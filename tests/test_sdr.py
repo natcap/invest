@@ -9,7 +9,7 @@ import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 
-from utils import assert_complete_execute
+from .utils import assert_complete_execute
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(

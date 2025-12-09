@@ -12,7 +12,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from utils import assert_complete_execute
+from .utils import assert_complete_execute
 
 
 gdal.UseExceptions()

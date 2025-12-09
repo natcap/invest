@@ -11,7 +11,7 @@ import pandas
 import pygeoprocessing
 from osgeo import gdal, ogr, osr
 
-from utils import assert_complete_execute
+from .utils import assert_complete_execute
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'annual_water_yield')
