@@ -31,6 +31,7 @@ MODEL_SPEC = spec.ModelSpec(
     model_id="sdr",
     model_title=gettext("Sediment Delivery Ratio"),
     userguide="sdr.html",
+    reporter="invest_reports.jinja_report_generators.sdr_report_generator",
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),

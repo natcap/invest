@@ -28,6 +28,7 @@ MODEL_SPEC = spec.ModelSpec(
     model_id="ndr",
     model_title=gettext("Nutrient Delivery Ratio"),
     userguide="ndr.html",
+    reporter="invest_reports.jinja_report_generators.ndr_report_generator",
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),

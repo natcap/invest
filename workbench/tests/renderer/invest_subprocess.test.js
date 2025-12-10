@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import events from 'events';
 import { spawn, exec } from 'child_process';
@@ -29,8 +30,6 @@ import {
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 
-const MOCK_MODEL_TITLE = 'Carbon';
-
 jest.mock('node-fetch');
 jest.mock('child_process');
 jest.mock('../../src/renderer/server_requests');
@@ -49,17 +48,15 @@ describe('InVEST subprocess testing', () => {
       },
     },
     input_field_order: [['workspace_dir', 'results_suffix']],
-    model_name: 'EcoModel',
-    pyname: 'natcap.invest.dot',
-    userguide: 'foo.html',
+    model_title: 'Eco Model',
+    model_id: 'eco',
+    module_name: 'natcap.invest.eco',
+    userguide: 'eco.html',
+    reporter: 'natcap.invest.reports.eco',
   };
-  const modelTitle = 'Carbon';
-  // nothing is written to the fake workspace in these tests,
-  // and we mock validation, so this dir need not exist.
-  const fakeWorkspace = 'foo_dir';
-  const logfilePath = path.join(fakeWorkspace, 'invest-log.txt');
+  let tempWorkspace;
   // invest always emits this message, and the workbench always listens for it:
-  const stdOutLogfileSignal = `Writing log messages to [${logfilePath}]`;
+  const stdOutLogfileSignal = 'Writing log messages to [/foo/bar/invest-log.txt]';
   const stdOutText = 'hello from invest';
   const investExe = 'foo';
 
@@ -112,7 +109,7 @@ describe('InVEST subprocess testing', () => {
     });
     getDynamicDropdowns.mockResolvedValue({});
     getInvestModelIDs.mockResolvedValue(
-      { carbon: { model_title: modelTitle } }
+      { [spec.model_id]: { model_title: spec.model_title } }
     );
     // mock the request to write the datastack file. Actually write it
     // because the app will clean it up when invest exits.
@@ -120,31 +117,38 @@ describe('InVEST subprocess testing', () => {
       fs.writeFileSync(payload.filepath, 'foo');
       return Promise.resolve({ text: () => 'foo' });
     });
+    tempWorkspace = fs.mkdtempSync(os.tmpdir());
   });
 
   afterEach(async () => {
     await InvestJob.clearStore();
+    fs.rmSync(tempWorkspace, { recursive: true });
   });
 
-  test('exit without error - expect log display', async () => {
+  test('exit without error - expect log & alert display', async () => {
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
       findByRole,
       getByRole,
-      getByText,
       queryByText,
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: MOCK_MODEL_TITLE }
+      'button', { name: spec.model_title }
     );
     await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, fakeWorkspace);
+    await userEvent.type(workspaceInput, tempWorkspace);
+    // Write a report to the workspace because that's something
+    // that execute will normally do.
+    fs.writeFileSync(
+      path.join(tempWorkspace, `${spec.model_id}_report.html`),
+      '<html />'
+    );
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
     await waitFor(() => expect(execute).toBeDisabled());
@@ -162,19 +166,21 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
     expect(queryByText('Model Complete')).toBeNull();
     expect(queryByText('Open Workspace')).toBeNull();
+    expect(queryByText('View Results')).toBeNull();
 
     act(() => {
       mockInvestProc.emit('exit', 0); // 0 - exit w/o error
     });
     expect(await findByRole('alert')).toHaveTextContent('Model Complete');
     expect(await findByText('Open Workspace')).toBeEnabled();
+    expect(await findByText('View Results')).toBeEnabled(); // because we wrote a report
     expect(await findByText(/\u2705/)).toBeInTheDocument();
     await waitFor(() => expect(execute).toBeEnabled());
 
     // A recent job card should be rendered
     await userEvent.click(getByRole('button', { name: 'InVEST' }));
     const homeTab = getByRole('tabpanel', { name: 'home tab' });
-    const workspaceText = await within(homeTab).findByText(fakeWorkspace)
+    const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();
     const status = await within(card).getByText(/model complete/i);
@@ -188,16 +194,17 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       getByRole,
+      queryByText,
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: MOCK_MODEL_TITLE }
+      'button', { name: spec.model_title }
     );
     await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, fakeWorkspace);
+    await userEvent.type(workspaceInput, tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
@@ -226,11 +233,12 @@ describe('InVEST subprocess testing', () => {
     });
     expect(await findByRole('button', { name: 'Open Workspace' }))
       .toBeEnabled();
+    expect(queryByText('View Results')).toBeNull(); // did not write report
 
     // A recent job card should be rendered
     await userEvent.click(getByRole('button', { name: 'InVEST' }));
     const homeTab = getByRole('tabpanel', { name: 'home tab' });
-    const workspaceText = await within(homeTab).findByText(fakeWorkspace)
+    const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();
     const status = await within(card).getByText(/error/i);
@@ -248,13 +256,13 @@ describe('InVEST subprocess testing', () => {
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: MOCK_MODEL_TITLE }
+      'button', { name: spec.model_title }
     );
     await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, fakeWorkspace);
+    await userEvent.type(workspaceInput, tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
@@ -285,7 +293,7 @@ describe('InVEST subprocess testing', () => {
     // A recent job card should be rendered
     await userEvent.click(getByRole('button', { name: 'InVEST' }));
     const homeTab = getByRole('tabpanel', { name: 'home tab' });
-    const workspaceText = await within(homeTab).findByText(fakeWorkspace)
+    const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();
     const status = await within(card).getByText(/canceled/i);
@@ -301,13 +309,13 @@ describe('InVEST subprocess testing', () => {
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: MOCK_MODEL_TITLE }
+      'button', { name: spec.model_title }
     );
     await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, fakeWorkspace);
+    await userEvent.type(workspaceInput, tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
@@ -357,14 +365,15 @@ describe('InVEST subprocess testing', () => {
   test('Load Recent run & re-run it - expect new log display', async () => {
     const mockInvestProc = getMockedInvestProcess();
     const argsValues = {
-      workspace_dir: fakeWorkspace,
+      workspace_dir: tempWorkspace,
     };
     const mockJob = new InvestJob({
-      modelID: 'carbon',
-      modelTitle: 'Carbon Sequestration',
+      modelID: spec.model_id,
+      modelTitle: spec.model_title,
       argsValues: argsValues,
       status: 'success',
-      logfile: logfilePath,
+      logfile: 'foo/bar/invest-log.txt',
+      htmlfile: 'foo/bar/report.html',
     });
     await InvestJob.saveJob(mockJob);
 
@@ -382,6 +391,8 @@ describe('InVEST subprocess testing', () => {
     // We don't need to have a real logfile in order to test that LogTab
     // is trying to read from a file instead of from stdout
     expect(await findByText(/Logfile is missing/)).toBeInTheDocument();
+    // the InvestJob references an html file
+    expect(await findByText('View Results')).toBeEnabled();
 
     // Now re-run from the same InvestTab component and expect
     // LogTab is displaying the new invest process stdout
@@ -405,5 +416,6 @@ describe('InVEST subprocess testing', () => {
     });
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
+    expect(queryByText('View Results')).toBeNull(); // did not write report
   });
 });
