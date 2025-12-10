@@ -65,6 +65,12 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* Now testing and building against Python 3.14.
+  No longer testing and building with Python 3.9, which reached EOL.
+  (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
+
 Coastal Vulnerability
 =====================
 * Various updates to model input and output data metadata, including
