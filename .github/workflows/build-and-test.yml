@@ -20,17 +20,17 @@ env:
   # build: dependency of make install
   # setuptools_scm: needed for versioning to work
   CONDA_DEFAULT_DEPENDENCIES: python-build setuptools_scm
-  LATEST_SUPPORTED_PYTHON_VERSION: "3.13"
+  LATEST_SUPPORTED_PYTHON_VERSION: "3.14"
 
 jobs:
   check-syntax-errors:
     name: Check for syntax errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -49,9 +49,9 @@ jobs:
     name: Check RST syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         name: Set up python
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
@@ -71,17 +71,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, macos-15-intel, ubuntu-latest]
         include:
-          - os: ubuntu-latest
-            python-version: 3.9
-            platform-specific-dependencies: libxcrypt
           - os: ubuntu-latest
             python-version: "3.10"
             platform-specific-dependencies: libxcrypt
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -90,7 +87,7 @@ jobs:
       # Test data is way, way faster by contrast (on the order of a few
       # seconds to archive).
       - name: Restore git-LFS test data cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
@@ -108,7 +105,7 @@ jobs:
         continue-on-error: true
         # Using 'dawidd6' since 'download-artifact' GH action doesn't
         # support downloading artifacts from prior workflow runs
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v11
         with:
           workflow: build-and-test.yml
           # Get frozen conda env artifact from last successful workflow
@@ -167,13 +164,13 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
@@ -186,17 +183,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, macos-15-intel, ubuntu-latest]
         include:
-          - os: ubuntu-latest
-            python-version: 3.9
-            platform-specific-dependencies: libxcrypt
           - os: ubuntu-latest
             python-version: "3.10"
             platform-specific-dependencies: libxcrypt
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Fetch complete history for accurate versioning
 
@@ -246,25 +240,25 @@ jobs:
         # different extensions)
       - name: Authenticate GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
-      # gsutil (part of make deploy) can't use python 3.13 yet, so set up 3.12 for use for now.
-      - name: Set up python 3.12 for gsutil
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-        id: python-312-task
+      # # gsutil (part of make deploy) can't use python 3.13 yet, so set up 3.12 for use for now.
+      # - name: Set up python 3.12 for gsutil
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.12'
+      #   id: python-312-task
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        env:
-          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-312-task.outputs.python-path }}
+        # env:
+        #   CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-312-task.outputs.python-path }}
         run: make deploy
 
   validate-resources:
@@ -272,7 +266,7 @@ jobs:
     runs-on: windows-latest
     needs: check-syntax-errors
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -305,7 +299,7 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -321,13 +315,13 @@ jobs:
         run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
       - name: Set up node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: 20
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -363,7 +357,7 @@ jobs:
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -402,13 +396,13 @@ jobs:
         run: make CONDA="$MAMBA_EXE" binaries
 
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: 18
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -438,13 +432,13 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Build Workbench
         working-directory: workbench
@@ -461,16 +455,16 @@ jobs:
         run: npx cross-env CI=true yarn run test-electron-app
 
       # gsutil (part of make deploy) can't use python 3.13 yet, so set up 3.12 for use for now.
-      - name: Set up python 3.12 for gsutil
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-        id: python-312-task
+      # - name: Set up python 3.12 for gsutil
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.12'
+      #   id: python-312-task
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
-        env:
-          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-312-task.outputs.python-path }}
+        # env:
+        #   CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-312-task.outputs.python-path }}
         run: make deploy
 
       # This relies on the file existing on GCP, so it must be run after `make
@@ -526,11 +520,11 @@ jobs:
     needs: check-syntax-errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -548,13 +542,13 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
