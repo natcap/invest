@@ -434,7 +434,8 @@ class UMHTests(unittest.TestCase):
 
         target_masked_ndvi = os.path.join(self.workspace_dir, "tgt_ndvi.tif")
 
-        urban_mental_health.mask_ndvi(ndvi_base, target_masked_ndvi)
+        urban_mental_health.mask_ndvi(ndvi_base, target_masked_ndvi,
+                                      None, None, None)
 
         # FLOAT32_NODATA is explicitly set in `make_raster_from_array`
         # and UMH uses native nodata until delta ndvi calculation
