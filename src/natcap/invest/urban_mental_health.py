@@ -220,7 +220,8 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=int,
             units=None,
             required="scenario=='lulc'",
-            allowed="scenario=='lulc'"
+            # Allow lulc_alt for masking if using scenario 3
+            allowed="scenario=='lulc' or lulc_base"
         ),
         spec.CSVInput(
             id="lulc_attr_csv",
@@ -475,7 +476,7 @@ MODEL_SPEC = spec.ModelSpec(
                     "resampling the baseline LULC and mapping it to mean "
                     "NDVI (with excluded lucodes set to NODATA)."
                     "If option 3 (NDVI), this is simply the masked aligned "
-                    "and resampled alternate NDVI raster."),
+                    "and resampled baseline NDVI raster."),
                 data_type=float,
                 units=None,
                 created_if="ndvi_base"
@@ -1013,7 +1014,7 @@ def build_lulc_ndvi_table(lulc_attr_table, target_output_csv,
         base_ndvi_path (str): path to baseline NDVI raster
 
     Returns:
-        dictionary mapping lulc codes to ndvi values
+        None
 
     """
     lulc_df = pandas.read_csv(lulc_attr_table)
@@ -1024,7 +1025,7 @@ def build_lulc_ndvi_table(lulc_attr_table, target_output_csv,
         ndvi_means = list(lulc_df['ndvi'])
         value_map = {}
         for lu, ndvi, exclude in zip(codes, ndvi_means, excludes):
-            if exclude:
+            if bool(exclude):
                 value_map[lu] = FLOAT32_NODATA
             elif numpy.isfinite(lu):
                 value_map[lu] = ndvi
@@ -1089,7 +1090,6 @@ def _calculate_mean_ndvi_by_lulc_class(lulc_path, ndvi_path, lulc_dict):
     for lucode, exclude in lulc_dict.items():
         if exclude == 1:
             mean_ndvi_by_lulc_dict[lucode] = FLOAT32_NODATA
-            # TODO check that this ^ is correct nodata to set for output lulc-to-ndvi mapped raster
 
     return mean_ndvi_by_lulc_dict
 
@@ -1097,11 +1097,10 @@ def _calculate_mean_ndvi_by_lulc_class(lulc_path, ndvi_path, lulc_dict):
 def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
     """Reclassify LULC raster: Map mean NDVI values onto LULC.
 
-    If ``lulc_attr_table`` contains field ``ndvi``, let this represent the
-    average NDVI for the LULC class.
-    Otherwise, calculate the average NDVI per lucode using the ``ndvi`` raster.
-    Set any lulc class with associated ``exclude`` value of 1 (based on the
-    ``lulc_attr_table``) to NODATA in the raster created.
+    Reclassify LULC raster using a precomputed mapping in
+    ``mean_ndvi_by_lulc_csv``. Note that this will set any lulc class with
+    an associated ``exclude`` value of 1 (based on the ``lulc_attr_csv``)
+    to NODATA in the raster created.
 
     Args:
         lulc (str): path to LULC raster (base or alt)
