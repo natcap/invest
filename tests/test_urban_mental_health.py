@@ -787,10 +787,10 @@ class UMHTests(unittest.TestCase):
                                       expected_delta_ndvi, atol=1e-6)
 
     def test_option2_lulc_relcassified_by_ndvi_raster(self):
-        """Test UMH option 2 (LULC) with no LULC attr table (instead, NDVI)"
+        """Test UMH option 2 (LULC) if reclassifying with NDVI raster
 
-        Test that LULC rasters are reclassified to NDVI based on NDVI raster.
-        Test that calculation of delta NDVI works when no LULC attribute given.
+        Test that UMH falls back to reclassifying LULC based on NDVI raster
+        if ``ndvi`` column not provided in attribute table.
         """
         from natcap.invest import urban_mental_health
         args = make_synthetic_data_and_params(self.workspace_dir, 2)
@@ -798,41 +798,6 @@ class UMHTests(unittest.TestCase):
         lulc_attr_table = pandas.read_csv(args['lulc_attr_csv'])
         lulc_attr_table = lulc_attr_table.drop(columns=['ndvi'])
         lulc_attr_table.to_csv(args['lulc_attr_csv'])
-
-        urban_mental_health.execute(args)
-
-        # LULC reclassified to mean NDVI based on alt NDVI raster
-        ndvi_lucode_1 = 0.503333  # (.5 + .9 + .1133 + nodata) / 3
-        ndvi_lucode_2 = 0.55  # (.6 + .7 + .8 + .12) / 4
-        # (calculated by hand using base_ndvi averages)
-        expected_ndvi_base = numpy.array(
-            [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_2],
-             [ndvi_lucode_2, ndvi_lucode_1, ndvi_lucode_2],
-             [ndvi_lucode_1, PGP_FLOAT32_NODATA, ndvi_lucode_1]])
-        actual_ndvi_base_path = os.path.join(
-            self.workspace_dir, "intermediate",
-            f"ndvi_base_aligned_masked_{args['results_suffix']}.tif")
-        actual_ndvi_base = pygeoprocessing.raster_to_numpy_array(
-            actual_ndvi_base_path)
-        numpy.testing.assert_allclose(actual_ndvi_base, expected_ndvi_base,
-                                      atol=1e-6)
-
-    def test_option2_attr_table_without_ndvi_column(self):
-        """Test UMH option 2 (LULC) with no ndvi column in LULC attr table
-
-        Test that UMH falls back to reclassifying LULC based on NDVI raster
-        if ``ndvi`` column not provided in attribute table.
-        """
-        from natcap.invest import urban_mental_health
-
-        args = make_synthetic_data_and_params(self.workspace_dir, 2)
-
-        # make attribute table without ndvi column
-        lulc_attr_table = pandas.DataFrame({"lucode": [1, 2, 3, 4],
-                                            "exclude": [0, 0, 1, 1]})
-        lulc_attr_path = os.path.join(self.workspace_dir, "lulc_attr_table.csv")
-        lulc_attr_table.to_csv(lulc_attr_path)
-        args['lulc_attr_csv'] = lulc_attr_path
 
         urban_mental_health.execute(args)
 
@@ -851,6 +816,18 @@ class UMHTests(unittest.TestCase):
         actual_ndvi_alt = pygeoprocessing.raster_to_numpy_array(
             actual_ndvi_alt_path)
         numpy.testing.assert_allclose(actual_ndvi_alt, expected_ndvi_alt,
+                                      atol=1e-6)
+
+        expected_ndvi_base = numpy.array(
+            [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_2],
+             [ndvi_lucode_2, ndvi_lucode_1, ndvi_lucode_2],
+             [ndvi_lucode_1, PGP_FLOAT32_NODATA, ndvi_lucode_1]])
+        actual_ndvi_base_path = os.path.join(
+            self.workspace_dir, "intermediate",
+            f"ndvi_base_aligned_masked_{args['results_suffix']}.tif")
+        actual_ndvi_base = pygeoprocessing.raster_to_numpy_array(
+            actual_ndvi_base_path)
+        numpy.testing.assert_allclose(actual_ndvi_base, expected_ndvi_base,
                                       atol=1e-6)
 
     def test_calculate_mean_ndvi_by_lulc_class(self):
