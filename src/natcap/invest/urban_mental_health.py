@@ -1401,7 +1401,7 @@ def validate(args, limit_to=None):
         validation_warnings.append((['scenario'], "Must select a scenario."))
 
     # raise error if user enters lulc_attr_csv without 'ndvi' column and also doesn't provide base_ndvi raster
-    if args['lulc_attr_csv']:
+    if args['scenario'] == 'lulc':
         lulc_df = pandas.read_csv(args['lulc_attr_csv'])
         if 'ndvi' not in lulc_df.columns and not args['ndvi_base']:
             validation_warnings.append((
