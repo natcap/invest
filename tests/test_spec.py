@@ -9,6 +9,7 @@ from natcap.invest.file_registry import FileRegistry
 from natcap.invest.unit_registry import u
 from osgeo import gdal
 from osgeo import ogr
+from pydantic import ValidationError
 
 gdal.UseExceptions()
 
@@ -504,3 +505,27 @@ class InputTests(unittest.TestCase):
         self.assertEqual(option_string_input.preprocess('Foo'), 'foo')
         self.assertEqual(option_string_input.preprocess(''), None)
         self.assertEqual(option_string_input.preprocess(None), None)
+
+
+class ModelSpecTests(unittest.TestCase):
+    """Tests for natcap.invest.spec.ModelSpec."""
+
+    def test_reporter_field_validator(self):
+        """Test that the field validator raises pydantic.ValidationError."""
+
+        data = {
+            'model_id': 'foo',
+            'model_title': 'Foo',
+            'userguide': '',
+            'input_field_order': [],
+            'inputs': [],
+            'outputs': [],
+            'module_name': 'foo',
+        }
+
+        _ = spec.ModelSpec(**data, reporter='')
+        with self.assertRaises(ValidationError):
+            spec.ModelSpec(**data, reporter='foo.bar')
+        with self.assertRaises(ValidationError):
+            # This module is importable, but has no 'report' attribute
+            spec.ModelSpec(**data, reporter='natcap.invest')

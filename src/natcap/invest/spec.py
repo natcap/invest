@@ -1962,6 +1962,20 @@ class ModelSpec(BaseModel):
     e.g. ``'invest_reports.jinja_report_generators.cv_report_generator'``
     """
 
+    @field_validator('reporter', mode='after')
+    @classmethod
+    def check_reporter(cls, value: str) -> str:
+        # Not all models will have a reporter; that's okay.
+        if value:
+            try:
+                reporter_module = importlib.import_module(value)
+            except ImportError as error:
+                raise ValueError(error)
+            if not hasattr(reporter_module, 'report'):
+                raise ValueError(
+                    f'{reporter_module} has no attribute "report"')
+        return value
+
     @model_validator(mode='after')
     def check_inputs_in_field_order(self):
         """Check that all inputs either appear in `input_field_order`,

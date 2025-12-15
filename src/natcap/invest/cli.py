@@ -473,24 +473,13 @@ def main(user_args=None):
             # written to stdout if this exception is uncaught.  This is by
             # design.
 
-            # Not all models will have a reporter; that's okay.
-            has_reporter = False
-            if model_module.MODEL_SPEC.reporter:
-                try:
-                    reporter_module = importlib.import_module(
-                        model_module.MODEL_SPEC.reporter)
-                    has_reporter = hasattr(reporter_module, 'report')
-                except (ImportError, AttributeError) as exc:
-                    # Unexpected cases, but we will still execute the model.
-                    LOGGER.exception(exc)
-
             model_module.MODEL_SPEC.execute(
                 parsed_datastack.args,
                 create_logfile=True,
                 generate_metadata=True,
                 save_file_registry=True,
                 check_outputs=False,
-                generate_report=has_reporter)
+                generate_report=bool(model_module.MODEL_SPEC.reporter))
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)
