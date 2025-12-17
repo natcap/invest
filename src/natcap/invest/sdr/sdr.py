@@ -80,7 +80,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " corresponding entries in the Biophysical Table."
             ),
             data_type=int,
-            units=None,
+            units=u.none,
             projected=True
         ),
         spec.VectorInput(
@@ -108,12 +108,12 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.RatioInput(
                     id="usle_c",
                     about=gettext("Cover-management factor for the USLE"),
-                    units=None
+                    units=u.none
                 ),
                 spec.RatioInput(
                     id="usle_p",
                     about=gettext("Support practice factor for the USLE"),
-                    units=None
+                    units=u.none
                 )
             ],
             index_col="lucode"
@@ -129,7 +129,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="sdr_max",
             name=gettext("maximum SDR value"),
             about=gettext("The maximum SDR value that a pixel can have."),
-            units=None
+            units=u.none
         ),
         spec.NumberInput(
             id="ic_0_param",
@@ -157,7 +157,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required=False,
             data_type=int,
-            units=None,
+            units=u.none,
             projected=None
         ),
         spec.FLOW_DIR_ALGORITHM
@@ -168,7 +168,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="avoided_erosion.tif",
             about=gettext(
                 "The contribution of vegetation to keeping soil from eroding from each"
-                " pixel. (Eq. (82))"
+                " pixel."
             ),
             data_type=float,
             units=u.metric_ton / u.hectare
@@ -179,7 +179,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "The contribution of vegetation to keeping erosion from entering a"
                 " stream. This combines local/on-pixel sediment retention with trapping"
-                " of erosion from upslope of the pixel. (Eq. (83))"
+                " of erosion from upslope of the pixel."
             ),
             data_type=float,
             units=u.metric_ton / u.hectare
@@ -189,8 +189,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="rkls.tif",
             about=gettext(
                 "Total potential soil loss per pixel in the original land cover from the"
-                " RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68),"
-                " without applying the C or P factors)."
+                " RKLS equation. Equivalent to the soil loss for bare soil."
             ),
             data_type=float,
             units=u.metric_ton / u.hectare
@@ -200,7 +199,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="sed_deposition.tif",
             about=gettext(
                 "The total amount of sediment deposited on the pixel from upslope sources"
-                " as a result of trapping. (Eq. (80))"
+                " as a result of trapping."
             ),
             data_type=float,
             units=u.metric_ton / u.hectare
@@ -210,7 +209,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="sed_export.tif",
             about=gettext(
                 "The total amount of sediment exported from each pixel that reaches the"
-                " stream. (Eq. (76))"
+                " stream."
             ),
             data_type=float,
             units=u.metric_ton / u.hectare
@@ -221,19 +220,19 @@ MODEL_SPEC = spec.ModelSpec(
             path="stream_and_drainage.tif",
             about=gettext(
                 "This raster is the union of that layer with the calculated stream"
-                " layer(Eq. (85)). Values of 1 represent streams, values of 0 are"
+                " layer. Values of 1 represent streams, values of 0 are"
                 " non-stream pixels."
             ),
             created_if="drainage_path",
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="usle",
             path="usle.tif",
             about=gettext(
                 "Total potential soil loss per hectare in the original land cover"
-                " calculated from the USLE equation. (Eq. (68))"
+                " calculated from the USLE equation."
             ),
             data_type=float,
             units=u.metric_ton / u.hectare
@@ -248,7 +247,6 @@ MODEL_SPEC = spec.ModelSpec(
                     id="sed_export",
                     about=gettext(
                         "Total amount of sediment exported to the stream per watershed."
-                        " (Eq. (77) with sum calculated over the watershed area)"
                     ),
                     units=u.metric_ton
                 ),
@@ -289,13 +287,13 @@ MODEL_SPEC = spec.ModelSpec(
                 " biophysical table to the LULC raster."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="d_dn",
             path="intermediate_outputs/d_dn.tif",
             about=gettext(
-                "Downslope factor of the index of connectivity (Eq. (74))"
+                "Downslope factor of the index of connectivity."
             ),
             data_type=float,
             units=u.none
@@ -304,7 +302,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="d_up",
             path="intermediate_outputs/d_up.tif",
             about=gettext(
-                "Upslope factor of the index of connectivity (Eq. (73))"
+                "Upslope factor of the index of connectivity."
             ),
             data_type=float,
             units=u.none
@@ -314,7 +312,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/e_prime.tif",
             about=gettext(
                 "Sediment downslope deposition, the amount of sediment from a"
-                " given pixel that does not reach a stream (Eq. (78))"
+                " given pixel that does not reach a stream."
             ),
             data_type=float,
             units=u.metric_ton / u.hectare / u.year
@@ -323,8 +321,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="flux",
             path="intermediate_outputs/f.tif",
             about=gettext(
-                "Map of sediment flux for sediment that does not reach the stream"
-                " (Eq. (81))"
+                "Map of sediment flux for sediment that does not reach the stream."
             ),
             data_type=float,
             units=u.metric_ton / u.hectare / u.year
@@ -336,14 +333,14 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SingleBandRasterOutput(
             id="ic",
             path="intermediate_outputs/ic.tif",
-            about=gettext("Index of connectivity (Eq. (70))"),
+            about=gettext("Index of connectivity."),
             data_type=float,
             units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="ls",
             path="intermediate_outputs/ls.tif",
-            about=gettext("LS factor for USLE (Eq. (69))"),
+            about=gettext("LS factor for USLE."),
             data_type=float,
             units=u.none
         ),
@@ -364,8 +361,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="s_bar",
             path="intermediate_outputs/s_bar.tif",
             about=gettext(
-                "Mean thresholded slope gradient of the upslope contributing area"
-                " (in eq. (73))"
+                "Mean thresholded slope gradient of the upslope contributing area."
             ),
             data_type=float,
             units=u.none
@@ -373,9 +369,9 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SingleBandRasterOutput(
             id="sdr_factor",
             path="intermediate_outputs/sdr_factor.tif",
-            about=gettext("Sediment delivery ratio (Eq. (75))"),
+            about=gettext("Sediment delivery ratio."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SLOPE.model_copy(update=dict(
             path="intermediate_outputs/slope.tif")),
@@ -384,11 +380,10 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/slope_threshold.tif",
             about=gettext(
                 "Percent slope, thresholded to be no less than 0.005 and no"
-                " greater than 1 (eq. (71)). 1 is equivalent to a 45 degree"
-                " slope."
+                " greater than 1. 1 is equivalent to a 45 degree slope."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="w_accumulation",
@@ -405,10 +400,10 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/w_bar.tif",
             about=gettext(
                 "Mean thresholded cover-management factor for upslope"
-                " contributing area (in eq. (73))"
+                " contributing area."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="w",
@@ -418,23 +413,22 @@ MODEL_SPEC = spec.ModelSpec(
                 " biophysical table to the LULC raster."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="w_threshold",
             path="intermediate_outputs/w_threshold.tif",
             about=gettext(
-                "Cover-management factor thresholded to be no less than 0.001"
-                " (eq. (72))"
+                "Cover-management factor thresholded to be no less than 0.001."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="weighted_avg_aspect",
             path="intermediate_outputs/weighted_avg_aspect.tif",
             about=gettext(
-                "Average aspect weighted by flow direction (in eq. (69))"
+                "Average aspect weighted by flow direction."
             ),
             data_type=float,
             units=u.none
@@ -449,17 +443,17 @@ MODEL_SPEC = spec.ModelSpec(
                 " to any stream in stream.tif."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="ws_inverse",
             path="intermediate_outputs/ws_inverse.tif",
             about=gettext(
                 "Inverse of the thresholded cover-management factor times the"
-                " thresholded slope (in eq. (74))"
+                " thresholded slope."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="aligned_dem",
@@ -479,7 +473,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " other raster inputs and aligned to the DEM."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="aligned_erodibility",
@@ -509,7 +503,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " of the other raster inputs and aligned to the DEM."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="mask",
@@ -522,7 +516,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " are valid."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="masked_dem",
@@ -541,7 +535,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " raster."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="masked_erodibility",
@@ -571,7 +565,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " mask raster."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.TASKGRAPH_CACHE
     ]

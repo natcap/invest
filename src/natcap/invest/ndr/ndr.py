@@ -56,7 +56,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " corresponding entries in the Biophysical table."
             ),
             data_type=int,
-            units=None,
+            units=u.none,
             projected=True
         ),
         spec.SingleBandRasterInput(
@@ -153,7 +153,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " proportion of the nitrogen that is retained on this LULC class."
                     ),
                     required="calc_n",
-                    units=None
+                    units=u.none
                 ),
                 spec.RatioInput(
                     id="eff_p",
@@ -163,7 +163,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " class."
                     ),
                     required="calc_p",
-                    units=None
+                    units=u.none
                 ),
                 spec.NumberInput(
                     id="crit_len_n",
@@ -192,7 +192,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " There is no equivalent of this for phosphorus."
                     ),
                     required="calc_n",
-                    units=None
+                    units=u.none
                 )
             ],
             index_col="lucode"
@@ -256,7 +256,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="calc_n",
             allowed="calc_n",
-            units=None
+            units=u.none
         ),
         spec.FLOW_DIR_ALGORITHM
     ],
@@ -417,7 +417,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Raw per-landscape cover retention efficiency for nitrogen."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="eff_p",
@@ -426,7 +426,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Raw per-landscape cover retention efficiency for phosphorus"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="effective_retention_n",
@@ -436,7 +436,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " for each pixel"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="effective_retention_p",
@@ -446,7 +446,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " path for each pixel"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.FLOW_ACCUMULATION.model_copy(update=dict(
             path="intermediate_outputs/flow_accumulation.tif")),
@@ -457,7 +457,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/ic_factor.tif",
             about=gettext("Index of connectivity"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="load_n",
@@ -494,14 +494,14 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/ndr_n.tif",
             about=gettext("NDR values for nitrogen"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="ndr_p",
             path="intermediate_outputs/ndr_p.tif",
             about=gettext("NDR values for phosphorus"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="runoff_proxy_index",
@@ -510,7 +510,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Normalized values for the Runoff Proxy input to the model"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="s_accumulation",
@@ -526,7 +526,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Average slope gradient of the upslope contributing area"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="s_factor_inverse",
@@ -547,7 +547,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/sub_ndr_n.tif",
             about=gettext("Subsurface nitrogen NDR values"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="surface_load_n",
@@ -570,7 +570,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Percent slope thresholded for correct calculation of IC."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="what_drains_to_stream",
@@ -582,7 +582,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " to any stream in stream.tif."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="aligned_dem",
@@ -601,7 +601,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " reprojected to the DEM projection"
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="aligned_runoff_proxy",
@@ -629,7 +629,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "LULC input masked to exclude pixels outside the watershed"
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="masked_runoff_proxy",
