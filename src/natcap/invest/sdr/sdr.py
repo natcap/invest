@@ -79,7 +79,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " corresponding entries in the Biophysical Table."
             ),
             data_type=int,
-            units=None,
+            units=u.none,
             projected=True
         ),
         spec.VectorInput(
@@ -107,12 +107,12 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.RatioInput(
                     id="usle_c",
                     about=gettext("Cover-management factor for the USLE"),
-                    units=None
+                    units=u.none
                 ),
                 spec.RatioInput(
                     id="usle_p",
                     about=gettext("Support practice factor for the USLE"),
-                    units=None
+                    units=u.none
                 )
             ],
             index_col="lucode"
@@ -128,7 +128,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="sdr_max",
             name=gettext("maximum SDR value"),
             about=gettext("The maximum SDR value that a pixel can have."),
-            units=None
+            units=u.none
         ),
         spec.NumberInput(
             id="ic_0_param",
@@ -156,7 +156,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required=False,
             data_type=int,
-            units=None,
+            units=u.none,
             projected=None
         ),
         spec.FLOW_DIR_ALGORITHM
@@ -224,7 +224,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             created_if="drainage_path",
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="usle",
@@ -286,7 +286,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " biophysical table to the LULC raster."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="d_dn",
@@ -370,7 +370,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/sdr_factor.tif",
             about=gettext("Sediment delivery ratio."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SLOPE.model_copy(update=dict(
             path="intermediate_outputs/slope.tif")),
@@ -382,7 +382,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " greater than 1. 1 is equivalent to a 45 degree slope."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="w_accumulation",
@@ -402,7 +402,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " contributing area."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="w",
@@ -412,7 +412,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " biophysical table to the LULC raster."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="w_threshold",
@@ -421,7 +421,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Cover-management factor thresholded to be no less than 0.001."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="weighted_avg_aspect",
@@ -442,7 +442,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " to any stream in stream.tif."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="ws_inverse",
@@ -452,7 +452,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " thresholded slope."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="aligned_dem",
@@ -472,7 +472,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " other raster inputs and aligned to the DEM."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="aligned_erodibility",
@@ -502,7 +502,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " of the other raster inputs and aligned to the DEM."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="mask",
@@ -515,7 +515,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " are valid."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="masked_dem",
@@ -534,7 +534,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " raster."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="masked_erodibility",
@@ -564,7 +564,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " mask raster."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.TASKGRAPH_CACHE
     ]
