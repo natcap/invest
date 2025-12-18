@@ -14,6 +14,8 @@ from osgeo import ogr
 from osgeo import osr
 from shapely.geometry import Polygon
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -109,7 +111,13 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
             'n_workers': -1
         }
-        forest_carbon_edge_effect.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(forest_carbon_edge_effect.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        forest_carbon_edge_effect.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, forest_carbon_edge_effect.MODEL_SPEC, **execute_kwargs)
         ForestCarbonEdgeTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'file_list.txt'),
             args['workspace_dir'])

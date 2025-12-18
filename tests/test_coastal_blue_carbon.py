@@ -686,8 +686,7 @@ class TestCBC2(unittest.TestCase):
         }
         coastal_blue_carbon.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
-            args['workspace_dir'], args, coastal_blue_carbon.MODEL_SPEC,
-            **execute_kwargs)
+            args, coastal_blue_carbon.MODEL_SPEC, **execute_kwargs)
 
         # Sample values calculated by hand.  Pixel 0 only accumulates.  Pixel 1
         # has no accumulation (per the biophysical table) and also has no

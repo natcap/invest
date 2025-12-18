@@ -13,6 +13,8 @@ import pygeoprocessing
 from pygeoprocessing.geoprocessing_core import (
     DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS as opts_tuple)
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 TEST_DATA = os.path.join(os.path.dirname(
     __file__), '..', 'data', 'invest-test-data', 'stormwater')
@@ -455,7 +457,12 @@ class StormwaterTests(unittest.TestCase):
             'aggregate_areas_path': os.path.join(TEST_DATA, 'aoi.gpkg'),
             'replacement_cost': retention_cost
         }
-        stormwater.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(stormwater.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        stormwater.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(args, stormwater.MODEL_SPEC, **execute_kwargs)
 
         expected_feature_fields = {
             1: {

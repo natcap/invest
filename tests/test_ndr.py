@@ -216,8 +216,7 @@ class NDRTests(unittest.TestCase):
             'save_file_registry': True
         }
         ndr.MODEL_SPEC.execute(args, **execute_kwargs)
-        assert_complete_execute(
-            args['workspace_dir'], args, ndr.MODEL_SPEC, **execute_kwargs)
+        assert_complete_execute(args, ndr.MODEL_SPEC, **execute_kwargs)
 
         result_vector = ogr.Open(os.path.join(
             args['workspace_dir'], 'watershed_results_ndr.gpkg'))

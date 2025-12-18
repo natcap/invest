@@ -140,8 +140,7 @@ class SDRTests(unittest.TestCase):
             'save_file_registry': True
         }
         sdr.MODEL_SPEC.execute(args, **execute_kwargs)
-        assert_complete_execute(
-            args['workspace_dir'], args, sdr.MODEL_SPEC, **execute_kwargs)
+        assert_complete_execute(args, sdr.MODEL_SPEC, **execute_kwargs)
 
         expected_watershed_totals = {
             'usle_tot': 2.62457418442,

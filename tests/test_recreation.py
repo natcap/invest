@@ -30,6 +30,8 @@ import shapely
 import warnings
 
 from natcap.invest import utils
+from .utils import assert_complete_execute
+
 
 gdal.UseExceptions()
 Pyro5.config.SERIALIZER = 'marshal'  # allow null bytes in strings
@@ -733,7 +735,13 @@ class TestRecClientServer(unittest.TestCase):
             'hostname': self.hostname,
             'port': self.port,
         }
-        recmodel_client.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(recmodel_client.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        recmodel_client.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, recmodel_client.MODEL_SPEC, **execute_kwargs)
 
         out_regression_vector_path = os.path.join(
             args['workspace_dir'], f'regression_data_{suffix}.gpkg')

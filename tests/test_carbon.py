@@ -155,8 +155,7 @@ class CarbonTests(unittest.TestCase):
         }
         carbon.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
-            args['workspace_dir'], args, carbon.MODEL_SPEC,
-            **execute_kwargs)
+            args, carbon.MODEL_SPEC, **execute_kwargs)
 
         # Ensure every pixel has the correct total C value.
         # Baseline: 15 + 10 + 60 + 1 = 86 Mg/ha

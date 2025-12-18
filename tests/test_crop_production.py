@@ -203,15 +203,13 @@ class CropProductionTests(unittest.TestCase):
         args = _get_default_args_percentile()
         args['workspace_dir'] = self.workspace_dir
 
-        crop_production_percentile.execute(args)
         execute_kwargs = {
             'generate_report': bool(crop_production_percentile.MODEL_SPEC.reporter),
             'save_file_registry': True
         }
         crop_production_percentile.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
-            args['workspace_dir'], args, crop_production_percentile.MODEL_SPEC,
-            **execute_kwargs)
+            args, crop_production_percentile.MODEL_SPEC, **execute_kwargs)
 
         agg_result_table_path = os.path.join(
             args['workspace_dir'], 'aggregate_results.csv')
@@ -381,15 +379,13 @@ class CropProductionTests(unittest.TestCase):
         args = _get_default_args_regression()
         args['workspace_dir'] = self.workspace_dir
 
-        crop_production_regression.execute(args)
         execute_kwargs = {
             'generate_report': bool(crop_production_regression.MODEL_SPEC.reporter),
             'save_file_registry': True
         }
         crop_production_regression.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
-            args['workspace_dir'], args, crop_production_regression.MODEL_SPEC,
-            **execute_kwargs)
+            args, crop_production_regression.MODEL_SPEC, **execute_kwargs)
 
         expected_agg_result_table = pandas.read_csv(
             os.path.join(TEST_OUTPUTS_PATH,

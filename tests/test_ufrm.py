@@ -13,7 +13,10 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
+
 
 class UFRMTests(unittest.TestCase):
     """Tests for the Urban Flood Risk Mitigation Model."""
@@ -65,7 +68,14 @@ class UFRMTests(unittest.TestCase):
         input_layer = input_vector.GetLayer()
         input_fields = [field.GetName() for field in input_layer.schema]
 
-        urban_flood_risk_mitigation.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(
+                urban_flood_risk_mitigation.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        urban_flood_risk_mitigation.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, urban_flood_risk_mitigation.MODEL_SPEC, **execute_kwargs)
 
         result_vector = gdal.OpenEx(os.path.join(
             args['workspace_dir'], 'flood_risk_service_Test1.shp'),
