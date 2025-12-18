@@ -1062,10 +1062,10 @@ def _calculate_mean_ndvi_by_lulc_class(lulc_path, ndvi_path, lulc_dict):
 
     sums = {}
     counts = {}
-    _, lulc_blocks = pygeoprocessing.iterblocks(lulc_path)
-    _, ndvi_blocks = pygeoprocessing.iterblocks(ndvi_path)
+    lulc_blocks = pygeoprocessing.iterblocks((lulc_path, 1))
+    ndvi_blocks = pygeoprocessing.iterblocks((ndvi_path, 1))
 
-    for lulc, ndvi in zip(lulc_blocks, ndvi_blocks):
+    for (_, lulc), (_, ndvi) in zip(lulc_blocks, ndvi_blocks):
         mask = ~pygeoprocessing.array_equals_nodata(ndvi, ndvi_nodata) & (
             ~pygeoprocessing.array_equals_nodata(lulc, lulc_nodata))
 
