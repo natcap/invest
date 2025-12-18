@@ -11,6 +11,8 @@ import pygeoprocessing
 from shapely.geometry import Polygon
 from natcap.invest.crop_production_regression import CROP_TO_PATH_TABLES
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 MODEL_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -202,6 +204,14 @@ class CropProductionTests(unittest.TestCase):
         args['workspace_dir'] = self.workspace_dir
 
         crop_production_percentile.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(crop_production_percentile.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        crop_production_percentile.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args['workspace_dir'], args, crop_production_percentile.MODEL_SPEC,
+            **execute_kwargs)
 
         agg_result_table_path = os.path.join(
             args['workspace_dir'], 'aggregate_results.csv')
@@ -372,6 +382,14 @@ class CropProductionTests(unittest.TestCase):
         args['workspace_dir'] = self.workspace_dir
 
         crop_production_regression.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(crop_production_regression.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        crop_production_regression.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args['workspace_dir'], args, crop_production_regression.MODEL_SPEC,
+            **execute_kwargs)
 
         expected_agg_result_table = pandas.read_csv(
             os.path.join(TEST_OUTPUTS_PATH,
@@ -535,8 +553,8 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest.crop_production_regression import \
             tabulate_regression_results, MODEL_SPEC
         from natcap.invest.file_registry import FileRegistry
-        from crop_production.data_helpers import sample_nutrient_df
-        from crop_production.data_helpers import tabulate_regr_results_table
+        from .crop_production.data_helpers import sample_nutrient_df
+        from .crop_production.data_helpers import tabulate_regr_results_table
 
         nutrient_df = sample_nutrient_df()
 
@@ -577,8 +595,8 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest.crop_production_regression import \
             aggregate_regression_results_to_polygons, MODEL_SPEC
         from natcap.invest.file_registry import FileRegistry
-        from crop_production.data_helpers import sample_nutrient_df
-        from crop_production.data_helpers import \
+        from .crop_production.data_helpers import sample_nutrient_df
+        from .crop_production.data_helpers import \
             aggregate_regr_polygons_table
 
         workspace = self.workspace_dir
@@ -629,8 +647,8 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest.crop_production_percentile import \
             aggregate_to_polygons, MODEL_SPEC
         from natcap.invest.file_registry import FileRegistry
-        from crop_production.data_helpers import sample_nutrient_df
-        from crop_production.data_helpers import aggregate_pctl_polygons_table
+        from .crop_production.data_helpers import sample_nutrient_df
+        from .crop_production.data_helpers import aggregate_pctl_polygons_table
 
         workspace = self.workspace_dir
 
@@ -677,8 +695,8 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest.crop_production_percentile import \
             tabulate_results, MODEL_SPEC
         from natcap.invest.file_registry import FileRegistry
-        from crop_production.data_helpers import sample_nutrient_df
-        from crop_production.data_helpers import tabulate_pctl_results_table
+        from .crop_production.data_helpers import sample_nutrient_df
+        from .crop_production.data_helpers import tabulate_pctl_results_table
 
         nutrient_df = sample_nutrient_df()
         output_dir = os.path.join(self.workspace_dir, "output")

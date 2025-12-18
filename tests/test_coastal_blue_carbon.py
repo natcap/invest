@@ -13,10 +13,10 @@ import numpy
 import pandas
 from scipy.sparse import dok_matrix
 import pygeoprocessing
-from natcap.invest import utils
-from natcap.invest import validation
 from osgeo import gdal
 from osgeo import osr
+
+from .utils import assert_complete_execute
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
@@ -680,7 +680,14 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        coastal_blue_carbon.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(coastal_blue_carbon.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        coastal_blue_carbon.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args['workspace_dir'], args, coastal_blue_carbon.MODEL_SPEC,
+            **execute_kwargs)
 
         # Sample values calculated by hand.  Pixel 0 only accumulates.  Pixel 1
         # has no accumulation (per the biophysical table) and also has no
