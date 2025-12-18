@@ -42,7 +42,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.AOI.model_copy(update=dict(  #  TODO: potentially want to have this req to be census tract pop. shp? or only req that if opt 1 but optional for opts 2-3?
+        spec.AOI.model_copy(update=dict(
             about=gettext(
                 "Map of the area over which to run the model. The AOI must be "
                 "smaller than the raster inputs by at least the search radius "
@@ -257,8 +257,7 @@ MODEL_SPEC = spec.ModelSpec(
             # potentially also for mapping LULC classes to NDVI if not
             # base_ndvi) or if scenario is not lulc but baseline lulc raster
             # is provided so attribute table is needed for water masking
-            required="scenario=='lulc' or "
-                     "(scenario!='lulc' and lulc_base)",
+            required="scenario=='lulc' or (scenario!='lulc' and lulc_base)",
             allowed="scenario=='lulc' or lulc_base"
         )
         ],
@@ -419,7 +418,7 @@ MODEL_SPEC = spec.ModelSpec(
                 id="lulc_to_ndvi_csv",
                 path="intermediate/lulc_to_ndvi_map.csv",
                 about=gettext(
-                    "Table giving mean NDVI by LULC codes, with excluded LULC "
+                    "Table giving mean NDVI by LULC code, with excluded LULC "
                     "classes mapped to NODATA. Either derived directly from "
                     "the input lulc_attr_table.csv, or calculated using the "
                     "baseline NDVI raster."
@@ -641,7 +640,7 @@ def execute(args):
     for input_raster, resample_method in raster_to_method_dict.items():
         if args[input_raster]:
             input_align_list.append(args[input_raster])
-            output_align_list.append(file_registry[input_raster+'_aligned'])
+            output_align_list.append(file_registry[f"{input_raster}_aligned"])
             resample_method_list.append(resample_method)
 
     # Ensure rasters to be clipped to buffered AOI bbox are large enough
@@ -677,7 +676,7 @@ def execute(args):
             args=(args['lulc_attr_csv'],
                   file_registry['lulc_to_ndvi_csv'],
                   file_registry['lulc_base_aligned'],  # Note: won't get used if `ndvi` column in `lulc_attr_csv``
-                  file_registry['ndvi_base_aligned'] #TODO: will this get set to None if used doesn't input ndvi_base?
+                  file_registry['ndvi_base_aligned']
                   ),
             target_path_list=[file_registry['lulc_to_ndvi_csv']],
             dependent_task_list=[align_task],
@@ -984,8 +983,7 @@ def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
         lulc_df = pandas.read_csv(lulc_attr_table)
         codes = list(lulc_df['lucode'])
         excludes = list(lulc_df['exclude'])
-        value_map = {lu: ex for lu, ex in zip(codes, excludes)
-                     if numpy.isfinite(lu)}
+        value_map = {lu: ex for lu, ex in zip(codes, excludes)}
 
         utils.reclassify_raster(
             (input_lulc, 1), value_map, target_lulc_mask, gdal.GDT_Byte, 255,
@@ -1023,16 +1021,11 @@ def build_lulc_ndvi_table(lulc_attr_table, target_output_csv,
     if 'ndvi' in lulc_df.columns:
         LOGGER.info("Using NDVI in LULC attribute table to reclassify LULC.")
         ndvi_means = list(lulc_df['ndvi'])
-        value_map = {}
-        for lu, ndvi, exclude in zip(codes, ndvi_means, excludes):
-            if bool(exclude):
-                value_map[lu] = FLOAT32_NODATA
-            elif numpy.isfinite(lu):
-                value_map[lu] = ndvi
+        value_map = {lu: (FLOAT32_NODATA if bool(ex) else ndvi)
+                     for lu, ndvi, ex in zip(codes, ndvi_means, excludes)}
     elif base_ndvi_path:
         LOGGER.info("Using NDVI raster to calculate mean NDVI by LULC class.")
-        lulc_dict = {lu: ex for lu, ex in zip(codes, excludes)
-                     if numpy.isfinite(lu)}
+        lulc_dict = {lu: ex for lu, ex in zip(codes, excludes)}
         value_map = _calculate_mean_ndvi_by_lulc_class(
             base_lulc_path, base_ndvi_path, lulc_dict)
     else:
@@ -1048,7 +1041,7 @@ def _calculate_mean_ndvi_by_lulc_class(lulc_path, ndvi_path, lulc_dict):
     """Calculate the mean NDVI value for each LULC class
 
     Create dictionary mapping source LULC codes to dest. mean NDVI values.
-    Any LULC classes with exclude=1 are mapped to ``target_nodata``.
+    Any LULC classes with exclude=1 are mapped to ``FLOAT32_NODATA``.
 
     Args:
         lulc_path (str): path to baseline LULC raster
@@ -1060,32 +1053,58 @@ def _calculate_mean_ndvi_by_lulc_class(lulc_path, ndvi_path, lulc_dict):
         Dict containing the mean NDVI values for each LULC class
 
     """
-    # TODO: iterblocks?
-    lulc = pygeoprocessing.raster_to_numpy_array(lulc_path)
-    ndvi = pygeoprocessing.raster_to_numpy_array(ndvi_path)
 
-    raster_info = pygeoprocessing.get_raster_info(lulc_path)
-    lulc_nodata = raster_info["nodata"][0]
+    lulc_info = pygeoprocessing.get_raster_info(lulc_path)
+    lulc_nodata = lulc_info["nodata"][0]
 
-    raster_info = pygeoprocessing.get_raster_info(ndvi_path)
-    ndvi_nodata = raster_info["nodata"][0]
+    ndvi_info = pygeoprocessing.get_raster_info(ndvi_path)
+    ndvi_nodata = ndvi_info["nodata"][0]
 
-    mask = ~pygeoprocessing.array_equals_nodata(ndvi, ndvi_nodata) & (
-        ~pygeoprocessing.array_equals_nodata(lulc, lulc_nodata))
+    sums = {}
+    counts = {}
+    _, lulc_blocks = pygeoprocessing.iterblocks(lulc_path)
+    _, ndvi_blocks = pygeoprocessing.iterblocks(ndvi_path)
 
-    masked_lulc = lulc[mask]
-    masked_ndvi = ndvi[mask]
+    for lulc, ndvi in zip(lulc_blocks, ndvi_blocks):
+        mask = ~pygeoprocessing.array_equals_nodata(ndvi, ndvi_nodata) & (
+            ~pygeoprocessing.array_equals_nodata(lulc, lulc_nodata))
 
-    unique_lucodes, inverse_indices = numpy.unique(
-        masked_lulc.astype(numpy.int64), return_inverse=True)
+        if not mask.any():
+            continue
 
-    sums = numpy.bincount(inverse_indices,
-                          weights=masked_ndvi.astype(numpy.float32))
-    counts = numpy.bincount(inverse_indices)
-    means = sums / counts
+        # Extract valid pixels into 1D arrays
+        masked_lulc = lulc[mask].astype(numpy.int64)
+        masked_ndvi = ndvi[mask].astype(numpy.float32)
 
-    mean_ndvi_by_lulc_dict = {lucode: mean for lucode, mean in zip(
-        unique_lucodes, means)}
+        # numpy.unique returns unique elements of an array
+        # return_inverse returns the indices of unique array
+        # e.g., for lulc array [1, 2, 2, 5]: unique_lucodes = [1, 2, 5]
+        # and inverse_indices = [0, 1, 1, 2]
+        unique_lucodes, inverse_indices = numpy.unique(
+            masked_lulc, return_inverse=True)
+
+        # Use bincount to get the NDVI sum for each unique LULC code (in
+        # block) and count the number of pixels for each lucode
+        # e.g., for ndvi_array = [0.2, 0.5, 0.7, 0.1] and same example lulc as
+        # above, block_sums = [0.2, 1.2, 0.1] and block_counts = [1, 2, 1]
+        block_sums = numpy.bincount(inverse_indices, weights=masked_ndvi)
+        block_counts = numpy.bincount(inverse_indices)
+
+        # accumulate into global sums/counts
+        for lucode, sum, c in zip(unique_lucodes, block_sums, block_counts):
+            if c == 0:
+                continue
+            if lucode not in sums:
+                sums[lucode] = float(sum)
+                counts[lucode] = int(c)
+            else:
+                sums[lucode] += float(sum)
+                counts[lucode] += int(c)
+
+    # Calculate global mean NDVI for each unique lulc code
+    mean_ndvi_by_lulc_dict = {
+        lucode: sums[lucode] / counts[lucode]
+        for lucode in sums}
 
     for lucode, exclude in lulc_dict.items():
         if exclude == 1:
@@ -1121,7 +1140,6 @@ def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
     if source_nodata is not None:
         mean_ndvi_by_lulc_dict[source_nodata] = target_nodata
 
-    # TODO check nodata value propgates correctly from here
     utils.reclassify_raster(
         (lulc, 1), mean_ndvi_by_lulc_dict, target_path, target_datatype,
         target_nodata, error_details={'raster_name': lulc,
@@ -1330,7 +1348,7 @@ def zonal_stats_preventable_cases_cost(
         cost_stats_dict = {k: {"sum_cost": v['sum']}
                            for k, v in cost_stats_dict.items()}
 
-        # merge the dicts - TODO check this always works
+        # merge the dicts
         output_dict = {fid: output_dict[fid] | cost_stats_dict.get(fid, None)
                        for fid in output_dict.keys()}
 
@@ -1400,8 +1418,9 @@ def validate(args, limit_to=None):
     if error_msg:
         validation_warnings.append((['scenario'], "Must select a scenario."))
 
-    # raise error if user enters lulc_attr_csv without 'ndvi' column and also doesn't provide base_ndvi raster
-    if args['scenario'] == 'lulc':
+    # raise error if user enters lulc_attr_csv without 'ndvi' column and also
+    # doesn't provide base_ndvi raster
+    if args['scenario'] == 'lulc' and args.get('lulc_attr_csv'):
         lulc_df = pandas.read_csv(args['lulc_attr_csv'])
         if 'ndvi' not in lulc_df.columns and not args['ndvi_base']:
             validation_warnings.append((
