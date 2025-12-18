@@ -117,7 +117,7 @@ describe('Run status Alert renders with status from a recent run', () => {
   });
 });
 
-describe('Open Workspace button', () => {
+describe('Open Workspace & View Results buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
@@ -142,7 +142,7 @@ describe('Open Workspace button', () => {
     removeIpcMainListeners();
   });
 
-  test('should open workspace', async () => {
+  test('Open Workspace should open workspace', async () => {
     const job = {
       ...baseJob,
       argsValues: {
@@ -160,7 +160,7 @@ describe('Open Workspace button', () => {
     expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
   });
 
-  test('should present an error message to the user if workspace cannot be opened (e.g., if it does not exist)', async () => {
+  test('Open Workspace: present message if workspace cannot be opened (e.g., does not exist)', async () => {
     const job = {
       ...baseJob,
       status: 'error',
@@ -177,10 +177,33 @@ describe('Open Workspace button', () => {
     openWorkspaceBtn.click();
 
     expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(
+      ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir
+    );
 
-    const errorModal = await findByRole('dialog', { name: 'Error opening workspace'});
+    const errorModal = await findByRole('dialog', { name: 'Error opening workspace' });
     expect(errorModal).toBeTruthy();
+  });
+
+  test('View Results button exists & opens new window', async () => {
+    const job = {
+      ...baseJob,
+      argsValues: {
+        workspace_dir: '/workspace',
+      },
+      htmlfile: 'report.html', // if this prop exists, the button will exist.
+    };
+
+    jest.spyOn(ipcRenderer, 'send');
+
+    const { findByRole } = renderInvestTab(job);
+    const button = await findByRole('button', { name: 'View Results' });
+    button.click();
+
+    expect(ipcRenderer.send).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.send).toHaveBeenCalledWith(
+      ipcMainChannels.OPEN_LOCAL_HTML, job.htmlfile
+    );
   });
 });
 

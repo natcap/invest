@@ -12,6 +12,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'pollination')
@@ -104,7 +106,14 @@ class PollinationTests(unittest.TestCase):
         for file_name in result_files:
             f = open(os.path.join(self.workspace_dir, file_name), 'w')
             f.close()
-        pollination.execute(args)
+
+        execute_kwargs = {
+            'generate_report': bool(pollination.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        pollination.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(args, pollination.MODEL_SPEC, **execute_kwargs)
+
         expected_farm_yields = {
             'blueberry': {
                 'y_tot': 0.44934792607,

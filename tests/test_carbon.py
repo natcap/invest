@@ -11,8 +11,9 @@ from osgeo import osr
 import numpy
 import numpy.random
 import numpy.testing
-
 import pygeoprocessing
+
+from .utils import assert_complete_execute
 
 gdal.UseExceptions()
 
@@ -148,7 +149,13 @@ class CarbonTests(unittest.TestCase):
                                                  'pools.csv')
         make_pools_csv(args['carbon_pools_path'])
 
-        carbon.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(carbon.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        carbon.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, carbon.MODEL_SPEC, **execute_kwargs)
 
         # Ensure every pixel has the correct total C value.
         # Baseline: 15 + 10 + 60 + 1 = 86 Mg/ha

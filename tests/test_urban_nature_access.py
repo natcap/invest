@@ -1,7 +1,6 @@
 # coding=UTF-8
 """Tests for the Urban Nature Access Model."""
 import itertools
-import math
 import os
 import random
 import shutil
@@ -13,10 +12,12 @@ import numpy
 import pandas
 import pygeoprocessing
 import shapely.geometry
-from natcap.invest import utils
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+
+from .utils import assert_complete_execute
+
 
 gdal.UseExceptions()
 _DEFAULT_ORIGIN = (444720, 3751320)
@@ -229,7 +230,13 @@ class UNATests(unittest.TestCase):
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
         args['search_radius'] = 100
 
-        urban_nature_access.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(urban_nature_access.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        urban_nature_access.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, urban_nature_access.MODEL_SPEC, **execute_kwargs)
 
         # Since we're doing a semi-manual alignment step, assert that the
         # aligned LULC and population rasters have the same pixel sizes,
