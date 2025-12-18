@@ -178,8 +178,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         }
         annual_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
-            args['workspace_dir'], args, annual_water_yield.MODEL_SPEC,
-            **execute_kwargs)
+            args, annual_water_yield.MODEL_SPEC, **execute_kwargs)
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
         for raster_path in raster_results:
