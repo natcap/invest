@@ -13,14 +13,12 @@ import numpy
 import pygeoprocessing
 import pygeoprocessing.kernels
 import scipy
-import taskgraph
 from osgeo import gdal
 
-from . import gettext
-from . import spec
-from . import utils
-from . import validation
-from .unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
