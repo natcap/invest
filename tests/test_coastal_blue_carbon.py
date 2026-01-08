@@ -13,8 +13,6 @@ import numpy
 import pandas
 from scipy.sparse import dok_matrix
 import pygeoprocessing
-from natcap.invest import utils
-from natcap.invest import validation
 from osgeo import gdal
 from osgeo import osr
 
