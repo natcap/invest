@@ -1085,15 +1085,15 @@ def _calculate_mean_ndvi_by_lulc_class(lulc_path, ndvi_path, lulc_dict):
 
         # numpy.unique returns unique elements of an array
         # return_inverse returns the indices of unique array
+        # block_counts counts the number of pixels per unique lucode
         # e.g., for lulc array [1, 2, 2, 5]: unique_lucodes = [1, 2, 5]
-        # and inverse_indices = [0, 1, 1, 2]
+        # inverse_indices = [0, 1, 1, 2], and block_counts = [1, 2, 1]
         unique_lucodes, inverse_indices, block_counts = numpy.unique(
             masked_lulc, return_inverse=True, return_counts=True)
 
         # Use bincount to get the NDVI sum for each unique LULC code (in
-        # block) and count the number of pixels for each lucode
-        # e.g., for ndvi_array = [0.2, 0.5, 0.7, 0.1] and same example lulc as
-        # above, block_sums = [0.2, 1.2, 0.1] and block_counts = [1, 2, 1]
+        # block) e.g., for ndvi_array = [0.2, 0.5, 0.7, 0.1] and same example
+        # lulc as above, block_sums = [0.2, 1.2, 0.1]
         block_sums = numpy.bincount(inverse_indices, weights=masked_ndvi)
 
         # accumulate into global sums/counts
