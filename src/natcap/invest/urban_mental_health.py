@@ -220,7 +220,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=int,
             units=None,
             required="scenario=='lulc'",
-            # Allow lulc_alt for masking if using scenario 3
+            # Allow lulc_alt for masking if using NDVI inputs (scenario = ndvi)
             allowed="scenario=='lulc' or lulc_base"
         ),
         spec.CSVInput(
@@ -250,7 +250,9 @@ MODEL_SPEC = spec.ModelSpec(
                     id="ndvi",
                     about=gettext("NDVI value."),
                     units=None,
-                    required="scenario=='lulc' and not ndvi_base"
+                    required=False
+                    # required if "scenario=='lulc' and not ndvi_base"
+                    # This is checked in `validate` function below
                 )
             ],
             # Attr table required if scenario is lulc (used for masking and
@@ -617,6 +619,13 @@ def execute(args):
             f"Search radius {args['search_radius']} yielded pixel_radius "
             "of zero. Please increase search radius.")
 
+    if args['lulc_attr_csv']:
+        lulc_df = MODEL_SPEC.get_input(
+                'lulc_attr_csv').get_validated_dataframe(
+                    args['lulc_attr_csv'])
+    else:
+        lulc_df = None
+
     # Users should input the AOI to which they want outputs clipped
     # InVEST will take care of buffering the processing AOI to ensure
     # correct edge pixel calculation
@@ -673,22 +682,22 @@ def execute(args):
 
         create_lulc_ndvi_csv_task = task_graph.add_task(
             func=build_lulc_ndvi_table,
-            args=(args['lulc_attr_csv'],
+            args=(lulc_df,
                   file_registry['lulc_to_ndvi_csv'],
-                  file_registry['lulc_base_aligned'],  # Note: won't get used if `ndvi` column in `lulc_attr_csv``
+                  file_registry['lulc_base_aligned'],  # Note: won't get used if `ndvi` column in `lulc_attr_csv`
                   file_registry['ndvi_base_aligned']
                   ),
             target_path_list=[file_registry['lulc_to_ndvi_csv']],
             dependent_task_list=[align_task],
             task_name='create csv with lulc-to-ndvi mapping'
         )
-
+        # Reclassify base lulc to ndvi; the output of this task
+        # is used as the base ndvi raster in subsequent tasks
         reclassify_base_lulc_task = task_graph.add_task(
             func=reclassify_lulc_raster,
             args=(file_registry['lulc_base_aligned'],
                   file_registry['lulc_to_ndvi_csv'],
                   file_registry['ndvi_base_aligned_masked']),
-                  # this outputs raster to use as new NDVI to use going forward
             target_path_list=[file_registry['ndvi_base_aligned_masked']],
             dependent_task_list=[create_lulc_ndvi_csv_task],
             task_name="reclassify base lulc to ndvi and mask"
@@ -726,7 +735,7 @@ def execute(args):
                   file_registry['ndvi_base_aligned_masked']),
             kwargs={  # use LULC to mask if provided; else will pass None
                 'input_lulc': file_registry['lulc_base_aligned'],
-                'lulc_attr_table': args['lulc_attr_csv'],
+                'lulc_df': lulc_df,
                 'target_lulc_mask': file_registry['lulc_base_mask']
                 },
             target_path_list=base_mask_outputs,
@@ -741,7 +750,7 @@ def execute(args):
                   file_registry['ndvi_alt_aligned_masked']),
             kwargs={  # use LULC to mask if provided
                 'input_lulc': file_registry[f'lulc_{mask_alt_tag}_aligned'],
-                'lulc_attr_table': args['lulc_attr_csv'],
+                'lulc_df': lulc_df,
                 'target_lulc_mask': file_registry['lulc_alt_mask']
                 },
             target_path_list=alt_mask_outputs,
@@ -773,7 +782,7 @@ def execute(args):
                 file_registry['ndvi_base_aligned_masked'])["datatype"],
             'target_nodata': pygeoprocessing.get_raster_info(
                 file_registry['ndvi_base_aligned_masked'])["nodata"][0]},
-        dependent_task_list=buffer_base_dependencies+[kernel_task],
+        dependent_task_list=buffer_base_dependencies + [kernel_task],
         target_path_list=[file_registry['ndvi_base_buffer_mean']],
         task_name="calculate mean baseline NDVI within buffer")
 
@@ -943,15 +952,15 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
 
 
 def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
-              lulc_attr_table, target_lulc_mask):
+              lulc_df, target_lulc_mask):
     """Mask NDVI using either threshold of NDVI<0 or LULC exclude codes
 
     Args:
         input_ndvi (str): path to NDVI raster
         target_masked_ndvi (str): path to output masked NDVI raster
         input_lulc (str): path to LULC raster or None if not provided by user
-        lulc_attr_table (str): (required if input_lulc) path to lulc attribute
-            table csv or None
+        lulc_df (DataFrame): (required if input_lulc) lulc attribute
+            table dataframe or None
         target_lulc_mask (str): (required if input_lulc) path to output
             binary mask or None
 
@@ -977,10 +986,9 @@ def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
 
     raster_list = [(input_ndvi, 1), (ndvi_nodata, "raw")]
 
-    if lulc_attr_table:
+    if lulc_df is not None:
         # create lulc_mask where any lulc code with corresponding 'exclude'
         # value = 1 get assigned value of 1 and all others are 0
-        lulc_df = pandas.read_csv(lulc_attr_table)
         codes = list(lulc_df['lucode'])
         excludes = list(lulc_df['exclude'])
         value_map = {lu: ex for lu, ex in zip(codes, excludes)}
@@ -989,7 +997,7 @@ def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
             (input_lulc, 1), value_map, target_lulc_mask, gdal.GDT_Byte, 255,
             error_details={'raster_name': input_lulc,
                            'column_name': 'lucode',
-                           'table_name': lulc_attr_table})
+                           'table_name': 'lulc_attr_table'})
 
         mask_op = _mask_with_lulc
         raster_list.append((target_lulc_mask, 1))
@@ -1001,12 +1009,12 @@ def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
         datatype_target=ndvi_dtype, nodata_target=ndvi_nodata)
 
 
-def build_lulc_ndvi_table(lulc_attr_table, target_output_csv,
+def build_lulc_ndvi_table(lulc_df, target_output_csv,
                           base_lulc_path, base_ndvi_path):
     """Write csv table showing ndvi by lulc class with exclude mapped to nodata
 
     Args:
-        lulc_attr_table (str): path to lulc attribute csv
+        lulc_df (DataFrame): lulc attribute table dataframe
         target_output_csv (str): path to output csv to save lulc:ndvi mapping
         base_lulc_path (str): path to baseline LULC raster
         base_ndvi_path (str): path to baseline NDVI raster
@@ -1015,7 +1023,6 @@ def build_lulc_ndvi_table(lulc_attr_table, target_output_csv,
         None
 
     """
-    lulc_df = pandas.read_csv(lulc_attr_table)
     codes = list(lulc_df['lucode'])
     excludes = list(lulc_df['exclude'])
     if 'ndvi' in lulc_df.columns:
@@ -1080,15 +1087,14 @@ def _calculate_mean_ndvi_by_lulc_class(lulc_path, ndvi_path, lulc_dict):
         # return_inverse returns the indices of unique array
         # e.g., for lulc array [1, 2, 2, 5]: unique_lucodes = [1, 2, 5]
         # and inverse_indices = [0, 1, 1, 2]
-        unique_lucodes, inverse_indices = numpy.unique(
-            masked_lulc, return_inverse=True)
+        unique_lucodes, inverse_indices, block_counts = numpy.unique(
+            masked_lulc, return_inverse=True, return_counts=True)
 
         # Use bincount to get the NDVI sum for each unique LULC code (in
         # block) and count the number of pixels for each lucode
         # e.g., for ndvi_array = [0.2, 0.5, 0.7, 0.1] and same example lulc as
         # above, block_sums = [0.2, 1.2, 0.1] and block_counts = [1, 2, 1]
         block_sums = numpy.bincount(inverse_indices, weights=masked_ndvi)
-        block_counts = numpy.bincount(inverse_indices)
 
         # accumulate into global sums/counts
         for lucode, sum, c in zip(unique_lucodes, block_sums, block_counts):
@@ -1135,7 +1141,8 @@ def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
     target_nodata = FLOAT32_NODATA
 
     # Create lucode: ndvi dict
-    lulc_df = pandas.read_csv(mean_ndvi_by_lulc_csv, index_col='lucode')
+    lulc_df = utils.read_csv_to_dataframe(mean_ndvi_by_lulc_csv,
+                                          index_col='lucode')
     mean_ndvi_by_lulc_dict = lulc_df['ndvi'].to_dict()
     if source_nodata is not None:
         mean_ndvi_by_lulc_dict[source_nodata] = target_nodata
@@ -1421,7 +1428,9 @@ def validate(args, limit_to=None):
     # raise error if user enters lulc_attr_csv without 'ndvi' column and also
     # doesn't provide base_ndvi raster
     if args['scenario'] == 'lulc' and args.get('lulc_attr_csv'):
-        lulc_df = pandas.read_csv(args['lulc_attr_csv'])
+        lulc_df = MODEL_SPEC.get_input(
+            'lulc_attr_csv').get_validated_dataframe(
+                args['lulc_attr_csv'])
         if 'ndvi' not in lulc_df.columns and not args['ndvi_base']:
             validation_warnings.append((
                 ['lulc_attr_csv', 'ndvi_base'],

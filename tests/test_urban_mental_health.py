@@ -498,8 +498,10 @@ class UMHTests(unittest.TestCase):
         target_masked_ndvi = os.path.join(self.workspace_dir, "tgt_ndvi.tif")
         target_lulc_mask = os.path.join(self.workspace_dir, "tgt_mask.tif")
 
+        lulc_attr_df = pandas.read_csv(lulc_attr_path)
+
         urban_mental_health.mask_ndvi(ndvi_base, target_masked_ndvi, lulc_base,
-                                      lulc_attr_path, target_lulc_mask)
+                                      lulc_attr_df, target_lulc_mask)
 
         # FLOAT32_NODATA is explicitly set in `make_raster_from_array`
         # and UMH uses native nodata until delta ndvi calculation
