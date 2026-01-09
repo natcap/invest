@@ -18,7 +18,7 @@ from osgeo import ogr
 
 from natcap.invest import gettext
 from natcap.invest import spec
-from natcap.invest import urban_nature_access
+from natcap.invest.urban_nature_access import urban_nature_access
 from natcap.invest import utils
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
