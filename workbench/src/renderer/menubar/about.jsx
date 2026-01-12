@@ -32,7 +32,7 @@ ReactDom.render(
             <span id="version-string" />
           </div>
           <p id="invest-copyright">
-            {t('Copyright 2023, The Natural Capital Project')}
+            {t('Copyright 2023, The Natural Capital Alliance')}
           </p>
         </div>
         <br />
@@ -53,9 +53,9 @@ ReactDom.render(
                 <td>{t('Homepage')}</td>
                 <td>
                   <a
-                    href="https://naturalcapitalproject.stanford.edu/"
+                    href="https://naturalcapitalalliance.stanford.edu/"
                   >
-                    https://naturalcapitalproject.stanford.edu/
+                    https://naturalcapitalalliance.stanford.edu/
                   </a>
                 </td>
               </tr>
@@ -83,7 +83,7 @@ ReactDom.render(
                 <td>{t('InVEST Trademark and Logo Use Policy')}</td>
                 <td>
                   <a
-                    href="https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy"
+                    href="https://naturalcapitalalliance.stanford.edu/invest-trademark-and-logo-use-policy"
                   >
                     Trademark and Logo Policy
                   </a>

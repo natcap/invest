@@ -49,7 +49,7 @@
     "resetModules": true
   },
   "keywords": [],
-  "author": "Natural Capital Project",
+  "author": "Natural Capital Alliance",
   "license": "MIT",
   "dependencies": {
     "@babel/runtime": "^7.13.10",
