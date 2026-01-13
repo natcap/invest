@@ -119,7 +119,7 @@ USERGUIDE_BUILD_DIR := $(BUILD_DIR)/sphinx/userguide
 USERGUIDE_TARGET_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 
-INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest
+INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest --workspace $(AUTOTEST_DIR)
 
 
 .PHONY: fetch install binaries apidocs userguide sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
@@ -169,6 +169,9 @@ validate_userguide_filenames: $(GIT_UG_REPO_PATH)
 
 invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
+
+deploy_autotest_reports:
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(DIST_URL_BASE)/reports/
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)

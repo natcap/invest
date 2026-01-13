@@ -118,6 +118,8 @@ def main(user_args=None):
     parser.add_argument(
         '--workspace',
         default=tempfile.mkdtemp(),
+        const=tempfile.mkdtemp(),  # facilitates the Makefile call
+        nargs='?',
         help=('Where the output workspaces for all model runs should be '
               'stored. Default value is a new temporary directory.'))
     parser.add_argument(
@@ -129,7 +131,8 @@ def main(user_args=None):
     LOGGER.debug(args)
     LOGGER.info('Writing all model workspaces to %s', args.workspace)
     LOGGER.info('Running on %s CPUs', args.max_cpus)
-
+    print(args)
+    parser.exit(1)
     pairs = []
     for name, datastacks in DATASTACKS.items():
         if not name.startswith(args.prefix):
