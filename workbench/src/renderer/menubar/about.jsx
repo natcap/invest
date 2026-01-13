@@ -32,7 +32,7 @@ ReactDom.render(
             <span id="version-string" />
           </div>
           <p id="invest-copyright">
-            {t('Copyright 2023, The Natural Capital Alliance')}
+            {t('Copyright 2026, The Natural Capital Alliance')}
           </p>
         </div>
         <br />

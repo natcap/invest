@@ -70,6 +70,11 @@ General
 * Now testing and building against Python 3.14.
   No longer testing and building with Python 3.9, which reached EOL.
   (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
+* Changes for Natural Capital Alliance launch (formerly Natural Capital Project)
+    * Workbench: Update NatCap name and logo; update Forum URL to point to
+      community.naturalcapitalalliance.org; update NatCap website URL to point to
+      naturalcapitalalliance.stanford.edu
+      (`#2284 <https://github.com/natcap/invest/issues/2284>`_)
 
 Coastal Vulnerability
 =====================
