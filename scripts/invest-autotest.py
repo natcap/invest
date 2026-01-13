@@ -131,8 +131,6 @@ def main(user_args=None):
     LOGGER.debug(args)
     LOGGER.info('Writing all model workspaces to %s', args.workspace)
     LOGGER.info('Running on %s CPUs', args.max_cpus)
-    print(args)
-    parser.exit(1)
     pairs = []
     for name, datastacks in DATASTACKS.items():
         if not name.startswith(args.prefix):
