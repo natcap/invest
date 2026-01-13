@@ -147,6 +147,7 @@ jobs:
       - name: Install wheel and run model tests
         run: |
           pip install $(find dist -name "natcap[._-]invest*.whl")
+          pip install --no-deps invest-reports@git+https://github.com/natcap/invest-reports.git@main
           make test
 
       - name: Upload wheel artifact
@@ -370,7 +371,9 @@ jobs:
             pandoc
 
       - name: Make install
-        run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
+        run: |
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
+          pip install --no-deps invest-reports@git+https://github.com/natcap/invest-reports.git@main
 
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134

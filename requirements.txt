@@ -30,4 +30,7 @@ geometamaker>=0.2.0
 pydantic
 certifi
 docutils
-invest-reports@git+https://github.com/natcap/invest-reports.git@main # pip-only
+matplotlib
+jinja2
+geopandas
+altair
