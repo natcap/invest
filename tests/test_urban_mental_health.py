@@ -190,7 +190,7 @@ class UMHTests(unittest.TestCase):
         NDVI calculation is correct. Also test nodata propagates correctly,
         (i.e., output has nodata pixels anywhere either input is nodata).
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
         args = make_synthetic_data_and_params(self.workspace_dir, 3)
         urban_mental_health.execute(args)
 
@@ -238,7 +238,7 @@ class UMHTests(unittest.TestCase):
 
     def test_option3(self):
         "Test umh option 3 (ndvi)"
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 3)
 
@@ -283,7 +283,7 @@ class UMHTests(unittest.TestCase):
         Check that output preventable cases geotiff is clipped
         correctly given inputs of different projections
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 3)
 
@@ -318,7 +318,7 @@ class UMHTests(unittest.TestCase):
         Test that if AOI is larger than the input NDVI extent by search_radius
         distance, the model raises a warning.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         # make synthetic input data
         args = make_synthetic_data_and_params(self.workspace_dir, 3)
@@ -347,7 +347,7 @@ class UMHTests(unittest.TestCase):
 
     def test_search_radius_smaller_than_resolution(self):
         """Test that search_radius < pixel size/2 of NDVI raises error on option 3"""
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 3)
         args["search_radius"] = 2
@@ -364,7 +364,7 @@ class UMHTests(unittest.TestCase):
         population raster is nodata. That is, valid extent of outputs match
         extent of population raster input.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 3)
 
@@ -425,7 +425,7 @@ class UMHTests(unittest.TestCase):
 
     def test_AOI_larger_than_lulc_base_option3(self):
         """Test warning raised but model runs if LULC raster too small"""
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 3)
 
@@ -455,7 +455,7 @@ class UMHTests(unittest.TestCase):
 
     def test_masking_without_lulc(self):
         """Test NDVI threshold masking (given no lulc input for mask)"""
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         array = numpy.array(([.1, -.3, -6], [.1, .2, .9],
                              [.1, -.2, FLOAT32_NODATA], [.2, .5, .9]))
@@ -479,7 +479,7 @@ class UMHTests(unittest.TestCase):
 
     def test_lulc_masking(self):
         """Test that lulc masks correctly"""
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         array = numpy.array(([.1, .3, .1], [.1, .2, .9],
                              [.1, .2, .4], [.2, .5, .9]))
@@ -520,7 +520,7 @@ class UMHTests(unittest.TestCase):
         for valid pixels. Ensure that nodata propagates correctly
         (output should be nodata where pop or prevalance are nodata)
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         pop_array = numpy.array(([FLOAT32_NODATA, 30, 10], [10, 20, 90],
                                  [100, 20, 40], [20, 5, .9]))
@@ -578,7 +578,7 @@ class UMHTests(unittest.TestCase):
         Test that preventable_cases decreases with negative delta_ndvi and
         increases with positive delta_ndvi (given effect size < 1).
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         ndvi_array = numpy.array(([FLOAT32_NODATA, .3, .1], [.2, 0, 0],
                                   [-.1, .3, .1], [-0.2, .5, 1]))
@@ -626,7 +626,7 @@ class UMHTests(unittest.TestCase):
 
         prev cost = equals preventable_cases * health_cost_rate for valid
         pixels; nodata preserved."""
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         preventable_cases = os.path.join(self.workspace_dir, "prev_cases.tif")
         pc_array = numpy.array(([FLOAT32_NODATA, 40, 0], [1, 100, 10],
@@ -652,7 +652,7 @@ class UMHTests(unittest.TestCase):
           the sum total cases and costs aggregated across all polygons in AOI
 
           """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         aoi_vector = os.path.join(self.workspace_dir, "aoi.shp")
         fields = {"id": ogr.OFTReal}
@@ -737,7 +737,7 @@ class UMHTests(unittest.TestCase):
         Test that `execute` runs without health cost input and produces CSV
         without cost column.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 3)
         urban_mental_health.execute(args)
@@ -754,7 +754,7 @@ class UMHTests(unittest.TestCase):
         Test that LULC rasters are reclassified to NDVI based on attribute
         table values. Then test that delta NDVI is calculated correctly.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
         args = make_synthetic_data_and_params(self.workspace_dir, 2)
 
         urban_mental_health.execute(args)
@@ -794,7 +794,7 @@ class UMHTests(unittest.TestCase):
         Test that UMH falls back to reclassifying LULC based on NDVI raster
         if ``ndvi`` column not provided in attribute table.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
         args = make_synthetic_data_and_params(self.workspace_dir, 2)
         # open LULC attribute table and drop ndvi column
         lulc_attr_table = pandas.read_csv(args['lulc_attr_csv'])
@@ -837,7 +837,7 @@ class UMHTests(unittest.TestCase):
 
         Test that mean NDVI is calculated per LULC class correctly.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         lulc_array = numpy.array(
             [[1, 2, 3], [1, 2, 3], [1, 2, 4], [2, 2, 4]])
