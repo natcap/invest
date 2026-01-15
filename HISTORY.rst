@@ -71,6 +71,7 @@ General
   No longer testing and building with Python 3.9, which reached EOL.
   (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
 * Updated to ``pygeoprocessing`` 2.4.10:
+
   * Fixed an import error caused by ``GDALUseExceptions`` moving from
     ``pygeoprocessing.geoprocessing_core`` into ``pygeoprocessing.utils``.
     (`#2297 <https://github.com/natcap/invest/issues/2297>`_)
