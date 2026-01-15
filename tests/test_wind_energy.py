@@ -66,7 +66,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_calculate_distances_land_grid(self):
         """WindEnergy: testing 'calculate_distances_land_grid' function."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
@@ -110,7 +110,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_calculate_land_to_grid_distance(self):
         """WindEnergy: testing 'point_to_polygon_distance' function."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         # Setup parameters for creating polygon and point shapefiles
         fields = {'vec_id': ogr.OFTInteger}
@@ -170,7 +170,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_wind_data_to_point_vector(self):
         """WindEnergy: testing 'wind_data_to_point_vector' function."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         wind_data = {
             (31.79, 123.76): {
@@ -221,7 +221,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         This test is to test that when Longitude values range from -360 to 0,
             instead of the normal -180 to 180, they are handled properly.
         """
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         # Set up a coordinate with a longitude in the range of -360 to 0.
         wind_data = {
@@ -271,7 +271,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_create_distance_raster(self):
         """WindEnergy: testing '_create_distance_raster' function."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)  # UTM Zone 10N
@@ -317,7 +317,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_calculate_npv_levelized_rasters(self):
         """WindEnergy: testing '_calculate_npv_levelized_rasters' function."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         val_parameters_dict = {
             'air_density': 1.225,
@@ -402,7 +402,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_raster_values_to_point_vector(self):
         """WindEnergy: testing 'index_raster_values_to_point_vector' function."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
@@ -507,7 +507,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
         from natcap.invest.utils import _assert_vectors_equal
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -546,7 +546,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
         from natcap.invest.utils import _assert_vectors_equal
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
@@ -578,7 +578,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_val_no_grid_land_pts(self):
         """WindEnergy: testing Valuation without grid or land points."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
         from natcap.invest.utils import _assert_vectors_equal
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         # Also use an already projected bathymetry
@@ -609,7 +609,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_valuation_taskgraph(self):
         """WindEnergy: testing Valuation with async TaskGraph."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
         from natcap.invest.utils import _assert_vectors_equal
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         # Also use an already projected bathymetry
@@ -641,7 +641,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_field_error_missing_bio_param(self):
         """WindEnergy: test that validation catches missing bio param."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
         # created by hand and has no numerical validity. Helps test the
@@ -682,7 +682,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_time_period_exception(self):
         """WindEnergy: validation message if 'time' and 'wind_sched' differ."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
         # created by hand and has no numerical validity. Helps test the
@@ -738,7 +738,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_clip_vector_value_error(self):
         """WindEnergy: Test AOI doesn't intersect Wind Data points."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
@@ -789,7 +789,7 @@ class WindEnergyValidationTests(unittest.TestCase):
 
     def test_missing_keys(self):
         """Wind Energy Validate: assert missing required keys."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
         from natcap.invest import validation
 
         validation_errors = wind_energy.validate({})  # empty args dict.
@@ -799,7 +799,7 @@ class WindEnergyValidationTests(unittest.TestCase):
 
     def test_missing_keys_with_valuation(self):
         """Wind Energy Validate: assert missing required for valuation."""
-        from natcap.invest import wind_energy
+        from natcap.invest.wind_energy import wind_energy
         from natcap.invest import validation
 
         base_required_valuation = ['aoi_vector_path',

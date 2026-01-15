@@ -92,7 +92,6 @@ here for several reasons:
        across very large areas without modification.
 """
 import logging
-import os
 import shutil
 import time
 
@@ -103,12 +102,10 @@ import scipy.sparse
 import taskgraph
 from osgeo import gdal
 
-from .. import gettext
-from .. import spec
-from .. import utils
-from .. import validation
-from ..unit_registry import u
-from ..file_registry import FileRegistry
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 

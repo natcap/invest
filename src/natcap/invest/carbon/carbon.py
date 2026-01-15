@@ -2,19 +2,17 @@
 """Carbon Storage and Sequestration."""
 import codecs
 import logging
-import os
 import time
 
 from osgeo import gdal
 import numpy
 import pygeoprocessing
-import taskgraph
 
-from . import validation
-from . import utils
-from . import spec
-from .unit_registry import u
-from . import gettext
+from natcap.invest import validation
+from natcap.invest import utils
+from natcap.invest import spec
+from natcap.invest.unit_registry import u
+from natcap.invest import gettext
 
 LOGGER = logging.getLogger(__name__)
 

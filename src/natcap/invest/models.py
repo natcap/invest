@@ -3,6 +3,7 @@ import pkgutil
 
 import natcap.invest
 
+
 def is_invest_compliant_model(module):
     """Check if a python module is an invest model.
 
@@ -27,17 +28,15 @@ pyname_to_module = {}
 # discover core invest models. we could maintain a list of these,
 # but this way it's one less thing to update
 for _, _name, _ispkg in pkgutil.iter_modules(natcap.invest.__path__):
-    if _name in {'__main__', 'cli', 'ui_server', 'datastack'}:
-        continue  # avoid a circular import
-    _module = importlib.import_module(f'natcap.invest.{_name}')
+    # As of 3.18.0 all models are packages. Both the model package
+    # and it's model module are compliant invest models (they both
+    # have the necessary attributes).
     if _ispkg:
+        _module = importlib.import_module(f'natcap.invest.{_name}')
         for _, _sub_name, _ in pkgutil.iter_modules(_module.__path__):
             _submodule = importlib.import_module(f'natcap.invest.{_name}.{_sub_name}')
             if is_invest_compliant_model(_submodule):
                 pyname_to_module[f'natcap.invest.{_name}.{_sub_name}'] = _submodule
-    else:
-        if is_invest_compliant_model(_module):
-            pyname_to_module[f'natcap.invest.{_name}'] = _module
 
 # discover plugins: identify packages whose name starts with invest-
 # and meet the basic API criteria for an invest plugin
