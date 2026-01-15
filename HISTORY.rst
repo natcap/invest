@@ -77,6 +77,13 @@ Coastal Vulnerability
   correcting the units of some intermediate outputs.
   (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
 
+Pollination
+===========
+* Fixed a bug where farm vectors with polygon/multipolygon geometries including
+  Z and/or M coordinates would pass validation but trigger a failure during the
+  model run due to a conflicting geometry check.
+  (`#2262 <https://github.com/natcap/invest/issues/2262>`_)
+
 
 3.17.2 (2025-12-02)
 -------------------
