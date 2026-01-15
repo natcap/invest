@@ -500,7 +500,7 @@ class DatastackArchiveTests(unittest.TestCase):
                 with patch('natcap.invest.datastack.models') as p:
                     p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
                     datastack.build_datastack_archive(
-                        params, 'simple_parameters',archive_path)
+                        params, 'simple_parameters', archive_path)
 
     def test_extract_old_style_datastack(self):
         """Datastack: extract old-style datastack that uses pyname"""

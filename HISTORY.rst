@@ -62,9 +62,37 @@
 
 
 
-
 Unreleased Changes
 ------------------
+
+General
+=======
+* Now testing and building against Python 3.14.
+  No longer testing and building with Python 3.9, which reached EOL.
+  (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
+* Model source code was reorganized so that all models are placed in
+  packages. For example, ``natcap.invest.carbon`` is now a package containing
+  a ``carbon`` module. ``execute, validate, & MODEL_SPEC`` attributes
+  can be found on the package, as well as on the module, to maintain
+  backwards-compatibility.
+  (`#2277 <https://github.com/natcap/invest/issues/2277>`_)
+
+Coastal Vulnerability
+=====================
+* Various updates to model input and output data metadata, including
+  correcting the units of some intermediate outputs.
+  (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
+
+Pollination
+===========
+* Fixed a bug where farm vectors with polygon/multipolygon geometries including
+  Z and/or M coordinates would pass validation but trigger a failure during the
+  model run due to a conflicting geometry check.
+  (`#2262 <https://github.com/natcap/invest/issues/2262>`_)
+
+
+3.17.2 (2025-12-02)
+-------------------
 
 General
 =======
@@ -74,6 +102,13 @@ General
   now has a ``get_field`` method. ``CSVInput`` and ``CSVOutput`` no longer have
   a ``rows`` attribute; ``orientation='row'`` may be used to indicate a row-wise
   table layout. (`#2216 <https://github.com/natcap/invest/issues/2216>`_)
+
+Coastal Vulnerability
+=====================
+* Fixed a bug where the TaskGraph ``target_path_list`` was incomplete for
+  several tasks that created multiple files, resulting in these tasks always
+  evaluating to "not precalculated"
+  (`#2231 <https://github.com/natcap/invest/issues/2231>`_)
 
 
 3.17.1 (2025-11-06)

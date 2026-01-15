@@ -1381,12 +1381,11 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertEqual(validate_result[0][0], ['sensitivity_table_path'])
         self.assertTrue(utils.matches_format_string(
             validate_result[0][1],
-            habitat_quality.MISSING_SENSITIVITY_TABLE_THREATS_MSG))
+            habitat_quality.habitat_quality.MISSING_SENSITIVITY_TABLE_THREATS_MSG))
 
     def test_habitat_quality_validation_invalid_max_dist(self):
         """Habitat Quality: test validation for max_dist <= 0."""
         from natcap.invest import habitat_quality
-        from natcap.invest import utils
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1436,7 +1435,6 @@ class HabitatQualityTests(unittest.TestCase):
     def test_habitat_quality_validation_missing_max_dist(self):
         """Habitat Quality: test validation for missing max_dist."""
         from natcap.invest import habitat_quality
-        from natcap.invest import utils
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1487,7 +1485,6 @@ class HabitatQualityTests(unittest.TestCase):
     def test_habitat_quality_validation_missing_weight(self):
         """Habitat Quality: test validation for missing weight."""
         from natcap.invest import habitat_quality
-        from natcap.invest import utils
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1840,7 +1837,7 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertEqual(
-            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
+            habitat_quality.habitat_quality.MISSING_THREAT_RASTER_MSG.format(
                 threat_list=[('threat_1', 'fut_path')]),
             validate_result[0][1])
 
@@ -1906,7 +1903,8 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertEqual(
-            habitat_quality.DUPLICATE_PATHS_MSG + str(['threat_1_c.tif']),
+            habitat_quality.habitat_quality.DUPLICATE_PATHS_MSG +
+            str(['threat_1_c.tif']),
             validate_result[0][1])
 
     def test_habitat_quality_duplicate_threat_path(self):
@@ -1971,7 +1969,8 @@ class HabitatQualityTests(unittest.TestCase):
 
         actual_message = str(cm.exception)
         # assert that a duplicate error message was raised
-        self.assertIn(habitat_quality.DUPLICATE_PATHS_MSG, actual_message)
+        self.assertIn(habitat_quality.habitat_quality.DUPLICATE_PATHS_MSG,
+                      actual_message)
         # assert that the path for the duplicate was in the error message
         self.assertIn('threat_1_c.tif', actual_message)
 
@@ -2342,7 +2341,8 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_compute_rarity_operation(self):
         """Test `_compute_rarity_operation`"""
-        from natcap.invest.habitat_quality import _compute_rarity_operation
+        from natcap.invest.habitat_quality.habitat_quality import \
+            _compute_rarity_operation
 
         base_lulc_path_band = (os.path.join(self.workspace_dir, "base_lulc.tif"), 1)
         lulc_path_band = (os.path.join(self.workspace_dir, "fut_lulc.tif"), 1)
@@ -2365,7 +2365,8 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_raster_values_in_bounds(self):
         """Test `_raster_values_in_bounds`"""
-        from natcap.invest.habitat_quality import _raster_values_in_bounds
+        from natcap.invest.habitat_quality.habitat_quality import \
+            _raster_values_in_bounds
 
         raster_path_band = (os.path.join(self.workspace_dir, "ras.tif"), 1)
         lower_bound = 1
@@ -2383,7 +2384,8 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_decay_distance(self):
         """Test `_decay_distance`"""
-        from natcap.invest.habitat_quality import _decay_distance
+        from natcap.invest.habitat_quality.habitat_quality import \
+            _decay_distance
 
         dist_raster_path = os.path.join(self.workspace_dir, "dist.tif")
         max_dist = 20

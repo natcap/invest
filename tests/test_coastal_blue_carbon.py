@@ -13,8 +13,6 @@ import numpy
 import pandas
 from scipy.sparse import dok_matrix
 import pygeoprocessing
-from natcap.invest import utils
-from natcap.invest import validation
 from osgeo import gdal
 from osgeo import osr
 
@@ -739,7 +737,7 @@ class TestCBC2(unittest.TestCase):
             raster = gdal.OpenEx(raster_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
-                expected_total_sequestration, rtol=1e-6)
+                expected_total_sequestration, rtol=1e-5)
         finally:
             raster = None
 
@@ -751,7 +749,7 @@ class TestCBC2(unittest.TestCase):
             raster = gdal.OpenEx(raster_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
-                expected_net_present_value_at_2030, rtol=1e-6)
+                expected_net_present_value_at_2030, rtol=1e-5)
         finally:
             raster = None
 

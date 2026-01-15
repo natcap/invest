@@ -37,6 +37,10 @@ LOCALES = sorted(set(os.listdir(LOCALE_DIR) + ['en']))
 LOCALE_NAME_MAP = {
     locale: babel.Locale(locale).display_name for locale in LOCALES
 }
+# track the current locale setting,
+# this can be changed during runtime by the set_locale function
+# the gettext function below uses this to set the translation language
+LOCALE_CODE = 'en'
 
 
 def set_locale(locale_code):
@@ -62,17 +66,24 @@ def set_locale(locale_code):
             f"Locale '{locale_code}' is not supported by InVEST. "
             f"Supported locale codes are: {LOCALES}")
     this_module = sys.modules[__name__]
-    gettext = translation(
+    setattr(this_module, 'LOCALE_CODE', locale_code)
+
+
+def gettext(msg):
+    """natcap.invest.gettext, the translation function used throughout.
+
+    By referencing translation.gettext within this function, it's updated
+    according to the currently active locale.
+
+    Args:
+        msg (string): message string to translate
+    """
+    return translation(
         'messages',
-        languages=[locale_code],
+        languages=[LOCALE_CODE],
         localedir=LOCALE_DIR,
         # fall back to a NullTranslation, which returns the English messages
-        fallback=True).gettext
-    setattr(this_module, 'gettext', gettext)
-
-
-# create natcap.invest.gettext, the default translation function
-set_locale('en')
+        fallback=True).gettext(msg)
 
 
 def local_dir(source_file):

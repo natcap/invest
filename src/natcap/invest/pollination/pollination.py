@@ -8,16 +8,14 @@ import re
 import numpy
 import pygeoprocessing
 import pygeoprocessing.kernels
-import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from . import gettext
-from . import spec
-from . import utils
-from . import validation
-from .file_registry import FileRegistry
-from .unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1169,11 +1167,6 @@ def _parse_scenario_variables(args):
         LOGGER.info('Checking that farm polygon has expected headers')
         farm_vector = gdal.OpenEx(args['farm_vector_path'])
         farm_layer = farm_vector.GetLayer()
-        if farm_layer.GetGeomType() not in [
-                ogr.wkbPolygon, ogr.wkbMultiPolygon]:
-            farm_layer = None
-            farm_vector = None
-            raise ValueError("Farm layer not a polygon type")
         farm_layer_defn = farm_layer.GetLayerDefn()
         farm_headers = [
             farm_layer_defn.GetFieldDefn(i).GetName()

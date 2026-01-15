@@ -2,20 +2,17 @@
 from collections import defaultdict, namedtuple
 import logging
 import os
-import typing
 
 import numpy
 import pygeoprocessing
-import taskgraph
 from osgeo import gdal
 from osgeo import osr
-from pandas import NA
 
-from . import gettext
-from . import spec
-from . import utils
-from . import validation
-from .unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
