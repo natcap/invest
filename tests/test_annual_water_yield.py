@@ -418,7 +418,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_fractp_op(self):
         """Test `fractp_op`"""
-        from natcap.invest.annual_water_yield import fractp_op
+        from natcap.invest.annual_water_yield.annual_water_yield import fractp_op
 
         # generate fake data
         kc = numpy.array([[1, .1, .1], [.6, .6, .1]])
@@ -446,7 +446,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
     def test_compute_watershed_valuation(self):
         """Test `compute_watershed_valuation`, `compute_rsupply_volume`
         and `compute_water_yield_volume`"""
-        from natcap.invest import annual_water_yield
+        from natcap.invest.annual_water_yield import annual_water_yield
 
         def _create_watershed_results_vector(path_to_shp):
             """Generate a fake watershed results vector file."""

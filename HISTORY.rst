@@ -70,6 +70,17 @@ General
 * Now testing and building against Python 3.14.
   No longer testing and building with Python 3.9, which reached EOL.
   (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
+* Model source code was reorganized so that all models are placed in
+  packages. For example, ``natcap.invest.carbon`` is now a package containing
+  a ``carbon`` module. ``execute, validate, & MODEL_SPEC`` attributes
+  can be found on the package, as well as on the module, to maintain
+  backwards-compatibility.
+  (`#2277 <https://github.com/natcap/invest/issues/2277>`_)
+* Changes for Natural Capital Alliance launch (formerly Natural Capital Project)
+    * Workbench: Update NatCap name and logo; update Forum URL to point to
+      community.naturalcapitalalliance.org; update NatCap website URL to point to
+      naturalcapitalalliance.stanford.edu
+      (`#2284 <https://github.com/natcap/invest/issues/2284>`_)
 * Updated to ``pygeoprocessing`` 2.4.10:
 
   * Fixed an import error caused by ``GDALUseExceptions`` moving from

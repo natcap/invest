@@ -558,7 +558,8 @@ class PollinationTests(unittest.TestCase):
 
     def test_parse_scenario_variables(self):
         """Test `_parse_scenario_variables`"""
-        from natcap.invest.pollination import _parse_scenario_variables
+        from natcap.invest.pollination.pollination import \
+            _parse_scenario_variables
 
         def _create_guild_table_csv(output_path):
             data = {"species": ["Bee_A", "Bee_B", "Butterfly_C"]}
@@ -664,7 +665,8 @@ class PollinationTests(unittest.TestCase):
 
     def test_calculate_habitat_nesting_index(self):
         """Test `_calculate_habitat_nesting_index`"""
-        from natcap.invest.pollination import _calculate_habitat_nesting_index
+        from natcap.invest.pollination.pollination import \
+            _calculate_habitat_nesting_index
 
         substrate_path_map = {
             "wood": os.path.join(self.workspace_dir, "wood.tif"),
