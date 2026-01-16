@@ -3,7 +3,6 @@
 An implementation of the model described in 'Degradation in carbon stocks
 near tropical forest edges', by Chaplin-Kramer et. al (2015).
 """
-import copy
 import logging
 import os
 import pickle
@@ -17,15 +16,14 @@ import shapely.errors
 import shapely.geometry
 import shapely.prepared
 import shapely.wkb
-import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from . import gettext
-from . import spec
-from . import utils
-from . import validation
-from .unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 

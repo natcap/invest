@@ -512,7 +512,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_lookup_ratios(self):
         """Stormwater: test lookup_ratios function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         sorted_lucodes = [10, 11, 12, 13]
         lulc_array = numpy.array([
@@ -546,7 +546,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_volume_op(self):
         """Stormwater: test volume_op function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         precip_nodata = -2.5
         ratio_array = numpy.array([
@@ -577,7 +577,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_pollutant_load_op(self):
         """Stormwater: test pollutant_load_op function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         # test with nodata values greater and less than the LULC codes
         # there was a bug that only happened with a larger nodata value
@@ -614,7 +614,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_retention_value_op(self):
         """Stormwater: test retention_value_op function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         retention_volume_array = numpy.array([
             [0, 1.5, stormwater.FLOAT_NODATA],
@@ -630,7 +630,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_is_near(self):
         """Stormwater: test is_near function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
         is_connected_array = numpy.array([
             [0, 0, 1, 0, 0, 0],
             [1, 0, 1, 0, 0, 0],
@@ -659,7 +659,7 @@ class StormwaterTests(unittest.TestCase):
 
         mocked = functools.partial(mock_iterblocks, yoffs=[0], ysizes=[3],
                                    xoffs=[0, 3], xsizes=[3, 3])
-        with mock.patch('natcap.invest.stormwater.pygeoprocessing.iterblocks',
+        with mock.patch('natcap.invest.stormwater.stormwater.pygeoprocessing.iterblocks',
                         mocked):
             stormwater.is_near(connected_path, radius, distance_path, out_path)
             actual = pygeoprocessing.raster_to_numpy_array(out_path)
@@ -667,7 +667,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_raster_average(self):
         """Stormwater: test raster_average function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         array = numpy.empty((150, 150))
         nodata = -1
@@ -725,7 +725,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_validate_noninteger_soil_raster(self):
         """Stormwater: test arg validation."""
-        from natcap.invest import stormwater, validation
+        from natcap.invest import stormwater
 
         soil_array = numpy.array([[1, 2], [3, 4]], dtype=numpy.float32)
         soil_path = os.path.join(self.workspace_dir, 'soils.tif')
@@ -748,7 +748,7 @@ class StormwaterTests(unittest.TestCase):
         self.assertIn(('soil_group_path',), messages)
         self.assertEqual(
             messages[('soil_group_path',)],
-            stormwater.NONINTEGER_SOILS_RASTER_MESSAGE)
+            stormwater.stormwater.NONINTEGER_SOILS_RASTER_MESSAGE)
 
     def test_lulc_signed_byte(self):
         """Stormwater: regression test for handling signed byte LULC input."""

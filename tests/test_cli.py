@@ -18,6 +18,7 @@ except ImportError:
 from osgeo import gdal
 gdal.UseExceptions()
 
+
 @contextlib.contextmanager
 def redirect_stdout():
     """Redirect stdout to a stream, which is then yielded."""
@@ -429,7 +430,7 @@ class CLIUnitTests(unittest.TestCase):
         filename = 'foo.py'
         target_filepath = os.path.join(self.workspace_dir, filename)
         target_model = 'carbon'
-        expected_data = 'natcap.invest.carbon.execute(args)'
+        expected_data = 'natcap.invest.carbon.carbon.execute(args)'
         cli.export_to_python(target_filepath, target_model)
 
         self.assertTrue(os.path.exists(target_filepath))

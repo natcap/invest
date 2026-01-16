@@ -10,17 +10,15 @@ import numpy
 import pygeoprocessing
 import rtree
 import shapely.geometry
-import taskgraph
 from natcap.invest.scenic_quality.viewshed import viewshed
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 
-from .. import gettext
-from .. import spec
-from .. import utils
-from .. import validation
-from ..unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.

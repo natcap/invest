@@ -487,45 +487,6 @@ class PollinationTests(unittest.TestCase):
             "Expected a biophysical, guild, and farm entry for 'fall'",
             str(cm.exception))
 
-    def test_pollination_bad_farm_type(self):
-        """Pollination: ensure detection of bad farm geometry type."""
-        from natcap.invest import pollination
-
-        # make some fake farm points
-        point_geom = [shapely.geometry.Point(20, - 20)]
-
-        farm_shape_path = os.path.join(self.workspace_dir, 'point_farm.shp')
-        # Create the point shapefile
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3157)
-        projection_wkt = srs.ExportToWkt()
-
-        fields = {
-            'crop_type': ogr.OFTString,
-            'half_sat': ogr.OFTReal,
-            'p_managed': ogr.OFTReal}
-        attrs = [
-            {'crop_type': 'test', 'half_sat': 0.5, 'p_managed': 0.5}]
-
-        pygeoprocessing.shapely_geometry_to_vector(
-            point_geom, farm_shape_path, projection_wkt, 'ESRI Shapefile',
-            fields=fields, attribute_list=attrs, ogr_geom_type=ogr.wkbPoint)
-
-        args = {
-            'results_suffix': '',
-            'workspace_dir': self.workspace_dir,
-            'landcover_raster_path': os.path.join(
-                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
-            'guild_table_path': os.path.join(
-                REGRESSION_DATA, 'input', 'guild_table.csv'),
-            'landcover_biophysical_table_path': os.path.join(
-                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv'),
-            'farm_vector_path': farm_shape_path,
-        }
-        with self.assertRaises(ValueError) as cm:
-            pollination.execute(args)
-        self.assertIn("Farm layer not a polygon type", str(cm.exception))
-
     def test_pollination_unequal_raster_pixel_size(self):
         """Pollination: regression testing sample data."""
         from natcap.invest import pollination
@@ -606,7 +567,8 @@ class PollinationTests(unittest.TestCase):
 
     def test_parse_scenario_variables(self):
         """Test `_parse_scenario_variables`"""
-        from natcap.invest.pollination import _parse_scenario_variables
+        from natcap.invest.pollination.pollination import \
+            _parse_scenario_variables
 
         def _create_guild_table_csv(output_path):
             data = {"species": ["Bee_A", "Bee_B", "Butterfly_C"]}
@@ -712,7 +674,8 @@ class PollinationTests(unittest.TestCase):
 
     def test_calculate_habitat_nesting_index(self):
         """Test `_calculate_habitat_nesting_index`"""
-        from natcap.invest.pollination import _calculate_habitat_nesting_index
+        from natcap.invest.pollination.pollination import \
+            _calculate_habitat_nesting_index
 
         substrate_path_map = {
             "wood": os.path.join(self.workspace_dir, "wood.tif"),

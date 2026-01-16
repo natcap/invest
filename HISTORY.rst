@@ -70,12 +70,25 @@ General
 * Now testing and building against Python 3.14.
   No longer testing and building with Python 3.9, which reached EOL.
   (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
+* Model source code was reorganized so that all models are placed in
+  packages. For example, ``natcap.invest.carbon`` is now a package containing
+  a ``carbon`` module. ``execute, validate, & MODEL_SPEC`` attributes
+  can be found on the package, as well as on the module, to maintain
+  backwards-compatibility.
+  (`#2277 <https://github.com/natcap/invest/issues/2277>`_)
 
 Coastal Vulnerability
 =====================
 * Various updates to model input and output data metadata, including
   correcting the units of some intermediate outputs.
   (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
+
+Pollination
+===========
+* Fixed a bug where farm vectors with polygon/multipolygon geometries including
+  Z and/or M coordinates would pass validation but trigger a failure during the
+  model run due to a conflicting geometry check.
+  (`#2262 <https://github.com/natcap/invest/issues/2262>`_)
 
 
 3.17.2 (2025-12-02)

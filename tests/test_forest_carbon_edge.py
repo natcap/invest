@@ -312,7 +312,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
     def test_combine_carbon_maps(self):
         """Test `combine_carbon_maps`"""
-        from natcap.invest.forest_carbon_edge_effect import combine_carbon_maps
+        from natcap.invest.forest_carbon_edge_effect import \
+            forest_carbon_edge_effect
 
         # note that NODATA_VALUE = -1
         carbon_arr1 = numpy.array([[7, 2, -1], [0, -2, -1]])
@@ -320,14 +321,15 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         expected_output = numpy.array([[7, 902, -1], [1, 18, 0]])
 
-        actual_output = combine_carbon_maps(carbon_arr1, carbon_arr2)
+        actual_output = forest_carbon_edge_effect.combine_carbon_maps(
+            carbon_arr1, carbon_arr2)
 
         numpy.testing.assert_allclose(actual_output, expected_output)
 
     def test_aggregate_carbon_map(self):
         """Test `_aggregate_carbon_map`"""
         from natcap.invest.forest_carbon_edge_effect import \
-            _aggregate_carbon_map
+            forest_carbon_edge_effect
 
         aoi_vector_path = os.path.join(self.workspace_dir, "aoi.shp")
         carbon_map_path = os.path.join(self.workspace_dir, "carbon.tif")
@@ -339,8 +341,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         carbon_array = numpy.array(([1, 2, 3], [4, 5, 6]))
         make_simple_raster(carbon_map_path, carbon_array)
 
-        _aggregate_carbon_map(aoi_vector_path, carbon_map_path,
-                              target_vector_path)
+        forest_carbon_edge_effect._aggregate_carbon_map(
+            aoi_vector_path, carbon_map_path, target_vector_path)
 
         # Validate fields in the agg carbon results vector
         with gdal.OpenEx(target_vector_path,
@@ -356,7 +358,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
     def test_calculate_lulc_carbon_map(self):
         """Test `_calculate_lulc_carbon_map`"""
         from natcap.invest.forest_carbon_edge_effect import \
-            _calculate_lulc_carbon_map
+            forest_carbon_edge_effect
 
         # Make synthetic data
         lulc_raster_path = os.path.join(self.workspace_dir, "lulc.tif")
@@ -373,7 +375,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         compute_forest_edge_effects = True
         carbon_map_path = os.path.join(self.workspace_dir, "output_carbon.tif")
 
-        _calculate_lulc_carbon_map(
+        forest_carbon_edge_effect._calculate_lulc_carbon_map(
             lulc_raster_path, df, carbon_pool_type,
             ignore_tropical_type, compute_forest_edge_effects,
             carbon_map_path)
@@ -386,7 +388,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
     def test_map_distance_from_tropical_forest_edge(self):
         """Test `_map_distance_from_tropical_forest_edge`"""
         from natcap.invest.forest_carbon_edge_effect import \
-            _map_distance_from_tropical_forest_edge
+            forest_carbon_edge_effect
 
         # Make synthetic data
         base_lulc_raster_path = os.path.join(self.workspace_dir, "lulc.tif")
@@ -410,7 +412,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         target_mask_path = os.path.join(self.workspace_dir,
                                         "non_forest_mask.tif")
 
-        _map_distance_from_tropical_forest_edge(
+        forest_carbon_edge_effect._map_distance_from_tropical_forest_edge(
             base_lulc_raster_path, df,
             target_edge_distance_path, target_mask_path)
 
@@ -440,7 +442,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
     def test_calculate_tropical_forest_edge_carbon_map(self):
         """Test `_calculate_tropical_forest_edge_carbon_map`"""
         from natcap.invest.forest_carbon_edge_effect import \
-            _calculate_tropical_forest_edge_carbon_map
+            forest_carbon_edge_effect
         from scipy.spatial import cKDTree
 
         edge_dist_array = numpy.array([
@@ -514,7 +516,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         tropical_forest_edge_carbon_map_path = os.path.join(self.workspace_dir,
                                                             "output.tif")
 
-        _calculate_tropical_forest_edge_carbon_map(
+        forest_carbon_edge_effect._calculate_tropical_forest_edge_carbon_map(
             edge_distance_path, spatial_index_pickle_path,
             n_nearest_model_points, biomass_to_carbon_conversion_factor,
             tropical_forest_edge_carbon_map_path)
@@ -533,12 +535,13 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
     def test_invalid_geometries(self):
         """Forest Carbon: Check handling of invalid vector geometries."""
-        from natcap.invest import forest_carbon_edge_effect
+        from natcap.invest.forest_carbon_edge_effect import \
+            forest_carbon_edge_effect
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)
         projection_wkt = srs.ExportToWkt()
 
-        lulc_matrix = numpy.ones((5,5), dtype=numpy.int8)
+        lulc_matrix = numpy.ones((5, 5), dtype=numpy.int8)
         lulc_raster_path = os.path.join(self.workspace_dir, 'lulc.tif')
         pygeoprocessing.numpy_array_to_raster(
             lulc_matrix, 255, (1, -1), (461262, 4923269), projection_wkt,
@@ -602,12 +605,13 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
     def test_vector_clipping_buffer(self):
         """Forest Carbon: Check DISTANCE_UPPER_BOUND buffer."""
-        from natcap.invest import forest_carbon_edge_effect
+        from natcap.invest.forest_carbon_edge_effect import \
+            forest_carbon_edge_effect
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)
         projection_wkt = srs.ExportToWkt()
 
-        lulc_matrix = numpy.ones((5,5), dtype=numpy.int8)
+        lulc_matrix = numpy.ones((5, 5), dtype=numpy.int8)
         lulc_raster_path = os.path.join(self.workspace_dir, 'lulc.tif')
         pygeoprocessing.numpy_array_to_raster(
             lulc_matrix, 255, (1000, -1000), (461261, 4923270), projection_wkt,
