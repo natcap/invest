@@ -8,7 +8,6 @@ import Pyro5
 import Pyro5.api
 
 from natcap.invest.recreation import recmodel_client
-from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 

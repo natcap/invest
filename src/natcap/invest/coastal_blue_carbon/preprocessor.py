@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
 import logging
-import os
 import time
 
 import pygeoprocessing
-import taskgraph
 from osgeo import gdal
 
-from .. import gettext
-from .. import spec
-from .. import utils
-from .. import validation
-from ..unit_registry import u
-from . import coastal_blue_carbon
-from ..file_registry import FileRegistry
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
+from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 
