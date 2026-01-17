@@ -81,6 +81,14 @@ General
       community.naturalcapitalalliance.org; update NatCap website URL to point to
       naturalcapitalalliance.stanford.edu
       (`#2284 <https://github.com/natcap/invest/issues/2284>`_)
+* Updated to ``pygeoprocessing`` 2.4.10:
+
+  * Fixed an import error caused by ``GDALUseExceptions`` moving from
+    ``pygeoprocessing.geoprocessing_core`` into ``pygeoprocessing.utils``.
+    (`#2297 <https://github.com/natcap/invest/issues/2297>`_)
+  * ``pygeoprocessing.zonal_statistics`` now supports 3D and Measured Polygon
+    and MultiPolygon geometries.
+    (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
 
 Coastal Vulnerability
 =====================
