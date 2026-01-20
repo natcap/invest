@@ -57,6 +57,8 @@ RESAMPLE_ALGS = {
 
 
 class RasterDatatype(str, Enum):
+    """The type of measurement represented by the raster."""
+
     binary = 'binary'
     """
     Use `binary` where `1` pixels are likely to be adjacent to white
@@ -81,6 +83,7 @@ class RasterTransform(str, Enum):
 
     Original values are plotted, but the colorbar will be use this scale.
     """
+
     linear = 'linear'
     log = 'log'
 
@@ -88,6 +91,7 @@ class RasterTransform(str, Enum):
 @dataclass
 class RasterPlotConfig:
     """A definition for how to plot a raster."""
+
     raster_path: str
     """Filepath to a raster to plot."""
     datatype: RasterDatatype
@@ -128,8 +132,9 @@ def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
               not specified).
 
     Returns:
-        A list of ``RasterPlotConfig``s suitable for passing to
-            ``natcap.invest.reports.raster_utils.plot_and_base64_encode_rasters``.
+        A list of ``RasterPlotConfig`` suitable for passing to
+            ``natcap.invest.reports.raster_utils.plot_and_base64_encode_rasters``
+
     """
     raster_plot_configs = []
     for (raster_id, *other_args) in raster_plot_tuples:
