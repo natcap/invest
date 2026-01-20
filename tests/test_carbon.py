@@ -316,7 +316,7 @@ class CarbonTests(unittest.TestCase):
 
     def test_generate_carbon_map(self):
         """Test `_generate_carbon_map`"""
-        from natcap.invest.carbon import _generate_carbon_map
+        from natcap.invest.carbon.carbon import _generate_carbon_map
 
         def _make_simple_lulc_raster(base_raster_path):
             """Create a raster on designated path with arbitrary values.
@@ -366,7 +366,7 @@ class CarbonTests(unittest.TestCase):
 
     def test_calculate_valuation_constant(self):
         """Test `_calculate_valuation_constant`"""
-        from natcap.invest.carbon import _calculate_valuation_constant
+        from natcap.invest.carbon.carbon import _calculate_valuation_constant
 
         valuation_constant = _calculate_valuation_constant(lulc_bas_year=2010,
                                                            lulc_alt_year=2012,

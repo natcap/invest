@@ -70,12 +70,40 @@ General
 * Now testing and building against Python 3.14.
   No longer testing and building with Python 3.9, which reached EOL.
   (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
+* Model source code was reorganized so that all models are placed in
+  packages. For example, ``natcap.invest.carbon`` is now a package containing
+  a ``carbon`` module. ``execute, validate, & MODEL_SPEC`` attributes
+  can be found on the package, as well as on the module, to maintain
+  backwards-compatibility.
+  (`#2277 <https://github.com/natcap/invest/issues/2277>`_)
+* Changes for Natural Capital Alliance launch (formerly Natural Capital Project)
+    * Workbench: Update NatCap name and logo; update Forum URL to point to
+      community.naturalcapitalalliance.org; update NatCap website URL to point to
+      naturalcapitalalliance.stanford.edu
+      (`#2284 <https://github.com/natcap/invest/issues/2284>`_)
+* Updated to ``pygeoprocessing`` 2.4.10:
+
+  * Fixed an import error caused by ``GDALUseExceptions`` moving from
+    ``pygeoprocessing.geoprocessing_core`` into ``pygeoprocessing.utils``.
+    (`#2297 <https://github.com/natcap/invest/issues/2297>`_)
+  * ``pygeoprocessing.zonal_statistics`` now supports 3D and Measured Polygon
+    and MultiPolygon geometries.
+    (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
+* Docker container builds now use debian 13 "Trixie", which includes Python
+  3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
 
 Coastal Vulnerability
 =====================
 * Various updates to model input and output data metadata, including
   correcting the units of some intermediate outputs.
   (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
+
+Pollination
+===========
+* Fixed a bug where farm vectors with polygon/multipolygon geometries including
+  Z and/or M coordinates would pass validation but trigger a failure during the
+  model run due to a conflicting geometry check.
+  (`#2262 <https://github.com/natcap/invest/issues/2262>`_)
 
 
 3.17.2 (2025-12-02)

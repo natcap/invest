@@ -3,8 +3,6 @@ import logging
 import math
 import os
 import re
-import shutil
-import tempfile
 
 import numpy
 import numpy.testing
@@ -13,16 +11,14 @@ import pygeoprocessing.kernels
 import pygeoprocessing.symbolic
 import shapely.ops
 import shapely.wkb
-import taskgraph
 from osgeo import gdal
 from osgeo import ogr
-from osgeo import osr
 
-from . import gettext
-from . import spec
-from . import utils
-from . import validation
-from .spec import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)

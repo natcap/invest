@@ -232,7 +232,7 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(mock_post.call_args.args[0], mock_url)
         self.assertEqual(
             mock_post.call_args.kwargs['data']['model_name'],
-            'natcap.invest.carbon')
+            'natcap.invest.carbon.carbon')
         self.assertEqual(
             mock_post.call_args.kwargs['data']['invest_interface'],
             payload['invest_interface'])

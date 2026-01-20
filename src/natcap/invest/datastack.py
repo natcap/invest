@@ -559,7 +559,8 @@ def extract_parameter_set(paramset_path):
         model_id = read_params['model_id']
     else:
         # Old style datastacks use the pyname (core models only, no plugins)
-        model_id = models.pyname_to_model_id[read_params['model_name']]
+        _module = importlib.import_module(read_params['model_name'])
+        model_id = _module.MODEL_SPEC.model_id
     return ParameterSet(
         args=_recurse(read_params['args']),
         model_id=model_id)
@@ -601,10 +602,9 @@ def extract_parameters_from_logfile(logfile_path):
                 # (old style, using model pyname)
                 if line.startswith('Arguments for InVEST'):
                     identifier = line.split(' ')[3]
-                    if identifier in models.pyname_to_model_id:
-                        # Old style logfiles use the pyname
-                        # These will be for core models only, not plugins
-                        model_id = models.pyname_to_model_id[identifier]
+                    if identifier.startswith('natcap.invest'):
+                        _module = importlib.import_module(identifier)
+                        model_id = _module.MODEL_SPEC.model_id
                     else:
                         # New style logfiles use the model id
                         model_id = identifier

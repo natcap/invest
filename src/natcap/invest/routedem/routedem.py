@@ -1,17 +1,13 @@
 """RouteDEM for exposing the natcap.invest's routing package to UI."""
 import logging
-import os
 
 import pygeoprocessing
 import pygeoprocessing.routing
-import taskgraph
 
-from . import gettext
-from . import spec
-from . import utils
-from . import validation
-from .file_registry import FileRegistry
-from .unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 

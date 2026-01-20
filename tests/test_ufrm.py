@@ -236,7 +236,8 @@ class UFRMTests(unittest.TestCase):
         leading to a ``KeyError``.  See
         https://github.com/natcap/invest/issues/590.
         """
-        from natcap.invest import urban_flood_risk_mitigation
+        from natcap.invest.urban_flood_risk_mitigation import \
+            urban_flood_risk_mitigation
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
@@ -308,7 +309,8 @@ class UFRMTests(unittest.TestCase):
     
     def test_ufrm_smax(self):
         """UFRM: test _s_max operation."""
-        from natcap.invest import urban_flood_risk_mitigation
+        from natcap.invest.urban_flood_risk_mitigation import \
+            urban_flood_risk_mitigation
         
         cn_nodata = -1
         result_nodata = -9999

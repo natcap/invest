@@ -49,8 +49,8 @@
     "resetModules": true
   },
   "keywords": [],
-  "author": "Natural Capital Project",
-  "license": "MIT",
+  "author": "Natural Capital Alliance",
+  "license": "Apache-2.0",
   "dependencies": {
     "@babel/runtime": "^7.13.10",
     "electron-log": "^4.3.5",

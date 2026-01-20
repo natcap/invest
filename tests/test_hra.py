@@ -37,7 +37,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_calc_criteria(self):
         """HRA: test criteria calculations are correct."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         habitat_mask = numpy.array([
             [0, 1, 1]], dtype=numpy.uint8)
@@ -83,7 +83,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_calc_criteria_skip_all_criteria(self):
         """HRA: handle user skipping all criteria."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         habitat_mask = numpy.array([
             [0, 1, 1]], dtype=numpy.uint8)
@@ -121,7 +121,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_decayed_distance_linear(self):
         """HRA: linear decay over a distance."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         stressor_mask = numpy.array([
             [1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
@@ -144,7 +144,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_decayed_distance_exponential(self):
         """HRA: exponential decay over a distance."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         stressor_mask = numpy.array([
             [1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
@@ -171,7 +171,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_decayed_distance_no_decay(self):
         """HRA: weight with no decay out to a distance."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         stressor_mask = numpy.array([
             [1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
@@ -197,7 +197,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_info_table_parsing(self):
         """HRA: check info table parsing w/ case sensitivity."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         corals_path = 'habitat/corals.shp'
         oil_path = 'stressors/oil.shp'
@@ -247,7 +247,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_info_table_overlapping_habs_stressors(self):
         """HRA: error when info table has overlapping habitats, stressors."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         corals_habitat_path = 'habitat/corals.shp'
         oil_path = 'stressors/oil.shp'
@@ -287,7 +287,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_criteria_table_parsing(self):
         """HRA: check parsing of the criteria table w/ case sensitivity."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         eelgrass_relpath = 'foo/eelgrass_connectivity.shp'
 
@@ -354,7 +354,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_criteria_table_parsing_with_bom(self):
         """HRA: criteria table - parse a BOM."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w', encoding='utf-8-sig') as criteria_table:
@@ -389,7 +389,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_criteria_table_file_not_found(self):
         """HRA: criteria table - spatial file not found."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
@@ -421,7 +421,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_criteria_table_missing_section_headers(self):
         """HRA: verify exception when a required section is not found."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
@@ -455,7 +455,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_criteria_table_remote_filepath(self):
         """HRA: correctly parse a remote path in criteria table."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
@@ -490,7 +490,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_maximum_reclassified_score(self):
         """HRA: check maximum reclassed score given a stack of scores."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         nodata = hra._TARGET_NODATA_BYTE
 
@@ -513,7 +513,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_simplify(self):
         """HRA: check geometry simplification routine."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         geoms = [
             shapely.geometry.Point(
@@ -542,7 +542,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_polygonize(self):
         """HRA: test polygonization."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
         source_array = numpy.array([
@@ -588,7 +588,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_polygonize_mask(self):
         """HRA: test the polygonization mask."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
         nodata = 255
@@ -612,7 +612,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_align(self):
         """HRA: test alignment function."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         habitat_raster_path = os.path.join(
             self.workspace_dir, 'habitat_raster.tif')
@@ -737,7 +737,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_prep_criterion_raster(self):
         """HRA: Test processing of user inputs for consistency."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         # Test what happens when the raster has a defined nodata value.
         nodata = 255
@@ -776,7 +776,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_mask_binary_values(self):
         """HRA: test masking of presence/absence."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         mask_array_1 = numpy.array([
             [0, 1, 255]], dtype=numpy.uint8)
@@ -807,7 +807,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_pairwise_risk(self):
         """HRA: check pairwise risk calculations."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         byte_nodata = hra._TARGET_NODATA_BYTE
         habitat_mask_path = os.path.join(
@@ -867,7 +867,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_sum_rasters(self):
         """HRA: check summing of rasters."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         nodata = -1
         risk_array_1 = numpy.array([
@@ -909,7 +909,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_datastack_criteria_table_override(self):
         """HRA: verify we store all data referenced in the criteria table."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
 
         criteria_table_path = os.path.join(
             self.workspace_dir, 'criteria_table.csv')
@@ -987,7 +987,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_none_decay_distance(self):
         """HRA: Test 0 buffer distance."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
         nodata = -1
         shape = (20, 20)
         stressor_array = numpy.ones(shape, dtype=numpy.uint8)
@@ -1004,7 +1004,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_exception_invalid_decay(self):
         """HRA: Test invalid decay type."""
-        from natcap.invest import hra
+        from natcap.invest.hra import hra
         nodata = -1
         shape = (20, 20)
         stressor_array = numpy.ones(shape, dtype=numpy.uint8)
@@ -1021,7 +1021,8 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_summary_stats(self):
         """HRA: test summary stats table."""
-        from natcap.invest import hra, file_registry
+        from natcap.invest.hra import hra
+        from natcap.invest import file_registry
         e_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.float32)
         c_array = numpy.array([[0.5, 1.5, 2.5, 3.5]], dtype=numpy.float32)
         risk_array = numpy.array([[0, 1.1, 2.2, 3.3]], dtype=numpy.float32)

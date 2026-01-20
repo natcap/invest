@@ -13,16 +13,15 @@ import os
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
-import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from .. import gettext
-from .. import spec
-from .. import urban_nature_access
-from .. import utils
-from .. import validation
-from ..unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest.urban_nature_access import urban_nature_access
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)

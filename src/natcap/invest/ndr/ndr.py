@@ -6,18 +6,15 @@ import pickle
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
-import taskgraph
 from osgeo import gdal
 from osgeo import gdal_array
 from osgeo import ogr
 
-from .. import gettext
-from .. import spec
-from .. import utils
-from .. import validation
-from ..sdr import sdr
-from ..file_registry import FileRegistry
-from ..unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import validation
+from natcap.invest.sdr import sdr
+from natcap.invest.unit_registry import u
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
