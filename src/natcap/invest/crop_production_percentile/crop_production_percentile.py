@@ -6,18 +6,16 @@ import re
 
 import numpy
 import pygeoprocessing
-import taskgraph
 from osgeo import gdal
 from osgeo import osr
 
-from . import gettext
-from . import spec
-from . import utils
-from . import validation
-from .crop_production_regression import (
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.crop_production_regression.crop_production_regression import (
     NUTRIENTS, NUTRIENT_UNITS, CROP_TO_PATH_TABLES, LULC_RASTER_INPUT)
-from .file_registry import FileRegistry
-from .unit_registry import u
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
