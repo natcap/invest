@@ -11,6 +11,8 @@ import numpy
 import pygeoprocessing
 from osgeo import osr
 
+from natcap.invest import spec
+from natcap.invest.unit_registry import u
 from natcap.invest.reports import raster_utils
 from natcap.invest.reports import MATPLOTLIB_PARAMS
 
@@ -303,3 +305,45 @@ class RasterPlotFacets(unittest.TestCase):
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
+
+
+class RasterCaptions(unittest.TestCase):
+
+    def test_generate_caption_from_raster_list(self):
+        raster_list = [('raster_1', 'input'), ('raster_2', 'output')]
+        args_dict = {'raster_1': 'path/to/raster_1.tif'}
+        file_registry = {'raster_2': 'path/to/raster_2.tif'}
+        model_spec = spec.ModelSpec(
+            model_id='',
+            model_title='',
+            userguide='',
+            module_name='',
+            input_field_order=[['raster_1']],
+            inputs=[
+                spec.SingleBandRasterInput(
+                    id='raster_1',
+                    units=u.none,
+                    about='Map of land use/land cover codes.',
+                ),
+            ],
+            outputs=[
+                spec.SingleBandRasterOutput(
+                    id='raster_2',
+                    path='path/to/raster_2.tif',
+                    units=u.metric_ton / u.hectare,
+                    about=('The total amount of sediment exported from each '
+                           'pixel that reaches the stream.'),
+                )
+            ],
+        )
+
+        expected_caption = [
+            'raster_1.tif:Map of land use/land cover codes.',
+            ('raster_2.tif:The total amount of sediment exported from each '
+             'pixel that reaches the stream.')
+        ]
+
+        generated_caption = raster_utils.generate_caption_from_raster_list(
+            raster_list, args_dict, file_registry, model_spec)
+
+        self.assertEqual(generated_caption, expected_caption)

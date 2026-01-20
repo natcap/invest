@@ -9,12 +9,18 @@ import lxml.html
 import shapely
 
 from natcap.invest.reports import sdr_ndr_utils
-from natcap.invest import spec
-from natcap.invest.unit_registry import u
 
 
 MAIN_TABLE_COLS = ['ws_id', 'ws_name',
                    'calculated_value_1', 'calculated_value_2']
+
+
+def setUpModule():
+    geopandas.options.io_engine = 'fiona'
+
+
+def tearDownModule():
+    geopandas.options.io_engine = None
 
 
 def _generate_mock_watershed_data(num_features):
@@ -225,42 +231,3 @@ class SDRNDRUtilsTests(unittest.TestCase):
         for (i, val) in enumerate(totals, start=1):
             totals_cell = totals_row.xpath(f'./td[{i}]')
             self.assertEqual(str(val), totals_cell[0].text)
-
-    def test_generate_caption_from_raster_list(self):
-        raster_list = [('raster_1', 'input'), ('raster_2', 'output')]
-        args_dict = {'raster_1': 'path/to/raster_1.tif'}
-        file_registry = {'raster_2': 'path/to/raster_2.tif'}
-        model_spec = spec.ModelSpec(
-            model_id='',
-            model_title='',
-            userguide='',
-            module_name='',
-            input_field_order=[['raster_1']],
-            inputs=[
-                spec.SingleBandRasterInput(
-                    id='raster_1',
-                    units=u.none,
-                    about='Map of land use/land cover codes.',
-                ),
-            ],
-            outputs=[
-                spec.SingleBandRasterOutput(
-                    id='raster_2',
-                    path='path/to/raster_2.tif',
-                    units=u.metric_ton / u.hectare,
-                    about=('The total amount of sediment exported from each '
-                           'pixel that reaches the stream.'),
-                )
-            ],
-        )
-
-        expected_caption = [
-            'raster_1.tif:Map of land use/land cover codes.',
-            ('raster_2.tif:The total amount of sediment exported from each '
-             'pixel that reaches the stream.')
-        ]
-
-        generated_caption = sdr_ndr_utils.generate_caption_from_raster_list(
-            raster_list, args_dict, file_registry, model_spec)
-
-        self.assertEqual(generated_caption, expected_caption)
