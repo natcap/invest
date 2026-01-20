@@ -21,7 +21,7 @@ import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
-from pygeoprocessing.geoprocessing_core import GDALUseExceptions
+from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
     field_validator, model_validator
 import taskgraph
