@@ -89,6 +89,8 @@ General
   * ``pygeoprocessing.zonal_statistics`` now supports 3D and Measured Polygon
     and MultiPolygon geometries.
     (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
+* Docker container builds now use debian 13 "Trixie", which includes Python
+  3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
 
 Coastal Vulnerability
 =====================
