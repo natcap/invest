@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+  {{ super() }}
+  {% include 'datatable-styles.html' %}
+{% endblock styles %}
+
+{% block content %}
+
+  {{ super() }}
+
+  {% from 'args-table.html' import args_table with context %}
+  {% from 'caption.html' import caption %}
+  {% from 'content-grid.html' import content_grid %}
+  {% from 'metadata.html' import list_metadata %}
+  {% from 'raster-plot-img.html' import raster_plot_img %}
+  {% from 'wide-table.html' import wide_table %}
+
+  <h2 class="section-header">Results</h2>
+
+  {% if ws_vector_totals_table is defined and ws_vector_totals_table != None %}
+    {% set watershed_results = content_grid([
+      (wide_table(
+        ws_vector_table | safe,
+        font_size_px=15
+      ), 100),
+      (wide_table(
+        ws_vector_totals_table | safe,
+        font_size_px=15
+      ), 100),
+    ]) %}
+  {% else %}
+    {% set watershed_results = wide_table(
+      ws_vector_table | safe,
+      font_size_px=15
+    ) %}
+  {% endif %}
+
+  {{ accordion_section(
+    'Results by Watershed',
+    watershed_results
+  )}}
+
+  {{ accordion_section(
+    'Primary Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (caption(outputs_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    intermediate_outputs_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading), 100),
+      (caption(intermediate_outputs_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Output Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Inputs</h2>
+
+  {% if args_dict is defined and args_dict != None %}
+    {{ accordion_section(
+      'Arguments',
+      args_table()
+    )}}
+  {% endif %}
+
+  {{ accordion_section(
+    'Raster Inputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (caption(inputs_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Input Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Metadata</h2>
+
+  {{
+    accordion_section(
+      'Output Filenames and Descriptions',
+      list_metadata(model_spec_outputs),
+      expanded=False
+    )
+  }}
+
+{% endblock content %}
+
+{% block scripts %}
+  {{ super() }}
+  {% include 'datatable-js.html' %}
+{% endblock scripts %}

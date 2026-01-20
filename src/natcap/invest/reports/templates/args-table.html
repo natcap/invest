@@ -1,0 +1,23 @@
+<!--
+  Import this macro `with context` to allow it to access
+  `args_dict` directly from the args to `template.render()`.
+-->
+
+{% macro args_table() -%}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key, value in args_dict.items() %}
+      <tr>
+        <td>{{ key }}</td>
+        <td>{{ value }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{%- endmacro %}
