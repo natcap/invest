@@ -178,7 +178,7 @@ jobs:
       - name: Set up python for gsutil
         uses: actions/setup-python@v6
         with:
-          python-version: env.GSUTIL_PYTHON_VERSION
+          python-version: ${{ env.GSUTIL_PYTHON_VERSION }}
         id: python-gsutil-task
 
       - name: Deploy artifacts to GCS
@@ -263,7 +263,7 @@ jobs:
       - name: Set up python for gsutil
         uses: actions/setup-python@v6
         with:
-          python-version: env.GSUTIL_PYTHON_VERSION
+          python-version: ${{ env.GSUTIL_PYTHON_VERSION }}
         id: python-gsutil-task
 
       - name: Deploy artifacts to GCS
@@ -469,7 +469,7 @@ jobs:
       - name: Set up python for gsutil
         uses: actions/setup-python@v6
         with:
-          python-version: env.GSUTIL_PYTHON_VERSION
+          python-version: ${{ env.GSUTIL_PYTHON_VERSION }}
         id: python-gsutil-task
 
       - name: Deploy artifacts to GCS
