@@ -172,6 +172,10 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v3
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         run: make deploy
