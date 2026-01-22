@@ -4,7 +4,9 @@
 import logging
 import time
 
+from natcap.invest import gettext
 from natcap.invest.reports import jinja_env, sdr_ndr_utils, raster_utils
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,13 +59,13 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict).to_html(na_rep='')
 
-    stats_table_note = (
+    stats_table_note = gettext(
         '"Valid percent" indicates the percent of pixels that are not '
         'nodata. Comparing "valid percent" values across rasters may help '
         'you identify cases of unexpected nodata.'
     )
 
-    raster_group_caption = (
+    raster_group_caption = gettext(
         'If a plot title includes "resampled," that raster was resampled to '
         'a lower resolution for rendering in this report. Full resolution '
         'rasters are available in the output workspace.'
