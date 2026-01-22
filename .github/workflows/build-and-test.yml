@@ -184,7 +184,7 @@ jobs:
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         env:
-          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
+          CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
         run: make deploy
 
   test-source-distribution:
@@ -269,7 +269,7 @@ jobs:
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         env:
-          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
+          CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
         run: make deploy
 
   validate-resources:
@@ -475,7 +475,7 @@ jobs:
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         env:
-          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
+          CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
         run: make deploy
 
       # This relies on the file existing on GCP, so it must be run after `make
@@ -565,5 +565,5 @@ jobs:
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         env:
-          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
+          CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
         run: make deploy
