@@ -450,7 +450,7 @@ def _build_stats_table_row(resource, band):
 def _get_raster_metadata(filepath):
     if isinstance(filepath, collections.abc.Mapping):
         for path in filepath.values():
-            _get_raster_metadata(path)
+            return _get_raster_metadata(path)
     else:
         try:
             resource = geometamaker_load(f'{filepath}.yml')
@@ -466,19 +466,13 @@ def _get_raster_units(filepath):
     return resource.get_band_description(1).units if resource else None
 
 
-# @TODO tests for this function could use the same setup
-# as invest's test_spec.py:TestMetadataFromSpec.
-# @TODO This function's recursion through a file registry is duplicated in
-# invest's metadata-generating function. We may want a FileRegistry.walk method,
-# or similar.
 def raster_workspace_summary(file_registry):
     raster_summary = {}
-
     for path in file_registry.values():
         resource = _get_raster_metadata(path)
         band = resource.get_band_description(1) if resource else None
         if band:
-            filename = os.path.basename(path)
+            filename = os.path.basename(resource.path)
             raster_summary[filename] = _build_stats_table_row(
                 resource, band)
 

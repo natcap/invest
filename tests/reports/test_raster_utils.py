@@ -8,8 +8,9 @@ import matplotlib.testing.compare
 from matplotlib.testing import set_font_settings_for_testing
 from matplotlib.testing.exceptions import ImageComparisonFailure
 import numpy
-import pygeoprocessing
 from osgeo import osr
+import pandas
+import pygeoprocessing
 
 from natcap.invest import spec
 from natcap.invest.unit_registry import u
@@ -347,3 +348,29 @@ class RasterCaptions(unittest.TestCase):
             raster_list, args_dict, file_registry, model_spec)
 
         self.assertEqual(generated_caption, expected_caption)
+
+
+class TestRasterWorkspaceSummary(unittest.TestCase):
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)    
+
+    def test_raster_workspace_summary(self):
+        from ..utils import fake_execute
+        from ..utils import SAMPLE_MODEL_SPEC
+
+        # Generate an output workspace with real files & metadata
+        # without running an invest model.
+        args_dict = {'workspace_dir': self.workspace_dir}
+        SAMPLE_MODEL_SPEC.create_output_directories(args_dict)
+        file_registry = fake_execute(SAMPLE_MODEL_SPEC.outputs, self.workspace_dir)
+        SAMPLE_MODEL_SPEC.generate_metadata_for_outputs(file_registry, args_dict)
+        dataframe = raster_utils.raster_workspace_summary(file_registry)
+
+        # There are 2 rasters in the sample output spec
+        self.assertEqual(dataframe.shape, (2, 7))
