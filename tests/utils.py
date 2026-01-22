@@ -94,7 +94,18 @@ def assert_complete_execute(raw_args, model_spec, **kwargs):
 
 
 def fake_execute(output_spec, workspace):
-    """A function to support tests that need a real invest output workspace."""
+    """A function to support tests that need a real invest output workspace.
+
+    Files listed in the output_spec will be written to the workspace.
+
+    Args:
+        output_spec (list): list of ModelSpec.Output instances
+        workspace (str): path to a workspace directory
+
+    Returns:
+        dict (FileRegistry.registry)
+
+    """
     file_registry = FileRegistry(output_spec, workspace, '')
     for spec_data in output_spec:
         reg_key = spec_data.id
