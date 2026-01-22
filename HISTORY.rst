@@ -98,6 +98,12 @@ Coastal Vulnerability
   correcting the units of some intermediate outputs.
   (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
 
+Crop Production
+===============
+* Fixed a bug where ``nan`` values in the crop regression DataFrame were not
+  modified in-place under pandas 3.0.0, preventing correct reclassification to 0.
+  (`#2310 <https://github.com/natcap/invest/issues/2310>`_)
+
 Pollination
 ===========
 * Fixed a bug where farm vectors with polygon/multipolygon geometries including
