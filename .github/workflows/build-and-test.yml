@@ -312,7 +312,7 @@ jobs:
       - name: Set up node
         uses: actions/setup-node@v6
         with:
-          node-version: "lts/*"
+          node-version: 22
 
       - name: Restore node_modules cache
         id: nodemodules-cache
@@ -393,7 +393,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "lts/*"
+          node-version: 22
 
       - name: Restore node_modules cache
         id: nodemodules-cache
