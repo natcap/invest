@@ -146,6 +146,7 @@ def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
 def generate_caption_from_raster_list(
         raster_list: list[tuple[str, str]], args_dict,
         file_registry, model_spec: ModelSpec):
+    """Concatenate filenames and metadata descriptions to create captions."""
     caption = []
     for (id, input_or_output) in raster_list:
         if input_or_output == 'input':
@@ -158,7 +159,7 @@ def generate_caption_from_raster_list(
     return caption
 
 
-def read_masked_array(filepath, resample_method):
+def _read_masked_array(filepath, resample_method):
     info = pygeoprocessing.get_raster_info(filepath)
     nodata = info['nodata'][0]
     resampled = False
@@ -239,7 +240,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         dtype = config.datatype
         transform = config.transform
         resample_alg = RESAMPLE_ALGS[dtype]
-        arr, resampled = read_masked_array(raster_path, resample_alg)
+        arr, resampled = _read_masked_array(raster_path, resample_alg)
         imshow_kwargs = {}
         colorbar_kwargs = {}
         imshow_kwargs['norm'] = transform
@@ -364,14 +365,14 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     if subtitle_list is None:
         subtitle_list = ['']*n_plots
     resample_alg = resample_alg = RESAMPLE_ALGS[datatype]
-    arr, resampled = read_masked_array(tif_list[0], resample_alg)
+    arr, resampled = _read_masked_array(tif_list[0], resample_alg)
     ndarray = numpy.empty((n_plots, *arr.shape))
     ndarray[0] = arr
     for i, tif in enumerate(tif_list):
         # We already got the first one to initialize the ndarray with correct shape
         if i == 0:
             continue
-        arr, resampled = read_masked_array(tif, RESAMPLE_ALGS[datatype])
+        arr, resampled = _read_masked_array(tif, RESAMPLE_ALGS[datatype])
         ndarray[i] = arr
     # Perhaps this could be optimized by reading min/max from tif metadata
     # instead of storing all arrays in memory
@@ -405,7 +406,8 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     return fig
 
 
-# TODO: this will probably end up in the geometamaker API
+# TODO: this may end up in the geometamaker API
+# https://github.com/natcap/geometamaker/issues/111
 def geometamaker_load(filepath):
     with open(filepath, 'r') as file:
         yaml_string = file.read()
@@ -416,9 +418,11 @@ def geometamaker_load(filepath):
                        f'geometamaker.')
             raise ValueError(message)
 
-    return geometamaker.geometamaker.RESOURCE_MODELS[yaml_dict['type']](**yaml_dict)
+    return geometamaker.geometamaker.RESOURCE_MODELS[yaml_dict['type']](
+        **yaml_dict)
 
 
+# GDAL Metadata keys and corresponding column headers for a table
 STATS_LIST = [
     ('STATISTICS_MINIMUM', 'Minimum'),
     ('STATISTICS_MAXIMUM', 'Maximum'),
@@ -467,6 +471,7 @@ def _get_raster_units(filepath):
 
 
 def raster_workspace_summary(file_registry):
+    """Create a table of stats for all rasters in a file_registry."""
     raster_summary = {}
     for path in file_registry.values():
         resource = _get_raster_metadata(path)
@@ -480,6 +485,7 @@ def raster_workspace_summary(file_registry):
 
 
 def raster_inputs_summary(args_dict):
+    """Create a table of stats for all rasters in an args_dict."""
     raster_summary = {}
     for v in args_dict.values():
         if isinstance(v, str) and os.path.isfile(v):
