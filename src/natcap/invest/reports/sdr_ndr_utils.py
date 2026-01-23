@@ -9,7 +9,7 @@ TABLE_PAGINATION_THRESHOLD = 10
 
 
 def generate_results_table_from_vector(filepath, cols_to_sum):
-    vector_df = geopandas.read_file(filepath)
+    vector_df = geopandas.read_file(filepath, engine='fiona')
     vector_df = vector_df.drop(columns=['geometry'])
 
     css_classes = ['datatable']
