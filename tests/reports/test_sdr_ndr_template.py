@@ -1,4 +1,6 @@
+import sys
 import unittest
+
 import lxml.html
 
 from natcap.invest.reports import jinja_env
@@ -45,6 +47,7 @@ def _get_render_args(model_spec):
     }
 
 
+@unittest.skipIf(sys.platform.startswith("win"), "segfaults on Windows")
 class SDR_NDR_TemplateTests(unittest.TestCase):
     """Unit tests for SDR/NDR template."""
 
@@ -69,7 +72,6 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
         from natcap.invest.ndr.ndr import MODEL_SPEC
 
         html = TEMPLATE.render(_get_render_args(MODEL_SPEC))
-
         root = lxml.html.document_fromstring(html)
 
         sections = root.find_class('accordion-section')
