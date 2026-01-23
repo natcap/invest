@@ -470,11 +470,11 @@ MODEL_SPEC = spec.ModelSpec(
                 id="ndvi_alt_aligned_masked",
                 path="intermediate/ndvi_alt_aligned_masked.tif",
                 about=gettext(
-                    "Preprocessed alternate NDVI raster. If option 2 (LULC), " #TODO: replace all instances where I refer to options by number
-                    "this raster is created by masking, aligning, and "
+                    "Preprocessed alternate NDVI raster. If using LULC "
+                    "inputs, this raster is created by masking, aligning, and "
                     "resampling the alternate LULC and mapping it to mean "
                     "NDVI (with excluded lucodes set to NODATA)."
-                    "If option 3 (NDVI), this is simply the masked aligned "
+                    "If using NDVI inputs, this is simply the masked aligned "
                     "and resampled alternate NDVI raster."),
                 data_type=float,
                 units=None,
@@ -492,11 +492,11 @@ MODEL_SPEC = spec.ModelSpec(
                 id="ndvi_base_aligned_masked",
                 path="intermediate/ndvi_base_aligned_masked.tif",
                 about=gettext(
-                    "Preprocessed baseline NDVI raster. If option 2 (LULC), "
+                    "Preprocessed baseline NDVI raster. If using LULC inputs, "
                     "this raster is created by masking, aligning, and "
                     "resampling the baseline LULC and mapping it to mean "
                     "NDVI (with excluded lucodes set to NODATA)."
-                    "If option 3 (NDVI), this is simply the masked aligned "
+                    "If using NDVI inputs, this is simply the masked aligned "
                     "and resampled baseline NDVI raster."),
                 data_type=float,
                 units=None,
@@ -1291,7 +1291,7 @@ def _fit_tc_to_ndvi_curve(
         valid_mask = (~pygeoprocessing.array_equals_nodata(tc, tc_nodata) &
                       ~pygeoprocessing.array_equals_nodata(ndvi, ndvi_nodata) &
                       ~pygeoprocessing.array_equals_nodata(pop, pop_nodata) &
-                      pop > 0)
+                      (pop > 0))
 
         if not numpy.any(valid_mask):
             continue
@@ -1340,7 +1340,7 @@ def _fit_tc_to_ndvi_curve(
     gam.fit(x, y, weights=w)
 
     curve_smooth = gam.predict(centers.reshape(-1, 1))
-    return centers, curve_smooth.astype(numpy.float64), pop_sum
+    return centers, curve_smooth.astype(numpy.float64)
 
 
 def _apply_tc_target_to_alt_ndvi(base_ndvi_path, population_path,
