@@ -409,7 +409,8 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
 # TODO: this may end up in the geometamaker API
 # https://github.com/natcap/geometamaker/issues/111
 def geometamaker_load(filepath):
-    with open(filepath, 'r') as file:
+    # All geometamaker docs are written with utf-8 encoding
+    with open(filepath, 'r', encoding='utf-8') as file:
         yaml_string = file.read()
         yaml_dict = yaml.safe_load(yaml_string)
         if not yaml_dict or ('metadata_version' not in yaml_dict
