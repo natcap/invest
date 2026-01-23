@@ -4,9 +4,10 @@ import sys
 import tempfile
 import unittest
 
-import geopandas
 import lxml.html
 import shapely
+from osgeo import ogr, osr
+import pygeoprocessing
 
 from natcap.invest.reports import sdr_ndr_utils
 
@@ -15,15 +16,7 @@ MAIN_TABLE_COLS = ['ws_id', 'ws_name',
                    'calculated_value_1', 'calculated_value_2']
 
 
-def setUpModule():
-    geopandas.options.io_engine = 'fiona'
-
-
-def tearDownModule():
-    geopandas.options.io_engine = None
-
-
-def _generate_mock_watershed_data(num_features):
+def _generate_mock_watershed_data(num_features, target_vector_path):
     ws_names = ['Willamette', 'Columbia', 'Snake', 'Salmon', 'Boise',
                 'Owyhee', 'Deschutes', 'Sacramento', 'American', 'Tuolomne',
                 'San Joaquin', 'Los Angeles', 'Santa Ana', 'Colorado', 'Green',
@@ -34,15 +27,27 @@ def _generate_mock_watershed_data(num_features):
                 'Tennessee', 'Red', 'Arkansas', 'Platte']
     # All polygons can be identical: their specifics don't matter to the tests.
     polygon = shapely.Polygon(((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
-    polygons = geopandas.GeoSeries([polygon] * num_features)
-    columns = MAIN_TABLE_COLS
-    vector_data = [[i + 1, ws_names[i % len(ws_names)], i + 101, i + 201]
-                   for i in range(num_features)]
-    # The CRS is irrelevant, but specifying one prevents a user warning.
-    dataframe = geopandas.GeoDataFrame(
-        vector_data, columns=columns,
-        geometry=polygons, crs='EPSG:4326')
-    return (vector_data, dataframe)
+    field_types = [ogr.OFTInteger, ogr.OFTString, ogr.OFTInteger, ogr.OFTInteger]
+    field_dict = {
+        name: dtype for name, dtype in zip(MAIN_TABLE_COLS, field_types)}
+    attribute_list = [
+        {'ws_id': i + 1,
+         'ws_name': ws_names[i % len(ws_names)],
+         'calculated_value_1': i + 101,
+         'calculated_value_2': i + 201}
+        for i in range(num_features)
+    ]
+    projection = osr.SpatialReference()
+    projection.ImportFromEPSG(4326)
+    pygeoprocessing.shapely_geometry_to_vector(
+        shapely_geometry_list=[polygon] * num_features,
+        target_vector_path=target_vector_path,
+        projection_wkt=projection.ExportToWkt(),
+        vector_format='GPKG',
+        fields=field_dict,
+        attribute_list=attribute_list,
+        ogr_geom_type=ogr.wkbPolygon)
+    return attribute_list
 
 
 @unittest.skipIf(sys.platform.startswith("win"), "segfaults on Windows")
@@ -62,9 +67,8 @@ class SDRNDRUtilsTests(unittest.TestCase):
 
         num_features = 1
 
-        (vector_data, dataframe) = _generate_mock_watershed_data(num_features)
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
-        dataframe.to_file(filepath, driver='GPKG')
+        attribute_list = _generate_mock_watershed_data(num_features, filepath)
         cols_to_sum = []
 
         (main_table, totals_table) = (
@@ -84,9 +88,9 @@ class SDRNDRUtilsTests(unittest.TestCase):
         self.assertEqual(len(ws_1_cells), 4)
 
         # Check values.
-        ws_1_data = vector_data[0]
+        ws_1_data = attribute_list[0]
         # xpath positions are 1-indexed.
-        for (i, val) in enumerate(ws_1_data, start=1):
+        for (i, val) in enumerate(ws_1_data.values(), start=1):
             ws_1_cell = ws_1_row.xpath(f'./td[{i}]')
             self.assertEqual(str(val), ws_1_cell[0].text)
 
@@ -104,9 +108,9 @@ class SDRNDRUtilsTests(unittest.TestCase):
 
         num_features = 2
 
-        (vector_data, dataframe) = _generate_mock_watershed_data(num_features)
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
-        dataframe.to_file(filepath, driver='GPKG')
+        attribute_list = _generate_mock_watershed_data(
+            num_features, filepath)
         cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
@@ -135,10 +139,10 @@ class SDRNDRUtilsTests(unittest.TestCase):
             self.assertEqual(col_name, col_header[0].text)
 
         # Check main table values.
-        for (i, ws_data) in enumerate(vector_data):
+        for (i, ws_data) in enumerate(attribute_list):
             html_table_row = table_body_rows[i]
             # xpath positions are 1-indexed.
-            for (j, val) in enumerate(ws_data, start=1):
+            for (j, val) in enumerate(ws_data.values(), start=1):
                 table_cell = html_table_row.xpath(f'./td[{j}]')
                 self.assertEqual(str(val), table_cell[0].text)
 
@@ -185,9 +189,8 @@ class SDRNDRUtilsTests(unittest.TestCase):
         self.assertGreater(num_features,
                            sdr_ndr_utils.TABLE_PAGINATION_THRESHOLD)
 
-        (vector_data, dataframe) = _generate_mock_watershed_data(num_features)
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
-        dataframe.to_file(filepath, driver='GPKG')
+        attribute_list = _generate_mock_watershed_data(num_features, filepath)
         cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
@@ -202,10 +205,10 @@ class SDRNDRUtilsTests(unittest.TestCase):
         self.assertEqual(len(table_body_rows), num_features)
 
         # Check main table values.
-        for (i, ws_data) in enumerate(vector_data):
+        for (i, ws_data) in enumerate(attribute_list):
             html_table_row = table_body_rows[i]
             # xpath positions are 1-indexed.
-            for (j, val) in enumerate(ws_data, start=1):
+            for (j, val) in enumerate(ws_data.values(), start=1):
                 table_cell = html_table_row.xpath(f'./td[{j}]')
                 self.assertEqual(str(val), table_cell[0].text)
 
