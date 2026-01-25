@@ -27,4 +27,4 @@ coverage
 xlwt
 build  # pip-only
 rst2html5
-lxml
+beautifulsoup4

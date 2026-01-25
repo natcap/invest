@@ -1,13 +1,12 @@
 import os
 import shutil
-import sys
 import tempfile
 import unittest
 
-import lxml.html
 import shapely
-from osgeo import ogr, osr
 import pygeoprocessing
+from bs4 import BeautifulSoup
+from osgeo import ogr, osr
 
 from natcap.invest.reports import sdr_ndr_utils
 
@@ -50,7 +49,6 @@ def _generate_mock_watershed_data(num_features, target_vector_path):
     return attribute_list
 
 
-@unittest.skipIf(sys.platform.startswith("win"), "segfaults on Windows")
 class SDRNDRUtilsTests(unittest.TestCase):
     """Unit tests for SDR/NDR utils."""
 
@@ -76,28 +74,27 @@ class SDRNDRUtilsTests(unittest.TestCase):
                 filepath, cols_to_sum))
         self.assertIsNotNone(main_table)
 
-        root = lxml.html.document_fromstring(main_table)
+        soup = BeautifulSoup(main_table, 'html.parser')
 
-        # Make sure table body has exactly 1 row.
-        table_body_rows = root.xpath('.//table/tbody/tr')
+        # Make sure table body has exactly 1 row per feature.
+        table_body_rows = soup.find('tbody').find_all('tr')
         self.assertEqual(len(table_body_rows), num_features)
 
         # Make sure table body has expected number of columns.
         ws_1_row = table_body_rows[0]
-        ws_1_cells = ws_1_row.xpath('./td')
+        ws_1_cells = ws_1_row.find_all('td')
         self.assertEqual(len(ws_1_cells), 4)
 
         # Check values.
         ws_1_data = attribute_list[0]
-        # xpath positions are 1-indexed.
-        for (i, val) in enumerate(ws_1_data.values(), start=1):
-            ws_1_cell = ws_1_row.xpath(f'./td[{i}]')
-            self.assertEqual(str(val), ws_1_cell[0].text)
-
+        actual_values = [cell.string for cell in ws_1_cells]
+        expected_values = [str(v) for v in ws_1_data.values()]
+        self.assertEqual(expected_values, actual_values)
+        
         # Make sure table has class 'datatable' but not 'paginate'.
-        datatable_table = root.find_class('datatable')
+        datatable_table = soup.find_all(class_='datatable')
         self.assertEqual(len(datatable_table), 1)
-        paginated_table = root.find_class('paginate')
+        paginated_table = soup.find_all(class_='paginate')
         self.assertEqual(len(paginated_table), 0)
 
         # Make sure totals_table is None.
@@ -118,69 +115,56 @@ class SDRNDRUtilsTests(unittest.TestCase):
                 filepath, cols_to_sum))
         self.assertIsNotNone(main_table)
 
-        main_table_root = lxml.html.document_fromstring(main_table)
+        main_soup = BeautifulSoup(main_table, 'html.parser')
 
         # Make sure main table body has exactly `num_features` rows.
-        table_body_rows = main_table_root.xpath('.//table/tbody/tr')
+        table_body_rows = main_soup.find('tbody').find_all('tr')
         self.assertEqual(len(table_body_rows), num_features)
 
-        # Make sure main table body has expected number of columns.
-        ws_1_row = table_body_rows[0]
-        ws_1_cells = ws_1_row.xpath('./td')
-        self.assertEqual(len(ws_1_cells), 4)
-
         # Check main table column headings for accuracy.
-        table_header_rows = main_table_root.xpath('.//table/thead/tr')
-        table_header_row = table_header_rows[0]
+        table_header_row = main_soup.find('thead').find('tr')
+        header_cells = table_header_row.find_all('th')
         col_names = MAIN_TABLE_COLS
-        # xpath positions are 1-indexed.
-        for (i, col_name) in enumerate(col_names, start=1):
-            col_header = table_header_row.xpath(f'./th[{i}]')
-            self.assertEqual(col_name, col_header[0].text)
+        actual_header_values = [cell.string for cell in header_cells]
+        self.assertEqual(col_names, actual_header_values)
 
         # Check main table values.
-        for (i, ws_data) in enumerate(attribute_list):
-            html_table_row = table_body_rows[i]
-            # xpath positions are 1-indexed.
-            for (j, val) in enumerate(ws_data.values(), start=1):
-                table_cell = html_table_row.xpath(f'./td[{j}]')
-                self.assertEqual(str(val), table_cell[0].text)
+        for i, feature in enumerate(attribute_list):
+            cells = table_body_rows[i].find_all('td')
+            actual_values = [cell.string for cell in cells]
+            expected_values = [str(v) for v in feature.values()]
+            self.assertEqual(expected_values, actual_values)
 
         # Make sure main table has class 'datatable' but not 'paginate'.
-        datatable_table = main_table_root.find_class('datatable')
+        datatable_table = main_soup.find_all(class_='datatable')
         self.assertEqual(len(datatable_table), 1)
-        paginated_table = main_table_root.find_class('paginate')
+        paginated_table = main_soup.find_all(class_='paginate')
         self.assertEqual(len(paginated_table), 0)
 
-        # Make sure totals table is not None.
-        self.assertIsNotNone(totals_table)
-
-        totals_table_root = lxml.html.document_fromstring(totals_table)
+        totals_soup = BeautifulSoup(totals_table, 'html.parser')
 
         # Make sure totals table body has exactly 1 row.
-        table_body_rows = totals_table_root.xpath('.//table/tbody/tr')
-        self.assertEqual(len(table_body_rows), 1)
+        totals_body_rows = totals_soup.find('tbody').find_all('tr')
+        self.assertEqual(len(totals_body_rows), 1)
 
         # Make sure totals table body has expected number of columns.
-        totals_row = table_body_rows[0]
-        totals_cells = totals_row.xpath('./td')
+        totals_row = totals_body_rows[0]
+        totals_cells = totals_row.find_all('td')
         self.assertEqual(len(totals_cells), 2)
 
         # Check totals table column headings for accuracy.
-        table_header_rows = totals_table_root.xpath('.//table/thead/tr')
-        table_header_row = table_header_rows[0]
-        # xpath positions are 1-indexed. Skip first (empty) th and start at 2.
-        for (i, col_name) in enumerate(cols_to_sum, start=2):
-            col_header = table_header_row.xpath(f'./th[{i}]')
-            self.assertEqual(col_name, col_header[0].text)
+        totals_header_row = totals_soup.find('thead').find('tr')
+        totals_header_cells = totals_header_row.find_all('th')
+        actual_header_values = [cell.string for cell in totals_header_cells]
+        # The first column is a row index, it did not get summed.
+        self.assertEqual([None] + cols_to_sum, actual_header_values)
 
         # Check totals table values.
         # calculated_value_1 is ws_id + 100; calculated_value_2 is ws_id + 200.
-        totals = [101 + 102, 201 + 202]
-        # xpath positions are 1-indexed.
-        for (i, val) in enumerate(totals, start=1):
-            totals_cell = totals_row.xpath(f'./td[{i}]')
-            self.assertEqual(str(val), totals_cell[0].text)
+        expected_totals = [101 + 102, 201 + 202]
+        actual_values = [cell.string for cell in totals_cells]
+        expected_values = [str(v) for v in expected_totals]
+        self.assertEqual(expected_values, actual_values)
 
     def test_generate_results_table_with_pagination_directive(self):
         """Return table with paginate flag when there are a lot of features."""
@@ -190,7 +174,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
                            sdr_ndr_utils.TABLE_PAGINATION_THRESHOLD)
 
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
-        attribute_list = _generate_mock_watershed_data(num_features, filepath)
+        _ = _generate_mock_watershed_data(num_features, filepath)
         cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
@@ -198,39 +182,13 @@ class SDRNDRUtilsTests(unittest.TestCase):
                 filepath, cols_to_sum))
         self.assertIsNotNone(main_table)
 
-        main_table_root = lxml.html.document_fromstring(main_table)
-
-        # Make sure main table body has exactly `num_features` rows.
-        table_body_rows = main_table_root.xpath('.//table/tbody/tr')
-        self.assertEqual(len(table_body_rows), num_features)
-
-        # Check main table values.
-        for (i, ws_data) in enumerate(attribute_list):
-            html_table_row = table_body_rows[i]
-            # xpath positions are 1-indexed.
-            for (j, val) in enumerate(ws_data.values(), start=1):
-                table_cell = html_table_row.xpath(f'./td[{j}]')
-                self.assertEqual(str(val), table_cell[0].text)
+        main_soup = BeautifulSoup(main_table, 'html.parser')
 
         # Make sure main table has classes 'datatable' AND 'paginate'.
-        datatable_table = main_table_root.find_class('datatable')
-        self.assertEqual(len(datatable_table), 1)
-        paginated_table = main_table_root.find_class('paginate')
-        self.assertEqual(len(paginated_table), 1)
+        datatable_table = main_soup.find(class_='datatable')
+        self.assertIsNotNone(datatable_table)
+        paginated_table = main_soup.find(class_='paginate')
+        self.assertIsNotNone(paginated_table)
 
         # Make sure totals table is not None.
         self.assertIsNotNone(totals_table)
-
-        # Check totals table values.
-        totals_table_root = lxml.html.document_fromstring(totals_table)
-        table_body_rows = totals_table_root.xpath('.//table/tbody/tr')
-        totals_row = table_body_rows[0]
-        # calculated_value_1 is ws_id + 100; calculated_value_2 is ws_id + 200.
-        totals = [
-            101 + 102 + 103 + 104 + 105 + 106 + 107 + 108 + 109 + 110 + 111,
-            201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211
-        ]
-        # xpath positions are 1-indexed.
-        for (i, val) in enumerate(totals, start=1):
-            totals_cell = totals_row.xpath(f'./td[{i}]')
-            self.assertEqual(str(val), totals_cell[0].text)

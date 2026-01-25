@@ -1,7 +1,6 @@
-import sys
 import unittest
 
-import lxml.html
+from bs4 import BeautifulSoup
 
 from natcap.invest.reports import jinja_env
 
@@ -47,7 +46,6 @@ def _get_render_args(model_spec):
     }
 
 
-@unittest.skipIf(sys.platform.startswith("win"), "segfaults on Windows")
 class SDR_NDR_TemplateTests(unittest.TestCase):
     """Unit tests for SDR/NDR template."""
 
@@ -58,13 +56,12 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
 
         html = TEMPLATE.render(_get_render_args(MODEL_SPEC))
 
-        root = lxml.html.document_fromstring(html)
+        soup = BeautifulSoup(html, 'html.parser')
 
-        sections = root.find_class('accordion-section')
+        sections = soup.find_all(class_='accordion-section')
         self.assertEqual(len(sections), 8)
-
-        h1 = root.find('.//h1')
-        self.assertEqual(h1.text, f'InVEST Results: {MODEL_SPEC.model_title}')
+        self.assertEqual(
+            soup.title.string, f'InVEST Results: {MODEL_SPEC.model_title}')
 
     def test_render_ndr(self):
         """Make sure the template renders for NDR without error."""
@@ -72,18 +69,18 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
         from natcap.invest.ndr.ndr import MODEL_SPEC
 
         html = TEMPLATE.render(_get_render_args(MODEL_SPEC))
-        root = lxml.html.document_fromstring(html)
 
-        sections = root.find_class('accordion-section')
+        soup = BeautifulSoup(html, 'html.parser')
+
+        sections = soup.find_all(class_='accordion-section')
         self.assertEqual(len(sections), 8)
-
-        h1 = root.find('.//h1')
-        self.assertEqual(h1.text, f'InVEST Results: {MODEL_SPEC.model_title}')
+        self.assertEqual(
+            soup.title.string, f'InVEST Results: {MODEL_SPEC.model_title}')
 
     def test_watershed_results_totals(self):
         """Totals should be rendered when passed to the render function."""
 
-        ws_vector_table = '<table class="test__results-table></table>'
+        ws_vector_table = '<table class="test__results-table"></table>'
         ws_vector_totals_table = '<table class="test__totals-table"></table>'
 
         # Note that args_dict=None, which isn't exactly realistic,
@@ -111,21 +108,21 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
             model_spec_outputs=[],
         )
 
-        root = lxml.html.document_fromstring(html)
+        soup = BeautifulSoup(html, 'html.parser')
 
-        totals_table = root.find_class('test__totals-table')
-        self.assertTrue(len(totals_table) == 1)
+        totals_table = soup.find_all(class_='test__totals-table')
+        self.assertEqual(len(totals_table), 1)
 
         # Ideally, this test would select only the tables in the 'Results by
         # Watershed' section, but doing so seems impossible without cumbersome
         # tree traversal that would likely result in a brittle test.
-        tables = root.findall('.//table')
+        tables = soup.find_all('table')
         self.assertEqual(len(tables), 2)
 
     def test_watershed_results_without_totals(self):
         """Totals should be not be rendered when there are none to render."""
 
-        ws_vector_table = '<table class="test__results-table></table>'
+        ws_vector_table = '<table class="test__results-table"></table>'
         ws_vector_totals_table = None
 
         # Note that args_dict=None, which isn't exactly realistic,
@@ -153,10 +150,10 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
             model_spec_outputs=[],
         )
 
-        root = lxml.html.document_fromstring(html)
+        soup = BeautifulSoup(html, 'html.parser')
 
-        # Ideally, this test would select only the tables in the 'Results by
-        # Watershed' section, but doing so seems impossible without cumbersome
-        # tree traversal that would likely result in a brittle test.
-        tables = root.findall('.//table')
-        self.assertEqual(len(tables), 1)
+        results_table = soup.find_all(class_='test__results-table')
+        self.assertEqual(len(results_table), 1)
+
+        totals_table = soup.find_all(class_='test__totals-table')
+        self.assertEqual(len(totals_table), 0)

@@ -9,7 +9,6 @@ from matplotlib.testing import set_font_settings_for_testing
 from matplotlib.testing.exceptions import ImageComparisonFailure
 import numpy
 from osgeo import osr
-import pandas
 import pygeoprocessing
 
 from natcap.invest import spec
