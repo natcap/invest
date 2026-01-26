@@ -12,10 +12,10 @@ def _get_render_args(model_spec):
     args_dict = {'suffix': 'test'}
     img_src = 'bAse64eNcoDEdIMagE'
     intermediate_outputs_heading = 'Intermediate Outputs'
-    ws_vector_table = '<table class="test__results-table></table>'
+    ws_vector_table = '<table class="test__results-table"></table>'
     ws_vector_totals_table = '<table class="test__totals-table"></table>'
-    output_stats_table = '<table class="test__output-stats-table></table>'
-    input_stats_table = '<table class="test__input-stats-table></table>'
+    output_stats_table = '<table class="test__output-stats-table"></table>'
+    input_stats_table = '<table class="test__input-stats-table"></table>'
     stats_table_note = 'This is a test!'
     inputs_caption = ['input.tif:Input map.']
     outputs_caption = ['results.tif:Results map.']
