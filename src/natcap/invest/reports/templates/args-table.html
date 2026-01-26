@@ -1,9 +1,8 @@
 <!--
-  Import this macro `with context` to allow it to access
-  `args_dict` directly from the args to `template.render()`.
+  - `args_dict`: Python dictionary rendered as a table.
 -->
 
-{% macro args_table() -%}
+{% macro args_table(args_dict) -%}
   <table>
     <thead>
       <tr>

@@ -9,7 +9,7 @@
 
   {{ super() }}
 
-  {% from 'args-table.html' import args_table with context %}
+  {% from 'args-table.html' import args_table %}
   {% from 'caption.html' import caption %}
   {% from 'content-grid.html' import content_grid %}
   {% from 'metadata.html' import list_metadata %}
@@ -72,12 +72,10 @@
 
   <h2 class="section-header">Inputs</h2>
 
-  {% if args_dict is defined and args_dict != None %}
-    {{ accordion_section(
-      'Arguments',
-      args_table()
-    )}}
-  {% endif %}
+  {{ accordion_section(
+    'Arguments',
+    args_table(args_dict)
+  )}}
 
   {{ accordion_section(
     'Raster Inputs',

@@ -83,15 +83,13 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
         ws_vector_table = '<table class="test__results-table"></table>'
         ws_vector_totals_table = '<table class="test__totals-table"></table>'
 
-        # Note that args_dict=None, which isn't exactly realistic,
-        # but omitting the args table from the HTML is crucial for this test.
         html = TEMPLATE.render(
             report_script=__file__,
             model_id='',
             model_name='',
             userguide_page='',
             timestamp='',
-            args_dict=None,
+            args_dict={},
             inputs_img_src='',
             inputs_caption=[],
             outputs_img_src='',
@@ -110,14 +108,10 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
 
         soup = BeautifulSoup(html, 'html.parser')
 
+        results_table = soup.find_all(class_='test__results-table')
+        self.assertEqual(len(results_table), 1)
         totals_table = soup.find_all(class_='test__totals-table')
         self.assertEqual(len(totals_table), 1)
-
-        # Ideally, this test would select only the tables in the 'Results by
-        # Watershed' section, but doing so seems impossible without cumbersome
-        # tree traversal that would likely result in a brittle test.
-        tables = soup.find_all('table')
-        self.assertEqual(len(tables), 2)
 
     def test_watershed_results_without_totals(self):
         """Totals should be not be rendered when there are none to render."""
@@ -125,15 +119,13 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
         ws_vector_table = '<table class="test__results-table"></table>'
         ws_vector_totals_table = None
 
-        # Note that args_dict=None, which isn't exactly realistic,
-        # but omitting the args table from the HTML is crucial for this test.
         html = TEMPLATE.render(
             report_script=__file__,
             model_id='',
             model_name='',
             userguide_page='',
             timestamp='',
-            args_dict=None,
+            args_dict={},
             inputs_img_src='',
             inputs_caption=[],
             outputs_img_src='',

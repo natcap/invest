@@ -138,8 +138,8 @@ class JinjaTemplateUnitTests(unittest.TestCase):
         template_str = (
             """
             <html>
-                {% from 'args-table.html' import args_table with context %}
-                {{ args_table() }}
+                {% from 'args-table.html' import args_table %}
+                {{ args_table(args_dict) }}
             </html>
             """
         )
