@@ -126,10 +126,10 @@ def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
             each of which should contain the following:
             - first, the id of the raster (as defined in the model spec),
             - second, the datatype of the raster ('continuous', 'divergent',
-              'nominal', 'binary', or 'binary_high_contrast'), and
+            'nominal', 'binary', or 'binary_high_contrast'), and
             - third (optionally), the transform to apply to the colormap when
-              plotting (either 'linear' or 'log'; will default to 'linear' if
-              not specified).
+            plotting (either 'linear' or 'log'; will default to 'linear' if
+            not specified).
 
     Returns:
         A list of ``RasterPlotConfig`` suitable for passing to
