@@ -20,7 +20,7 @@ projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
-REFS_DIR = os.path.join('tests', 'reports', 'refs')
+REFS_DIR = os.path.join('data', 'invest-test-data', 'reports', 'snapshots')
 
 
 def setUpModule():
@@ -36,9 +36,7 @@ def tearDownModule():
 
 
 def save_figure(fig, filepath):
-    # Overriding the default dpi to reduce file size since
-    # these figures are under source control.
-    fig.savefig(filepath, **raster_utils.MPL_SAVE_FIG_KWARGS, dpi=50)
+    fig.savefig(filepath, **raster_utils.MPL_SAVE_FIG_KWARGS)
 
 
 def make_simple_raster(target_filepath, shape):
