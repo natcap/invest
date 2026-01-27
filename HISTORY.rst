@@ -92,6 +92,13 @@ General
 * Docker container builds now use debian 13 "Trixie", which includes Python
   3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
 
+Workbench
+=========
+* The Workbench model input fields now display as valid or invalid after using
+  the file browse button to populate an input, rather than requiring the user
+  to "touch" the field again in order to see the validation status.
+  (`#2149 <https://github.com/natcap/invest/issues/2149>`_)
+
 Coastal Vulnerability
 =====================
 * Various updates to model input and output data metadata, including
