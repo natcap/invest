@@ -4,6 +4,7 @@ import os
 import shutil
 import tempfile
 
+import matplotlib.pyplot as plt
 import numpy
 import pandas
 from pygam import LinearGAM, s # Are we ok to add pygam as new invest dependency? Alternatively, could us scipy.UnivariateSpline
@@ -523,11 +524,30 @@ MODEL_SPEC = spec.ModelSpec(
                 created_if="ndvi_base"
             ),
             spec.SingleBandRasterOutput(
+                id="tree_cover_buffer_mean",
+                path="intermediate/tree_cover_buffer_mean.tif",
+                about=gettext(
+                    "Tree Cover raster convolved with a mean circular "
+                    "kernel of radius search_radius."),
+                data_type=float,
+                units=None,
+                created_if="tree_cover_raster"
+            ),
+            spec.SingleBandRasterOutput(
                 id="population_aligned",
                 path="intermediate/population_aligned.tif",
                 about=gettext("Aligned and resampled population raster."),
                 data_type=float,
                 units=u.people
+            ),
+            spec.FileOutput(
+                id="result_fig_tc_ndvi_plot",
+                path="intermediate/tree_cover_vs_ndvi_plot.png",
+                about=gettext(
+                    "Scatter plot showing the relationship between tree "
+                    "canopy cover and NDVI within the area of interest."
+                ),
+                created_if="tree_cover_raster"
             ),
             spec.TASKGRAPH_CACHE
         ]
@@ -781,8 +801,6 @@ def execute(args):
         target_path_list=[file_registry['kernel']],
         task_name='create kernel raster')
 
-    # TODO: either also convolve TCC before _apply_tc_target_to_alt_ndvi or
-    # convolve both alt and base ndvi after _apply_tc_target_to_alt_ndvi
     mean_buffered_base_ndvi_task = task_graph.add_task(
         func=pygeoprocessing.convolve_2d,
         args=(
@@ -803,7 +821,23 @@ def execute(args):
 
     if args['scenario'] == 'tcc_ndvi':
         LOGGER.info("Using Tree Canopy Cover and NDVI inputs")
-        #TODO do i need to convolve the TCC raster with the kernel too?
+        mean_buffered_tcc_task = task_graph.add_task(
+            func=pygeoprocessing.convolve_2d,
+            args=(
+                (file_registry['tree_cover_raster_aligned'], 1),
+                (file_registry['kernel'], 1),
+                file_registry['tree_cover_buffer_mean']),
+            kwargs={
+                'ignore_nodata_and_edges': True,
+                'mask_nodata': True,
+                'normalize_kernel': True,
+                'target_datatype': pygeoprocessing.get_raster_info(
+                    file_registry['tree_cover_raster_aligned'])["datatype"],
+                'target_nodata': pygeoprocessing.get_raster_info(
+                    file_registry['tree_cover_raster_aligned'])["nodata"][0]},
+            dependent_task_list=[align_task, kernel_task],
+            target_path_list=[file_registry['tree_cover_buffer_mean']],
+            task_name="calculate mean tree cover within buffer")
         # TODO: or will i need to make the target bbox for pop resampling the
         # intersection of baseline ndvi and tcc raster?
         baseline_ndvi_bbox = pygeoprocessing.get_raster_info(
@@ -824,25 +858,18 @@ def execute(args):
             dependent_task_list=[align_task],
             task_name='Resample population to NDVI resolution')
 
-        # population_weighted_ndvi = task_graph.add_task(
-        #     func=get_population_weighted_ndvi,
-        #     args=(file_registry['ndvi_base_aligned'],
-        #           file_registry['population_aligned'],
-        #           file_registry['ndvi_base_population_weighted']),
-        #     target_path_list=file_registry['ndvi_base_population_weighted'],
-        #     dependent_task_list=[population_align_task],
-        #     task_name="calculate population-weighted baseline NDVI"
-        # )
         mean_buffered_alt_ndvi_task = task_graph.add_task(
             func=_apply_tc_target_to_alt_ndvi,
             args=(file_registry['ndvi_base_buffer_mean'],
                   file_registry['population_aligned'],
-                  file_registry['tree_cover_raster_aligned'],
+                  file_registry['tree_cover_buffer_mean'],
                   args['tree_cover_target'],
-                  file_registry['ndvi_alt_buffer_mean']),
+                  file_registry['ndvi_alt_buffer_mean'],
+                  file_registry['result_fig_tc_ndvi_plot']),
             target_path_list=[file_registry['ndvi_alt_buffer_mean']],
             dependent_task_list=[population_align_task,
-                                 mean_buffered_base_ndvi_task],
+                                 mean_buffered_base_ndvi_task,
+                                 mean_buffered_tcc_task],
             task_name="generate alternate (mean buffered) NDVI based on tree cover target"
         )
     else:
@@ -1248,7 +1275,8 @@ def _fit_tc_to_ndvi_curve(
         base_ndvi_path,
         tree_cover_path,
         population_path,
-        nbins=256, nsplines=10):
+        result_figure_path,
+        nbins=256, nsplines=20):
     """Fit a population-weighted TC->NDVI curve using binning.
 
     Assumptions:
@@ -1301,7 +1329,9 @@ def _fit_tc_to_ndvi_curve(
         pop_vals = pop[valid_mask].astype(numpy.float64)
 
         # ``digitize`` returns the indices of the bins to which each value in
-        # an input array belongs
+        # an input array belongs. E.g. if tc_vals are 5, 15, 45, 55, 97, 2
+        # and nbins=5 so edges are 0, 20, 40, 60, 80, 100, then
+        # idx would be 0, 0, 2, 2, 4, 0
         idx = numpy.digitize(tc_vals, edges) - 1
         idx = numpy.clip(idx, 0, nbins - 1)
 
@@ -1309,6 +1339,7 @@ def _fit_tc_to_ndvi_curve(
         # ndvi_pop_sum array specified by indices, with values from another
         # array (here: ndvi_vals * pop_vals)
         # .add.at is used here to handle repeated indices correctly
+        # e.g., "add to ndvi_pop_sum at indices idx the values ndvi_vals * pop_vals"
         numpy.add.at(ndvi_pop_sum, idx, ndvi_vals * pop_vals)
         numpy.add.at(pop_sum, idx, pop_vals)
 
@@ -1317,6 +1348,8 @@ def _fit_tc_to_ndvi_curve(
     has_pop = pop_sum > 0
     # Fill curve array with pop-weighted mean NDVI where pop>0
     # Pixels where pop=0 remain NaN for now; will be filled by interpolation
+    # Bascially, for each "bin", take ndvi_i*pop_i for each pixel i in that
+    # bin, sum them up and divide by sum of pop_i for pixels in that bin
     curve[has_pop] = ndvi_pop_sum[has_pop] / pop_sum[has_pop]
 
     good = numpy.isfinite(curve)
@@ -1327,25 +1360,34 @@ def _fit_tc_to_ndvi_curve(
         )
 
     # Fill empty bins by interpolation across available bins
-    # ``interp`` performs 1D piecewise linear interpolation for a
-    # function with given discrete data points
-    curve_interp = numpy.interp(centers, centers[good], curve[good])
+    # curve_interp = numpy.interp(centers, centers[good], curve[good])
 
     # GAM smoothing on binned means
     x = centers[has_pop].reshape(-1, 1)
-    y = curve_interp[has_pop]
+    y = curve[has_pop]
     w = pop_sum[has_pop]
 
-    gam = LinearGAM(s(0, n_splines=nsplines))
+    gam = LinearGAM(s(0, n_splines=nsplines)) #TODO - cubic regression spline
     gam.fit(x, y, weights=w)
 
     curve_smooth = gam.predict(centers.reshape(-1, 1))
+
+    # plt.vlines(edges, ymin=-1, ymax=1, colors='gray', linestyles='dotted')
+    # TODO - check this curve looks reasonable
+    plt.plot(centers, curve_smooth, c='r', label='Fitted TC->NDVI curve')
+    # plt.scatter(tc_ar.flatten(), ndvi_ar.flatten(), c='green', label="Orig. data", alpha=0.1)
+    plt.scatter(x, y, c='b', label="Binned means", alpha=0.6)
+    plt.xlabel('Tree Canopy Cover (%)')
+    plt.ylabel('NDVI')
+    plt.legend(loc='upper left')
+    plt.savefig(result_figure_path)
+
     return centers, curve_smooth.astype(numpy.float64)
 
 
 def _apply_tc_target_to_alt_ndvi(base_ndvi_path, population_path,
                                  tree_cover_path, tc_target,
-                                 target_alt_ndvi):
+                                 target_alt_ndvi, result_figure_path):
     """Apply a fitted TC --> NDVI curve to create an alternate NDVI raster.
 
     Writes alt NDVI raster where each pixel's NDVI is increased based on
@@ -1371,7 +1413,7 @@ def _apply_tc_target_to_alt_ndvi(base_ndvi_path, population_path,
     """
 
     centers, curve = _fit_tc_to_ndvi_curve(
-        base_ndvi_path, tree_cover_path, population_path,
+        base_ndvi_path, tree_cover_path, population_path, result_figure_path
     )
 
     ndvi_info = pygeoprocessing.get_raster_info(base_ndvi_path)
