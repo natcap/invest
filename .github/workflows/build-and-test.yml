@@ -511,7 +511,7 @@ jobs:
       - name: Run invest-autotest with binaries
         if : |
           (github.event_name == 'push' &&
-          (startsWith(github.ref, 'refs/heads/feature') || github.ref == 'refs/heads/main')) ||
+          (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
           (github.event_name == 'pull_request' && startsWith(github.head_ref, 'autorelease'))
         run: |
           mkdir autotest_dir
