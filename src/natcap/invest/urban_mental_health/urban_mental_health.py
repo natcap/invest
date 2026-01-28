@@ -713,6 +713,22 @@ def execute(args):
         target_path_list=output_align_list,
         task_name='align input rasters')
 
+    population_align_task = task_graph.add_task(
+        func=utils.resample_population_raster,
+        kwargs={
+            'source_population_raster_path': args['population_raster'],
+            'target_population_raster_path': file_registry[
+                'population_aligned'],
+            'target_pixel_size': pixel_size,
+            'target_bb': pygeoprocessing.get_raster_info(
+                output_align_list[0])['bounding_box'],
+            'target_projection_wkt': aoi_projection,
+            'working_dir': args['workspace_dir'],
+        },
+        target_path_list=[file_registry['population_aligned']],
+        dependent_task_list=[align_task],
+        task_name='Resample population to same resolution as other inputs')
+
     if args['scenario'] == 'lulc':
         LOGGER.info("Using LULC inputs")
 
@@ -838,25 +854,6 @@ def execute(args):
             dependent_task_list=[align_task, kernel_task],
             target_path_list=[file_registry['tree_cover_buffer_mean']],
             task_name="calculate mean tree cover within buffer")
-        # TODO: or will i need to make the target bbox for pop resampling the
-        # intersection of baseline ndvi and tcc raster?
-        baseline_ndvi_bbox = pygeoprocessing.get_raster_info(
-                file_registry['ndvi_base_aligned'])['bounding_box']
-
-        population_align_task = task_graph.add_task(
-            func=utils.resample_population_raster,
-            kwargs={
-                'source_population_raster_path': args['population_raster'],
-                'target_population_raster_path': file_registry[
-                    'population_aligned'],
-                'target_pixel_size': pixel_size,
-                'target_bb': baseline_ndvi_bbox,
-                'target_projection_wkt': aoi_projection,
-                'working_dir': args['workspace_dir'],
-            },
-            target_path_list=[file_registry['population_aligned']],
-            dependent_task_list=[align_task],
-            task_name='Resample population to NDVI resolution')
 
         mean_buffered_alt_ndvi_task = task_graph.add_task(
             func=_apply_tc_target_to_alt_ndvi,
@@ -920,31 +917,8 @@ def execute(args):
         # (if ndvi or lulc) or (2) mask_negative_delta_ndvi_task (if tcc)
         baseline_cases_dependency_list = [mask_negative_delta_ndvi_task]
         prev_cases_dependency_list = [mask_negative_delta_ndvi_task]
-    # TODO: could population just be aligned to aligned baseline ndvi raster bbox?
-    # ie is there a scenario where there is a difference between baseline_ndvi
-    # and alt ndvi bbox after they've been aligned?
-    # this would allow us to align population near top of script indpedentent of scenarios rather than here
     else:
-        # Use this bbox as target when aligning pop raster because extents
-        # should match when using raster calculator to calc preventable cases
-        delta_ndvi_bbox = pygeoprocessing.get_raster_info(
-                file_registry['delta_ndvi'])['bounding_box']
-
-        population_align_task = task_graph.add_task(
-            func=utils.resample_population_raster,
-            kwargs={
-                'source_population_raster_path': args['population_raster'],
-                'target_population_raster_path': file_registry[
-                    'population_aligned'],
-                'target_pixel_size': pixel_size,
-                'target_bb': delta_ndvi_bbox,
-                'target_projection_wkt': aoi_projection,
-                'working_dir': args['workspace_dir'],
-            },
-            target_path_list=[file_registry['population_aligned']],
-            dependent_task_list=[delta_ndvi_task],
-            task_name='Resample population to NDVI resolution')
-        baseline_cases_dependency_list = [population_align_task]
+        baseline_cases_dependency_list = [delta_ndvi_task]
         prev_cases_dependency_list = [delta_ndvi_task]
 
     baseline_cases_task = task_graph.add_task(

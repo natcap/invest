@@ -1029,6 +1029,6 @@ class UMHTests(unittest.TestCase):
         # shape is 3x4 (rather than 3x3) because when ndvi_base is resampled,
         # it causes extra nodata column to right of AOI
         expected_prev_cases = numpy.full((3, 4), PGP_FLOAT32_NODATA)
-        expected_prev_cases[1, 1] = 242.5831 #from output
+        expected_prev_cases[1, 1] = 131.3226  # from output
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases,
                                       atol=1e-4)
