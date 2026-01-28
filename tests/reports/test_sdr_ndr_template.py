@@ -6,6 +6,8 @@ from natcap.invest.reports import jinja_env
 
 TEMPLATE = jinja_env.get_template('models/sdr-ndr-report.html')
 
+BSOUP_HTML_PARSER = 'html.parser'
+
 
 def _get_render_args(model_spec):
     timestamp = '1970-01-01'
@@ -56,7 +58,7 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
 
         html = TEMPLATE.render(_get_render_args(MODEL_SPEC))
 
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
         self.assertEqual(len(sections), 8)
@@ -70,7 +72,7 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
 
         html = TEMPLATE.render(_get_render_args(MODEL_SPEC))
 
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
         self.assertEqual(len(sections), 8)
@@ -106,7 +108,7 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
             model_spec_outputs=[],
         )
 
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         results_table = soup.find_all(class_='test__results-table')
         self.assertEqual(len(results_table), 1)
@@ -142,7 +144,7 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
             model_spec_outputs=[],
         )
 
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         results_table = soup.find_all(class_='test__results-table')
         self.assertEqual(len(results_table), 1)

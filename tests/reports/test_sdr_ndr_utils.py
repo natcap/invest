@@ -10,6 +10,8 @@ from osgeo import ogr, osr
 
 from natcap.invest.reports import sdr_ndr_utils
 
+BSOUP_HTML_PARSER = 'html.parser'
+
 
 MAIN_TABLE_COLS = ['ws_id', 'ws_name',
                    'calculated_value_1', 'calculated_value_2']
@@ -74,7 +76,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
                 filepath, cols_to_sum))
         self.assertIsNotNone(main_table)
 
-        soup = BeautifulSoup(main_table, 'html.parser')
+        soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
 
         # Make sure table body has exactly 1 row per feature.
         table_body_rows = soup.find('tbody').find_all('tr')
@@ -115,7 +117,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
                 filepath, cols_to_sum))
         self.assertIsNotNone(main_table)
 
-        main_soup = BeautifulSoup(main_table, 'html.parser')
+        main_soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
 
         # Make sure main table body has exactly `num_features` rows.
         table_body_rows = main_soup.find('tbody').find_all('tr')
@@ -141,7 +143,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
         paginated_table = main_soup.find_all(class_='paginate')
         self.assertEqual(len(paginated_table), 0)
 
-        totals_soup = BeautifulSoup(totals_table, 'html.parser')
+        totals_soup = BeautifulSoup(totals_table, BSOUP_HTML_PARSER)
 
         # Make sure totals table body has exactly 1 row.
         totals_body_rows = totals_soup.find('tbody').find_all('tr')
@@ -182,7 +184,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
                 filepath, cols_to_sum))
         self.assertIsNotNone(main_table)
 
-        main_soup = BeautifulSoup(main_table, 'html.parser')
+        main_soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
 
         # Make sure main table has classes 'datatable' AND 'paginate'.
         datatable_table = main_soup.find(class_='datatable')
