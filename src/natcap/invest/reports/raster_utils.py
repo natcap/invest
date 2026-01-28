@@ -160,6 +160,22 @@ def generate_caption_from_raster_list(
 
 
 def _read_masked_array(filepath, resample_method):
+    """Read a raster into a masked numpy array.
+
+    If the raster is large, build overviews and then read array from the
+    smallest-sized overview. Nodata values are assigned ``numpy.nan``
+    to facilitate matplotlib plotting.
+
+    Args:
+        filepath (str): path to the raster file.
+        resample_method (str): GDAL resampling method to use if resampling
+
+    Returns:
+        tuple: A 2-tuple containing:
+            - masked_array (numpy.ndarray): the raster data as a numpy array
+            - resampled (boolean): whether or not the array is an overview
+
+    """
     info = pygeoprocessing.get_raster_info(filepath)
     nodata = info['nodata'][0]
     resampled = False
@@ -181,7 +197,12 @@ def _read_masked_array(filepath, resample_method):
         raster = band = None
     else:
         array = pygeoprocessing.raster_to_numpy_array(filepath)
-    masked_array = numpy.where(array == nodata, numpy.nan, array)
+    masked_array = numpy.full(array.shape, numpy.nan)
+    if nodata is not None:
+        valid_mask = ~numpy.isclose(array, nodata, equal_nan=True)
+    else:
+        valid_mask = numpy.full(array.shape, True)
+    masked_array[valid_mask] = array[valid_mask]
     return (masked_array, resampled)
 
 
