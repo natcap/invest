@@ -1,4 +1,5 @@
 import contextlib
+import logging
 
 import altair
 import geopandas
@@ -19,6 +20,7 @@ MATPLOTLIB_PARAMS = {
     # 'xtick.labelsize': 'small',
     # 'ytick.labelsize': 'small'
 }
+matplotlib_logger = logging.getLogger('matplotlib')
 
 
 @contextlib.contextmanager
@@ -51,6 +53,8 @@ def configure_libraries():
 
     # Matplotlib
     matplotlib.rcParams.update(MATPLOTLIB_PARAMS)
+    # Debug-level is far too noisy and likely never useful in invest's context
+    matplotlib_logger.setLevel(logging.INFO)
 
     try:
         yield
@@ -59,3 +63,4 @@ def configure_libraries():
         pandas.reset_option('display.float_format')
         geopandas.options.io_engine = None
         matplotlib.rcParams.update(matplotlib.rcParamsDefault)
+        matplotlib_logger.setLevel(logging.NOTSET)
