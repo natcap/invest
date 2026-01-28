@@ -1271,12 +1271,8 @@ def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
     return None
 
 
-def _fit_tc_to_ndvi_curve(
-        base_ndvi_path,
-        tree_cover_path,
-        population_path,
-        result_figure_path,
-        nbins=256, nsplines=20):
+def _fit_tc_to_ndvi_curve(base_ndvi_path, tree_cover_path, population_path,
+                          result_figure_path, nbins, nsplines):
     """Fit a population-weighted TC->NDVI curve using binning.
 
     Assumptions:
@@ -1372,10 +1368,8 @@ def _fit_tc_to_ndvi_curve(
 
     curve_smooth = gam.predict(centers.reshape(-1, 1))
 
-    # plt.vlines(edges, ymin=-1, ymax=1, colors='gray', linestyles='dotted')
     # TODO - check this curve looks reasonable
     plt.plot(centers, curve_smooth, c='r', label='Fitted TC->NDVI curve')
-    # plt.scatter(tc_ar.flatten(), ndvi_ar.flatten(), c='green', label="Orig. data", alpha=0.1)
     plt.scatter(x, y, c='b', label="Binned means", alpha=0.6)
     plt.xlabel('Tree Canopy Cover (%)')
     plt.ylabel('NDVI')
@@ -1387,7 +1381,8 @@ def _fit_tc_to_ndvi_curve(
 
 def _apply_tc_target_to_alt_ndvi(base_ndvi_path, population_path,
                                  tree_cover_path, tc_target,
-                                 target_alt_ndvi, result_figure_path):
+                                 target_alt_ndvi, result_figure_path,
+                                 nbins=256, nsplines=10):
     """Apply a fitted TC --> NDVI curve to create an alternate NDVI raster.
 
     Writes alt NDVI raster where each pixel's NDVI is increased based on
@@ -1407,13 +1402,16 @@ def _apply_tc_target_to_alt_ndvi(base_ndvi_path, population_path,
             range [0, 100]
         tc_target (float): target tree canopy cover value (in range [0,100])
         target_alt_ndvi (str): path to output alternate NDVI raster
+        nbins (int): number of tree cover bins to use when fitting curve
+        nsplines (int): number of splines to use in GAM smoothing
 
     Returns:
         None
     """
 
     centers, curve = _fit_tc_to_ndvi_curve(
-        base_ndvi_path, tree_cover_path, population_path, result_figure_path
+        base_ndvi_path, tree_cover_path, population_path,
+        result_figure_path, nbins, nsplines
     )
 
     ndvi_info = pygeoprocessing.get_raster_info(base_ndvi_path)
@@ -1454,9 +1452,13 @@ def _apply_tc_target_to_alt_ndvi(base_ndvi_path, population_path,
         # tc_vals = numpy.clip(tc_arr[valid].astype(numpy.float64), 0.0, 1.0)
         tcc_vals = tcc[valid_mask].astype(numpy.float64)
         tcc_vals = numpy.clip(tcc_vals, 0, 100)
+        # get predicted NDVI given current tcc, as per the fitted curve
         f_tc = numpy.interp(tcc_vals, centers_arr, curve_arr)
+        # compute difference between target NDVI and predicted NDVI
+        # i.e., get amount of exposure change need to bring pixel to target NDVI
         ndvi_diff = ndvi_target_val - f_tc
 
+        # apply difference to base NDVI to get alt NDVI
         result[valid_mask] = (
             ndvi[valid_mask] + ndvi_diff).astype(numpy.float32)
 
