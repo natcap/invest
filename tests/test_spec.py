@@ -5,11 +5,12 @@ import unittest
 
 import geometamaker
 from natcap.invest import spec
-from natcap.invest.file_registry import FileRegistry
 from natcap.invest.unit_registry import u
 from osgeo import gdal
-from osgeo import ogr
 from pydantic import ValidationError
+
+from .utils import fake_execute
+
 
 gdal.UseExceptions()
 
@@ -261,38 +262,6 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
 
-def _fake_execute(output_spec, workspace):
-    """A utility function to support the metadata test."""
-    file_registry = FileRegistry(output_spec, workspace, '')
-    for spec_data in output_spec:
-        reg_key = spec_data.id
-        if '[' in spec_data.id:
-            reg_key = (spec_data.id, 'A')
-        filepath = file_registry[reg_key]
-        if isinstance(spec_data, spec.SingleBandRasterOutput):
-            driver = gdal.GetDriverByName('GTIFF')
-            raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
-            band = raster.GetRasterBand(1)
-            band.SetNoDataValue(2)
-        elif isinstance(spec_data, spec.VectorOutput):
-            driver = gdal.GetDriverByName('GPKG')
-            target_vector = driver.CreateDataSource(filepath)
-            layer_name = os.path.basename(os.path.splitext(filepath)[0])
-            target_layer = target_vector.CreateLayer(
-                layer_name, geom_type=ogr.wkbPolygon)
-            for field_spec in spec_data.fields:
-                target_layer.CreateField(ogr.FieldDefn(field_spec.id, ogr.OFTInteger))
-        elif isinstance(spec_data, spec.CSVOutput):
-            columns = [field_spec.id for field_spec in spec_data.columns]
-            with open(filepath, 'w') as file:
-                file.write(','.join(columns))
-        else:
-            # Such as taskgraph.db, just create the file.
-            with open(filepath, 'w') as file:
-                pass
-    return file_registry.registry
-
-
 class TestMetadataFromSpec(unittest.TestCase):
     """Tests for metadata-generation functions."""
 
@@ -306,83 +275,26 @@ class TestMetadataFromSpec(unittest.TestCase):
 
     def test_write_metadata_for_outputs(self):
         """Test writing metadata for an invest output workspace."""
-
-        # An example invest output spec
-        output_spec = [
-            spec.SingleBandRasterOutput(
-                id="urban_nature_supply_percapita",
-                path="output/urban_nature_supply_percapita.tif",
-                about="The calculated supply per capita of urban nature.",
-                data_type=float,
-                units=u.m**2
-            ),
-            spec.VectorOutput(
-                id="admin_boundaries",
-                path="output/admin_boundaries.gpkg",
-                about=("A copy of the user's administrative boundaries "
-                       "vector with a single layer."),
-                geometry_types=spec.POLYGONS,
-                fields=[
-                    spec.NumberOutput(
-                        id="SUP_DEMadm_cap",
-                        units=u.m**2/u.person,
-                        about="The average urban nature supply/demand"
-                    )
-                ]
-            ),
-            spec.CSVOutput(
-                id="table",
-                path="output/table.csv",
-                about=("A biophysical table."),
-                columns=[
-                    spec.NumberOutput(
-                        id="foo",
-                        units=u.m**2/u.person,
-                        about="bar"
-                    )
-                ]
-            ),
-            spec.SingleBandRasterOutput(
-                id="mask_[A]",  # testing with a pattern
-                path="intermediate/mask_[A].tif",
-                about="A mask for the final raster output.",
-                data_type=float,
-                units=u.m**2
-            ),
-            spec.TASKGRAPH_CACHE.model_copy(update=dict(
-                path="intermediate/taskgraph_cache/taskgraph.db")
-            )
-        ]
-
-        model_spec = spec.ModelSpec(
-            model_id='urban_nature_access',
-            model_title='Urban Nature Access',
-            userguide='',
-            aliases=[],
-            input_field_order=[],
-            inputs=[],
-            module_name='',
-            outputs=output_spec
-        )
+        from .utils import SAMPLE_MODEL_SPEC
         
         # Generate an output workspace with real files, without
         # running an invest model.
         args_dict = {'workspace_dir': self.workspace_dir}
-        model_spec.create_output_directories(args_dict)
-        file_registry = _fake_execute(model_spec.outputs, self.workspace_dir)
-        model_spec.generate_metadata_for_outputs(file_registry, args_dict)
+        SAMPLE_MODEL_SPEC.create_output_directories(args_dict)
+        file_registry = fake_execute(SAMPLE_MODEL_SPEC.outputs, self.workspace_dir)
+        SAMPLE_MODEL_SPEC.generate_metadata_for_outputs(file_registry, args_dict)
 
         files, messages = geometamaker.validate_dir(self.workspace_dir)
         self.assertEqual(len(files), 4)
         self.assertFalse(any(messages))
 
         # Test some specific content of the metadata
-        vector_spec = model_spec.get_output('admin_boundaries')
+        vector_spec = SAMPLE_MODEL_SPEC.get_output('admin_boundaries')
         resource = geometamaker.describe(
             os.path.join(self.workspace_dir, vector_spec.path))
         self.assertCountEqual(
             resource.get_keywords(),
-            [model_spec.model_id, 'InVEST'])
+            [SAMPLE_MODEL_SPEC.model_id, 'InVEST'])
         self.assertEqual(
             resource.get_field_description('SUP_DEMadm_cap').description,
             vector_spec.get_field('SUP_DEMadm_cap').about)

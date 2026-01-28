@@ -1959,7 +1959,7 @@ class ModelSpec(BaseModel):
     reporter: str = ''
     """The importable name of a report-generating module with a ``report``
     function.
-    e.g. ``'invest_reports.jinja_report_generators.cv_report_generator'``
+    e.g. ``'natcap.invest.ndr.reporter'``
     """
 
     @field_validator('reporter', mode='after')
@@ -2251,7 +2251,7 @@ class ModelSpec(BaseModel):
                         'Something went wrong while generating metadata',
                         exc_info=exc)
 
-            # optionally write the file registry dict to a JSON file in the workspace
+            # optionally write file registry to a JSON file in the workspace
             if save_file_registry:
                 file_registry_path = os.path.join(
                     preprocessed_args['workspace_dir'],
@@ -2264,8 +2264,10 @@ class ModelSpec(BaseModel):
                 target_html_filepath = os.path.join(
                     preprocessed_args['workspace_dir'],
                     f'{self.model_id}_report{preprocessed_args["results_suffix"]}.html')
-                reporter_module.report(
-                    registry, preprocessed_args, self, target_html_filepath)
+
+                with natcap.invest.reports.configure_libraries():
+                    reporter_module.report(
+                        registry, preprocessed_args, self, target_html_filepath)
 
 
 # Specs for common arg types ##################################################
