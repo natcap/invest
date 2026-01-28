@@ -68,9 +68,9 @@ Unreleased Changes
 General
 =======
 * Some InVEST models now generate visual summaries of results,
-  called "reports". Reports are html documents available in the output
+  called "reports". A report is an html document available in the output
   workspace and also viewable from the Workbench after the model run completes.
-  Reports exist for Carbon, Coastal Vulnerability NDR, & SDR models.
+  Reports exist for the Carbon, Coastal Vulnerability, NDR, & SDR models.
   Reports for other models will be developed and released over time.
   (`#2249 <https://github.com/natcap/invest/issues/2249>`_)
 * Now testing and building against Python 3.14.
