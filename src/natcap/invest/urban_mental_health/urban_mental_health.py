@@ -683,7 +683,7 @@ def execute(args):
 
     raster_to_method_dict = {'ndvi_base': 'cubic', 'ndvi_alt': 'cubic',
                              'lulc_base': 'near', 'lulc_alt': 'near',
-                             'tree_cover_raster': 'cubic'}
+                             'tree_cover_raster': 'bilinear'}
     input_align_list = []
     output_align_list = []
     resample_method_list = []
@@ -915,10 +915,10 @@ def execute(args):
         )
         # baseline cases task depends on either (1) population align task
         # (if ndvi or lulc) or (2) mask_negative_delta_ndvi_task (if tcc)
-        baseline_cases_dependency_list = [mask_negative_delta_ndvi_task]
+        delta_ndvi_dependency = mask_negative_delta_ndvi_task
         prev_cases_dependency_list = [mask_negative_delta_ndvi_task]
     else:
-        baseline_cases_dependency_list = [delta_ndvi_task]
+        delta_ndvi_dependency = delta_ndvi_task
         prev_cases_dependency_list = [delta_ndvi_task]
 
     baseline_cases_task = task_graph.add_task(
@@ -928,7 +928,7 @@ def execute(args):
               file_registry['baseline_prevalence_raster'],
               file_registry['baseline_cases']),
         target_path_list=[file_registry['baseline_cases']],
-        dependent_task_list=baseline_cases_dependency_list,
+        dependent_task_list=[delta_ndvi_dependency, population_align_task],
         task_name="calculate baseline cases"
     )
 
@@ -1262,7 +1262,7 @@ def _fit_tc_to_ndvi_curve(base_ndvi_path, tree_cover_path, population_path,
 
     Returns:
         tuple of (centers, curve)
-            centers: numpy.ndarray shape (nbins,), TC bin centers in [0,1]
+            centers: numpy.ndarray shape (nbins,), TC bin centers in [0, 100]
             curve: numpy.ndarray shape (nbins,), pop-weighted mean NDVI per TC
                    bin, with empty bins linearly interpolated.
     """
@@ -1342,13 +1342,14 @@ def _fit_tc_to_ndvi_curve(base_ndvi_path, tree_cover_path, population_path,
 
     curve_smooth = gam.predict(centers.reshape(-1, 1))
 
-    # TODO - check this curve looks reasonable
-    plt.plot(centers, curve_smooth, c='r', label='Fitted TC->NDVI curve')
-    plt.scatter(x, y, c='b', label="Binned means", alpha=0.6)
-    plt.xlabel('Tree Canopy Cover (%)')
-    plt.ylabel('NDVI')
-    plt.legend(loc='upper left')
-    plt.savefig(result_figure_path)
+    fig, ax = plt.subplots()
+    ax.plot(centers, curve_smooth, c='r', label='Fitted TC->NDVI curve')
+    ax.scatter(x, y, c='b', label="Binned means", alpha=0.6)
+    ax.set_xlabel("Tree cover (%)")
+    ax.set_ylabel("Predicted NDVI")
+    fig.tight_layout()
+    fig.savefig(result_figure_path, dpi=150)
+    plt.close(fig)
 
     return centers, curve_smooth.astype(numpy.float64)
 
