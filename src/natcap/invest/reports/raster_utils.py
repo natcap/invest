@@ -269,6 +269,41 @@ def _figure_subplots(xy_ratio, n_plots):
     return fig, axs
 
 
+def _get_title_kwargs(raster_path: str, resampled: bool, subtitle: str = ''):
+    filename = os.path.basename(raster_path)
+    label = f"{filename}{' (resampled)' if resampled else ''}"
+    label = f"{label}\n{subtitle}" if subtitle else label
+    return {
+        'fontfamily': 'monospace',
+        'fontsize': TITLE_FONT_SIZE,
+        'fontweight': 700,
+        'label': label,
+        'loc': 'left',
+        'pad': 1.5 * SUBTITLE_FONT_SIZE,
+        'verticalalignment': 'bottom',
+    }
+
+
+def _get_units_text_kwargs(units: str, raster_height: int):
+    # This -0.1 multiplier is a bit of a 'magic number' but seems to work for now.
+    subtitle_offset = -0.1 * raster_height
+    # Set ylim top < 0 to add some padding above the plot.
+    ylim_args = {
+        'bottom': raster_height,
+        'top': subtitle_offset,
+    }
+    # Place subtitle text immediately above that padding.
+    text_args = {
+        'fontsize': SUBTITLE_FONT_SIZE,
+        'horizontalalignment': 'left',
+        's': f'Units: {units}',
+        'verticalalignment': 'bottom',
+        'x': -0.5,
+        'y': subtitle_offset,
+    }
+    return (ylim_args, text_args)
+
+
 def plot_raster_list(raster_list: list[RasterPlotConfig]):
     """Plot a list of rasters.
 
@@ -311,22 +346,14 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             imshow_kwargs['vmax'] = 1.5
             colorbar_kwargs['ticks'] = [0, 1]
 
-        # @TODO: extract title/text settings into shared const/fn so plot_raster_facets can get them too.
-        ax.set_title(
-            label=f"{os.path.basename(raster_path)}{' (resampled)' if resampled else ''}",
-            loc='left', pad=(1.5 * SUBTITLE_FONT_SIZE), verticalalignment='bottom',
-            fontfamily='monospace', fontsize=TITLE_FONT_SIZE, fontweight=700)
+        ax.set_title(**_get_title_kwargs(raster_path, resampled))
 
         units = _get_raster_units(raster_path)
         if units:
-            # This -0.1 multiplier is a bit of a 'magic number' but seems to work for now.
-            subtitle_offset = -0.1 * len(arr)
-            # Set ylim top < 0 to add some padding above the plot.
-            ax.set_ylim(bottom=len(arr), top=subtitle_offset)
-            # Place subtitle text immediately above that padding.
-            ax.text(x=-0.5, y=subtitle_offset,
-                    horizontalalignment='left', verticalalignment='bottom',
-                    s=f'Units: {units}', fontsize=SUBTITLE_FONT_SIZE)
+            (ylim_kwargs,
+             text_kwargs) = _get_units_text_kwargs(units, len(arr))
+            ax.set_ylim(**ylim_kwargs)
+            ax.text(**text_kwargs)
 
         if dtype == 'nominal':
             # typically a 'nominal' raster would be an int type, but we replaced
@@ -476,16 +503,17 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
         cmap.set_under(cmap.colors[0])  # values below vmin (0s) get this color
     else:
         normalizer = plt.Normalize(vmin=vmin, vmax=vmax)
-    for arr, ax, tif, subtitle in zip(ndarray, axes.flatten(), tif_list, subtitle_list):
+    for arr, ax, raster_path, subtitle in zip(ndarray, axes.flatten(),
+                                              tif_list, subtitle_list):
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
         # all rasters are identical size; `resampled` will be the same for all
-        ax.set_title(
-            label=f"{os.path.basename(tif)}{' (resampled)' if resampled else ''}\n{subtitle}",
-            loc='left', y=1.12, pad=0,
-            fontfamily='monospace', fontsize=14, fontweight=700)
-        units = _get_raster_units(tif)
+        ax.set_title(**_get_title_kwargs(raster_path, resampled, subtitle))
+        units = _get_raster_units(raster_path)
         if units:
-            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
+            (ylim_kwargs,
+             text_kwargs) = _get_units_text_kwargs(units, len(arr))
+            ax.set_ylim(**ylim_kwargs)
+            ax.text(**text_kwargs)
         fig.colorbar(mappable, ax=ax)
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
@@ -531,8 +559,6 @@ def _build_stats_table_row(resource, band):
     row['Count'] = width * height
     row['Nodata value'] = band.nodata
     # band.units may be '', which can mean 'unitless', 'unknown', or 'other'
-    # @TODO: standardize string representations to help distinguish between
-    # 'unitless', 'other/multiple/it depends', and truly 'unknown'
     row['Units'] = band.units
     return row
 
