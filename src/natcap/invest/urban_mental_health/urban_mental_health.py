@@ -1337,7 +1337,7 @@ def _fit_tc_to_ndvi_curve(base_ndvi_path, tree_cover_path, population_path,
     y = curve[has_pop]
     w = pop_sum[has_pop]
 
-    gam = LinearGAM(s(0, n_splines=nsplines)) #TODO - cubic regression spline
+    gam = LinearGAM(s(0, n_splines=nsplines))
     gam.fit(x, y, weights=w)
 
     curve_smooth = gam.predict(centers.reshape(-1, 1))
