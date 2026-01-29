@@ -278,7 +278,10 @@ test('Check local userguide links', async () => {
   const modelButtons = await investList.$$('button.invest-button');
 
   await page.waitForTimeout(WAIT_TO_CLICK); // first btn click does not register w/o this pause
+  // eslint-disable-next-line
   for (const btn of modelButtons) {
+    const isPlugin = await btn.$('::-p-text(Plugin)');
+    if (isPlugin) { continue; } // plugins do not have local UG
     await btn.click();
     const link = await page.waitForSelector('text/User\'s Guide');
     await page.waitForTimeout(WAIT_TO_CLICK); // link.click() not working w/o this pause
