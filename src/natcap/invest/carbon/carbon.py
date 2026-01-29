@@ -20,6 +20,7 @@ MODEL_SPEC = spec.ModelSpec(
     model_id="carbon",
     model_title=gettext("Carbon Storage and Sequestration"),
     userguide="carbonstorage.html",
+    reporter="natcap.invest.carbon.reporter",
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
@@ -230,7 +231,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="npv_alt",
             path="npv_alt.tif",
             about=gettext(
-                "Rasters showing the economic value of carbon sequestered between the"
+                "Raster showing the economic value of carbon sequestered between the"
                 " baseline and the alternate landscape dates."
             ),
             created_if="lulc_alt_path",

@@ -35,3 +35,4 @@ fiona
 geopandas
 jinja2
 matplotlib
+distinctipy

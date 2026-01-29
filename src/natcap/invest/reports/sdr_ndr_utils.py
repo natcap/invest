@@ -4,8 +4,7 @@
 import geopandas
 import pandas
 
-
-TABLE_PAGINATION_THRESHOLD = 10
+from natcap.invest.reports.report_constants import TABLE_PAGINATION_THRESHOLD
 
 
 def generate_results_table_from_vector(filepath, cols_to_sum):

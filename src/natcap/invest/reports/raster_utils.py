@@ -6,19 +6,22 @@ import os
 from io import BytesIO
 from enum import Enum
 
+import distinctipy
 import geometamaker
 import numpy
 import pygeoprocessing
 import matplotlib
-import matplotlib.pyplot as plt
+import matplotlib.colors
 from matplotlib.colors import ListedColormap
+import matplotlib.patches
+import matplotlib.pyplot as plt
 import pandas
 import yaml
 from osgeo import gdal
 from pydantic.dataclasses import dataclass
 
 from natcap.invest.spec import ModelSpec
-
+from natcap.invest.reports.report_constants import TABLE_PAGINATION_THRESHOLD
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,18 +30,38 @@ MPL_SAVE_FIG_KWARGS = {
     'bbox_inches': 'tight'
 }
 
-# We set report container max width to 80rem.
-# img is set to width:100%, but it's best if figures are sized to
-# fill the container with minimal rescaling, as they contain rasterized text.
+# Our CSS sets report container max width to 80rem, which is 1280px
+# (with default browser settings, i.e., root font size = 16px).
+# After accounting for padding and borders,
+# an img typically has a max width of 75.5rem, or 1208px.
+# It's best if figures are sized to fill their containers
+# with minimal rescaling, since they contain rasterized text.
 # Other variables:
-#   root font size (default 16px)
-#   savefig with tight bbox layout shrinks the figure after it is sized
-FIGURE_WIDTH = 14.5  # inches; by trial & error
+#   - When creating a figure, e.g., with plt.subplots, default dpi is 100.
+#   - Creating a figure with layout='constrained' may automagically adjust
+#     subplot sizes and grid spacing (potentially affecting overall figure
+#     size) to ensure colorbars/legends don't overlap or get cut off.
+#   - Savefig with tight bbox layout shrinks the figure after it is sized.
+# In practice, with all the variables mentioned above, final image width tends
+# to be a few hundredths of an inch larger than what is specified when creating
+# the figure. With that in mind, we set max figure width slightly smaller than
+# the desired image width.
+MAX_FIGURE_WIDTH_INCHES = 12  # 1208px / 100 dpi = 12.08 in => round down to 12.0
+# The goal of max height is to ensure a given subplot fits within the vertical
+# bounds of a maximized window on any laptop/desktop screen. At one extreme,
+# some laptop screens are only 768px high. Allowing some buffer for browser
+# toolbars (~ 10% of window height) leaves around 700px for the subplot itself.
+MAX_SUBPLOT_HEIGHT_INCHES = 7  # 700px / 100 dpi = 7 in
+
+TITLE_FONT_SIZE = 13  # 13pt ≈ 18.1px
+SUBTITLE_FONT_SIZE = 11  # 11pt ≈ 15.3px
 
 # Mapping 'datatype' to colormaps and resampling algorithms
 COLORMAPS = {
     'continuous': 'viridis',
     'divergent': 'BrBG',
+    # Default for nominal data is matplotlib's tab20.
+    # If > 20 colors are needed, colormap will be generated with distinctipy.
     'nominal': 'tab20',
     # This `1` color has good (but not especially high) contrast against both
     # black (the `0` color) and white (the figure background).
@@ -227,10 +250,19 @@ def _choose_n_rows_n_cols(xy_ratio, n_plots):
 def _figure_subplots(xy_ratio, n_plots):
     n_rows, n_cols = _choose_n_rows_n_cols(xy_ratio, n_plots)
 
-    sub_width = FIGURE_WIDTH / n_cols
-    sub_height = (sub_width / xy_ratio) + 1.0  # in; expand vertically for title & subtitle
+    figure_width = MAX_FIGURE_WIDTH_INCHES
+    sub_width = figure_width / n_cols
+    sub_height = (sub_width / xy_ratio)
+    figure_height = sub_height * n_rows
+    max_figure_height = MAX_SUBPLOT_HEIGHT_INCHES * n_rows
+    if figure_height > max_figure_height:
+        # Constrain height, then adjust width accordingly.
+        downscale_factor = max_figure_height / figure_height
+        figure_height = max_figure_height
+        figure_width *= downscale_factor
+
     fig, axs = plt.subplots(
-        n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height),
+        n_rows, n_cols, figsize=(figure_width, figure_height),
         layout='constrained')
     if n_plots == 1:
         axs = numpy.array([axs])
@@ -278,24 +310,55 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             imshow_kwargs['vmin'] = -0.5
             imshow_kwargs['vmax'] = 1.5
             colorbar_kwargs['ticks'] = [0, 1]
-        mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
+
+        # @TODO: extract title/text settings into shared const/fn so plot_raster_facets can get them too.
         ax.set_title(
             label=f"{os.path.basename(raster_path)}{' (resampled)' if resampled else ''}",
-            loc='left', y=1.12, pad=0,
-            fontfamily='monospace', fontsize=14, fontweight=700)
+            loc='left', pad=(1.5 * SUBTITLE_FONT_SIZE), verticalalignment='bottom',
+            fontfamily='monospace', fontsize=TITLE_FONT_SIZE, fontweight=700)
+
         units = _get_raster_units(raster_path)
         if units:
-            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
+            # This -0.1 multiplier is a bit of a 'magic number' but seems to work for now.
+            subtitle_offset = -0.1 * len(arr)
+            # Set ylim top < 0 to add some padding above the plot.
+            ax.set_ylim(bottom=len(arr), top=subtitle_offset)
+            # Place subtitle text immediately above that padding.
+            ax.text(x=-0.5, y=subtitle_offset,
+                    horizontalalignment='left', verticalalignment='bottom',
+                    s=f'Units: {units}', fontsize=SUBTITLE_FONT_SIZE)
+
         if dtype == 'nominal':
             # typically a 'nominal' raster would be an int type, but we replaced
             # nodata with nan, so the array is now a float.
             values, counts = numpy.unique(arr[~numpy.isnan(arr)], return_counts=True)
             values = values[numpy.argsort(-counts)].astype(int)  # descending order
+            # We need enough colors to cover the full range of values.
+            # If there is only one color per unique value, and the range of
+            # values is larger than the number of unique values, matplotlib's
+            # normalization can cause multiple values to be represented by the
+            # same color.
+            # (Future work may involve writing a custom normalizer to prevent
+            # this problem and generate only one color for each unique value.)
+            num_colors = numpy.max(values) - numpy.min(values) + 1
+            # If > 20 colors needed, generate colormap to override default.
+            if num_colors > 20:
+                # Values of pastel_factor and rng have been chosen specifically
+                # for Carbon (Willamette) sample data. If/when we create a
+                # report using sample data that is ill-suited to the color
+                # palette generated with these values, we will take a different
+                # approach to customizing color palettes.
+                cmap = ListedColormap(
+                    distinctipy.get_colors(
+                        num_colors, pastel_factor=0.6, rng=0))
+
+            mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
             colors = [mappable.cmap(mappable.norm(value)) for value in values]
             patches = [matplotlib.patches.Patch(
                 color=colors[i], label=f'{values[i]}') for i in range(len(values))]
+
             legend_kwargs = {
-                'ncol': 1,
+                'ncol': math.ceil(len(patches) / 30),
                 'loc': 'upper left',
                 'bbox_to_anchor': (1.02, 1)  # place 'loc' corner here
             }
@@ -305,6 +368,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             leg = ax.legend(handles=patches, **legend_kwargs)
             leg.set_in_layout(True)
         else:
+            mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
             fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
     [ax.set_axis_off() for ax in axs.flatten()]
     return fig
@@ -522,3 +586,22 @@ def raster_inputs_summary(args_dict):
                     del raster_summary[filename]['Units']
 
     return pandas.DataFrame(raster_summary).T
+
+
+def rat_to_html(raster_path: str) -> str | None:
+    with gdal.OpenEx(raster_path) as raster:
+        band = raster.GetRasterBand(1)
+        rat = band.GetDefaultRAT()
+        if rat:
+            columns = [pandas.Series(
+                rat.ReadAsArray(i), name=rat.GetNameOfCol(i)).astype('string')
+                for i in range(rat.GetColumnCount())]
+            df = pandas.concat(columns, axis=1)
+            css_classes = ['datatable']
+            (num_rows, _) = df.shape
+            if num_rows > TABLE_PAGINATION_THRESHOLD:
+                css_classes.append('paginate')
+            return df.to_html(
+                index=False, na_rep='', classes=css_classes)
+        else:
+            return None

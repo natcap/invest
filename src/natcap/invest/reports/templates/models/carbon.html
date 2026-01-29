@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+  {{ super() }}
+  {% include 'datatable-styles.html' %}
+{% endblock styles %}
+
+{% block content %}
+
+  {{ super() }}
+
+  {% from 'args-table.html' import args_table %}
+  {% from 'caption.html' import caption %}
+  {% from 'content-grid.html' import content_grid %}
+  {% from 'metadata.html' import list_metadata %}
+  {% from 'raster-plot-img.html' import raster_plot_img %}
+  {% from 'rat-heading.html' import rat_heading %}
+  {% from 'wide-table.html' import wide_table %}
+
+  <h2 class="section-header">Results</h2>
+
+  {{ accordion_section(
+    'Aggregate Results',
+    agg_results_table | safe
+  )}}
+
+  {{ accordion_section(
+    'Primary Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (caption(outputs_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {% for section in intermediate_raster_sections %}
+  {{ accordion_section(
+    section['heading'],
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(section['img_src'], section['heading']), 100),
+      (caption(section['caption'], definition_list=True), 100)
+    ])
+  )}}
+  {% endfor %}
+
+  {{ accordion_section(
+    'Output Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Inputs</h2>
+
+  {% if args_dict is defined and args_dict != None %}
+    {{ accordion_section(
+      'Arguments',
+      args_table(args_dict)
+    )}}
+  {% endif %}
+
+  {{ accordion_section(
+    'LULC Maps',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (caption(lulc_pre_caption, pre_caption=True), 100),
+      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (caption(inputs_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {% if lulc_attr_tables is defined and lulc_attr_tables != None %}
+    {% if lulc_attr_tables | length == 1 %}
+      {% set table = lulc_attr_tables[0] %}
+      {{ accordion_section(
+        'LULC Attribute Tables',
+        content_grid([
+          (rat_heading(table.filename), 100),
+          (wide_table(
+            table.table | safe,
+            font_size_px=16
+          ), 100)
+        ])
+      )}}
+    {% elif lulc_attr_tables | length == 2 %}
+      {% set table1 = lulc_attr_tables[0] %}
+      {% set table2 = lulc_attr_tables[1] %}
+      {{ accordion_section(
+        'LULC Attribute Tables',
+        content_grid([
+          (rat_heading(table1.filename), 100),
+          (wide_table(
+            table1.table | safe,
+            font_size_px=16
+          ), 100),
+          (rat_heading(table2.filename), 100),
+          (wide_table(
+            table2.table | safe,
+            font_size_px=16
+          ), 100)
+        ])
+      )}}
+    {% endif %}
+  {% endif %}
+
+  {{ accordion_section(
+    'Input Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Metadata</h2>
+
+  {{
+    accordion_section(
+      'Output Filenames and Descriptions',
+      list_metadata(model_spec_outputs),
+      expanded=False
+    )
+  }}
+
+{% endblock content %}
+
+{% block scripts %}
+  {{ super() }}
+  {% include 'datatable-js.html' %}
+{% endblock scripts %}

@@ -151,7 +151,7 @@ class RasterPlotConfig(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        
+
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
@@ -239,7 +239,7 @@ class RasterPlotLegends(unittest.TestCase):
         self.raster_config = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
             'nominal', 'linear')
-        
+
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
@@ -277,7 +277,7 @@ class RasterPlotFacets(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        
+
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
@@ -297,7 +297,7 @@ class RasterPlotFacets(unittest.TestCase):
         pygeoprocessing.numpy_array_to_raster(
             b_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
             projection_wkt=PROJ_WKT, target_path=b_raster_filepath)
-        
+
         fig = raster_utils.plot_raster_facets(
             [a_raster_filepath, b_raster_filepath], 'continuous')
         actual_png = os.path.join(self.workspace_dir, figname)
@@ -355,11 +355,10 @@ class TestRasterWorkspaceSummary(unittest.TestCase):
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)    
+        shutil.rmtree(self.workspace_dir)
 
     def test_raster_workspace_summary(self):
-        from ..utils import fake_execute
-        from ..utils import SAMPLE_MODEL_SPEC
+        from tests.utils import fake_execute, SAMPLE_MODEL_SPEC
 
         # Generate an output workspace with real files & metadata
         # without running an invest model.
