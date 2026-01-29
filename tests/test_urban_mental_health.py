@@ -134,17 +134,13 @@ def make_synthetic_data_and_params(workspace_dir, model_option):
 
     if model_option == 1:
         args['scenario'] = 'tcc_ndvi'
-        args['tc_raster'] = '' #TODO
-        args['tc_target'] = '' #TODO
-
-    if model_option == 1:
-        args['scenario'] = 'tcc_ndvi'
         tcc_array = numpy.array(
-            [[.12, .22, .1], [.2, .3, .8], [.9, .14, .14], [.16, .17, .3]])
+            [[1, 2, 10], [2, 30, 10],
+             [9, 4, 4], [6, 7, 30]], dtype=numpy.float32)
         tcc_path = os.path.join(workspace_dir, "tcc.tif")
         make_raster_from_array(tcc_path, tcc_array)
         args['tree_cover_raster'] = tcc_path
-        args['tree_cover_target'] = 50
+        args['tree_cover_target'] = 80
 
     elif model_option == 2:
         args['scenario'] = 'lulc'
@@ -890,7 +886,7 @@ class UMHTests(unittest.TestCase):
 
     #     urban_mental_health.execute(args)
 
-    #     expected_delta_ndvi = numpy.array(
+    #     expected_delta_ndvi = numpy.array( #pre-masking negatives 
     #         [[-0.1, 0.0, -0.2],
     #          [0.0, 0.1, PGP_FLOAT32_NODATA],
     #          [-0.05, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]]) # TODO: verify
@@ -969,16 +965,17 @@ class UMHTests(unittest.TestCase):
         expected_centers = numpy.array([10, 30, 50, 70, 90])
         numpy.testing.assert_allclose(centers, expected_centers)
 
+        expected_curve_smooth = [0.00352484, 0.20409146, 0.50960143,
+                                 0.32081851, 0.40392808]
+        # ^ calculated via:
         # GAM smoothing on binned means
-        x = (expected_centers[expected_pop_sum > 0]).reshape(-1, 1)
-        y = expected_interp_curve[expected_pop_sum > 0]
-        w = expected_pop_sum[expected_pop_sum > 0]
-
-        gam = LinearGAM(s(0, n_splines=10))
-        gam.fit(x, y, weights=w)
-
-        expected_curve_smooth = gam.predict(expected_centers.reshape(-1, 1))
-        numpy.testing.assert_allclose(curve, expected_curve_smooth)
+        # x = (expected_centers[expected_pop_sum > 0]).reshape(-1, 1)
+        # y = expected_interp_curve[expected_pop_sum > 0]
+        # w = expected_pop_sum[expected_pop_sum > 0]
+        # gam = LinearGAM(s(0, n_splines=10))
+        # gam.fit(x, y, weights=w)
+        # expected_curve_smooth = gam.predict(expected_centers.reshape(-1, 1))
+        numpy.testing.assert_allclose(curve, expected_curve_smooth, atol=1e-6)
 
         urban_mental_health._apply_tc_target_to_alt_ndvi(
             ndvi_path, pop_path, tc_path, tc_target, actual_alt_ndvi_path,
@@ -1009,8 +1006,8 @@ class UMHTests(unittest.TestCase):
 
         # create NDVI base with different projection
         ndvi_base_array = numpy.array(
-            [[.1, .2, .35], [.5, .6, .7],
-             [.8, .9, .10], [.11, .12, FLOAT32_NODATA]])
+            [[.1, .2, .05], [.15, .016, .017],
+             [.18, .19, .10], [.011, .12, FLOAT32_NODATA]])
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(5070)
@@ -1022,6 +1019,19 @@ class UMHTests(unittest.TestCase):
 
         urban_mental_health.execute(args)
 
+        # expected_delta_ndvi = numpy.array(
+        #     [[-0.1, 0.0, -0.2, 1],
+        #      [0.0, 0.1, PGP_FLOAT32_NODATA, 1],
+        #      [-0.05, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, 1]]) # TODO: verify
+        # actual_delta_ndvi_path = os.path.join(
+        #     self.workspace_dir, "intermediate",
+        #     f"delta_ndvi_{args['results_suffix']}.tif")
+        # actual_delta_ndvi = pygeoprocessing.raster_to_numpy_array(
+        #     actual_delta_ndvi_path)
+
+        # numpy.testing.assert_allclose(actual_delta_ndvi,
+        #                               expected_delta_ndvi, atol=1e-6)
+
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
             os.path.join(self.workspace_dir, "output",
                          "preventable_cases_test1.tif"))
@@ -1029,6 +1039,6 @@ class UMHTests(unittest.TestCase):
         # shape is 3x4 (rather than 3x3) because when ndvi_base is resampled,
         # it causes extra nodata column to right of AOI
         expected_prev_cases = numpy.full((3, 4), PGP_FLOAT32_NODATA)
-        expected_prev_cases[1, 1] = 131.3226  # from output
+        expected_prev_cases[1, 1] = 12.04800  # from output
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases,
                                       atol=1e-4)
