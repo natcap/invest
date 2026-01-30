@@ -63,7 +63,7 @@
     "react-i18next": "^12.1.4",
     "toml": "^3.0.0",
     "upath": "^2.0.1",
-    "yauzl": "^2.10.0"
+    "yauzl": "^3.2.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.22.5",
@@ -102,8 +102,8 @@
     "react-bootstrap": "^1.5.2",
     "react-dom": "^18.2.0",
     "react-icons": "^4.9.0",
-    "rimraf": "^3.0.2",
+    "rimraf": "^6.1.2",
     "vite": "^5.4.14",
-    "yazl": "^2.5.1"
+    "yazl": "^3.3.1"
   }
 }
