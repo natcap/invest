@@ -112,7 +112,12 @@ beforeEach(() => {
   ELECTRON_PROCESS = spawn(
     `"${BINARY_PATH}"`,
     // these are chromium args
-    [`--remote-debugging-port=${PORT}`],
+    [
+      `--remote-debugging-port=${PORT}`,
+      // disable gpu because macos runners display:
+      // ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer
+      '--disable-gpu',
+    ],
     {
       shell: true,
       env: { ...process.env, PUPPETEER: true }
