@@ -236,6 +236,7 @@ export function main() {
   });
 }
 
-if (typeof require !== 'undefined' && require.main === module) {
+// allow import of this module into tests without running main function
+if (process.versions.hasOwnProperty('electron')) {
   main(process.argv);
 }
