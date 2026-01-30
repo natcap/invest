@@ -36,6 +36,9 @@ MPL_SAVE_FIG_KWARGS = {
 # an img typically has a max width of 75.5rem, or 1208px.
 # It's best if figures are sized to fill their containers
 # with minimal rescaling, since they contain rasterized text.
+# In addition, while our CSS will scale an image down to fit within its
+# container, it will not scale an image up to fill the width of its container.
+# (This is by design, to prevent images from becoming too tall.)
 # Other variables:
 #   - When creating a figure, e.g., with plt.subplots, default dpi is 100.
 #   - Creating a figure with layout='constrained' may automagically adjust
@@ -46,7 +49,12 @@ MPL_SAVE_FIG_KWARGS = {
 # to be a few hundredths of an inch larger than what is specified when creating
 # the figure. With that in mind, we set max figure width slightly smaller than
 # the desired image width.
-MAX_FIGURE_WIDTH_INCHES = 12  # 1208px / 100 dpi = 12.08 in => round down to 12.0
+MAX_FIGURE_WIDTH_DEFAULT = 12  # 1208px/100dpi = 12.08in => round down to 12.
+# Two-column grids of "wide AOI" rasters (1 < X/Y ratio <= 4) require a
+# deviation from the default, since such figures end up significantly narrower
+# than the figure width we specify. To compensate, figure width for such
+# layouts is set to a larger number, determined experimentally.
+MAX_FIGURE_WIDTH_2_COL_WIDE_AOI = 15  # image will shrink to approx. 12 in.
 # The goal of max height is to ensure a given subplot fits within the vertical
 # bounds of a maximized window on any laptop/desktop screen. At one extreme,
 # some laptop screens are only 768px high. Allowing some buffer for browser
@@ -237,13 +245,21 @@ def _get_aspect_ratio(map_bbox):
     return (map_bbox[2] - map_bbox[0]) / (map_bbox[3] - map_bbox[1])
 
 
+def _wide_aoi(xy_ratio):
+    return xy_ratio > WIDE_AOI_THRESHOLD and xy_ratio <= EX_WIDE_AOI_THRESHOLD
+
+
+def _extra_wide_aoi(xy_ratio):
+    return xy_ratio > EX_WIDE_AOI_THRESHOLD
+
+
 def _choose_n_rows_n_cols(xy_ratio, n_plots):
-    if xy_ratio <= WIDE_AOI_THRESHOLD:
-        n_cols = 3
-    elif xy_ratio > EX_WIDE_AOI_THRESHOLD:
+    if _extra_wide_aoi(xy_ratio):
         n_cols = 1
-    elif xy_ratio > WIDE_AOI_THRESHOLD:
+    elif _wide_aoi(xy_ratio):
         n_cols = 2
+    else:
+        n_cols = 3
 
     if n_cols > n_plots:
         n_cols = n_plots
@@ -254,7 +270,9 @@ def _choose_n_rows_n_cols(xy_ratio, n_plots):
 def _figure_subplots(xy_ratio, n_plots):
     n_rows, n_cols = _choose_n_rows_n_cols(xy_ratio, n_plots)
 
-    figure_width = MAX_FIGURE_WIDTH_INCHES
+    figure_width = MAX_FIGURE_WIDTH_DEFAULT
+    if (n_cols == 2) and (_wide_aoi(xy_ratio)):
+        figure_width = MAX_FIGURE_WIDTH_2_COL_WIDE_AOI
     sub_width = figure_width / n_cols
     sub_height = (sub_width / xy_ratio)
     figure_height = sub_height * n_rows
@@ -267,7 +285,7 @@ def _figure_subplots(xy_ratio, n_plots):
 
     fig, axs = plt.subplots(
         n_rows, n_cols, figsize=(figure_width, figure_height),
-        layout='constrained')
+        layout='compressed')
     if n_plots == 1:
         axs = numpy.array([axs])
     return fig, axs
@@ -311,11 +329,11 @@ def _get_units_text_kwargs(units: str, raster_height: int):
 def _get_legend_kwargs(num_patches: int, n_plots: int, xy_ratio: float):
     # Num legend cols/rows determined experimentally; may change if needed.
     MAX_LEGEND_COLS_1_COL_LAYOUT = 10
-    MAX_LEGEND_COLS_2_COL_LAYOUT = 4
+    MAX_LEGEND_COLS_2_COL_LAYOUT = 6
     MAX_LEGEND_ROWS = 30
-    if xy_ratio > WIDE_AOI_THRESHOLD:
+    if _wide_aoi(xy_ratio) or _extra_wide_aoi(xy_ratio):
         bbox_to_anchor = (-0.01, 0)
-        if n_plots == 1 or xy_ratio > EX_WIDE_AOI_THRESHOLD:
+        if n_plots == 1 or _extra_wide_aoi(xy_ratio):
             ncol = MAX_LEGEND_COLS_1_COL_LAYOUT
         else:
             ncol = MAX_LEGEND_COLS_2_COL_LAYOUT
