@@ -81,7 +81,7 @@ export const createWindow = async () => {
     frame: false,
     alwaysOnTop: false,
   });
-  splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
+  splashScreen.loadURL(new URL('splash.html', BASE_URL).href);
 
   settingsStore.set('investExe', findInvestBinaries(ELECTRON_DEV_MODE));
   settingsStore.set('micromamba', findMicromambaExecutable(ELECTRON_DEV_MODE));
@@ -125,7 +125,7 @@ export const createWindow = async () => {
       menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
     )
   );
-  mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
+  mainWindow.loadURL(new URL('index.html', BASE_URL).href);
 
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
@@ -148,7 +148,7 @@ export const createWindow = async () => {
     // unless we're actually quitting the app
     if (process.platform === 'darwin' & !forceQuit) {
       event.preventDefault();
-      mainWindow.minimize()
+      mainWindow.minimize();
     }
   });
 
