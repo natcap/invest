@@ -78,6 +78,10 @@ RESAMPLE_ALGS = {
     'binary_high_contrast': 'nearest'
 }
 
+# XY-ratio thresholds used in determining grid layouts and legend layouts
+WIDE_AOI_THRESHOLD = 1
+EX_WIDE_AOI_THRESHOLD = 4
+
 
 class RasterDatatype(str, Enum):
     """The type of measurement represented by the raster."""
@@ -234,11 +238,11 @@ def _get_aspect_ratio(map_bbox):
 
 
 def _choose_n_rows_n_cols(xy_ratio, n_plots):
-    if xy_ratio <= 1:
+    if xy_ratio <= WIDE_AOI_THRESHOLD:
         n_cols = 3
-    elif xy_ratio > 4:
+    elif xy_ratio > EX_WIDE_AOI_THRESHOLD:
         n_cols = 1
-    elif xy_ratio > 1:
+    elif xy_ratio > WIDE_AOI_THRESHOLD:
         n_cols = 2
 
     if n_cols > n_plots:
@@ -302,6 +306,27 @@ def _get_units_text_kwargs(units: str, raster_height: int):
         'y': subtitle_offset,
     }
     return (ylim_args, text_args)
+
+
+def _get_legend_kwargs(num_patches: int, n_plots: int, xy_ratio: float):
+    # Num legend cols/rows determined experimentally; may change if needed.
+    MAX_LEGEND_COLS_1_COL_LAYOUT = 10
+    MAX_LEGEND_COLS_2_COL_LAYOUT = 4
+    MAX_LEGEND_ROWS = 30
+    if xy_ratio > WIDE_AOI_THRESHOLD:
+        bbox_to_anchor = (-0.01, 0)
+        if n_plots == 1 or xy_ratio > EX_WIDE_AOI_THRESHOLD:
+            ncol = MAX_LEGEND_COLS_1_COL_LAYOUT
+        else:
+            ncol = MAX_LEGEND_COLS_2_COL_LAYOUT
+    else:
+        bbox_to_anchor = (1.02, 1)
+        ncol = math.ceil(num_patches / MAX_LEGEND_ROWS)
+    return {
+        'bbox_to_anchor': bbox_to_anchor,
+        'loc': 'upper left',
+        'ncol': ncol,
+    }
 
 
 def plot_raster_list(raster_list: list[RasterPlotConfig]):
@@ -382,17 +407,10 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
             colors = [mappable.cmap(mappable.norm(value)) for value in values]
             patches = [matplotlib.patches.Patch(
-                color=colors[i], label=f'{values[i]}') for i in range(len(values))]
-
-            legend_kwargs = {
-                'ncol': math.ceil(len(patches) / 30),
-                'loc': 'upper left',
-                'bbox_to_anchor': (1.02, 1)  # place 'loc' corner here
-            }
-            if xy_ratio > 1:
-                legend_kwargs['ncol'] = math.ceil(xy_ratio) * 2
-                legend_kwargs['bbox_to_anchor'] = (-0.01, 0)
-            leg = ax.legend(handles=patches, **legend_kwargs)
+                color=colors[i],
+                label=f'{values[i]}') for i in range(len(values))]
+            leg = ax.legend(handles=patches, **_get_legend_kwargs(
+                len(patches), n_plots, xy_ratio))
             leg.set_in_layout(True)
         else:
             mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
