@@ -17,7 +17,6 @@ import { APP_VERSION_TOKEN } from '../../src/main/setupIsNewVersion';
 
 jest.setTimeout(240000);
 const PORT = 9009;
-const WAIT_TO_CLICK = 300; // ms
 let ELECTRON_PROCESS;
 let BROWSER;
 
@@ -182,7 +181,6 @@ test('Run a real invest model', async () => {
   );
   const downloadModalCancel = await downloadModal.waitForSelector(
     'aria/[name="Close modal"][role="button"]');
-  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
 
   const changelogModal = await page.waitForSelector(
@@ -190,7 +188,6 @@ test('Run a real invest model', async () => {
   );
   const changelogModalClose = await changelogModal.waitForSelector(
     'aria/[name="Close modal"][role="button"]');
-  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await changelogModalClose.click();
 
   // We need to get the modelButton from w/in this list-group because there
@@ -240,7 +237,7 @@ test('Run a real invest model', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 240000); // >2x the sum of all the max timeouts within this test
 
-test('Check local userguide links', async () => {
+test('Open each model and each local userguide', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -263,7 +260,6 @@ test('Check local userguide links', async () => {
   );
   const downloadModalCancel = await downloadModal.waitForSelector(
     'aria/[name="Close modal"][role="button"]');
-  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
 
   const changelogModal = await page.waitForSelector(
@@ -271,20 +267,20 @@ test('Check local userguide links', async () => {
   );
   const changelogModalClose = await changelogModal.waitForSelector(
     'aria/[name="Close modal"][role="button"]');
-  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await changelogModalClose.click();
 
   const investList = await page.waitForSelector('.invest-list-group');
+  // wait for a specific model button to make sure they are all loaded
+  // before iterating through them
+  await investList.waitForSelector(
+    'aria/[name="Annual Water Yield"][role="button"]');
   const modelButtons = await investList.$$('button.invest-button');
-
-  await page.waitForTimeout(WAIT_TO_CLICK); // first btn click does not register w/o this pause
   // eslint-disable-next-line
   for (const btn of modelButtons) {
     const isPlugin = await btn.$('::-p-text(Plugin)');
     if (isPlugin) { continue; } // plugins do not have local UG
     await btn.click();
     const link = await page.waitForSelector('text/User\'s Guide');
-    await page.waitForTimeout(WAIT_TO_CLICK); // link.click() not working w/o this pause
     const hrefHandle = await link.getProperty('href');
     const hrefValue = await hrefHandle.jsonValue();
     await link.click();
@@ -302,7 +298,7 @@ test('Check local userguide links', async () => {
     const tab = await page.waitForSelector('.nav-item');
     const closeTabBtn = await tab.waitForSelector('aria/[role="button"]');
     await closeTabBtn.click();
-    await page.waitForTimeout(100); // allow for Home Tab to be visible again
+    await new Promise(r => setTimeout(r, 100)); // allow for Home Tab to be visible again
   }
 });
 
@@ -328,13 +324,11 @@ test.skip('Install and run a plugin', async () => {
   const downloadModalClose = await downloadModal.waitForSelector(
     'aria/[name="Close modal"][role="button"]'
   );
-  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalClose.click();
   const changelogModal = await page.waitForSelector('.modal-dialog');
   const changelogModalClose = await changelogModal.waitForSelector(
     'aria/[name="Close modal"][role="button"]'
   );
-  await page.waitForTimeout(WAIT_TO_CLICK);
   await changelogModalClose.click();
 
   const dropdownButton = await page.waitForSelector('aria/[name="menu"][role="button"]');
