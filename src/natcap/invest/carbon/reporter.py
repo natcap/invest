@@ -93,6 +93,10 @@ def _generate_agg_results_table(args_dict: dict, file_registry: dict) -> str:
 
     table_df = pandas.DataFrame()
 
+    total_col_name = gettext('Total')
+    units_col_name = gettext('Units')
+    filename_col_name = gettext('Filename')
+
     for (raster_id, description, units) in table_inputs:
         raster_path = file_registry[raster_id]
         raster_info = pygeoprocessing.get_raster_info(raster_path)
@@ -112,7 +116,7 @@ def _generate_agg_results_table(args_dict: dict, file_registry: dict) -> str:
         summary_stat = raster_sum * pixel_area / 10000
 
         # Populate table row.
-        table_df.loc[description, [gettext('Total'), gettext('Units'), gettext('Filename')]] = [
+        table_df.loc[description, [total_col_name, units_col_name, filename_col_name]] = [
             summary_stat, units, os.path.basename(raster_path)]
 
     return table_df.to_html()

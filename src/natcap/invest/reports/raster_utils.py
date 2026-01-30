@@ -20,6 +20,7 @@ import yaml
 from osgeo import gdal
 from pydantic.dataclasses import dataclass
 
+from natcap.invest import gettext
 from natcap.invest.spec import ModelSpec
 from natcap.invest.reports.report_constants import TABLE_PAGINATION_THRESHOLD
 
@@ -92,11 +93,17 @@ EX_WIDE_AOI_THRESHOLD = 4
 
 # GDAL metadata keys and corresponding column headers for stats tables
 STATS_LIST = [
-    ('STATISTICS_MINIMUM', 'Minimum'),
-    ('STATISTICS_MAXIMUM', 'Maximum'),
-    ('STATISTICS_MEAN', 'Mean'),
-    ('STATISTICS_VALID_PERCENT', 'Valid percent'),
+    ('STATISTICS_MINIMUM', gettext('Minimum')),
+    ('STATISTICS_MAXIMUM', gettext('Maximum')),
+    ('STATISTICS_MEAN', gettext('Mean')),
+    ('STATISTICS_VALID_PERCENT', gettext('Valid percent')),
 ]
+
+COUNT_COL_NAME = gettext('Count')
+NODATA_COL_NAME = gettext('Nodata value')
+UNITS_COL_NAME = gettext('Units')
+UNKNOWN_VAL_TEXT = gettext('unknown')
+UNITS_TEXT = gettext('Units')
 
 
 class RasterDatatype(str, Enum):
@@ -326,7 +333,7 @@ def _get_units_text_kwargs(units: str, raster_height: int):
     text_args = {
         'fontsize': SUBTITLE_FONT_SIZE,
         'horizontalalignment': 'left',
-        's': f'Units: {units}',
+        's': f'{UNITS_TEXT}: {units}',
         'verticalalignment': 'bottom',
         'x': -0.5,
         'y': subtitle_offset,
@@ -587,14 +594,14 @@ def _build_stats_table_row(resource, band):
         if stat_val is not None:
             row[display_name] = float(stat_val)
         else:
-            row[display_name] = 'unknown'
+            row[display_name] = UNKNOWN_VAL_TEXT
     (width, height) = (
         resource.data_model.raster_size['width'],
         resource.data_model.raster_size['height'])
-    row['Count'] = width * height
-    row['Nodata value'] = band.nodata
+    row[COUNT_COL_NAME] = width * height
+    row[NODATA_COL_NAME] = band.nodata
     # band.units may be '', which can mean 'unitless', 'unknown', or 'other'
-    row['Units'] = band.units
+    row[UNITS_COL_NAME] = band.units
     return row
 
 
@@ -643,8 +650,8 @@ def raster_inputs_summary(args_dict):
                 raster_summary[filename] = _build_stats_table_row(
                     resource, band)
                 # Remove 'Units' column if all units are blank
-                if not any(raster_summary[filename]['Units']):
-                    del raster_summary[filename]['Units']
+                if not any(raster_summary[filename][UNITS_COL_NAME]):
+                    del raster_summary[filename][UNITS_COL_NAME]
 
     return pandas.DataFrame(raster_summary).T
 
