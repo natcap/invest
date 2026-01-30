@@ -92,6 +92,13 @@ General
 * Docker container builds now use debian 13 "Trixie", which includes Python
   3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
 
+Workbench
+=========
+* Fixed a bug where trying to save a datastack with an invalid filepath would
+  result in the "archiving" message hanging forever. Now all types of datastack
+  archiving errors will be indicated in the sidebar.
+  (`#1995 <https://github.com/natcap/invest/issues/1995>`_)
+
 Coastal Vulnerability
 =====================
 * Various updates to model input and output data metadata, including
