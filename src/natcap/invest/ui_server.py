@@ -254,7 +254,7 @@ def build_datastack_archive():
             json.loads(payload['args']),
             payload['model_id'],
             payload['filepath'])
-    except ValueError as message:
+    except Exception as message:
         LOGGER.error(str(message))
         return {
             'message': str(message),
