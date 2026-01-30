@@ -41,7 +41,7 @@ MPL_SAVE_FIG_KWARGS = {
 # (This is by design, to prevent images from becoming too tall.)
 # Other variables:
 #   - When creating a figure, e.g., with plt.subplots, default dpi is 100.
-#   - Creating a figure with layout='constrained' may automagically adjust
+#   - Creating a figure with layout='compressed' may automagically adjust
 #     subplot sizes and grid spacing (potentially affecting overall figure
 #     size) to ensure colorbars/legends don't overlap or get cut off.
 #   - Savefig with tight bbox layout shrinks the figure after it is sized.
@@ -89,6 +89,14 @@ RESAMPLE_ALGS = {
 # XY-ratio thresholds used in determining grid layouts and legend layouts
 WIDE_AOI_THRESHOLD = 1
 EX_WIDE_AOI_THRESHOLD = 4
+
+# GDAL metadata keys and corresponding column headers for stats tables
+STATS_LIST = [
+    ('STATISTICS_MINIMUM', 'Minimum'),
+    ('STATISTICS_MAXIMUM', 'Maximum'),
+    ('STATISTICS_MEAN', 'Mean'),
+    ('STATISTICS_VALID_PERCENT', 'Valid percent'),
+]
 
 
 class RasterDatatype(str, Enum):
@@ -570,15 +578,6 @@ def geometamaker_load(filepath):
 
     return geometamaker.geometamaker.RESOURCE_MODELS[yaml_dict['type']](
         **yaml_dict)
-
-
-# GDAL Metadata keys and corresponding column headers for a table
-STATS_LIST = [
-    ('STATISTICS_MINIMUM', 'Minimum'),
-    ('STATISTICS_MAXIMUM', 'Maximum'),
-    ('STATISTICS_MEAN', 'Mean'),
-    ('STATISTICS_VALID_PERCENT', 'Valid percent'),
-]
 
 
 def _build_stats_table_row(resource, band):
