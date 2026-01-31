@@ -5,7 +5,8 @@ import logging
 import time
 
 from natcap.invest import gettext
-from natcap.invest.reports import jinja_env, sdr_ndr_utils, raster_utils
+from natcap.invest.reports import (
+    jinja_env, report_constants, sdr_ndr_utils, raster_utils)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -60,18 +61,6 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict).to_html(na_rep='')
 
-    stats_table_note = gettext(
-        '"Valid percent" indicates the percent of pixels that are not '
-        'nodata. Comparing "valid percent" values across rasters may help '
-        'you identify cases of unexpected nodata.'
-    )
-
-    raster_group_caption = gettext(
-        'If a plot title includes "resampled," that raster was resampled to '
-        'a lower resolution for rendering in this report. Full resolution '
-        'rasters are available in the output workspace.'
-    )
-
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
             report_script=__file__,
@@ -84,15 +73,15 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             inputs_caption=raster_plot_captions.inputs,
             outputs_img_src=outputs_img_src,
             outputs_caption=raster_plot_captions.outputs,
-            intermediate_outputs_heading='Stream Network Maps',
+            intermediate_outputs_heading=gettext('Stream Network Maps'),
             intermediate_outputs_img_src=intermediate_img_src,
             intermediate_outputs_caption=raster_plot_captions.intermediates,
-            raster_group_caption=raster_group_caption,
+            raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
             ws_vector_table=ws_vector_table,
             ws_vector_totals_table=ws_vector_totals_table,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
-            stats_table_note=stats_table_note,
+            stats_table_note=report_constants.STATS_TABLE_NOTE,
             model_spec_outputs=model_spec.outputs,
         ))
 

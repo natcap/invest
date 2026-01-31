@@ -8,9 +8,10 @@
        Helpful random color generator: https://rgbcolorpicker.com/random/pastel */
     /* Make sure each accent color has sufficient contrast with black (#000).
        Minimum 4.5:1; higher is better. Check with https://www.whocanuse.com/. */
+    --accent-color-carbon: #bed4f0;
+    --accent-color-coastal_vulnerability: #fff6d8;
     --accent-color-ndr: #c2da9d;
     --accent-color-sdr: #e4b5db;
-    --accent-color-coastal_vulnerability: #fff6d8;
 
     --accent-color: var(--accent-color-{{ accent_color_suffix }});
   }
@@ -97,6 +98,13 @@
     flex-wrap: wrap;
     .content-grid-item {
       padding: 0.5rem;
+      &:has(> img) {
+        display: flex;
+        justify-content: center;
+        img {
+          max-width: 100%;
+        }
+      }
     }
   }
   .wide-table-wrapper {
@@ -108,7 +116,7 @@
   .full-width {
     width: 100%;
   }
-  h1, h2, h3, th {
+  h1, h2, h3, h4, th {
       font-weight: bold;
   }
   h1 {
@@ -119,6 +127,9 @@
   }
   h3 {
     font-size: 1.25rem;
+  }
+  h4 {
+    font-size: 1.125rem;
   }
   .section-header {
     margin-top: 3.0rem;
@@ -144,9 +155,6 @@
   .number {
       text-align: right;
       font-family: monospace;
-  }
-  img {
-    width: 100%;
   }
   dt {
     font-weight: bold;
