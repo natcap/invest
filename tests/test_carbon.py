@@ -93,7 +93,9 @@ class CarbonTests(unittest.TestCase):
         """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp(suffix='\U0001f60e')  # smiley
+        # Emoji suffix helps ensure support for Unicode characters in paths.
+        # @TODO: Add suffix back in once geometamaker #112 is resolved.
+        self.workspace_dir = tempfile.mkdtemp()  # smiley
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
