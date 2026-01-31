@@ -1,6 +1,5 @@
 import upath from 'upath';
-import fs from 'fs';
-import { execSync, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
 
 import { ipcMain } from 'electron';
 
