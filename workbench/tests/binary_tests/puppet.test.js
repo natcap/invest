@@ -8,7 +8,7 @@ import os from 'os';
 import glob from 'glob';
 import { spawn, spawnSync } from 'child_process';
 
-import { rimrafSync } from 'rimraf';
+import { rimraf } from 'rimraf';
 import puppeteer from 'puppeteer-core';
 
 import pkg from '../../package.json';
@@ -99,8 +99,8 @@ function makeAOI() {
 beforeAll(() => {
   makeAOI();
 });
-afterAll(() => {
-  rimrafSync(TMP_DIR, (error) => { if (error) { throw error; } });
+afterAll(async () => {
+  await rimraf(TMP_DIR);
 });
 
 // errors are not thrown from an async beforeAll
