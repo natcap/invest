@@ -301,6 +301,7 @@ def _figure_subplots(xy_ratio, n_plots):
     fig, axs = plt.subplots(
         n_rows, n_cols, figsize=(figure_width, figure_height),
         layout='compressed')
+    plt.close()
     if n_plots == 1:
         axs = numpy.array([axs])
     return fig, axs
