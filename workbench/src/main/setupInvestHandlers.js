@@ -66,7 +66,7 @@ export function setupInvestRunHandlers() {
     const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
     const language = settingsStore.get('language');
     const nWorkers = settingsStore.get('nWorkers');
-    let resultsSuffix = args?.resultsSuffix || '';
+    let resultsSuffix = args?.results_suffix || '';
     if (resultsSuffix && !resultsSuffix.startsWith('_')) {
       resultsSuffix = `_${resultsSuffix}`;
     }
