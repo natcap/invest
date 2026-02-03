@@ -54,6 +54,17 @@ def make_simple_nominal_raster(target_filepath, shape):
         projection_wkt=PROJ_WKT, target_path=target_filepath)
 
 
+def make_nominal_raster_with_distinct_counts(target_filepath, num_vals):
+    """Create raster with one 1, two 2s, three 3s, ..., num_vals num_vals."""
+    if not num_vals % 2 == 0:
+        raise ValueError('num_vals must be an even number.')
+    val = numpy.arange(1, num_vals + 1, 1)
+    array = numpy.repeat(val, val).reshape(num_vals + 1, num_vals // 2)
+    pygeoprocessing.numpy_array_to_raster(
+        array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+        projection_wkt=PROJ_WKT, target_path=target_filepath)
+
+
 def compare_snapshots(reference, actual):
     ref, ext = os.path.splitext(reference)
     new_reference = f'{ref}_fail{ext}'
@@ -289,9 +300,13 @@ class RasterPlotLegendTests(unittest.TestCase):
         figname = 'plot_raster_list_tall_nominal_many_classes.png'
         reference = os.path.join(REFS_DIR, figname)
         # More than 20 values will require a distinctipy-generated palette.
-        # More than 30 pixels will result in a multi-column legend.
-        shape = (9, 6)
-        make_simple_nominal_raster(self.raster_config.raster_path, shape)
+        # More than 30 values will result in a multi-column legend.
+        num_unique_vals = 40
+        # We need a unique number of pixels for each unique value to ensure the
+        # sort order in the legend is deterministic (otherwise we see variance
+        # across platforms).
+        make_nominal_raster_with_distinct_counts(
+            self.raster_config.raster_path, num_unique_vals)
 
         config_list = [self.raster_config]
         fig = raster_utils.plot_raster_list(config_list)
