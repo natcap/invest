@@ -198,7 +198,7 @@ class InvestTab extends React.Component {
   }
 
   async handleViewResults(filepath) {
-    ipcRenderer.send(ipcMainChannels.OPEN_FILE_URL, filepath);
+    ipcRenderer.send(ipcMainChannels.OPEN_LOCAL_HTML, filepath, true);
   }
 
   showErrorModal(shouldShow) {

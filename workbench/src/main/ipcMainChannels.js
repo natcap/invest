@@ -20,7 +20,6 @@ export const ipcMainChannels = {
   IS_NEW_VERSION: 'is-new-version',
   LOGGER: 'logger',
   OPEN_EXTERNAL_URL: 'open-external-url',
-  OPEN_FILE_URL: 'open-file-url',
   OPEN_LOCAL_HTML: 'open-local-html',
   OPEN_PATH: 'open-path',
   REMOVE_PLUGIN: 'remove-plugin',
