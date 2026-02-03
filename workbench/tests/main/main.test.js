@@ -208,6 +208,7 @@ describe('createWindow', () => {
       ipcMainChannels.LOGGER,
       ipcMainChannels.SHOW_ITEM_IN_FOLDER,
       ipcMainChannels.OPEN_EXTERNAL_URL,
+      ipcMainChannels.OPEN_FILE_URL,
       ipcMainChannels.OPEN_LOCAL_HTML,
       ipcMainChannels.SET_SETTING,
     ];
