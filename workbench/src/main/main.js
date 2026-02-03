@@ -44,6 +44,7 @@ import { setupIsNewVersion } from './setupIsNewVersion';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
 import setupRendererLogger from './setupRendererLogger';
+import setupOpenFileUrl from './setupOpenFileUrl';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -166,6 +167,7 @@ export const createWindow = async () => {
   setupRemovePlugin();
   setupWindowsMSVCHandlers();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
+  setupOpenFileUrl(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
     // The timing of this is fussy due a chromium bug. It seems to only
     // come up if there is an unrelated uncaught exception during page load.

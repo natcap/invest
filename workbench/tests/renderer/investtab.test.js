@@ -202,7 +202,7 @@ describe('Open Workspace & View Results buttons', () => {
 
     expect(ipcRenderer.send).toHaveBeenCalledTimes(1);
     expect(ipcRenderer.send).toHaveBeenCalledWith(
-      ipcMainChannels.OPEN_LOCAL_HTML, job.htmlfile
+      ipcMainChannels.OPEN_FILE_URL, job.htmlfile
     );
   });
 });
