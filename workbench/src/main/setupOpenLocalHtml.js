@@ -4,7 +4,6 @@ import {
 } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
-import setupContextMenu from './setupContextMenu';
 
 export default function setupOpenLocalHtml(parentWindow, isDevMode) {
   ipcMain.on(
@@ -16,7 +15,6 @@ export default function setupOpenLocalHtml(parentWindow, isDevMode) {
         height: height,
         frame: true,
       });
-      setupContextMenu(child);
       child.loadURL(url);
       if (isDevMode) {
         child.webContents.openDevTools();

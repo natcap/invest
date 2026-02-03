@@ -7,6 +7,7 @@ import {
   Menu,
   ipcMain
 } from 'electron';
+import contextMenu from 'electron-context-menu';
 
 import i18n from './i18n/i18n';
 import BASE_URL from './baseUrl';
@@ -17,7 +18,6 @@ import {
 import { findInvestBinaries, findMicromambaExecutable } from './findBinaries';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
-import setupContextMenu from './setupContextMenu';
 import setupCheckFilePermissions from './setupCheckFilePermissions';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
 import { setupCheckStorageToken } from './setupCheckStorageToken';
@@ -62,6 +62,8 @@ process.on('unhandledRejection', (err, promise) => {
 let mainWindow;
 let splashScreen;
 let forceQuit = false;
+
+contextMenu({});
 
 export function destroyWindow() {
   mainWindow = null;
@@ -158,7 +160,6 @@ export const createWindow = async () => {
 
   // register listeners that need a reference to the mainWindow or
   // have callbacks that won't work until the invest server is ready.
-  setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers();
   setupLaunchPluginServerHandler();
