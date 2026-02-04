@@ -54,9 +54,18 @@ class FileRegistry:
         for output in outputs:
             path, extension = os.path.splitext(output.path)
             # Distinguish between paths that are/aren't patterns
+            path_fields = set(re.findall(r'\[(\w+)\]', path))
+            # Don't convert id_fields to set, need to preserve order later
+            id_fields = re.findall(r'\[(\w+)\]', output.id)
+            if path_fields and not path_fields.issubset(set(id_fields)):
+                raise ValueError(
+                    f"Output id '{output.id}' must include pattern field(s) "
+                    f"{sorted(path_fields - set(id_fields))} because path "
+                    f"'{output.path}' uses them.")
+
             if re.match(r'(.*)\[(\w+)\](.*)', path):
                 self._pattern_fields[output.id] = [
-                    field.lower() for field in re.findall(r'\[(\w+)\]', output.id)]
+                    field.lower() for field in id_fields]
 
             full_path = os.path.abspath(os.path.join(
                 workspace_dir, path + (file_suffix or '') + extension))
@@ -96,7 +105,7 @@ class FileRegistry:
             raise KeyError(f'Key not found: {key}')
 
         path = self._keys_to_paths[key]
-        if key in self._pattern_fields:
+        if key in self._pattern_fields and self._pattern_fields[key]:
             fields = self._pattern_fields[key]
             if len(field_values) != len(fields):
                 raise KeyError(
@@ -120,4 +129,9 @@ class FileRegistry:
             if field_values:
                 raise KeyError('Received field values for a key that has no fields')
             self.registry[key] = path
+
+        parent_dir = os.path.dirname(path)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
+
         return path
