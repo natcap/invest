@@ -58,6 +58,23 @@ def _get_raster_plot_tuples(args_dict: dict) -> tuple[
 
 
 def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
+    """Get headings for Intermediate Outputs sections of the report.
+
+    Args:
+        args_dict (dict): the arguments passed to the model's ``execute``
+            function.
+
+    Returns:
+        A list containing exactly one string or exactly four strings.
+        If the model was run with ``calc_sequestration = False``, the report
+        will group all four intermediate outputs into one section, with the
+        heading "Carbon Maps by Pool Type".
+        If the model was run with ``calc_sequestration = True``, the report
+        will group intermediate outputs by carbon pool type, resulting in four
+        sections containing two rasters each. This structure facilitates
+        side-by-side comparisons of baseline vs. alternate scenarios for each
+        carbon pool type.
+    """
     if args_dict['calc_sequestration']:
         return [
             gettext('Carbon Maps: Aboveground'),
