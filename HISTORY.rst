@@ -91,6 +91,10 @@ General
     (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
 * Docker container builds now use debian 13 "Trixie", which includes Python
   3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
+* Fixed a bug where output directories containing unresolved patterns
+  were created during model setup, preventing correct creation of
+  substituted output directories at runtime.
+  (`#2213 <https://github.com/natcap/invest/issues/2213>`_)
 
 Workbench
 =========
