@@ -56,7 +56,7 @@
 
   <h2 class="section-header">Inputs</h2>
 
-  {% if args_dict is defined and args_dict != None %}
+  {% if args_dict != None %}
     {{ accordion_section(
       'Arguments',
       args_table(args_dict)
