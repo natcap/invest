@@ -11,6 +11,7 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
+    model_description = 'This is a description of the carbon model.'
     timestamp = '1970-01-01'
     args_dict = {'suffix': 'test'}
     img_src = 'bAse64eNcoDEdIMagE'
@@ -28,6 +29,7 @@ def _get_render_args(model_spec):
         'report_script': __file__,
         'model_id': model_spec.model_id,
         'model_name': model_spec.model_title,
+        'model_description': model_description,
         'userguide_page': model_spec.userguide,
         'timestamp': timestamp,
         'args_dict': args_dict,

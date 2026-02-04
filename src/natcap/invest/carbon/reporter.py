@@ -139,6 +139,17 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         ``None``
     """
 
+    model_description = gettext(
+        """
+        The InVEST Carbon Storage and Sequestration model uses maps of land use
+        along with stocks in four carbon pools (aboveground biomass,
+        belowground biomass, soil, and dead organic matter) to estimate the
+        amount of carbon stored in a landscape at baseline or the amount of
+        carbon sequestered over time. Optionally, the market or social value of
+        sequestered carbon, its annual rate of change, and a discount rate can
+        be used to estimate the value of this ecosystem service to society.
+        """)
+
     (input_raster_tuples,
      output_raster_tuples,
      intermediate_raster_tuples) = _get_raster_plot_tuples(args_dict)
@@ -194,6 +205,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             report_script=__file__,
             model_id=model_spec.model_id,
             model_name=model_spec.model_title,
+            model_description=model_description,
             userguide_page=model_spec.userguide,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
