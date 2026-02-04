@@ -360,13 +360,6 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="l",
-            path="L.tif",
-            about=gettext("Map of local recharge values"),
-            data_type=float,
-            units=u.millimeter
-        ),
-        spec.SingleBandRasterOutput(
             id="l_sum_avail",
             path="L_sum_avail.tif",
             about=gettext(
@@ -551,8 +544,10 @@ MODEL_SPEC = spec.ModelSpec(
             id="l_aligned",
             path="intermediate_outputs/l_aligned.tif",
             about=gettext(
-                "Copy of user-defined local recharge input, aligned and clipped"
-                " to match the other spatial inputs"
+                "Map of local recharge. If a user-defined local recharge input"
+                " is provided, this is a copy of that layer, aligned and clipped"
+                " to match the other spatial inputs. Otherwise, this is the"
+                " local recharge as calculated by the model."
             ),
             data_type=float,
             units=u.millimeter
