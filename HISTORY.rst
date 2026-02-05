@@ -109,6 +109,14 @@ Workbench
   to "touch" the field again in order to see the validation status.
   (`#2149 <https://github.com/natcap/invest/issues/2149>`_)
 
+Carbon Storage and Sequestration
+================================
+* Previously, the Carbon model generated an HTML report consisting of a table
+  of model inputs and a table of aggregate results. That report has been
+  replaced with a new report containing the same features plus many more.
+  (`#2249 <https://github.com/natcap/invest/issues/2249>`_,
+  `#2331 <https://github.com/natcap/invest/issues/2331>`_)
+
 Coastal Vulnerability
 =====================
 * Various updates to model input and output data metadata, including
