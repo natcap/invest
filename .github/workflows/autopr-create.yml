@@ -83,9 +83,8 @@ jobs:
                         SHORTREV=$(git rev-parse --short main)
                         CLEAN_BRANCH=$(echo "$BRANCH" | tr '/' '-')
                         AUTOPR_BRANCH="autopr/${SOURCE_BRANCH}-rev${SHORTREV}-into-${CLEAN_BRANCH}"
-                        git checkout -b "${AUTOPR_BRANCH}"
-                        git push origin ${AUTOPR_BRANCH}
                         export AUTOPR_BRANCH  # needed for envsubst
+                        gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/heads/${AUTOPR_BRANCH}" -f sha="${SHORTREV}"
 
                         # This PR will be assigned to $PR_USERNAME, which should be
                         # the person who merged the PR that caused this commit to be
@@ -103,7 +102,7 @@ jobs:
                         if [[ $FAILED -eq 1 ]]
                         then
                             echo "PR failed; deleting autopr branch"
-                            git push -d origin ${AUTOPR_BRANCH}
+                            gh api --method DELETE "repos/${{ github.repository }}/git/refs/heads/${AUTOPR_BRANCH}"
                             ERRORSPRESENT=$((${ERRORSPRESENT} | 1))
                         fi
                     done
