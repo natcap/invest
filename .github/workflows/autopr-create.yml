@@ -66,10 +66,6 @@ jobs:
                         git checkout main
 
                         export RELEASE_BRANCH=$BRANCH  # needed for envsubst
-                        PR_BODY_FILE=pr_body.txt
-                        cat .github/auto-main-into-release-pr-body.md | envsubst > $PR_BODY_FILE
-                        cat $PR_BODY_FILE  # for debugging
-
                         PR_TITLE="[Auto-generated] Merge main into $BRANCH"
 
                         # Skip this branch if a PR from main into $BRANCH already exists.
@@ -89,6 +85,10 @@ jobs:
                         # Create the branch via github API to allow GH Actions to authenticate
                         LONGREV=$(git rev-parse main)
                         gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/heads/${AUTOPR_BRANCH}" -f sha="${LONGREV}"
+
+                        PR_BODY_FILE=pr_body.txt
+                        cat .github/auto-main-into-release-pr-body.md | envsubst > $PR_BODY_FILE
+                        cat $PR_BODY_FILE  # for debugging
 
                         # This PR will be assigned to $PR_USERNAME, which should be
                         # the person who merged the PR that caused this commit to be
