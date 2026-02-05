@@ -5,6 +5,7 @@ import tempfile
 import shutil
 import os
 
+from bs4 import BeautifulSoup
 from osgeo import gdal
 from osgeo import osr
 import numpy
@@ -106,6 +107,7 @@ class CarbonTests(unittest.TestCase):
 
         args = {
             'workspace_dir': self.workspace_dir,
+            'calc_sequestration': True,
             'do_valuation': True,
             'price_per_metric_ton_of_c': 43.0,
             'rate_change': 2.8,
@@ -151,6 +153,23 @@ class CarbonTests(unittest.TestCase):
         # Alternate: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_alt.tif'), -3422.079)
+
+        # Ensure aggregate results are correct.
+        report_path = os.path.join(args['workspace_dir'], 'carbon_report.html')
+        # Raster size is 100 m^2; therefore, raster total is as follows:
+        # (x Mg / 1 ha) * (1 ha / 10000 m^2) * (100 m^2) = (x / 100) Mg
+        with open(report_path, encoding='utf-8') as html_file:
+            soup = BeautifulSoup(html_file, 'html.parser')
+            for (stat_name, expected_value) in [
+                    ('Baseline Carbon Storage', 0.86),
+                    ('Alternate Carbon Storage', 0.28),
+                    ('Change in Carbon Storage', -0.58),
+                    ('Net Present Value of Carbon Change', -34.2208),
+                    ]:
+                stat_name_text = soup.find(string=stat_name)
+                row_heading = stat_name_text.find_parent('th')
+                value_str = row_heading.find_next_sibling('td').string
+                assert float(value_str) == expected_value
 
     def test_carbon_zero_rates(self):
         """Carbon: test with 0 discount and rate change."""
