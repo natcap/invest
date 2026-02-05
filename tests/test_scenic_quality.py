@@ -14,6 +14,8 @@ from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 _SRS = osr.SpatialReference()
 _SRS.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
@@ -317,7 +319,13 @@ class ScenicQualityTests(unittest.TestCase):
         with open(clipped_structures_path, 'w') as fake_file:
             fake_file.write('this is a vector :)')
 
-        scenic_quality.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(scenic_quality.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        scenic_quality.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, scenic_quality.MODEL_SPEC, **execute_kwargs)
 
         # 3 of the 4 viewpoints overlap the DEM, so there should only be files
         # from 3 viewsheds.
