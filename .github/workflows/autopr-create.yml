@@ -84,7 +84,7 @@ jobs:
                         SHORTREV=$(git rev-parse --short main)
                         CLEAN_BRANCH=$(echo "$BRANCH" | tr '/' '-')
                         AUTOPR_BRANCH="autopr/${SOURCE_BRANCH}-rev${SHORTREV}-into-${CLEAN_BRANCH}"
-                        export AUTOPR_BRANCH  # needed for envsubst
+                        export $AUTOPR_BRANCH  # needed for envsubst
 
                         # Create the branch via github API to allow GH Actions to authenticate
                         LONGREV=$(git rev-parse main)
