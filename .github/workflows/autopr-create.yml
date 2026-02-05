@@ -45,7 +45,7 @@ jobs:
                       # A push could include a bunch of commits, so just get
                       # the login name of the user that pushed
                       PR_USERNAME="${{ github.event.push.pusher.username }}"
-                      export PR_MSG="due to a push to `main`."
+                      export PR_MSG='due to a push to `main`.'
                   fi
 
                   # Using grep with pattern ^release filters out any autorelease branches.
