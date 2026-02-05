@@ -117,6 +117,10 @@ beforeEach(() => {
       // disable gpu because macos runners display:
       // ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer
       '--disable-gpu',
+      // Some other recommendations for errors we've seen on macos
+      // https://github.com/puppeteer/puppeteer/issues/12857
+      '--enable-features=NetworkServiceInProcess2',
+      '--no-sandbox',
     ],
     {
       shell: true,

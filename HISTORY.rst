@@ -108,6 +108,9 @@ Workbench
   the file browse button to populate an input, rather than requiring the user
   to "touch" the field again in order to see the validation status.
   (`#2149 <https://github.com/natcap/invest/issues/2149>`_)
+* The "Manage Plugins" modal now presents a message upon successful
+  installation or removal of a plugin.
+  (`#2276 <https://github.com/natcap/invest/issues/2276>`_)
 
 Carbon Storage and Sequestration
 ================================
