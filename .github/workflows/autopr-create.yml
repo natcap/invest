@@ -85,7 +85,10 @@ jobs:
                         CLEAN_BRANCH=$(echo "$BRANCH" | tr '/' '-')
                         AUTOPR_BRANCH="autopr/${SOURCE_BRANCH}-rev${SHORTREV}-into-${CLEAN_BRANCH}"
                         export AUTOPR_BRANCH  # needed for envsubst
-                        gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/heads/${AUTOPR_BRANCH}" -f sha="${SHORTREV}"
+
+                        # Create the branch via github API to allow GH Actions to authenticate
+                        LONGREV=$(git rev-parse main)
+                        gh api --method POST "repos/${{ github.repository }}/git/refs" -f ref="refs/heads/${AUTOPR_BRANCH}" -f sha="${LONGREV}"
 
                         # This PR will be assigned to $PR_USERNAME, which should be
                         # the person who merged the PR that caused this commit to be
@@ -103,6 +106,7 @@ jobs:
                         if [[ $FAILED -eq 1 ]]
                         then
                             echo "PR failed; deleting autopr branch"
+                            # Using github api allows us to use github actions to be the actor
                             gh api --method DELETE "repos/${{ github.repository }}/git/refs/heads/${AUTOPR_BRANCH}"
                             ERRORSPRESENT=$((${ERRORSPRESENT} | 1))
                         fi
