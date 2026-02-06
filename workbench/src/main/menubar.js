@@ -1,6 +1,7 @@
 import path from 'path';
 
 import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import contextMenu from 'electron-context-menu';
 
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
@@ -124,6 +125,10 @@ function createWindow(parentWindow, isDevMode) {
       defaultEncoding: 'UTF-8',
       additionalArguments: [devModeArg],
     },
+  });
+  contextMenu({
+    window: win,
+    showSearchWithGoogle: false,
   });
   win.setMenu(null);
   if (isDevMode) {

@@ -63,12 +63,6 @@ let mainWindow;
 let splashScreen;
 let forceQuit = false;
 
-// These options will apply to all browser windows
-contextMenu({
-  showSaveImageAs: true,
-  showSearchWithGoogle: false,
-});
-
 export function destroyWindow() {
   mainWindow = null;
 }
@@ -131,6 +125,15 @@ export const createWindow = async () => {
       menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
     )
   );
+  contextMenu({
+    window: mainWindow,
+    // saveImage true would interfere with our custom 'will-download' handler
+    // plus, there are no images in the main window users would want to download
+    showSaveImage: false,
+    showSaveImageAs: false,
+    showSearchWithGoogle: false,
+  });
+
   mainWindow.loadURL(new URL('index.html', BASE_URL).href);
 
   mainWindow.once('ready-to-show', () => {
@@ -159,7 +162,15 @@ export const createWindow = async () => {
   });
 
   mainWindow.on('closed', () => {
-    mainWindow = null;
+    // On Windows, closing the main window should exit the application.
+    // So if the main window is closed, we want to force all other windows
+    // to close also, even if they are not direct children.
+    if (process.platform !== 'darwin') {
+      app.quit();
+      // since we treat 'close' as minimize on mac,
+      // I think we want to keep the reference to the window?
+      mainWindow = null;
+    }
   });
 
   // register listeners that need a reference to the mainWindow or
