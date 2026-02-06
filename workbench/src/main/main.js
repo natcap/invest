@@ -63,6 +63,7 @@ let mainWindow;
 let splashScreen;
 let forceQuit = false;
 
+// These options will apply to all browser windows
 contextMenu({
   showSaveImageAs: true,
   showSearchWithGoogle: false,

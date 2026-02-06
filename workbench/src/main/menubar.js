@@ -2,7 +2,6 @@ import path from 'path';
 
 import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
-import setupContextMenu from './setupContextMenu';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
 
@@ -126,7 +125,6 @@ function createWindow(parentWindow, isDevMode) {
       additionalArguments: [devModeArg],
     },
   });
-  setupContextMenu(win);
   win.setMenu(null);
   if (isDevMode) {
     win.webContents.openDevTools();
