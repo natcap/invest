@@ -53,6 +53,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@babel/runtime": "^7.13.10",
+    "electron-context-menu": "^4.1.1",
     "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "i18next": "^22.4.9",
