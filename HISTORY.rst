@@ -81,6 +81,8 @@ General
       community.naturalcapitalalliance.org; update NatCap website URL to point to
       naturalcapitalalliance.stanford.edu
       (`#2284 <https://github.com/natcap/invest/issues/2284>`_)
+    * Updated NatCap name, website URL, and Forum URL throughout the codebase,
+      including API docs (`#2287 <https://github.com/natcap/invest/issues/2287>`_)
 * Updated to ``pygeoprocessing`` 2.4.10:
 
   * Fixed an import error caused by ``GDALUseExceptions`` moving from
