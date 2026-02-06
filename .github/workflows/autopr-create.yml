@@ -1,14 +1,7 @@
 name: "AutoPR: Create PRs into release branches"
-
 env:
     SOURCE_BRANCH: main
 on:
-    #pull_request:
-    #    types: [closed]
-    #    branches:
-    #        # Triggered when PR into this branch is closed.
-    #        - main
-
     # Pushes to main (e.g. after a PR) are the only way that this workflow should be triggered.
     push:
         branches:
@@ -16,7 +9,7 @@ on:
 
 jobs:
     create-pr-into-release:
-        #if: github.repository == 'natcap/invest'
+        if: github.repository == 'natcap/invest'
         name: "AutoPR main into release branches"
         runs-on: ubuntu-latest
         permissions:
