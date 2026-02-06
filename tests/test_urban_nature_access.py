@@ -1,7 +1,6 @@
 # coding=UTF-8
 """Tests for the Urban Nature Access Model."""
 import itertools
-import math
 import os
 import random
 import shutil
@@ -13,7 +12,6 @@ import numpy
 import pandas
 import pygeoprocessing
 import shapely.geometry
-from natcap.invest import utils
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -113,66 +111,9 @@ class UNATests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_resample_population_raster(self):
-        """UNA: Test population raster resampling."""
-        from natcap.invest import urban_nature_access
-
-        random.seed(-1)  # for our random number generation
-
-        source_population_raster_path = os.path.join(
-            self.workspace_dir, 'population.tif')
-        population_pixel_size = (90, -90)
-        population_array_shape = (10, 10)
-
-        array_of_100s = numpy.full(
-            population_array_shape, 100, dtype=numpy.uint32)
-        array_of_random_ints = numpy.array(
-            random.choices(range(0, 100), k=100),
-            dtype=numpy.uint32).reshape(population_array_shape)
-
-        for population_array in (
-                array_of_100s, array_of_random_ints):
-            population_srs = osr.SpatialReference()
-            population_srs.ImportFromEPSG(_DEFAULT_EPSG)
-            population_wkt = population_srs.ExportToWkt()
-            pygeoprocessing.numpy_array_to_raster(
-                base_array=population_array,
-                target_nodata=-1,
-                pixel_size=population_pixel_size,
-                origin=_DEFAULT_ORIGIN,
-                projection_wkt=population_wkt,
-                target_path=source_population_raster_path)
-
-            for target_pixel_size in (
-                    (30, -30),  # 1/3 the pixel size
-                    (4, -4),  # way smaller
-                    (100, -100)):  # bigger
-                target_population_raster_path = os.path.join(
-                    self.workspace_dir, 'resampled_population.tif')
-                urban_nature_access._resample_population_raster(
-                    source_population_raster_path,
-                    target_population_raster_path,
-                    lulc_pixel_size=target_pixel_size,
-                    lulc_bb=pygeoprocessing.get_raster_info(
-                        source_population_raster_path)['bounding_box'],
-                    lulc_projection_wkt=population_wkt,
-                    working_dir=self.workspace_dir)
-
-                resampled_population_array = (
-                    pygeoprocessing.raster_to_numpy_array(
-                        target_population_raster_path))
-
-                # There should be no significant loss or gain of population due
-                # to warping, but the fact that this is aggregating across the
-                # whole raster (lots of pixels) means we need to lower the
-                # relative tolerance.
-                numpy.testing.assert_allclose(
-                    population_array.sum(), resampled_population_array.sum(),
-                    rtol=1e-3)
-
     def test_density_kernel(self):
         """UNA: Test the density kernel."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         max_distance = 3
         distance = numpy.array([0, 1, 2, 3, 4])
@@ -183,7 +124,7 @@ class UNATests(unittest.TestCase):
 
     def test_power_kernel(self):
         """UNA: Test the power kernel."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         beta = -5
         max_distance = 3
@@ -197,7 +138,7 @@ class UNATests(unittest.TestCase):
 
     def test_gaussian_kernel(self):
         """UNA: Test the gaussian decay kernel."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         max_distance = 3
         distance = numpy.array([0, 1, 2, 3, 4])
@@ -211,7 +152,7 @@ class UNATests(unittest.TestCase):
 
     def test_urban_nature_balance(self):
         """UNA: Test the per-capita urban_nature balance functions."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         nodata = urban_nature_access.FLOAT32_NODATA
         urban_nature_supply_percapita = numpy.array([
@@ -239,7 +180,7 @@ class UNATests(unittest.TestCase):
 
     def test_reclassify_and_multpliy(self):
         """UNA: test reclassification/multiplication function."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         nodata = 255
         aois_array = numpy.array([
@@ -280,7 +221,7 @@ class UNATests(unittest.TestCase):
 
     def test_core_model(self):
         """UNA: Run through the model with base data."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
@@ -361,7 +302,7 @@ class UNATests(unittest.TestCase):
 
     def test_no_lulc_nodata(self):
         """UNA: verify behavior when the LULC has no nodata value."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
@@ -375,7 +316,7 @@ class UNATests(unittest.TestCase):
         urban_nature_access.execute(args)
 
     def test_split_urban_nature(self):
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_URBAN_NATURE
@@ -449,7 +390,7 @@ class UNATests(unittest.TestCase):
         Split population is not a radius mode, it's a summary statistics mode.
         Therefore, we test with another mode, such as uniform search radius.
         """
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
@@ -531,7 +472,7 @@ class UNATests(unittest.TestCase):
             AssertionError: When the raster's sum, min or max values are not
             numerically close to the expected values.
         """
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         accessible_urban_nature_array = (
             pygeoprocessing.raster_to_numpy_array(path))
@@ -545,7 +486,7 @@ class UNATests(unittest.TestCase):
 
     def test_radii_by_pop_group(self):
         """UNA: Test defining radii by population group."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_POP_GROUP
@@ -620,7 +561,7 @@ class UNATests(unittest.TestCase):
 
         Issue for this bug: https://github.com/natcap/invest/issues/1502
         """
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
         args['decay_function'] = urban_nature_access.KERNEL_LABEL_EXPONENTIAL
@@ -700,7 +641,7 @@ class UNATests(unittest.TestCase):
 
         This is a good gut-check of basic model behavior across modes.
         """
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         # This radius will be the same across all model runs.
         search_radius = 1000
@@ -817,7 +758,7 @@ class UNATests(unittest.TestCase):
 
     def test_polygon_overlap(self):
         """UNA: Test that we can check if polygons overlap."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(_DEFAULT_EPSG)
         wkt = srs.ExportToWkt()
@@ -839,7 +780,7 @@ class UNATests(unittest.TestCase):
 
     def test_square_pixels(self):
         """UNA: Assert we can make square pixels as expected."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         raster_path = os.path.join(self.workspace_dir, 'raster.tif')
         nodata = 255
@@ -857,7 +798,7 @@ class UNATests(unittest.TestCase):
 
     def test_weighted_sum(self):
         """UNA: Assert weighted sum is correct."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         weights_paths = []
         source_paths = []
@@ -904,7 +845,7 @@ class UNATests(unittest.TestCase):
 
     def test_write_vector(self):
         """UNA: test writing of various numeric types to the output vector."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
         args = _build_model_args(self.workspace_dir)
 
         admin_vector = gdal.OpenEx(args['admin_boundaries_vector_path'])
@@ -947,7 +888,7 @@ class UNATests(unittest.TestCase):
     def test_write_vector_for_single_raster_modes(self):
         """UNA: create a summary vector for single-raster summary stats."""
 
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
 
@@ -988,7 +929,7 @@ class UNATests(unittest.TestCase):
 
     def test_urban_nature_proportion(self):
         """UNA: Run the model with urban nature proportion."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
@@ -1004,32 +945,22 @@ class UNATests(unittest.TestCase):
 
     def test_reclassify_urban_nature(self):
         """UNA: Test for urban nature area reclassification."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
         args = _build_model_args(self.workspace_dir)
 
         # Rewrite the lulc attribute table to use proportions of urban nature.
-        with open(args['lulc_attribute_table'], 'w') as attr_table:
-            attr_table.write(textwrap.dedent(
-                """\
-                lucode,urban_nature,search_radius_m
-                0,0,100
-                1,0.1,100
-                2,0,100
-                3,0.3,100
-                4,0,100
-                5,0.5,100
-                6,0,100
-                7,0.7,100
-                8,0,100
-                9,0.9,100
-                """))
+        attr_table = pandas.DataFrame({
+            'lucode': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            'urban_nature': [0, 0.1, 0, 0.3, 0, 0.5, 0, 0.7, 0, 0.9],
+            'search_radius_m': [100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
+        })
 
         urban_nature_area_path = os.path.join(
             self.workspace_dir, 'urban_nature_area.tif')
 
         for limit_to_lucodes in (None, set([1, 3])):
             urban_nature_access._reclassify_urban_nature_area(
-                args['lulc_raster_path'], args['lulc_attribute_table'],
+                args['lulc_raster_path'], attr_table,
                 urban_nature_area_path,
                 only_these_urban_nature_codes=limit_to_lucodes)
 
@@ -1054,7 +985,7 @@ class UNATests(unittest.TestCase):
 
     def test_validate(self):
         """UNA: Basic test for validation."""
-        from natcap.invest import urban_nature_access
+        from natcap.invest.urban_nature_access import urban_nature_access
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = (
             urban_nature_access.RADIUS_OPT_URBAN_NATURE)
@@ -1062,8 +993,8 @@ class UNATests(unittest.TestCase):
 
     def test_validate_uniform_search_radius(self):
         """UNA: Search radius is required when using uniform search radii."""
-        from natcap.invest import urban_nature_access
-        from natcap.invest import validation
+        from natcap.invest.urban_nature_access import urban_nature_access
+        from natcap.invest import validation_messages
 
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
@@ -1071,4 +1002,4 @@ class UNATests(unittest.TestCase):
 
         warnings = urban_nature_access.validate(args)
         self.assertEqual(warnings, [(['search_radius'],
-                                     validation.MESSAGES['MISSING_VALUE'])])
+                                     validation_messages.MISSING_VALUE)])

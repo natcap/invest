@@ -72,7 +72,7 @@ density of CO2-equivalent per hectare.  Megatonnes of CO2-equivalent per Ha are
 the units specified in the user's guide, but any such density could be used as
 no conversion of units takes place in the model.
 
-There has been some conversation within the Natural Capital Project staff of
+There has been some conversation within the Natural Capital Alliance staff of
 whether to convert this carbon density per hectare to carbon density per pixel,
 for consistency with the rest of InVEST (which often displays metrics per
 pixel), and also for easier aggregation of spatial metrics such as total carbon
@@ -92,7 +92,6 @@ here for several reasons:
        across very large areas without modification.
 """
 import logging
-import os
 import shutil
 import time
 
@@ -103,12 +102,10 @@ import scipy.sparse
 import taskgraph
 from osgeo import gdal
 
-from .. import gettext
-from .. import spec
-from .. import utils
-from .. import validation
-from ..unit_registry import u
-from ..file_registry import FileRegistry
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -232,9 +229,11 @@ MODEL_SPEC = spec.ModelSpec(
                 ),
                 spec.NumberInput(
                     id="biomass-half-life",
-                    about=gettext("The half-life of carbon in the biomass pool."),
+                    about=gettext(
+                        "The half-life of carbon in the biomass pool. A value of 0 "
+                        "indicates no emissions."),
                     units=u.year,
-                    expression="value > 0"
+                    expression="value >= 0"
                 ),
                 spec.RatioInput(
                     id="biomass-low-impact-disturb",
@@ -272,9 +271,11 @@ MODEL_SPEC = spec.ModelSpec(
                 ),
                 spec.NumberInput(
                     id="soil-half-life",
-                    about=gettext("The half-life of carbon in the soil pool."),
+                    about=gettext(
+                        "The half-life of carbon in the soil pool. A value of 0 "
+                        "indicates no emissions."),
                     units=u.year,
-                    expression="value > 0"
+                    expression="value >= 0"
                 ),
                 spec.RatioInput(
                     id="soil-low-impact-disturb",
@@ -367,7 +368,8 @@ MODEL_SPEC = spec.ModelSpec(
                     ]
                 )
             ],
-            index_col="lulc-class"
+            index_col="lulc-class",
+            na_allowed=["[LULC CODE]"]
         ),
         spec.BooleanInput(
             id="do_economic_analysis",
@@ -1861,17 +1863,6 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
     # maps of the spatial values per transition to the timeseries analysis
     # function.
     for index, row in table.iterrows():
-        # If the user is using the template, all rows have some sort of values
-        # in them until the blank row before the legend.  If we find that row,
-        # we can break out of the loop.
-        if row.isnull().all():
-            LOGGER.info(f"Halting transition table parsing on row {index}; "
-                        "blank line encountered.")
-            break
-
-        # skip rows starting with a blank cell, these are part of the legend
-        if pandas.isna(row['lulc-class']):
-            continue
 
         try:
             from_lucode = lulc_class_to_lucode[row['lulc-class']]
@@ -2067,25 +2058,5 @@ def validate(args, limit_to=None):
                     INVALID_ANALYSIS_YEAR_MSG.format(
                         analysis_year=args['analysis_year'],
                         latest_year=max(snapshots.keys()))))
-
-    # check for invalid options in the translation table
-    if ("landcover_transitions_table" not in invalid_keys and
-            "landcover_transitions_table" in sufficient_keys):
-        transitions_spec = MODEL_SPEC.get_input('landcover_transitions_table')
-        transition_options = transitions_spec.get_column(
-            '[LULC CODE]').list_options()
-        transitions_df = transitions_spec.get_validated_dataframe(
-            args['landcover_transitions_table'])
-        transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()
-        if transitions_mask.any(axis=None):
-            transition_numpy_mask = transitions_mask.values
-            transition_numpy_values = transitions_df.to_numpy()
-            bad_transition_values = list(
-                numpy.unique(transition_numpy_values[transition_numpy_mask]))
-            validation_warnings.append((
-                ['landcover_transitions_table'],
-                INVALID_TRANSITION_VALUES_MSG.format(
-                    model_transitions=(transition_options),
-                    transition_values=bad_transition_values)))
 
     return validation_warnings

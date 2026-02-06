@@ -1,5 +1,4 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
-import copy
 import logging
 import os
 import pickle
@@ -7,18 +6,15 @@ import pickle
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
-import taskgraph
 from osgeo import gdal
 from osgeo import gdal_array
 from osgeo import ogr
 
-from .. import gettext
-from .. import spec
-from .. import utils
-from .. import validation
-from ..sdr import sdr
-from ..file_registry import FileRegistry
-from ..unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import validation
+from natcap.invest.sdr import sdr
+from natcap.invest.unit_registry import u
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
@@ -56,7 +52,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " corresponding entries in the Biophysical table."
             ),
             data_type=int,
-            units=None,
+            units=u.none,
             projected=True
         ),
         spec.SingleBandRasterInput(
@@ -153,7 +149,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " proportion of the nitrogen that is retained on this LULC class."
                     ),
                     required="calc_n",
-                    units=None
+                    units=u.none
                 ),
                 spec.RatioInput(
                     id="eff_p",
@@ -163,7 +159,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " class."
                     ),
                     required="calc_p",
-                    units=None
+                    units=u.none
                 ),
                 spec.NumberInput(
                     id="crit_len_n",
@@ -192,7 +188,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " There is no equivalent of this for phosphorus."
                     ),
                     required="calc_n",
-                    units=None
+                    units=u.none
                 )
             ],
             index_col="lucode"
@@ -256,7 +252,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="calc_n",
             allowed="calc_n",
-            units=None
+            units=u.none
         ),
         spec.FLOW_DIR_ALGORITHM
     ],
@@ -417,7 +413,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Raw per-landscape cover retention efficiency for nitrogen."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="eff_p",
@@ -426,7 +422,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Raw per-landscape cover retention efficiency for phosphorus"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="effective_retention_n",
@@ -436,7 +432,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " for each pixel"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="effective_retention_p",
@@ -446,7 +442,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " path for each pixel"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.FLOW_ACCUMULATION.model_copy(update=dict(
             path="intermediate_outputs/flow_accumulation.tif")),
@@ -457,28 +453,28 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/ic_factor.tif",
             about=gettext("Index of connectivity"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="load_n",
             path="intermediate_outputs/load_n.tif",
-            about=gettext("Nitrogen load (for surface transport) per pixel"),
+            about=gettext("Nitrogen load (for surface transport)"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="load_p",
             path="intermediate_outputs/load_p.tif",
-            about=gettext("Phosphorus load (for surface transport) per pixel"),
+            about=gettext("Phosphorus load (for surface transport)"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="modified_load_n",
             path="intermediate_outputs/modified_load_n.tif",
             about=gettext("Raw nitrogen load scaled by the runoff proxy index."),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="modified_load_p",
@@ -487,21 +483,21 @@ MODEL_SPEC = spec.ModelSpec(
                 "Raw phosphorus load scaled by the runoff proxy index."
             ),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="ndr_n",
             path="intermediate_outputs/ndr_n.tif",
             about=gettext("NDR values for nitrogen"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="ndr_p",
             path="intermediate_outputs/ndr_p.tif",
             about=gettext("NDR values for phosphorus"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="runoff_proxy_index",
@@ -510,7 +506,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Normalized values for the Runoff Proxy input to the model"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="s_accumulation",
@@ -526,7 +522,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Average slope gradient of the upslope contributing area"
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="s_factor_inverse",
@@ -540,14 +536,14 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/sub_load_n.tif",
             about=gettext("Nitrogen loads for subsurface transport"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="sub_ndr_n",
             path="intermediate_outputs/sub_ndr_n.tif",
             about=gettext("Subsurface nitrogen NDR values"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="surface_load_n",
@@ -570,7 +566,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Percent slope thresholded for correct calculation of IC."
             ),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="what_drains_to_stream",
@@ -582,7 +578,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " to any stream in stream.tif."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="aligned_dem",
@@ -601,7 +597,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " reprojected to the DEM projection"
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="aligned_runoff_proxy",
@@ -629,7 +625,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "LULC input masked to exclude pixels outside the watershed"
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="masked_runoff_proxy",
@@ -759,7 +755,7 @@ def execute(args):
 
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
-        args['biophysical_table_path'])
+        args['biophysical_table_path'], args=args)
 
     # Ensure that if user doesn't explicitly assign a value,
     # runoff_proxy_av = None
@@ -1420,23 +1416,12 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    spec_copy = copy.deepcopy(MODEL_SPEC)
     # Check required fields given the state of ``calc_n`` and ``calc_p``
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     nutrients_selected = []
     for nutrient_letter in ('n', 'p'):
         if f'calc_{nutrient_letter}' in args and args[f'calc_{nutrient_letter}']:
             nutrients_selected.append(nutrient_letter)
-
-    for param in ['load', 'eff', 'crit_len']:
-        for nutrient in nutrients_selected:
-            spec_copy.get_input('biophysical_table_path').get_column(
-                f'{param}_{nutrient}').required = True
-
-    if 'n' in nutrients_selected:
-        spec_copy.get_input('biophysical_table_path').get_column(
-            'proportion_subsurface_n').required = True
-
-    validation_warnings = validation.validate(args, spec_copy)
 
     if not nutrients_selected:
         validation_warnings.append(
@@ -1493,7 +1478,7 @@ def _calculate_load(
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
             efficiency, and load type. The load type value can be one of:
-            [ 'measured-runoff' | 'appliation-rate' ].
+            [ 'measured-runoff' | 'application-rate' ].
         nutrient_type (str): the nutrient type key ('p' | 'n').
         target_load_raster (string): path to target raster that will have
             load values (kg/ha) mapped to pixels based on LULC.
@@ -1507,16 +1492,6 @@ def _calculate_load(
     load_key = f'load_{nutrient_type}'
     eff_key = f'eff_{nutrient_type}'
     load_type_key = f'load_type_{nutrient_type}'
-
-    # Raise ValueError if unknown load_type
-    for key, value in lucode_to_load.items():
-        load_type = value[load_type_key]
-        if not load_type in [app_rate, measured_runoff]:
-            # unknown load type, raise ValueError
-            raise ValueError(
-                'nutrient load type must be: '
-                f'"{app_rate}" | "{measured_runoff}". Instead '
-                f'found value of: "{load_type}".')
 
     def _map_load_op(lucode_array):
         """Convert unit load to total load."""

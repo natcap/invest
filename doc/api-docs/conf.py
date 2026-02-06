@@ -13,11 +13,7 @@
 # serve to show the default.
 
 from datetime import datetime
-import importlib
 import os
-import pkgutil
-import sys
-from unittest.mock import MagicMock
 from urllib.request import urlretrieve
 
 import natcap.invest
@@ -54,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'InVEST'
-copyright = f'{datetime.now().year}, The Natural Capital Project'
+copyright = f'{datetime.now().year}, The Natural Capital Alliance'
 
 # The full version, including alpha/beta/rc tags.
 release = natcap.invest.__version__
@@ -110,7 +106,7 @@ htmlhelp_basename = 'InVESTdoc'
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   ('index', 'InVEST.tex', 'InVEST Documentation',
-   'The Natural Capital Project', 'manual'),
+   'The Natural Capital Alliance', 'manual'),
 ]
 
 
@@ -120,7 +116,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'invest', 'InVEST Documentation',
-     ['The Natural Capital Project'], 1)
+     ['The Natural Capital Alliance'], 1)
 ]
 
 
@@ -131,7 +127,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'InVEST', 'InVEST Documentation',
-   'The Natural Capital Project', 'InVEST',
+   'The Natural Capital Alliance', 'InVEST',
    'Integrated Valuation of Ecosystem Services and Tradeoffs',
    'Scientific Software'),
 ]
@@ -154,7 +150,7 @@ apidoc.main([
 ])
 
 # Download the demo plugin pyproject.toml to display in the plugins page
-urlretrieve (
+urlretrieve(
     "https://raw.githubusercontent.com/natcap/invest-demo-plugin/main/pyproject.toml",
     "pyproject.toml"
 )
@@ -170,9 +166,13 @@ InVEST Model Entry Points
 
 All InVEST models share a consistent python API:
 
-    - Every InVEST model has a corresponding module or subpackage in the
-      ``natcap.invest`` package
-    - The model modules contain a function called ``execute``
+    - Every InVEST model has a corresponding subpackage in the
+      ``natcap.invest`` package. This subpackage will typically contain a main
+      model module with that model's python source code.
+    - The model modules contain a function called ``execute``. This function is
+      also available from the model subpackage. For example,
+      ``natcap.invest.carbon.execute`` and ``natcap.invest.carbon.carbon.execute``
+      both work and refer to the same function.
     - The ``execute`` function takes a single argument (``args``), a dictionary
       that stores all data inputs and configuration options for the model
     - This dictionary contains an entry, ``'workspace_dir'``, which is a path

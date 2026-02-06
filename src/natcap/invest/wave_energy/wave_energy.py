@@ -1,0 +1,2265 @@
+"""InVEST Wave Energy Model Core Code"""
+import math
+import os
+import logging
+import struct
+import itertools
+import shutil
+import tempfile
+
+import numpy
+import pandas
+from rtree import index
+import scipy
+from osgeo import gdal
+from osgeo import osr
+from osgeo import ogr
+
+import pygeoprocessing
+from natcap.invest import utils
+from natcap.invest import spec
+from natcap.invest.unit_registry import u
+from natcap.invest import validation
+from natcap.invest import gettext
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+PERCENTILE_TABLE_FIELDS = [
+    spec.IntegerOutput(
+        id="Percentile Group",
+        about=gettext("Index of this percentile bin.")
+    ),
+    spec.StringOutput(
+        id="Percentile Range",
+        about=gettext("Percentile range within this bin.")
+    ),
+    spec.IntegerOutput(
+        id="Pixel Count",
+        about=gettext(
+            "Number of pixels whose wave energy values fall into this"
+            " percentile bin."
+        )
+    ),
+    spec.NumberOutput(
+        id="Value Range (megawatt hours per year, MWh/yr)",
+        about=gettext(
+            "Range of wave energy values within this percentile bin."
+        ),
+        units=u.megawatt_hour / u.year
+    )
+]
+
+WEM_FIELDS = [
+    spec.NumberOutput(
+        id="I",
+        about=gettext("index value for the wave input grid points"),
+        units=u.none
+    ),
+    spec.NumberOutput(
+        id="J",
+        about=gettext("index value for the wave input grid points"),
+        units=u.none
+    ),
+    spec.NumberOutput(
+        id="LONG",
+        about=gettext("longitude of the grid points"),
+        units=u.degree
+    ),
+    spec.NumberOutput(
+        id="LATI",
+        about=gettext("latitude of the grid points"),
+        units=u.degree
+    ),
+    spec.NumberOutput(
+        id="HSAVG_M",
+        about=gettext("wave height average"),
+        units=u.meter
+    ),
+    spec.NumberOutput(
+        id="TPAVG_S",
+        about=gettext("wave period average"),
+        units=u.second
+    )
+]
+
+INDEXED_WEM_FIELDS = [
+    *WEM_FIELDS,
+    spec.NumberOutput(id="DEPTH_M", about=gettext("depth"), units=u.meter)
+]
+
+CAPTURED_WEM_FIELDS = [
+    *INDEXED_WEM_FIELDS,
+    spec.NumberOutput(
+        id="CAPWE_MWHY",
+        about=gettext("captured wave energy per device"),
+        units=u.megawatt_hour / u.year
+    ),
+    spec.NumberOutput(
+        id="WE_KWM",
+        about=gettext("potential wave power"),
+        units=u.kilowatt / u.meter
+    )
+]
+
+MODEL_SPEC = spec.ModelSpec(
+    model_id="wave_energy",
+    model_title=gettext("Wave Energy Production"),
+    userguide="wave_energy.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=(),
+    module_name=__name__,
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["wave_base_data_table", "analysis_area", "aoi_path", "dem_path"],
+        ["machine_perf_path", "machine_param_path"],
+        ["valuation_container", "land_gridPts_path",
+         "machine_econ_path", "number_of_machines"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.CSVInput(
+            id="wave_base_data_table",
+            name=gettext("wave base data"),
+            about=gettext(
+                "Table pointing to pre-packaged wave energy data. This is "
+                "provided with the sample data."),
+            columns=[
+                spec.StringInput(
+                    id="analysis_area",
+                    about=gettext("Analysis area")
+                ),
+                spec.VectorInput(
+                    id="point_vector",
+                    about=gettext("Wave energy point vector for each analysis area"),
+                    geometry_types={"POINT"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.VectorInput(
+                    id="extract_vector",
+                    about=gettext("Wave energy extract vector for each analysis area"),
+                    geometry_types={"POLYGON"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.FileInput(
+                    id="binary_wwiii_data",
+                    about=gettext("Binary WaveWatchIII data for each analysis area")
+                )
+            ],
+            index_col="analysis_area"
+        ),
+        spec.OptionStringInput(
+            id="analysis_area",
+            name=gettext("analysis area"),
+            about=gettext("The analysis area over which to run the model."),
+            options=[
+                spec.Option(key="westcoast", display_name="West Coast of North America and Hawaii"),
+                spec.Option(key="eastcoast", display_name="East Coast of North America and Puerto Rico"),
+                spec.Option(key="northsea4", display_name="North Sea 4 meter resolution"),
+                spec.Option(key="northsea10", display_name="North Sea 10 meter resolution"),
+                spec.Option(key="australia", display_name="Australia"),
+                spec.Option(key="global", display_name="Global")
+            ]
+        ),
+        spec.AOI.model_copy(update=dict(
+            id="aoi_path",
+            required=False,
+            projected=True,
+            projection_units=u.meter
+        )),
+        spec.CSVInput(
+            id="machine_perf_path",
+            name=gettext("machine performance table"),
+            about=gettext(
+                "A matrix of the wave machine performance, or ability to capture wave"
+                " energy, in different sea state conditions. The first column contains"
+                " wave height values (in meters, increasing from top to bottom), and the"
+                " first row contains wave period values (in seconds, increasing from left"
+                " to right). Values within the matrix are the machine performance in"
+                " kilowatts at that sea state condition, described by the wave height"
+                " (row) and wave period (column). The model linearly interpolates sea"
+                " state data from the base wave dataset onto this matrix to determine"
+                " performance."
+            ),
+            columns=None,
+            index_col=None
+        ),
+        spec.CSVInput(
+            id="machine_param_path",
+            name=gettext("machine parameter table"),
+            about=gettext("Table of parameters for the wave energy machine in use."),
+            columns=[
+                spec.StringInput(
+                    id="name",
+                    about=(
+                        "Name of the machine parameter. Expected parameters are: 'capmax'"
+                        " (maximum capacity for device, in kilowatts), 'hsmax' (upper"
+                        " limit of wave height for device operation, in meters), and"
+                        " 'tpmax' (upper limit of wave period for device operation, in"
+                        " seconds)."
+                    ),
+                    regexp=None
+                ),
+                spec.NumberInput(
+                    id="value",
+                    about=gettext("Value of the machine parameter."),
+                    units=u.none
+                )
+            ],
+            index_col="name"
+        ),
+        spec.SingleBandRasterInput(
+            id="dem_path",
+            name=gettext("bathymetry"),
+            about=gettext("Map of ocean depth. Values should be negative."),
+            data_type=float,
+            units=u.meter,
+            projected=None
+        ),
+        spec.BooleanInput(
+            id="valuation_container",
+            name=gettext("run valuation"),
+            about=gettext("Run the valuation model."),
+            required=False
+        ),
+        spec.CSVInput(
+            id="land_gridPts_path",
+            name=gettext("grid connection points table"),
+            about=gettext(
+                "A table of data for each connection point. Required if Run Valuation is"
+                " selected."
+            ),
+            required="valuation_container",
+            allowed="valuation_container",
+            columns=[
+                spec.IntegerInput(
+                    id="id", about=gettext("Unique identifier for each point.")
+                ),
+                spec.OptionStringInput(
+                    id="type",
+                    about=gettext("The type of connection at this point."),
+                    options=[
+                        spec.Option(key="LAND", about="This is a land connection point"),
+                        spec.Option(key="GRID", about="This is a grid connection point")
+                    ]
+                ),
+                spec.NumberInput(
+                    id="lat",
+                    about=gettext("Latitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.NumberInput(
+                    id="long",
+                    about=gettext("Longitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.StringInput(
+                    id="location",
+                    about=gettext("Name for the connection point location."),
+                    regexp=None
+                )
+            ],
+            index_col=None
+        ),
+        spec.CSVInput(
+            id="machine_econ_path",
+            name=gettext("machine economic table"),
+            about=gettext(
+                "Table of economic parameters for the wave energy machine. Required if"
+                " Run Valuation is selected."
+            ),
+            required="valuation_container",
+            allowed="valuation_container",
+            columns=[
+                spec.StringInput(
+                    id="name",
+                    about=(
+                        "Name of the machine parameter. Expected parameters are: 'capmax'"
+                        " (maximum capacity for device, in kilowatts), 'cc' (capital cost"
+                        " per device installed, $/kilowatt), 'cml' (cost of mooring"
+                        " lines, $/kilometer), 'cul' (cost of underwater cable,"
+                        " $/kilometer), 'col' (cost of overland transmission lines,"
+                        " $/kilometer), 'omc' (operating and maintenance cost, $/kilowatt"
+                        " hour), 'p' (price of electricity, $/kilowatt hour), 'r'"
+                        " (discount rate, between 0 and 1), 'smlpm' (number of slack"
+                        " lines required per machine)"
+                    ),
+                    regexp=None
+                ),
+                spec.NumberInput(
+                    id="value",
+                    about=gettext("Value of the machine parameter."),
+                    units=u.none
+                )
+            ],
+            index_col="name"
+        ),
+        spec.IntegerInput(
+            id="number_of_machines",
+            name=gettext("number of machines"),
+            about=gettext(
+                "Number of wave machines to model. Required if Run Valuation is selected."
+            ),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.none,
+            expression="value > 0"
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="capwe_mwh",
+            path="output/capwe_mwh.tif",
+            about=gettext("Map of captured wave energy per WEC device."),
+            data_type=float,
+            units=u.megawatt_hour / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="capwe_rc",
+            path="output/capwe_rc.tif",
+            about=gettext(
+                "Map of captured wave energy per WEC device reclassified by"
+                " quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = >"
+                " 90%)."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.CSVOutput(
+            id="capwe_rc_csv",
+            path="output/capwe_rc.csv",
+            about=gettext(
+                "Table of value ranges for each captured wave energy quantile"
+                " group as well as the number of pixels for each group."
+            ),
+            columns=[
+                *PERCENTILE_TABLE_FIELDS,
+                spec.NumberOutput(
+                    id="Value Range (megawatt hours per year, MWh/yr)",
+                    about=gettext(
+                        "Range of wave energy values within this percentile bin."
+                    ),
+                    units=u.megawatt_hour / u.year
+                )
+            ],
+            index_col="Percentile Group"
+        ),
+        spec.VectorOutput(
+            id="gridpt_prj",
+            path="output/GridPts_prj.shp",
+            about=gettext("Vector map of the provided grid points"),
+            created_if="valuation_container",
+            geometry_types={"POINT"},
+            fields=[
+                spec.IntegerOutput(
+                    id="id", about=gettext("Unique identifier for each point.")
+                ),
+                spec.OptionStringOutput(
+                    id="type",
+                    about=gettext("The type of connection at this point."),
+                    options=[
+                        spec.Option(key="LAND", about="This is a land connection point"),
+                        spec.Option(key="GRID", about="This is a grid connection point")
+                    ]
+                ),
+                spec.NumberOutput(
+                    id="lat",
+                    about=gettext("Latitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.NumberOutput(
+                    id="long",
+                    about=gettext("Longitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.StringOutput(
+                    id="location",
+                    about=gettext("Name for the connection point location."),
+                    regexp=None
+                )
+            ]
+        ),
+        spec.VectorOutput(
+            id="landpts_prj",
+            path="output/LandPts_prj.shp",
+            about=gettext("Vector map of the provided land points"),
+            created_if="valuation_container",
+            geometry_types={"POINT"},
+            fields=[
+                spec.IntegerOutput(
+                    id="id", about=gettext("Unique identifier for each point.")
+                ),
+                spec.OptionStringOutput(
+                    id="type",
+                    about=gettext("The type of connection at this point."),
+                    options=[
+                        spec.Option(key="LAND", about="This is a land connection point"),
+                        spec.Option(key="GRID", about="This is a grid connection point")
+                    ]
+                ),
+                spec.NumberOutput(
+                    id="lat",
+                    about=gettext("Latitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.NumberOutput(
+                    id="long",
+                    about=gettext("Longitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.StringOutput(
+                    id="location",
+                    about=gettext("Name for the connection point location."),
+                    regexp=None
+                )
+            ]
+        ),
+        spec.SingleBandRasterOutput(
+            id="npv_rc",
+            path="output/npv_rc.tif",
+            about=gettext(
+                "Map of positive values of net present value over the 25-year"
+                " lifespan of a wave energy facility, reclassified by quantiles"
+                " (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%)."
+            ),
+            created_if="valuation_container",
+            data_type=int,
+            units=None
+        ),
+        spec.CSVOutput(
+            id="npv_rc_csv",
+            path="output/npv_rc.csv",
+            about=gettext(
+                "Table of value ranges for each net present value quantile group"
+                " as well as the number of pixels for each group."
+            ),
+            created_if="valuation_container",
+            columns=[
+                *PERCENTILE_TABLE_FIELDS,
+                spec.NumberOutput(
+                    id="Value Range (thousands of currency units, currency)",
+                    about=gettext(
+                        "Range of net present values within this percentile bin."
+                    ),
+                    units=u.currency
+                )
+            ],
+            index_col="Percentile Group"
+        ),
+        spec.SingleBandRasterOutput(
+            id="npv_usd",
+            path="output/npv_usd.tif",
+            about=gettext(
+                "Map of net present value over the 25-year lifespan of a wave"
+                " energy facility."
+            ),
+            created_if="valuation_container",
+            data_type=float,
+            units=u.kilocurrency
+        ),
+        spec.SingleBandRasterOutput(
+            id="wp_kw",
+            path="output/wp_kw.tif",
+            about=gettext("Map of potential wave power."),
+            data_type=float,
+            units=u.kilowatt / u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="wp_rc",
+            path="output/wp_rc.tif",
+            about=gettext(
+                "Map of potential wave power classified into quantiles (1 = <"
+                " 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%)."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.CSVOutput(
+            id="wp_rc_csv",
+            path="output/wp_rc.csv",
+            about=gettext(
+                "Table of value ranges for each wave power quantile group as well"
+                " as the number of pixels for each group."
+            ),
+            columns=[
+                *PERCENTILE_TABLE_FIELDS,
+                spec.NumberOutput(
+                    id=(
+                        "Value Range (wave power per unit width of wave crest"
+                        " length, kW/m)"
+                    ),
+                    about=gettext(
+                        "Range of potential wave power values within this"
+                        " percentile bin."
+                    ),
+                    units=u.kilowatt / u.meter
+                )
+            ],
+            index_col="Percentile Group"
+        ),
+        spec.VectorOutput(
+            id="aoi_clipped_to_extract_path",
+            path="intermediate/aoi_clipped_to_extract_path.shp",
+            about=gettext("AOI clipped to the analysis area"),
+            geometry_types={"POLYGON"},
+            fields=[]
+        ),
+        spec.VectorOutput(
+            id="captured_wem_inputoutput_pts",
+            path="intermediate/Captured_WEM_InputOutput_Pts.shp",
+            about=gettext("Map of wave data points."),
+            geometry_types={"POINT"},
+            fields=CAPTURED_WEM_FIELDS
+        ),
+        spec.VectorOutput(
+            id="final_wem_inputoutput_pts",
+            path="intermediate/Final_WEM_InputOutput_Pts.shp",
+            about=gettext("Map of wave data points."),
+            created_if="valuation_container",
+            geometry_types={"POINT"},
+            fields=[
+                *CAPTURED_WEM_FIELDS,
+                spec.NumberOutput(
+                    id="W2L_MDIST",
+                    about=gettext(
+                        "Euclidean distance to the nearest landing connection"
+                        " point"
+                    ),
+                    units=u.meter
+                ),
+                spec.NumberOutput(
+                    id="L2G_MDIST",
+                    about=gettext(
+                        "Euclidean distance from LAND_ID to the nearest power"
+                        " grid connection"
+                    ),
+                    units=u.meter
+                ),
+                spec.NumberOutput(
+                    id="LAND_ID",
+                    about=gettext("ID of the closest landing connection point"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="NPV_25Y",
+                    about=gettext("net present value of 25 year period"),
+                    units=u.kilocurrency
+                ),
+                spec.NumberOutput(
+                    id="CAPWE_ALL",
+                    about=gettext(
+                        "total captured wave energy for all machines at site"
+                    ),
+                    units=u.megawatt_hour / u.year
+                ),
+                spec.NumberOutput(
+                    id="UNITS",
+                    about=gettext(
+                        "number of WEC devices assumed to be at this WEC facility"
+                        " site"
+                    ),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.VectorOutput(
+            id="indexed_wem_inputoutput_pts",
+            path="intermediate/Indexed_WEM_InputOutput_Pts.shp",
+            about=gettext("Map of wave data points."),
+            geometry_types={"POINT"},
+            fields=INDEXED_WEM_FIELDS
+        ),
+        spec.SingleBandRasterOutput(
+            id="interpolated_capwe_mwh",
+            path="intermediate/interpolated_capwe_mwh.tif",
+            about=gettext("Interpolated wave energy"),
+            data_type=float,
+            units=u.megawatt_hour / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="interpolated_wp_kw",
+            path="intermediate/interpolated_wp_kw.tif",
+            about=gettext("Interpolated wave power"),
+            data_type=float,
+            units=u.kilowatt / u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="npv_not_clipped",
+            path="intermediate/npv_not_clipped.tif",
+            about=gettext("Interpolated net present value"),
+            created_if="valuation_container",
+            data_type=float,
+            units=u.kilocurrency
+        ),
+        spec.SingleBandRasterOutput(
+            id="unclipped_capwe_mwh",
+            path="intermediate/unclipped_capwe_mwh.tif",
+            about=gettext("Blank raster showing the extent of the AOI"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="unclipped_wp_kw",
+            path="intermediate/unclipped_wp_kw.tif",
+            about=gettext("Blank raster showing the extent of the AOI"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.VectorOutput(
+            id="wem_inputoutput_pts",
+            path="intermediate/WEM_InputOutput_Pts.shp",
+            about=gettext("Map of wave data points."),
+            geometry_types={"POINT"},
+            fields=WEM_FIELDS
+        ),
+        spec.TASKGRAPH_CACHE
+    ]
+)
+
+
+# Set nodata value and target_pixel_type for new rasters
+_NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
+_TARGET_PIXEL_TYPE = gdal.GDT_Float32
+
+# The life span (25 years) of a wave energy conversion facility.
+_LIFE_SPAN = 25
+# Sea water density constant (kg/m^3)
+_SWD = 1028
+# Gravitational acceleration (m/s^2)
+_GRAV = 9.8
+# Constant determining the shape of a wave spectrum (see users guide pg 23)
+_ALFA = 0.86
+
+# Depth field name to be added to the wave vector from DEM data
+_DEPTH_FIELD = 'DEPTH_M'
+# Captured wave energy field name to be added to the wave vector
+_CAP_WE_FIELD = 'CAPWE_MWHY'
+# Wave power field name to be added to the wave vector
+_WAVE_POWER_FIELD = 'WE_kWM'
+
+# Preexisting field names in the wave energy vector
+_HEIGHT_FIELD = 'HSAVG_M'
+_PERIOD_FIELD = 'TPAVG_S'
+
+# Field names for storing distance in wave vector
+_W2L_DIST_FIELD = 'W2L_MDIST'
+_L2G_DIST_FIELD = 'L2G_MDIST'
+_LAND_ID_FIELD = 'LAND_ID'
+
+# Net Present Value (NPV) field for wave vector
+_NPV_25Y_FIELD = 'NPV_25Y'
+# Total captured wave energy field for wave vector
+_CAPWE_ALL_FIELD = 'CAPWE_ALL'
+# Units field for wave vector
+_UNIT_FIELD = 'UNITS'
+
+# Resampling method for target rasters
+_TARGET_RESAMPLE_METHOD = 'near'
+
+# Percentile values and units specified explicitly in the user's guide
+_PERCENTILES = [25, 50, 75, 90]
+_CAPWE_UNITS_SHORT = 'MWh/yr'
+_CAPWE_UNITS_LONG = 'megawatt hours per year'
+_WP_UNITS_SHORT = 'kW/m'
+_WP_UNITS_LONG = 'wave power per unit width of wave crest length'
+_NPV_UNITS_SHORT = 'currency'
+_NPV_UNITS_LONG = 'thousands of currency units'
+_STARTING_PERC_RANGE = '1'
+
+# Driver name for creating vector and raster files
+_VECTOR_DRIVER_NAME = "ESRI Shapefile"
+_RASTER_DRIVER_NAME = "GTiff"
+
+
+class IntersectionError(Exception):
+    """A custom error message for when the AOI does not intersect any wave
+        data points.
+
+    """
+    pass
+
+
+def execute(args):
+    """Wave Energy.
+
+    Executes both the biophysical and valuation parts of the wave energy model
+    (WEM). Files will be written on disk to the intermediate and output
+    directories. The outputs computed for biophysical and valuation include:
+    wave energy capacity raster, wave power raster, net present value raster,
+    percentile rasters for the previous three, and a point shapefile of the
+    wave points with attributes.
+
+    Args:
+        workspace_dir (str): Where the intermediate and output folder/files
+            will be saved. (required)
+        wave_base_data_table (str): Path to wave base data table including
+            WAVEWATCH III (WW3) data and analysis area shapefile. (required)
+        analysis_area (str): A string identifying the analysis area of
+            interest. Used to determine wave data shapefile, wave data text
+            file, and analysis area boundary shape. (required)
+        aoi_path (str): A polygon OGR vector outlining a more detailed area
+            within the analysis area. This vector should be projected with
+            linear units being in meters. (required to run Valuation model)
+        machine_perf_path (str): The path of a CSV file that holds the
+            machine performance table. (required)
+        machine_param_path (str): The path of a CSV file that holds the
+            machine parameter table. (required)
+        dem_path (str): The path of the Global Digital Elevation Model (DEM).
+            (required)
+        results_suffix (str): A python string of characters to append to each output
+            filename (optional)
+        valuation_container (boolean): Indicates whether the model includes
+            valuation
+        land_gridPts_path (str): A CSV file path containing the Landing and
+            Power Grid Connection Points table. (required for Valuation)
+        machine_econ_path (str): A CSV file path for the machine economic
+            parameters table. (required for Valuation)
+        number_of_machines (int): An integer specifying the number of machines
+            for a wave farm site. (required for Valuation)
+        n_workers (int): The number of worker processes to use for processing
+            this model.  If omitted, computation will take place in the current
+            process. (optional)
+
+    """
+    LOGGER.info('Starting the Wave Energy Model.')
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
+    # Create a dictionary that stores the wave periods and wave heights as
+    # arrays. Also store the amount of energy the machine produces
+    # in a certain wave period/height state as a 2D array
+    machine_perf_dict = {}
+    machine_perf_data = utils.read_csv_to_dataframe(args['machine_perf_path'])
+    # Get the wave period fields, starting from the second column of the table
+    machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
+    # Build up the height field by taking the first column of the table
+    machine_perf_dict['heights'] = machine_perf_data.iloc[:, 0].values
+    # Set the key for storing the machine's performance
+    for i in range(len(machine_perf_dict['heights'])):
+        bin_matrix_row = machine_perf_data.iloc[i, 1:].values
+        # Expand the dimension from (N,) to (N,1)
+        bin_matrix_row = numpy.expand_dims(bin_matrix_row, axis=0)
+        # Concatenate each row along axis 0
+        if i == 0:
+            machine_perf_dict['bin_matrix'] = bin_matrix_row
+        else:
+            machine_perf_dict['bin_matrix'] = numpy.concatenate(
+                (machine_perf_dict['bin_matrix'], bin_matrix_row))
+
+    # Check if x and y dimensions of the bin_matrix array equal the size of
+    # heights and periods
+    if machine_perf_dict['bin_matrix'].shape != (
+            machine_perf_dict['heights'].size,
+            machine_perf_dict['periods'].size):
+        raise ValueError(
+            'Please make sure all values are entered properly in the Machine '
+            'Performance Table.')
+    LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
+    LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
+
+    machine_param_dict = MODEL_SPEC.get_input(
+        'machine_param_path').get_validated_dataframe(
+        args['machine_param_path'])['value'].to_dict()
+
+    if args['valuation_container']:
+        machine_econ_dict = MODEL_SPEC.get_input(
+            'machine_econ_path').get_validated_dataframe(
+            args['machine_econ_path'])['value'].to_dict()
+
+    # Get the String value for the analysis area provided from the dropdown
+    # menu in the user interface
+    analysis_area = args['analysis_area']
+    base_data = MODEL_SPEC.get_input(
+        'wave_base_data_table').get_validated_dataframe(
+        args['wave_base_data_table']).loc[analysis_area]
+    # Use the analysis area String to get the path's to the wave seastate data,
+    # the wave point shapefile, and the polygon extract shapefile
+    wave_seastate_bins = _binary_wave_data_to_dict(base_data['binary_wwiii_data'])
+    analysis_area_points_path = base_data['point_vector']
+    analysis_area_extract_path = base_data['extract_vector']
+    analysis_area_sr = _get_vector_spatial_ref(analysis_area_points_path)
+
+    # If AOI is not provided
+    if not args['aoi_path']:
+        LOGGER.info('AOI not provided.')
+
+        # Make a copy of the wave point shapefile so that the original input is
+        # not corrupted when we clip the vector
+        _copy_vector_or_raster(
+            analysis_area_points_path, file_registry['wem_inputoutput_pts'])
+
+        # The path to a polygon shapefile that specifies the broader AOI
+        aoi_vector_path = analysis_area_extract_path
+
+        # Set the pixel size to that of DEM, to be used for creating rasters
+        target_pixel_size = pygeoprocessing.get_raster_info(args['dem_path'])[
+            'pixel_size']
+
+        # Create a coordinate transformation, because it is used below when
+        # indexing the DEM
+        aoi_sr = _get_vector_spatial_ref(aoi_vector_path)
+        aoi_sr_wkt = aoi_sr.ExportToWkt()
+        analysis_area_sr_wkt = analysis_area_sr.ExportToWkt()
+
+    else:
+        LOGGER.info('AOI provided.')
+        # Create a coordinate transformation from the projection of the given
+        # wave energy point shapefile, to the AOI's projection
+        aoi_sr = _get_vector_spatial_ref(args['aoi_path'])
+        aoi_sr_wkt = aoi_sr.ExportToWkt()
+        analysis_area_sr_wkt = analysis_area_sr.ExportToWkt()
+
+        # Clip the wave data shapefile by the bounds provided from the AOI
+        task_graph.add_task(
+            func=_clip_vector_by_vector,
+            args=(analysis_area_points_path, args['aoi_path'],
+                  file_registry['wem_inputoutput_pts'], aoi_sr_wkt,
+                  args['workspace_dir']),
+            target_path_list=[file_registry['wem_inputoutput_pts']],
+            task_name='clip_wave_points_to_aoi')
+
+        # Clip the AOI to the Extract shape to make sure the output results do
+        # not show extrapolated values outside the bounds of the points
+        task_graph.add_task(
+            func=_clip_vector_by_vector,
+            args=(args['aoi_path'], analysis_area_extract_path,
+                  file_registry['aoi_clipped_to_extract_path'],
+                  aoi_sr_wkt, args['workspace_dir']),
+            target_path_list=[file_registry['aoi_clipped_to_extract_path']],
+            task_name='clip_aoi_to_extract_data')
+
+        # Replace the AOI path with the clipped AOI path
+        aoi_vector_path = file_registry['aoi_clipped_to_extract_path']
+
+        # Join here since we need pixel size for creating output rasters
+        task_graph.join()
+
+        # Get the size of the pixels in meters, to be used for creating
+        # projected wave power and wave energy capacity rasters
+        coord_trans = utils.create_coordinate_transformer(
+            analysis_area_sr, aoi_sr)
+        coord_trans_opposite = utils.create_coordinate_transformer(
+            aoi_sr, analysis_area_sr)
+        target_pixel_size = _pixel_size_helper(
+            file_registry['wem_inputoutput_pts'], coord_trans,
+            coord_trans_opposite, args['dem_path'])
+
+    LOGGER.debug('target_pixel_size: %s, target_projection: %s',
+                 target_pixel_size, aoi_sr_wkt)
+
+    # We do all wave power calculations by manipulating the fields in
+    # the wave data shapefile, thus we need to add proper depth values
+    # from the raster DEM
+    LOGGER.info('Adding DEPTH_M field to the wave shapefile from the DEM')
+    # Add the depth value to the wave points by indexing into the DEM dataset
+    index_depth_to_wave_vector_task = task_graph.add_task(
+        func=_index_raster_value_to_point_vector,
+        args=(file_registry['wem_inputoutput_pts'], args['dem_path'],
+              file_registry['indexed_wem_inputoutput_pts'], _DEPTH_FIELD),
+        target_path_list=[file_registry['indexed_wem_inputoutput_pts']],
+        task_name='index_depth_to_wave_vector')
+
+    # Generate an interpolate object for wave_energy_capacity
+    LOGGER.info('Interpolating machine performance table.')
+    energy_interp = _wave_energy_interp(wave_seastate_bins, machine_perf_dict)
+
+    # Create a dictionary with the wave energy capacity sums from each location
+    LOGGER.info('Calculating Captured Wave Energy.')
+    energy_cap = _wave_energy_capacity_to_dict(
+        wave_seastate_bins, energy_interp, machine_param_dict)
+
+    # Add wave energy and wave power fields to the shapefile for the
+    # corresponding points
+    LOGGER.info('Adding wave energy and power fields to the wave vector.')
+    create_wave_energy_and_power_raster_task = task_graph.add_task(
+        func=_energy_and_power_to_wave_vector,
+        args=(energy_cap, file_registry['indexed_wem_inputoutput_pts'],
+              file_registry['captured_wem_inputoutput_pts']),
+        target_path_list=[file_registry['captured_wem_inputoutput_pts']],
+        task_name='get_wave_energy_and_power',
+        dependent_task_list=[index_depth_to_wave_vector_task])
+
+    create_unclipped_energy_raster_task = task_graph.add_task(
+        func=pygeoprocessing.create_raster_from_vector_extents,
+        args=(aoi_vector_path, file_registry['unclipped_capwe_mwh'],
+              target_pixel_size, _TARGET_PIXEL_TYPE, _NODATA),
+        target_path_list=[file_registry['unclipped_capwe_mwh']],
+        task_name='create_unclipped_energy_raster')
+
+    create_unclipped_power_raster_task = task_graph.add_task(
+        func=pygeoprocessing.create_raster_from_vector_extents,
+        args=(aoi_vector_path, file_registry['unclipped_wp_kw'],
+              target_pixel_size, _TARGET_PIXEL_TYPE, _NODATA),
+        target_path_list=[file_registry['unclipped_wp_kw']],
+        task_name='create_unclipped_power_raster')
+
+    # Interpolate wave energy and power from the wave vector over the rasters
+    LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
+    interpolate_energy_points_task = task_graph.add_task(
+        func=_interpolate_vector_field_onto_raster,
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['unclipped_capwe_mwh'],
+              file_registry['interpolated_capwe_mwh'], _CAP_WE_FIELD),
+        target_path_list=[file_registry['interpolated_capwe_mwh']],
+        task_name='interpolate_energy_points',
+        dependent_task_list=[create_wave_energy_and_power_raster_task,
+                             create_unclipped_energy_raster_task])
+
+    interpolate_power_points_task = task_graph.add_task(
+        func=_interpolate_vector_field_onto_raster,
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['unclipped_wp_kw'],
+              file_registry['interpolated_wp_kw'], _WAVE_POWER_FIELD),
+        target_path_list=[file_registry['interpolated_wp_kw']],
+        task_name='interpolate_power_points',
+        dependent_task_list=[create_wave_energy_and_power_raster_task,
+                             create_unclipped_power_raster_task])
+
+    clip_energy_raster_task = task_graph.add_task(
+        func=pygeoprocessing.mask_raster,
+        args=((file_registry['interpolated_capwe_mwh'], 1), aoi_vector_path,
+              file_registry['capwe_mwh'],),
+        kwargs={'all_touched': True},
+        target_path_list=[file_registry['capwe_mwh']],
+        task_name='clip_energy_raster',
+        dependent_task_list=[interpolate_energy_points_task])
+
+    clip_power_raster_task = task_graph.add_task(
+        func=pygeoprocessing.mask_raster,
+        args=((file_registry['interpolated_wp_kw'], 1), aoi_vector_path,
+              file_registry['wp_kw'],),
+        kwargs={'all_touched': True},
+        target_path_list=[file_registry['wp_kw']],
+        task_name='clip_power_raster',
+        dependent_task_list=[interpolate_power_points_task])
+
+    task_graph.add_task(
+        func=_create_percentile_rasters,
+        args=(file_registry['capwe_mwh'], file_registry['capwe_rc'],
+              file_registry['capwe_rc_csv'], _CAPWE_UNITS_SHORT,
+              _CAPWE_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
+        kwargs={'start_value': _STARTING_PERC_RANGE},
+        target_path_list=[file_registry['capwe_rc']],
+        task_name='create_energy_percentile_raster',
+        dependent_task_list=[clip_energy_raster_task])
+
+    task_graph.add_task(
+        func=_create_percentile_rasters,
+        args=(file_registry['wp_kw'], file_registry['wp_rc'],
+              file_registry['wp_rc_csv'], _WP_UNITS_SHORT,
+              _WP_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
+        kwargs={'start_value': _STARTING_PERC_RANGE},
+        target_path_list=[file_registry['wp_rc']],
+        task_name='create_power_percentile_raster',
+        dependent_task_list=[clip_power_raster_task])
+
+    LOGGER.info('Completed Wave Energy Biophysical')
+
+    if not args['valuation_container']:
+        # The rest of the function is valuation, so we can quit now
+        LOGGER.info('Valuation not selected')
+        task_graph.close()
+        task_graph.join()
+        return file_registry.registry
+
+    LOGGER.info('Valuation selected')
+
+    grid_land_df = MODEL_SPEC.get_input(
+            'land_gridPts_path').get_validated_dataframe(args['land_gridPts_path'])
+
+    create_grid_points_vector_task = task_graph.add_task(
+        func=_dict_to_point_vector,
+        args=(grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index'),
+              file_registry['gridpt_prj'], 'grid_points',
+              analysis_area_sr_wkt, aoi_sr_wkt),
+        target_path_list=[file_registry['gridpt_prj']],
+        task_name='create_grid_points_vector')
+
+    # Make a point shapefile for landing points.
+    LOGGER.info('Creating Landing Points Vector.')
+    create_land_points_vector_task = task_graph.add_task(
+        func=_dict_to_point_vector,
+        args=(grid_land_df[grid_land_df['type'] == 'land'].to_dict('index'),
+              file_registry['landpts_prj'], 'land_points',
+              analysis_area_sr_wkt, aoi_sr_wkt),
+        target_path_list=[file_registry['landpts_prj']],
+        task_name='create_land_points_vector')
+
+    add_target_fields_to_wave_vector_task = task_graph.add_task(
+        func=_add_target_fields_to_wave_vector,
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['landpts_prj'],
+              file_registry['gridpt_prj'],
+              file_registry['final_wem_inputoutput_pts'],
+              machine_econ_dict, args['number_of_machines']),
+        target_path_list=[file_registry['final_wem_inputoutput_pts']],
+        task_name='add_fields_to_wave_vector',
+        dependent_task_list=[create_wave_energy_and_power_raster_task,
+                             create_land_points_vector_task,
+                             create_grid_points_vector_task])
+
+    create_npv_raster_task = task_graph.add_task(
+        func=_create_npv_raster,
+        args=(file_registry['final_wem_inputoutput_pts'], aoi_vector_path,
+              file_registry['npv_not_clipped'], file_registry['npv_usd'],
+              target_pixel_size),
+        target_path_list=[file_registry['npv_not_clipped'], file_registry['npv_usd']],
+        task_name='create_npv_raster',
+        dependent_task_list=[add_target_fields_to_wave_vector_task])
+
+    task_graph.add_task(
+        func=_create_percentile_rasters,
+        args=(file_registry['npv_usd'], file_registry['npv_rc'],
+              file_registry['npv_rc_csv'], _NPV_UNITS_SHORT,
+              _NPV_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
+        target_path_list=[file_registry['npv_rc']],
+        task_name='create_npv_percentile_raster',
+        dependent_task_list=[create_npv_raster_task])
+
+    task_graph.close()
+    task_graph.join()
+    LOGGER.info('End of Wave Energy Valuation.')
+    return file_registry.registry
+
+
+def _copy_vector_or_raster(base_file_path, target_file_path):
+    """Make a copy of a vector or raster.
+
+    Args:
+        base_file_path (str): a path to the base vector or raster to be copied
+            from.
+        target_file_path (str): a path to the target copied vector or raster.
+
+    Returns:
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
+
+    Raises:
+        ValueError if the base file can't be opened by GDAL.
+
+    """
+    gis_type = pygeoprocessing.get_gis_type(base_file_path)
+    if gis_type == pygeoprocessing.RASTER_TYPE:
+        source_dataset = gdal.OpenEx(base_file_path, gdal.OF_RASTER)
+        target_driver_name = _RASTER_DRIVER_NAME
+    elif gis_type == pygeoprocessing.VECTOR_TYPE:
+        source_dataset = gdal.OpenEx(base_file_path, gdal.OF_VECTOR)
+        target_driver_name = _VECTOR_DRIVER_NAME
+    else:
+        raise ValueError(f'File {base_file_path} is neither a GDAL-compatible '
+                         'raster nor vector.')
+    driver = gdal.GetDriverByName(target_driver_name)
+    driver.CreateCopy(target_file_path, source_dataset)
+
+
+def _interpolate_vector_field_onto_raster(
+        base_vector_path, base_raster_path, target_interpolated_raster_path,
+        field_name):
+    """Interpolate a vector field onto a target raster.
+
+    Copy the base raster to the target interpolated raster, so taskgraph could
+    trace the file state correctly.
+
+    Args:
+        base_vector_path (str): a path to a base vector that has field_name to
+            be interpolated.
+        base_raster_path (str): a path to a base raster to make a copy from.
+        target_interpolated_raster_path (str): a path to a target raster copied
+            from the base raster and will have the interpolated values.
+        field_name (str): a field name on the base vector whose values will be
+            interpolated onto the target raster.
+
+    Returns:
+        None
+
+    """
+    _copy_vector_or_raster(base_raster_path, target_interpolated_raster_path)
+    pygeoprocessing.interpolate_points(
+        base_vector_path, field_name, (target_interpolated_raster_path, 1),
+        _TARGET_RESAMPLE_METHOD)
+
+
+def _create_npv_raster(
+        base_wave_vector_path, base_aoi_vector_path, inter_npv_raster_path,
+        target_npv_raster_path, target_pixel_size):
+    """Generate final NPV raster from the wave vector and AOI extent.
+
+    Args:
+        base_wave_vector_path (str): a path to the wave vector that contains
+            the NPV field.
+        base_aoi_vector_path (str): a path to the AOI vector used for
+            generating and clipping the NPV raster.
+        inter_npv_raster_path (str): a path to the intermediate NPV raster
+            generated based on AOI vector extents.
+        target_npv_raster_path (str): a path to the target NPV raster that
+            has the NPV value and is clipped from the AOI.
+        target_pixel_size (tuple): a tuple of floats representing the target
+            x and y pixel sizes.
+
+    Returns:
+        None
+
+    """
+    # Create a blank raster from the extents of the wave farm shapefile
+    LOGGER.info('Creating NPV Raster From AOI Vector Extents')
+    pygeoprocessing.create_raster_from_vector_extents(
+        base_aoi_vector_path, inter_npv_raster_path, target_pixel_size,
+        _TARGET_PIXEL_TYPE, _NODATA)
+
+    # Interpolate the NPV values based on the dimensions and corresponding
+    # points of the raster, then write the interpolated values to the raster
+    LOGGER.info('Interpolating Net Present Value onto Raster.')
+    pygeoprocessing.interpolate_points(
+        base_wave_vector_path, _NPV_25Y_FIELD, (inter_npv_raster_path, 1),
+        _TARGET_RESAMPLE_METHOD)
+
+    # Clip the raster to the AOI vector
+    LOGGER.info('Masking NPV raster with AOI vector.')
+    pygeoprocessing.mask_raster(
+        (inter_npv_raster_path, 1),
+        base_aoi_vector_path,
+        target_npv_raster_path,
+        all_touched=True)
+
+
+def _get_npv_results(captured_wave_energy, depth, number_of_machines,
+                     wave_to_land_dist, land_to_grid_dist, machine_econ_dict):
+    """Compute NPV, total captured wave energy, and units for wave point.
+
+    Args:
+        captured_wave_energy (double): the amount of captured wave energy for
+            a wave machine.
+        depth (double): the depth of that wave point.
+        number_of_machines (int): the number of machines for a given wave point
+        wave_to_land_dist (float): the shortest distance from the wave point to
+            land points.
+        land_to_grid_dist (float): the shortest distance from the wave point to
+            grid points.
+        machine_econ_dict (dict): a dictionary of keys from the first
+            column of the machine economy CSV file and corresponding
+            values from the `VALUE` column.
+
+    Returns:
+        npv_result (float): the sum of total NPV of all 25 years.
+        capwe_all_result (float): the total captured wave energy per year.
+
+    """
+    # Extract the machine economic parameters
+    cap_max = float(machine_econ_dict['capmax'])  # maximum capacity, kW
+    capital_cost = float(machine_econ_dict['cc'])  # capital cost, $/kW
+    cml = float(machine_econ_dict['cml'])  # cost of mooring lines, $ per m
+    cul = float(machine_econ_dict['cul'])  # cost of underwater cable, $ per km
+    col = float(machine_econ_dict['col'])  # cost of overland cable, $ per km
+    # operating & maintenance cost, $ per kWh
+    omc = float(machine_econ_dict['omc'])
+    price = float(machine_econ_dict['p'])  # price of electricity, $ per kWh
+    smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
+    d_rate = float(machine_econ_dict['r'])  # discount rate
+
+    capwe_all_result = captured_wave_energy * number_of_machines
+
+    # Create a numpy array of length 25, filled with the captured wave
+    # energy in kW/h. Represents the lifetime of this wave farm.
+    # Note: Divide the result by 1000 to convert W/h to kW/h
+    captured_we = numpy.ones(_LIFE_SPAN) * (int(captured_wave_energy) * 1000.0)
+    # It is expected that there is no revenue from the first year
+    captured_we[0] = 0
+
+    # Compute values to determine NPV
+    lenml = 3.0 * numpy.absolute(depth)
+    install_cost = number_of_machines * cap_max * capital_cost
+    mooring_cost = smlpm * lenml * cml * number_of_machines
+    # Divide by 1000.0 to convert cul and col from [$ per km] to [$ per m]
+    trans_cost = (wave_to_land_dist * cul / 1000.0) + (
+        land_to_grid_dist * col / 1000.0)
+    initial_cost = install_cost + mooring_cost + trans_cost
+    annual_revenue = price * number_of_machines * captured_we
+    annual_cost = omc * captured_we * number_of_machines
+
+    # The first year's cost is the initial start up cost
+    annual_cost[0] = initial_cost
+
+    # Calculate the total NPV of total life span
+    rho = 1.0 / (1.0 + d_rate)
+    npv = numpy.power(rho, numpy.arange(_LIFE_SPAN)) * (
+        annual_revenue - annual_cost)
+
+    npv_result = numpy.sum(npv) / 1000.0
+
+    return npv_result, capwe_all_result
+
+
+def _add_target_fields_to_wave_vector(
+        base_wave_vector_path, base_land_vector_path, base_grid_vector_path,
+        target_wave_vector_path, machine_econ_dict, number_of_machines):
+    """Add six target fields to the target wave point vector.
+
+    The target fields are the distance from ocean to land, the distance
+    from land to grid, the land point ID, NPV, total captured wave energy, and
+    units.
+
+    Args:
+        base_wave_vector_path (str): a path to the wave point vector with
+            fields to calculate distances and NPV.
+        base_land_vector_path (str): a path to the land point vector to get
+            the wave to land distances from.
+        base_grid_vector_path (str): a path to the grid point vector to get
+            the land to grid distances from.
+        target_wave_vector_path (str): a path to the target wave point vector
+            to create new fields in.
+        machine_econ_dict (dict): a dictionary of keys from the first column of
+            the machine economy CSV file and corresponding values from the
+            `VALUE` column.
+        number_of_machines (int): the number of machines for each wave point.
+
+    Returns:
+        None
+
+    """
+    _copy_vector_or_raster(base_wave_vector_path, target_wave_vector_path)
+    target_wave_vector = gdal.OpenEx(
+        target_wave_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_wave_layer = target_wave_vector.GetLayer(0)
+
+    # Get the coordinates of points of wave, land, and grid vectors
+    wave_point_list = _get_points_geometries(base_wave_vector_path)
+    land_point_list = _get_points_geometries(base_land_vector_path)
+    grid_point_list = _get_points_geometries(base_grid_vector_path)
+
+    # Calculate the minimum distances between the relative point groups
+    LOGGER.info('Calculating Min Distances from wave to land and from land '
+                'to grid.')
+    wave_to_land_dist_list, wave_to_land_id_list = _calculate_min_distances(
+        wave_point_list, land_point_list)
+    land_to_grid_dist_list, _ = _calculate_min_distances(
+        land_point_list, grid_point_list)
+
+    # Add target fields to the wave vector to store results
+    for field in [_W2L_DIST_FIELD, _L2G_DIST_FIELD, _LAND_ID_FIELD,
+                  _NPV_25Y_FIELD, _CAPWE_ALL_FIELD, _UNIT_FIELD]:
+        field_defn = ogr.FieldDefn(field, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
+        target_wave_layer.CreateField(field_defn)
+
+    # For each feature in the shapefile add the corresponding distance
+    # from wave_to_land_dist and land_to_grid_dist calculated above
+    target_wave_layer.ResetReading()
+
+    LOGGER.info('Calculating and adding new fields to wave layer.')
+    for i, feat in enumerate(target_wave_layer):
+        # Get corresponding distances and land ID for the wave point
+        land_id = int(wave_to_land_id_list[i])
+        wave_to_land_dist = wave_to_land_dist_list[i]
+        land_to_grid_dist = land_to_grid_dist_list[land_id]
+
+        # Set distance and land ID fields to the feature
+        feat.SetField(_W2L_DIST_FIELD, wave_to_land_dist)
+        feat.SetField(_L2G_DIST_FIELD, land_to_grid_dist)
+        feat.SetField(_LAND_ID_FIELD, land_id)
+
+        # Get depth and captured wave energy for calculating NPV, total
+        # captured energy, and units
+        captured_wave_energy = feat.GetFieldAsDouble(_CAP_WE_FIELD)
+        depth = feat.GetFieldAsDouble(_DEPTH_FIELD)
+        npv_result, capwe_all_result = _get_npv_results(
+            captured_wave_energy, depth, number_of_machines,
+            wave_to_land_dist, land_to_grid_dist, machine_econ_dict)
+
+        feat.SetField(_NPV_25Y_FIELD, npv_result)
+        feat.SetField(_CAPWE_ALL_FIELD, capwe_all_result)
+        feat.SetField(_UNIT_FIELD, number_of_machines)
+
+        target_wave_layer.SetFeature(feat)
+        feat = None
+
+    target_wave_layer = None
+    target_wave_vector = None
+
+
+def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
+                          base_sr_wkt, target_sr_wkt):
+    """Given a dictionary of data create a point shapefile that represents it.
+
+    Args:
+        base_dict_data (dict): a  dictionary with the wind data, where the keys
+            are tuples of the lat/long coordinates:
+            {
+            1 : {'TYPE':'GRID', 'LAT':49, 'LONG':-126, 'LOCATION':'Ucluelet'},
+            2 : {'TYPE':'GRID', 'LAT':50, 'LONG':-127, 'LOCATION':'Tofino'},
+            }
+        layer_name (str): the name of the layer.
+        target_vector_path (str): path to the output destination of the
+            shapefile.
+        base_sr_wkt (str): the spatial reference of the data from
+            base_dict_data in well-known text format.
+        target_sr_wkt (str): target spatial reference in well-known text format
+
+    Returns:
+        None
+
+    """
+    # If the target_vector_path exists delete it
+    if os.path.isfile(target_vector_path):
+        driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
+        driver.DeleteDataSource(target_vector_path)
+
+    base_sr = osr.SpatialReference()
+    base_sr.ImportFromWkt(base_sr_wkt)
+    target_sr = osr.SpatialReference()
+    target_sr.ImportFromWkt(target_sr_wkt)
+    # Get coordinate transformation from base spatial reference to target,
+    # in order to transform wave points to target_sr
+    coord_trans = utils.create_coordinate_transformer(base_sr, target_sr)
+
+    LOGGER.info('Creating new vector')
+    output_driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
+    output_vector = output_driver.CreateDataSource(target_vector_path)
+    target_layer = output_vector.CreateLayer(str(layer_name), target_sr,
+                                             ogr.wkbPoint)
+
+    # Construct a dictionary of field names and their corresponding types
+    field_dict = {
+        'ID': ogr.OFTInteger,
+        'TYPE': ogr.OFTString,
+        'LAT': ogr.OFTReal,
+        'LONG': ogr.OFTReal,
+        'LOCATION': ogr.OFTString
+    }
+
+    LOGGER.info('Creating fields for the vector')
+    for field_name in ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']:
+        target_field = ogr.FieldDefn(field_name, field_dict[field_name])
+        target_layer.CreateField(target_field)
+
+    LOGGER.info('Entering iteration to create and set the features')
+    # For each inner dictionary (for each point) create a point
+    for point_dict in base_dict_data.values():
+        latitude = float(point_dict['lat'])
+        longitude = float(point_dict['long'])
+        point_dict['id'] = int(point_dict['id'])
+        # When projecting to WGS84, extents -180 to 180 are used for longitude.
+        # In case input longitude is from -360 to 0 convert
+        if longitude < -180:
+            longitude += 360
+        geom = ogr.Geometry(ogr.wkbPoint)
+        geom.AddPoint_2D(longitude, latitude)
+        geom.Transform(coord_trans)
+
+        output_feature = ogr.Feature(target_layer.GetLayerDefn())
+        target_layer.CreateFeature(output_feature)
+
+        for field_name in point_dict:
+            output_feature.SetField(field_name.upper(), point_dict[field_name])
+        output_feature.SetGeometryDirectly(geom)
+        target_layer.SetFeature(output_feature)
+        output_feature = None
+
+    output_vector = None
+    LOGGER.info('Finished _dict_to_point_vector')
+
+
+def _get_points_geometries(base_vector_path):
+    """Retrieve the XY coordinates from a point shapefile.
+
+    The X and Y values from each point feature in the vector are stored in pair
+    as [x_location,y_location] in a numpy array.
+
+    Args:
+        base_vector_path (str): a path to an OGR vector file.
+
+    Returns:
+        an array of points, representing the geometry of each point in the
+            shapefile.
+
+    """
+    points = []
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    base_layer = base_vector.GetLayer(0)
+    for feat in base_layer:
+        x_location = float(feat.GetGeometryRef().GetX())
+        y_location = float(feat.GetGeometryRef().GetY())
+        points.append([x_location, y_location])
+        feat = None
+    base_layer = None
+    base_vector = None
+
+    return numpy.array(points)
+
+
+def _calculate_min_distances(xy_1, xy_2):
+    """Calculate the shortest distances and indexes of points in xy_1 to xy_2.
+
+    For all points in xy_1, this function calculates the distance from point
+    xy_1 to various points in xy_2, and stores the shortest distances found in
+    a list min_dist. The function also stores the index from which ever point
+    in xy_2 was closest, as an id in a list that corresponds to min_dist.
+
+    Args:
+        xy_1 (numpy.array): An array of points in the form [x,y]
+        xy_2 (numpy.array): An array of points in the form [x,y]
+
+    Returns:
+        min_dist (numpy.array): An array of shortest distances for each point
+            in xy_1 to xy_2.
+        min_id (numpy.array): An array of indexes corresponding to the array
+            of shortest distances (min_dist).
+
+    """
+    # Create two numpy array of zeros with length set to as many points in xy_1
+    min_dist = numpy.zeros(len(xy_1))
+    min_id = numpy.zeros(len(xy_1))
+
+    # For all points xy_point in xy_1 calculate the distance from xy_point to
+    # xy_2 and save the shortest distance found.
+    for idx, xy_point in enumerate(xy_1):
+        dists = numpy.sqrt(numpy.sum((xy_point - xy_2)**2, axis=1))
+        min_dist[idx], min_id[idx] = dists.min(), dists.argmin()
+
+    return min_dist, min_id
+
+
+def _binary_wave_data_to_dict(wave_file_path):
+    """Convert a pickled binary WW3 text file into a dictionary.
+
+    The dictionary's keys are the corresponding (I,J) values and the value is
+    a two-dimensional array representing a matrix of the number of hours a
+    seastate occurs over a 5 year period. The row and column fields are
+    extracted once and stored in the dictionary as well.
+
+    Args:
+        wave_file_path (str): path to a pickled binary WW3 file.
+
+    Returns:
+        wave_dict (dict): a dictionary of matrices representing hours of
+            specific seastates, as well as the period and height ranges.
+            It has the following structure:
+               {'periods': [1,2,3,4,...],
+                'heights': [.5,1.0,1.5,...],
+                'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 ...
+                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                              }
+               }
+
+    """
+    LOGGER.info('Extrapolating wave data from text to a dictionary')
+    wave_file = open(wave_file_path, 'rb')
+    wave_dict = {}
+    # Create a key that hosts another dictionary where the matrix
+    # representation of the seastate bins will be saved
+    wave_dict['bin_matrix'] = {}
+    wave_array = None
+    wave_periods = []
+    wave_heights = []
+    key = None
+
+    # get rows,cols
+    row_col_bin = wave_file.read(8)
+    n_cols, n_rows = struct.unpack('ii', row_col_bin)
+
+    # get the periods and heights
+    line = wave_file.read(n_cols * 4)
+
+    wave_periods = list(struct.unpack('f' * n_cols, line))
+    line = wave_file.read(n_rows * 4)
+    wave_heights = list(struct.unpack('f' * n_rows, line))
+
+    key = None
+    while True:
+        line = wave_file.read(8)
+        if not line:
+            # end of file
+            wave_dict['bin_matrix'][key] = numpy.array(wave_array)
+            break
+
+        if key is not None:
+            wave_dict['bin_matrix'][key] = numpy.array(wave_array)
+
+        # Clear out array
+        wave_array = []
+
+        key = struct.unpack('ii', line)
+
+        for _ in itertools.repeat(None, n_rows):
+            line = wave_file.read(n_cols * 4)
+            array = list(struct.unpack('f' * n_cols, line))
+            wave_array.append(array)
+
+    wave_file.close()
+    # Add row/col field to dictionary
+    LOGGER.debug('WaveData col %s', wave_periods)
+    wave_dict['periods'] = numpy.array(wave_periods, dtype='f')
+    LOGGER.debug('WaveData row %s', wave_heights)
+    wave_dict['heights'] = numpy.array(wave_heights, dtype='f')
+    LOGGER.info('Finished extrapolating wave data to dictionary.')
+    return wave_dict
+
+
+def _get_vector_spatial_ref(base_vector_path):
+    """Get the spatial reference of an OGR vector (datasource).
+
+    Args:
+        base_vector_path (str): a path to an ogr vector
+
+    Returns:
+        spat_ref: a spatial reference
+
+    """
+    vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    layer = vector.GetLayer(0)
+    spat_ref = layer.GetSpatialRef()
+    layer = None
+    vector = None
+    return spat_ref
+
+
+def _create_percentile_rasters(base_raster_path, target_raster_path,
+                               target_csv_path, units_short, units_long,
+                               percentile_list, working_dir, start_value=None):
+    """Create a percentile (quartile) raster based on the raster_dataset.
+
+    An attribute table is also constructed for the raster_dataset that displays
+    the ranges provided by taking the quartile of values.
+
+    Args:
+        base_raster_path (str): path to a GDAL raster with data of type
+            integer
+        target_raster_path (str): path to the destination of the new raster.
+        units_short (str): The shorthand for the units of the raster values,
+            ex: kW/m.
+        units_long (str): The description of the units of the raster values,
+            ex: wave power per unit width of wave crest length (kW/m).
+        percentile_list (list): A list of the _PERCENTILES ranges,
+            ex: [25, 50, 75, 90].
+        start_value (str): The first value that goes to the first percentile
+            range (start_value: percentile_one) (optional)
+
+    Returns:
+        None
+
+    """
+    LOGGER.info('Creating Percentile Rasters')
+    temp_dir = tempfile.mkdtemp(dir=working_dir)
+
+    # If the target_raster_path is already a file, delete it
+    if os.path.isfile(target_raster_path):
+        os.remove(target_raster_path)
+
+    target_nodata = 255
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    base_nodata = base_raster_info['nodata'][0]
+    base_dtype = base_raster_info['datatype']
+
+    def _mask_below_start_value(array):
+        valid_mask = (
+            ~pygeoprocessing.array_equals_nodata(array, base_nodata) &
+            (array >= float(start_value)))
+        result = numpy.empty_like(array)
+        result[:] = base_nodata
+        result[valid_mask] = array[valid_mask]
+        return result
+
+    if start_value is not None:
+        masked_raster_path = os.path.join(
+            temp_dir, os.path.basename(base_raster_path))
+        pygeoprocessing.raster_calculator(
+            [(base_raster_path, 1)], _mask_below_start_value,
+            masked_raster_path, base_dtype, base_nodata)
+        input_raster_path = masked_raster_path
+    else:
+        input_raster_path = base_raster_path
+
+    # Get the percentile values for each percentile
+    percentile_values = pygeoprocessing.raster_band_percentile(
+        (input_raster_path, 1),
+        os.path.join(temp_dir, 'percentile'),
+        percentile_list)
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+    # Get the percentile ranges as strings so that they can be added to the
+    # output table. Also round them for readability.
+    value_ranges = []
+    rounded_percentiles = numpy.round(percentile_values, decimals=2)
+    # Add the first range with the starting value if it exists
+    if start_value:
+        value_ranges.append('%s to %s' % (start_value, rounded_percentiles[0]))
+    else:
+        value_ranges.append('Less than or equal to %s' %
+                            rounded_percentiles[0])
+    value_ranges += ['%s to %s' % (p, q) for (p, q) in
+                     zip(rounded_percentiles[:-1], rounded_percentiles[1:])]
+    # Add the last range to the range of values list
+    value_ranges.append('Greater than %s' % rounded_percentiles[-1])
+    LOGGER.debug('Range_values : %s', value_ranges)
+
+    # Classify the pixels of raster_dataset into groups and write to output
+    pygeoprocessing.raster_map(
+        op=lambda band: numpy.searchsorted(percentile_values, band) + 1,
+        rasters=[base_raster_path],
+        target_path=target_raster_path,
+        target_dtype=numpy.uint8,
+        target_nodata=target_nodata)
+
+    # Create percentile groups of how percentile ranges are classified
+    percentile_groups = numpy.arange(1, len(percentile_values) + 2)
+
+    # Get the pixel count for each group
+    pixel_count = _count_pixels_groups(target_raster_path, percentile_groups)
+
+    LOGGER.debug('Pixel_count: %s; Percentile_groups: %s' %
+                 (pixel_count, percentile_groups))
+
+    # Initialize a dictionary where percentile groups map to a string
+    # of corresponding percentile ranges. Used to create RAT
+    percentile_dict = {}
+    for idx in range(len(percentile_groups)):
+        percentile_dict[percentile_groups[idx]] = value_ranges[idx]
+    value_range_field = 'Value Range (' + units_long + ', ' + units_short + ')'
+    _create_raster_attr_table(
+        target_raster_path, percentile_dict, column_name=value_range_field)
+
+    # Create a list of corresponding percentile ranges from the percentile list
+    length = len(percentile_list)
+    percentile_ranges = []
+    first_range = '<' + str(percentile_list[0]) + '%'
+    percentile_ranges.append(first_range)
+    for idx in range(length - 1):
+        percentile_ranges.append(
+            str(percentile_list[idx]) + '-' +
+            str(percentile_list[idx + 1]) + '%')
+    # Add the last range to the percentile ranges list
+    last_range = '>' + str(percentile_list[length - 1]) + '%'
+    percentile_ranges.append(last_range)
+
+    # Initialize a dictionary to map percentile groups to percentile range
+    # string and pixel count. Used for creating CSV table
+    column_names = [
+        'Percentile Group', 'Percentile Range', value_range_field,
+        'Pixel Count'
+    ]
+    table_dict = dict((col_name, []) for col_name in column_names)
+    for idx in range(len(percentile_groups)):
+        table_dict['Percentile Group'].append(percentile_groups[idx])
+        table_dict['Percentile Range'].append(percentile_ranges[idx])
+        table_dict[value_range_field].append(value_ranges[idx])
+        table_dict['Pixel Count'].append(pixel_count[idx])
+
+    table_df = pandas.DataFrame(table_dict)
+
+    # Write dataframe to csv, with columns in designated sequence
+    table_df.to_csv(target_csv_path, index=False, columns=column_names)
+
+
+def _clip_vector_by_vector(base_vector_path, clip_vector_path,
+                           target_clipped_vector_path, target_sr_wkt,
+                           work_dir):
+    """Clip Shapefile Layer by second Shapefile Layer.
+
+    Clip a shapefile layer where the output Layer inherits the projection and
+    fields from the original Shapefile.
+
+    Args:
+        base_vector_path (str): a path to a Shapefile on disk. This is
+            the Layer to clip. Must have same spatial reference as
+            'clip_vector_path'.
+        clip_vector_path (str): a path to a Shapefile on disk. This is
+            the Layer to clip to. Must have same spatial reference as
+            'base_vector_path'
+        target_clipped_vector_path (str): a path on disk to write the clipped
+            shapefile to. Should end with a '.shp' extension.
+        target_sr_wkt (str): projection for the target_clipped_vector.
+        work_dir (str): path to directory for saving temporary output files.
+
+    Returns:
+        None
+
+    """
+    if os.path.isfile(target_clipped_vector_path):
+        driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
+        driver.DeleteDataSource(target_clipped_vector_path)
+
+    # Create a temporary folder within work_dir for saving reprojected files
+    temp_work_dir = tempfile.mkdtemp(dir=work_dir, prefix='reproject-')
+
+    def reproject_vector(base_vector_path, target_sr_wkt, temp_work_dir):
+        """Reproject the vector to target projection."""
+        base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
+            'projection_wkt']
+
+        if base_sr_wkt != target_sr_wkt:
+            LOGGER.info(
+                'Base and target projections are different. '
+                'Reprojecting %s to %s.', base_vector_path, target_sr_wkt)
+
+            # Create path for the reprojected shapefile
+            reproject_base_vector_path = os.path.join(
+                temp_work_dir,
+                os.path.basename(base_vector_path).replace(
+                    '.shp', '_projected.shp'))
+            pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
+                                             reproject_base_vector_path)
+            # Replace the base shapefile path with the reprojected path
+            base_vector_path = reproject_base_vector_path
+
+        return base_vector_path
+
+    reproject_base_vector_path = reproject_vector(base_vector_path,
+                                                  target_sr_wkt, temp_work_dir)
+    reproject_clip_vector_path = reproject_vector(clip_vector_path,
+                                                  target_sr_wkt, temp_work_dir)
+
+    base_vector = gdal.OpenEx(reproject_base_vector_path, gdal.OF_VECTOR)
+    base_layer = base_vector.GetLayer()
+    base_layer_defn = base_layer.GetLayerDefn()
+
+    clip_vector = gdal.OpenEx(reproject_clip_vector_path, gdal.OF_VECTOR)
+    clip_layer = clip_vector.GetLayer()
+
+    driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
+    target_vector = driver.CreateDataSource(target_clipped_vector_path)
+    target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
+                                             base_layer.GetSpatialRef())
+    base_layer.Clip(clip_layer, target_layer)
+
+    # Add in a check to make sure the intersection didn't come back empty
+    if target_layer.GetFeatureCount() == 0:
+        raise IntersectionError(
+            "Intersection ERROR: found no intersection between base vector %s "
+            "and clip vector %s." % (base_vector_path, clip_vector_path))
+
+    base_layer = None
+    clip_layer = None
+    target_layer = None
+    base_vector = None
+    clip_vector = None
+    target_vector = None
+
+    shutil.rmtree(temp_work_dir, ignore_errors=True)
+
+
+def _wave_energy_interp(wave_data, machine_perf):
+    """Generate an interpolation matrix representing the machine perf table.
+
+    The matrix is generated using new ranges from wave watch data.
+
+    Args:
+        wave_data (dict): A dictionary holding the new x range (period) and
+            y range (height) values for the interpolation. The dictionary has
+            the following structure:
+                {'periods': [1,2,3,4,...],
+                 'heights': [.5,1.0,1.5,...],
+                 'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                  ...
+                                 (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                               }
+                }
+        machine_perf (dict): a dictionary that holds the machine performance
+            information with the following keys and structure:
+                machine_perf['periods'] - [1,2,3,...]
+                machine_perf['heights'] - [.5,1,1.5,...]
+                machine_perf['bin_matrix'] - [[1,2,3,...],[5,6,7,...],...].
+
+    Returns:
+        The interpolated matrix
+
+    """
+    # Get ranges and matrix for machine performance table
+    x_range = numpy.array(machine_perf['periods'], dtype='f')
+    y_range = numpy.array(machine_perf['heights'], dtype='f')
+    z_matrix = numpy.array(machine_perf['bin_matrix'], dtype='f')
+    # Get new ranges to interpolate to, from wave_data table
+    new_x = wave_data['periods']
+    new_y = wave_data['heights']
+
+    # Interpolate machine performance table and return the interpolated matrix
+    interp_z_spl = scipy.interpolate.RectBivariateSpline(
+        x_range, y_range, z_matrix.transpose(), kx=1, ky=1)
+    return interp_z_spl(new_x, new_y).transpose()
+
+
+def _wave_energy_capacity_to_dict(wave_data, interp_z, machine_param):
+    """Compute and save the wave energy capacity for each point to a dict.
+
+    The dictionary keys are the points (i,j) and their corresponding value
+    is the wave energy capacity.
+
+    Args:
+        wave_data (dict): A wave watch dictionary with the following structure:
+                {'periods': [1,2,3,4,...],
+                 'heights': [.5,1.0,1.5,...],
+                 'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                  ...
+                                 (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                               }
+                }
+        interp_z (np.array): A 2D array of the interpolated values for the
+            machine performance table
+        machine_param (dict): A dictionary containing the restrictions for the
+            machines (CapMax, TpMax, HsMax)
+
+    Returns:
+        energy_cap (dict): key - wave point, value - the wave energy capacity
+
+    """
+    energy_cap = {}
+
+    # Get the row,col fields (ranges) for the wave watch data
+    # row is wave period label
+    # col is wave height label
+    wave_periods = wave_data['periods']
+    wave_heights = wave_data['heights']
+
+    # Get the machine parameter restriction values
+    cap_max = float(machine_param['capmax'])
+    period_max = float(machine_param['tpmax'])
+    height_max = float(machine_param['hsmax'])
+
+    # It seems that the capacity max is already set to it's limit in
+    # the machine performance table. However, if it needed to be
+    # restricted the following line will do it
+    interp_z = numpy.array(interp_z)
+    interp_z[interp_z > cap_max] = cap_max
+
+    # Set position variables to use as a check and as an end
+    # point for rows/cols if restrictions limit the ranges
+    period_max_index = -1
+    height_max_index = -1
+
+    # Using the restrictions find the max position (index) for period and
+    # height in the wave_periods/wave_heights ranges
+
+    for index_pos, value in enumerate(wave_periods):
+        if value > period_max:
+            period_max_index = index_pos
+            break
+
+    for index_pos, value in enumerate(wave_heights):
+        if value > height_max:
+            height_max_index = index_pos
+            break
+
+    LOGGER.debug('Position of max period : %f', period_max_index)
+    LOGGER.debug('Position of max height : %f', height_max_index)
+
+    # For all the wave watch points, multiply the occurrence matrix by the
+    # interpolated machine performance matrix to get the captured wave energy
+    for key, val in wave_data['bin_matrix'].items():
+        # Convert all values to type float
+        temp_matrix = numpy.array(val, dtype='f')
+        mult_matrix = numpy.multiply(temp_matrix, interp_z)
+        # Set any value that is outside the restricting ranges provided by
+        # machine parameters to zero
+        if period_max_index != -1:
+            mult_matrix[:, period_max_index:] = 0
+        if height_max_index != -1:
+            mult_matrix[height_max_index:, :] = 0
+
+        # Since we are doing a cubic interpolation there is a possibility we
+        # will have negative values where they should be zero. So here
+        # we drive any negative values to zero.
+        mult_matrix[mult_matrix < 0] = 0
+
+        # Sum all of the values from the matrix to get the total
+        # captured wave energy and convert kWh into MWh
+        sum_we = (mult_matrix.sum() / 1000)
+        energy_cap[key] = sum_we
+
+    return energy_cap
+
+
+def _index_raster_value_to_point_vector(
+        base_point_vector_path, base_raster_path, target_point_vector_path,
+        field_name):
+    """Add the values of a raster to the field of vector point features.
+
+    Values are recorded in the attribute field of the vector. Note: If a value
+    is larger than or equal to 0, the feature will be deleted, since a wave
+    energy point on land should not be used in calculations.
+
+    Args:
+        base_point_vector_path (str): a path to an OGR point vector file.
+        base_raster_path (str): a path to a GDAL dataset.
+        target_point_vector_path (str): a path to a shapefile that has the
+            target field name in addition to the existing fields in the base
+            point vector.
+        field_name (str): the name of the new field that will be added to the
+            point feature. An exception will be raised if this field has
+            existed in the base point vector.
+
+    Returns:
+        None
+
+    """
+    _copy_vector_or_raster(base_point_vector_path, target_point_vector_path)
+
+    target_vector = gdal.OpenEx(
+        target_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
+    raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
+        'geotransform']
+    pixel_size_x, pixel_size_y, raster_min_x, raster_max_y = \
+        abs(raster_gt[1]), abs(raster_gt[5]), raster_gt[0], raster_gt[3]
+
+    # Create a new field for the VECTOR attribute
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
+
+    # Raise an exception if the field name already exists in the vector
+    exact_match = True
+    if target_layer.FindFieldIndex(field_name, exact_match) == -1:
+        target_layer.CreateField(field_defn)
+    else:
+        raise ValueError(
+            "'%s' field should not have existed in the wave data shapefiles. "
+            "Please make sure it's renamed or removed from the attribute table."
+            % field_name)
+
+    # Create coordinate transformation from vector to raster, to make sure the
+    # vector points are in the same projection as raster
+    raster_sr = osr.SpatialReference()
+    raster_sr.ImportFromWkt(
+        pygeoprocessing.get_raster_info(base_raster_path)['projection_wkt'])
+    vector_sr = osr.SpatialReference()
+    vector_sr.ImportFromWkt(
+        pygeoprocessing.get_vector_info(target_point_vector_path)[
+            'projection_wkt'])
+    vector_coord_trans = utils.create_coordinate_transformer(
+        vector_sr, raster_sr)
+
+    # Initialize an R-Tree indexing object with point geom from base_vector
+    def generator_function():
+        for feat in target_layer:
+            fid = feat.GetFID()
+            geom = feat.GetGeometryRef()
+            geom_x, geom_y = geom.GetX(), geom.GetY()
+            geom_trans_x, geom_trans_y, _ = vector_coord_trans.TransformPoint(
+                geom_x, geom_y)
+            yield (fid, (
+                geom_trans_x, geom_trans_x, geom_trans_y, geom_trans_y), None)
+
+    vector_idx = index.Index(generator_function(), interleaved=False)
+
+    # For all the features (points) add the proper raster value
+    encountered_fids = set()
+    for block_info, block_matrix in pygeoprocessing.iterblocks(
+            (base_raster_path, 1)):
+        # Calculate block bounding box in decimal degrees
+        block_min_x = raster_min_x + block_info['xoff'] * pixel_size_x
+        block_max_x = raster_min_x + (
+            block_info['win_xsize'] + block_info['xoff']) * pixel_size_x
+
+        block_max_y = raster_max_y - block_info['yoff'] * pixel_size_y
+        block_min_y = raster_max_y - (
+            block_info['win_ysize'] + block_info['yoff']) * pixel_size_y
+
+        # Obtain a list of vector points that fall within the block
+        intersect_vectors = list(
+            vector_idx.intersection(
+                (block_min_x, block_max_x, block_min_y, block_max_y),
+                objects=True))
+
+        for vector in intersect_vectors:
+            vector_fid = vector.id
+
+            # Occasionally there will be points that intersect multiple block
+            # bounding boxes (like points that lie on the boundary of two
+            # blocks) and we don't want to double-count.
+            if vector_fid in encountered_fids:
+                continue
+
+            vector_trans_x, vector_trans_y = vector.bbox[0], vector.bbox[1]
+
+            # To get proper raster value we must index into the dem matrix
+            # by getting where the point is located in terms of the matrix
+            i = int((vector_trans_x - block_min_x) / pixel_size_x)
+            j = int((block_max_y - vector_trans_y) / pixel_size_y)
+
+            try:
+                block_value = block_matrix[j][i]
+            except IndexError:
+                # It is possible for an index to be *just* on the edge of a
+                # block and exceed the block dimensions.  If this happens,
+                # pass on this point, as another block's bounding box should
+                # catch this point instead.
+                continue
+
+            # There are cases where the DEM may be too coarse and thus a
+            # wave energy point falls on land. If the raster value taken is
+            # greater than or equal to zero we need to delete that point as
+            # it should not be used in calculations
+            encountered_fids.add(vector_fid)
+            if block_value >= 0.0:
+                target_layer.DeleteFeature(vector_fid)
+            else:
+                feat = target_layer.GetFeature(vector_fid)
+                feat.SetField(field_name, float(block_value))
+                target_layer.SetFeature(feat)
+                feat = None
+
+    # It is not enough to just delete a feature from the layer. The
+    # database where the information is stored must be re-packed so that
+    # feature entry is properly removed
+    target_vector.ExecuteSQL('REPACK ' + target_layer.GetName())
+    target_layer = None
+    target_vector = None
+
+
+def _energy_and_power_to_wave_vector(
+        energy_cap, base_wave_vector_path, target_wave_vector_path):
+    """Add captured wave energy value from energy_cap to a field in wave_vector.
+
+    The values are set corresponding to the same I,J values which is the key of
+    the dictionary and used as the unique identifier of the shape.
+
+    Args:
+        energy_cap (dict): a dictionary with keys (I,J), representing the
+            wave energy capacity values.
+        base_wave_vector_path (str): a path to a wave point shapefile with
+            existing fields to copy from.
+        target_wave_vector_path (str): a path to the wave point shapefile
+            to write the new field/values to.
+
+    Returns:
+        None.
+
+    """
+    _copy_vector_or_raster(base_wave_vector_path, target_wave_vector_path)
+
+    target_wave_vector = gdal.OpenEx(
+        target_wave_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_wave_layer = target_wave_vector.GetLayer()
+    # Create the Captured Energy and Wave Power fields for the shapefile
+    for field_name in [_CAP_WE_FIELD, _WAVE_POWER_FIELD]:
+        field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
+        target_wave_layer.CreateField(field_defn)
+
+    # For all of the features (points) in the shapefile, get the corresponding
+    # point/value from the dictionary and set the _CAP_WE_FIELD field as
+    # the value from the dictionary
+    for feat in target_wave_layer:
+        # Calculate and set the Captured Wave Energy field
+        value_i = feat.GetField('I')
+        value_j = feat.GetField('J')
+        we_value = energy_cap[(value_i, value_j)]
+
+        feat.SetField(_CAP_WE_FIELD, we_value)
+
+        # Calculate and set the Wave Power field
+        height = feat.GetFieldAsDouble(_HEIGHT_FIELD)  # in meters
+        period = feat.GetFieldAsDouble(_PERIOD_FIELD)
+        depth = feat.GetFieldAsInteger(_DEPTH_FIELD)
+
+        depth = numpy.absolute(depth)
+        # wave frequency calculation (used to calculate wave number k)
+        tem = (2.0 * math.pi) / (period * _ALFA)
+        # wave number calculation (expressed as a function of
+        # wave frequency and water depth)
+        k = numpy.square(tem) / (_GRAV * numpy.sqrt(
+            numpy.tanh((numpy.square(tem)) * (depth / _GRAV))))
+        # Setting numpy overflow error to ignore because when numpy.sinh
+        # gets a really large number it pushes a warning, but Rich
+        # and Doug have agreed it's nothing we need to worry about.
+        numpy.seterr(over='ignore')
+
+        # wave group velocity calculation (expressed as a
+        # function of wave energy period and water depth)
+        wave_group_velocity = (((1 + (
+            (2 * k * depth) / numpy.sinh(2 * k * depth))) * numpy.sqrt(
+                (_GRAV / k) * numpy.tanh(k * depth))) / 2)
+
+        # Reset the overflow error to print future warnings
+        numpy.seterr(over='print')
+
+        # Wave power calculation. Divide by 1000 to convert W/m to kW/m
+        # Note: _SWD: Sea water density constant (kg/m^3),
+        # _GRAV: Gravitational acceleration (m/s^2),
+        # height: in m, wave_group_velocity: in m/s
+        wave_pow = ((((_SWD * _GRAV) / 16) *
+                     (numpy.square(height)) * wave_group_velocity) / 1000)
+
+        feat.SetField(_WAVE_POWER_FIELD, wave_pow)
+
+        # Save the feature modifications to the layer.
+        target_wave_layer.SetFeature(feat)
+        feat = None
+
+    target_wave_layer = None
+    target_wave_vector = None
+
+
+def _count_pixels_groups(raster_path, group_values):
+    """Count pixels for each value in 'group_values' over a raster.
+
+    Args:
+        raster_path (str): path to a GDAL raster on disk
+        group_values (list): unique numbers for which to get a pixel count
+
+    Returns:
+        pixel_count (list): a list of integers, where each integer at an index
+            corresponds to the pixel count of the value from 'group_values'
+
+    """
+    # Initialize a list that will hold pixel counts for each group
+    pixel_count = numpy.zeros(len(group_values))
+
+    for _, block_matrix in pygeoprocessing.iterblocks((raster_path, 1)):
+        # Cumulatively add the pixels count for each value in 'group_values'
+        for idx in range(len(group_values)):
+            val = group_values[idx]
+            count_mask = numpy.zeros(block_matrix.shape)
+            numpy.equal(block_matrix, val, count_mask)
+            pixel_count[idx] += numpy.count_nonzero(count_mask)
+
+    return pixel_count
+
+
+def _pixel_size_helper(base_vector_path, coord_trans, coord_trans_opposite,
+                       base_raster_path):
+    """Retrieve pixel size of a raster given a vector w/ certain projection.
+
+    Args:
+        base_vector_path (str): path to a shapefile indicating where in the
+            world we are interested in
+        coord_trans (osr.CoordinateTransformation): a coordinate transformation
+        coord_trans_opposite (osr.CoordinateTransformation): a coordinate
+            transformation in the opposite direction of 'coord_trans'
+        base_raster_path (str): path to a raster to get the pixel size from
+
+    Returns:
+        pixel_size_tuple (tuple): x and y pixel sizes of the raster given in
+            the units of what base vector is projected in
+
+    """
+    vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    layer = vector.GetLayer(0)
+
+    # Get a point in the clipped vector to determine output grid size
+    feat = layer.GetNextFeature()
+    geom = feat.GetGeometryRef()
+    reference_point_x = geom.GetX()
+    reference_point_y = geom.GetY()
+
+    # Convert the point from meters to geom_x/long
+    reference_point_latlng = coord_trans_opposite.TransformPoint(
+        reference_point_x, reference_point_y)
+
+    # Get the size of the pixels in meters, to be used for creating rasters
+    pixel_size_x, pixel_size_y = _pixel_size_based_on_coordinate_transform(
+        base_raster_path, coord_trans, reference_point_latlng)
+
+    feat = None
+    layer = None
+    vector = None
+
+    return (pixel_size_x, pixel_size_y)
+
+
+def _pixel_size_based_on_coordinate_transform(base_raster_path, coord_trans,
+                                              reference_point):
+    """Get width and height of cell in meters.
+
+    Calculates the pixel width and height in meters given a coordinate
+    transform and reference point on the dataset that's close to the
+    transformed projected coordinate system. This is only necessary if raster
+    is not already in a meter coordinate system, for example raster may be in
+    lat/long (WGS84).
+
+    Args:
+        base_raster_path (str): path to a GDAL raster path, projected in the
+            form of lat/long decimal degrees
+        coord_trans (osr.CoordinateTransformation): an OSR coordinate
+            transformation from dataset coordinate system to meters
+        reference_point (tuple): a reference point close to the transformed
+            coordinate system. Must be in the same coordinate system as
+            the base raster.
+
+    Returns:
+        pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
+            height in meters)
+
+    """
+    # Get the first points (x, y) from geoTransform
+    geotransform = pygeoprocessing.get_raster_info(base_raster_path)[
+        'geotransform']
+    pixel_size_x = geotransform[1]
+    pixel_size_y = geotransform[5]
+    top_left_x = reference_point[0]
+    top_left_y = reference_point[1]
+    # Create the second point by adding the pixel width/height
+    new_x = top_left_x + pixel_size_x
+    new_y = top_left_y + pixel_size_y
+    # Transform two points into meters
+    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
+    point_2 = coord_trans.TransformPoint(new_x, new_y)
+
+    # Calculate the x/y difference between two points
+    # taking the absolute value because the direction doesn't matter for pixel
+    # size in the case of most coordinate systems where y increases up and x
+    # increases to the right (right handed coordinate system).
+    pixel_diff_x = point_2[0] - point_1[0]
+    pixel_diff_y = point_2[1] - point_1[1]
+
+    return (pixel_diff_x, pixel_diff_y)
+
+
+def _create_raster_attr_table(base_raster_path, attr_dict, column_name):
+    """Create a raster attribute table (RAT).
+
+    Args:
+        base_raster_path (str): a GDAL raster dataset to create the RAT for
+        attr_dict (dict): a dictionary with keys that point to a primitive type
+            ex: {integer_id_1: value_1, ... integer_id_n: value_n}
+        column_name (str): a string for the column name that maps the values
+
+    Returns:
+        None
+
+    """
+    raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER | gdal.GA_Update)
+    band = raster.GetRasterBand(1)
+    attr_table = gdal.RasterAttributeTable()
+    attr_table.SetRowCount(len(attr_dict))
+
+    # create columns
+    attr_table.CreateColumn('Value', gdal.GFT_Integer, gdal.GFU_MinMax)
+    attr_table.CreateColumn(column_name, gdal.GFT_String, gdal.GFU_Name)
+
+    row_count = 0
+    for key in sorted(attr_dict.keys()):
+        attr_table.SetValueAsInt(row_count, 0, int(key))
+        attr_table.SetValueAsString(row_count, 1, attr_dict[key])
+        row_count += 1
+
+    band.SetDefaultRAT(attr_table)
+    raster = None
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate an input dictionary for Wave Energy.
+
+    Args:
+        args (dict): The args dictionary.
+        limit_to=None (str or None): If a string key, only this args parameter
+            will be validated.  If ``None``, all args parameters will be
+            validated.
+
+    Returns:
+        warnings (list): A list of tuples where tuple[0] is an iterable of keys
+            that the error message applies to and tuple[1] is the string
+            validation warning.
+
+    """
+    return validation.validate(args, MODEL_SPEC)

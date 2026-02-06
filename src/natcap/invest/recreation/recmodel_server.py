@@ -30,9 +30,9 @@ import shapely.wkt
 import shapely.geometry
 import shapely.prepared
 
-from ... import invest
-from .. import utils
-from natcap.invest.recreation import out_of_core_quadtree
+from natcap import invest
+from natcap.invest import utils
+from . import out_of_core_quadtree
 from . import recmodel_client
 from ._utils import _numpy_dumps, _numpy_loads
 

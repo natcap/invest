@@ -174,5 +174,6 @@ class ScenarioGenValidationTests(unittest.TestCase):
         actual_messages = set()
         for keys, error_strings in validation_errors:
             actual_messages.add(error_strings)
-        self.assertTrue(scenario_gen_proximity.MISSING_CONVERT_OPTION_MSG
+        self.assertTrue(
+            scenario_gen_proximity.scenario_gen_proximity.MISSING_CONVERT_OPTION_MSG
             in actual_messages)

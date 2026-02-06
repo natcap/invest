@@ -9,7 +9,8 @@ from osgeo import gdal, ogr, osr
 import pandas
 import pygeoprocessing
 from shapely.geometry import Polygon
-from natcap.invest.crop_production_regression import CROP_TO_PATH_TABLES
+from natcap.invest.crop_production_regression.crop_production_regression \
+    import CROP_TO_PATH_TABLES
 
 gdal.UseExceptions()
 MODEL_DATA_PATH = os.path.join(
@@ -319,10 +320,8 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_percentile.execute(args)
-        self.assertTrue("The following crop names were provided in "
-                        f"{args['landcover_to_crop_table_path']} but "
-                        "are not supported by the model: {'durian'}"
-                        in str(context.exception))
+        self.assertIn('Error in column "crop_name", value "durian"',
+                      str(context.exception))
 
     def test_crop_production_percentile_missing_climate_bin(self):
         """Crop Production Percentile: missing climate bin path."""
@@ -335,8 +334,8 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_percentile.execute(args)
-        self.assertTrue('No climate bin raster path could be found for wheat'
-                        in str(context.exception))
+        self.assertIn('Null value(s) found in column "path"',
+                      str(context.exception))
 
     def test_crop_production_regression_invalid_crop_name(self):
         """Crop Production Regression: invalid user-specified crop name."""
@@ -349,10 +348,8 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_regression.execute(args)
-        self.assertTrue("The following crop names were provided in "
-                        f"{args['landcover_to_crop_table_path']} but "
-                        "are not supported by the model: {'avocado'}"
-                        in str(context.exception))
+        self.assertIn('Error in column "crop_name", value "avocado"',
+                      str(context.exception))
 
     def test_crop_production_regression_missing_climate_bin(self):
         """Crop Production Regression: missing climate bin path."""
@@ -365,8 +362,8 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_regression.execute(args)
-        self.assertTrue('No climate bin raster path could be found for wheat'
-                        in str(context.exception))
+        self.assertIn('Null value(s) found in column "path"',
+                      str(context.exception))
 
     def test_crop_production_regression(self):
         """Crop Production Regression: validate results."""
@@ -477,7 +474,8 @@ class CropProductionTests(unittest.TestCase):
 
     def test_x_yield_op(self):
         """Test `_x_yield_op"""
-        from natcap.invest.crop_production_regression import _x_yield_op
+        from natcap.invest.crop_production_regression import \
+            crop_production_regression
 
         # make fake data
         y_max = numpy.array([[-1, 3, 2], [4, 5, 3]])
@@ -487,8 +485,8 @@ class CropProductionTests(unittest.TestCase):
         fert_rate = 0.6
         crop_lucode = 3
 
-        actual_result = _x_yield_op(y_max, b_x, c_x, lulc_array, fert_rate,
-                                    crop_lucode)
+        actual_result = crop_production_regression._x_yield_op(
+            y_max, b_x, c_x, lulc_array, fert_rate, crop_lucode)
         expected_result = numpy.array([[-1, -1.9393047, -1],
                                        [2.6776089, -1, 1.51231]])
 
@@ -497,14 +495,14 @@ class CropProductionTests(unittest.TestCase):
     def test_zero_observed_yield_op(self):
         """Test `_zero_observed_yield_op`"""
         from natcap.invest.crop_production_regression import \
-            _zero_observed_yield_op
+            crop_production_regression
 
         # make fake data
         observed_yield_array = numpy.array([[0, 1, -1], [5, 6, -1]])
         observed_yield_nodata = -1
 
-        actual_result = _zero_observed_yield_op(observed_yield_array,
-                                                observed_yield_nodata)
+        actual_result = crop_production_regression._zero_observed_yield_op(
+            observed_yield_array, observed_yield_nodata)
 
         expected_result = numpy.array([[0, 1, 0], [5, 6, 0]])
 
@@ -513,7 +511,7 @@ class CropProductionTests(unittest.TestCase):
     def test_mask_observed_yield_op(self):
         """Test `_mask_observed_yield_op`"""
         from natcap.invest.crop_production_regression import \
-            _mask_observed_yield_op
+            crop_production_regression
 
         # make fake data
         lulc_array = numpy.array([[3, 5, -9999], [3, 3, -1]])
@@ -526,7 +524,7 @@ class CropProductionTests(unittest.TestCase):
         landcover_nodata = -9999
         crop_lucode = 3
 
-        actual_result = _mask_observed_yield_op(
+        actual_result = crop_production_regression._mask_observed_yield_op(
             lulc_array, observed_yield_array, observed_yield_nodata,
             landcover_nodata, crop_lucode)
 
@@ -537,7 +535,7 @@ class CropProductionTests(unittest.TestCase):
     def test_tabulate_regression_results(self):
         """Test `tabulate_regression_results`"""
         from natcap.invest.crop_production_regression import \
-            tabulate_regression_results, MODEL_SPEC
+            crop_production_regression, MODEL_SPEC
         from natcap.invest.file_registry import FileRegistry
         from crop_production.data_helpers import sample_nutrient_df
         from crop_production.data_helpers import tabulate_regr_results_table
@@ -561,7 +559,7 @@ class CropProductionTests(unittest.TestCase):
 
         _create_crop_rasters(output_dir, crop_names, file_suffix)
 
-        tabulate_regression_results(
+        crop_production_regression.tabulate_regression_results(
             nutrient_df, crop_names, pixel_area_ha,
             landcover_raster_path, landcover_nodata,
             file_registry, target_table_path
@@ -579,7 +577,7 @@ class CropProductionTests(unittest.TestCase):
     def test_aggregate_regression_results_to_polygons(self):
         """Test `aggregate_regression_results_to_polygons`"""
         from natcap.invest.crop_production_regression import \
-            aggregate_regression_results_to_polygons, MODEL_SPEC
+            crop_production_regression, MODEL_SPEC
         from natcap.invest.file_registry import FileRegistry
         from crop_production.data_helpers import sample_nutrient_df
         from crop_production.data_helpers import \
@@ -603,7 +601,8 @@ class CropProductionTests(unittest.TestCase):
         output_dir = os.path.join(workspace, "OUTPUT")
         os.makedirs(output_dir, exist_ok=True)
         file_suffix = 'test'
-        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
+        file_registry = FileRegistry(
+            MODEL_SPEC.outputs, output_dir, file_suffix)
 
         _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
             '.', 'aggregate_results%s.csv')
@@ -615,7 +614,7 @@ class CropProductionTests(unittest.TestCase):
 
         _create_crop_rasters(output_dir, crop_names, file_suffix)
 
-        aggregate_regression_results_to_polygons(
+        crop_production_regression.aggregate_regression_results_to_polygons(
             base_aggregate_vector_path, target_aggregate_vector_path,
             aggregate_table_path, landcover_raster_projection, crop_names,
             nutrient_df, pixel_area_ha, file_registry)
@@ -631,7 +630,7 @@ class CropProductionTests(unittest.TestCase):
     def test_aggregate_to_polygons(self):
         """Test `aggregate_to_polygons`"""
         from natcap.invest.crop_production_percentile import \
-            aggregate_to_polygons, MODEL_SPEC
+            crop_production_percentile, MODEL_SPEC
         from natcap.invest.file_registry import FileRegistry
         from crop_production.data_helpers import sample_nutrient_df
         from crop_production.data_helpers import aggregate_pctl_polygons_table
@@ -658,12 +657,13 @@ class CropProductionTests(unittest.TestCase):
         file_suffix = 'v1'
         target_aggregate_table_path = os.path.join(output_dir,
                                                    "results.csv")
-        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
+        file_registry = FileRegistry(
+            MODEL_SPEC.outputs, output_dir, file_suffix)
 
         _create_crop_pctl_rasters(output_dir, crop_names, file_suffix,
                                   yield_percentile_headers)
 
-        aggregate_to_polygons(
+        crop_production_percentile.aggregate_to_polygons(
             base_aggregate_vector_path, target_aggregate_vector_path,
             landcover_raster_projection, crop_names, nutrient_df,
             yield_percentile_headers, pixel_area_ha, file_registry,
@@ -679,7 +679,7 @@ class CropProductionTests(unittest.TestCase):
     def test_tabulate_percentile_results(self):
         """Test `tabulate_results"""
         from natcap.invest.crop_production_percentile import \
-            tabulate_results, MODEL_SPEC
+            crop_production_percentile, MODEL_SPEC
         from natcap.invest.file_registry import FileRegistry
         from crop_production.data_helpers import sample_nutrient_df
         from crop_production.data_helpers import tabulate_pctl_results_table
@@ -697,14 +697,16 @@ class CropProductionTests(unittest.TestCase):
         make_simple_raster(landcover_raster_path,
                            numpy.array([[1, 4], [2, 2]], dtype=numpy.int16))
         file_suffix = 'test'
-        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
+        file_registry = FileRegistry(
+            MODEL_SPEC.outputs, output_dir, file_suffix)
         target_table_path = os.path.join(output_dir, "result_table.csv")
         _create_crop_pctl_rasters(output_dir, crop_names, file_suffix,
                                   yield_percentile_headers)
-        tabulate_results(nutrient_df, yield_percentile_headers,
-                         crop_names, pixel_area_ha,
-                         landcover_raster_path, landcover_nodata,
-                         file_registry, target_table_path)
+        crop_production_percentile.tabulate_results(
+            nutrient_df, yield_percentile_headers,
+            crop_names, pixel_area_ha,
+            landcover_raster_path, landcover_nodata,
+            file_registry, target_table_path)
 
         actual_table = pandas.read_csv(target_table_path, nrows=2)
         expected_table = tabulate_pctl_results_table()

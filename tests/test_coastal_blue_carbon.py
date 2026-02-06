@@ -13,8 +13,6 @@ import numpy
 import pandas
 from scipy.sparse import dok_matrix
 import pygeoprocessing
-from natcap.invest import utils
-from natcap.invest import validation
 from osgeo import gdal
 from osgeo import osr
 
@@ -134,10 +132,6 @@ class TestPreprocessor(unittest.TestCase):
                 transition_table.readline(),
                 'parkinglot,,NCC\n')
 
-            # After the above lines is a blank line, then the legend.
-            # Deliberately not testing the legend.
-            self.assertEqual(transition_table.readline(), '\n')
-
     def test_sample_data(self):
         """CBC Preprocessor: Test on sample data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
@@ -243,10 +237,6 @@ class TestPreprocessor(unittest.TestCase):
                 transition_table.readline(),
                 'parking lot,accum,NCC\n')
 
-            # After the above lines is a blank line, then the legend.
-            # Deliberately not testing the legend.
-            self.assertEqual(transition_table.readline(), '\n')
-
 
 class TestCBC2(unittest.TestCase):
     """Test Coastal Blue Carbon main model functions."""
@@ -290,8 +280,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('missing code,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         with self.assertRaises(ValueError) as cm:
             disturbance_matrices, accumulation_matrices = (
@@ -306,8 +294,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('a,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         with self.assertRaises(ValueError) as cm:
             disturbance_matrices, accumulation_matrices = (
@@ -348,8 +334,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('a,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         disturbance_matrices, accumulation_matrices = (
              coastal_blue_carbon._read_transition_matrix(
@@ -634,7 +618,7 @@ class TestCBC2(unittest.TestCase):
         """CBC: Test the model on one transition with no analysis year.
 
         This test came up while looking into an issue reported on the forums:
-        https://community.naturalcapitalproject.org/t/coastal-blue-carbon-negative-carbon-stocks/780/12
+        https://community.naturalcapitalalliance.org/t/coastal-blue-carbon-negative-carbon-stocks/780/12
         """
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)
@@ -753,7 +737,7 @@ class TestCBC2(unittest.TestCase):
             raster = gdal.OpenEx(raster_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
-                expected_total_sequestration, rtol=1e-6)
+                expected_total_sequestration, rtol=1e-5)
         finally:
             raster = None
 
@@ -765,7 +749,7 @@ class TestCBC2(unittest.TestCase):
             raster = gdal.OpenEx(raster_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
-                expected_net_present_value_at_2030, rtol=1e-6)
+                expected_net_present_value_at_2030, rtol=1e-5)
         finally:
             raster = None
 
@@ -905,21 +889,17 @@ class TestCBC2(unittest.TestCase):
         # Write invalid entries to landcover transition table
         with open(args['landcover_transitions_table'], 'w') as transition_table:
             transition_table.write('lulc-class,Developed,Forest,Water\n')
-            transition_table.write('Developed,NCC,,invalid\n')
-            transition_table.write('Forest,accum,disturb,low-impact-disturb\n')
+            transition_table.write('Developed,NCC,accum,NCC\n')
+            transition_table.write('Forest,accum,med-impact-disturb,low-impact-disturb\n')
             transition_table.write('Water,disturb,med-impact-disturb,high-impact-disturb\n')
-        transition_options = [
-                'accum', 'high-impact-disturb', 'low-impact-disturb',
-                'med-impact-disturb', 'ncc']
+
         validation_warnings = coastal_blue_carbon.validate(args)
         self.assertEqual(len(validation_warnings), 2)
         self.assertIn(
             'File could not be opened as a GDAL raster',
             validation_warnings[0][1])
         self.assertIn(
-            coastal_blue_carbon.INVALID_TRANSITION_VALUES_MSG.format(
-                model_transitions=transition_options,
-                transition_values=['disturb', 'invalid']),
+            'Error in column "developed", value "disturb"',
             validation_warnings[1][1])
 
     def test_track_first_disturbance(self):

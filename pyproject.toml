@@ -2,11 +2,11 @@
 name = "natcap.invest"
 description = "InVEST Ecosystem Service models"
 readme = "README_PYTHON.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE.txt"]
 maintainers = [
-    {name = "Natural Capital Project Software Team"}
+    {name = "Natural Capital Alliance Software Team"}
 ]
 keywords = ["gis", "invest", "ecosystem services"]
 classifiers = [
@@ -18,11 +18,11 @@ classifiers = [
     "Operating System :: Microsoft",
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Cython",
     "Topic :: Scientific/Engineering :: GIS"
 ]

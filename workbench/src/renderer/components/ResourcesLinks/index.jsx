@@ -9,7 +9,7 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 
-const FORUM_ROOT = 'https://community.naturalcapitalproject.org';
+const FORUM_ROOT = 'https://community.naturalcapitalalliance.org';
 
 // map model names to forum tags:
 const FORUM_TAGS = {
@@ -44,7 +44,7 @@ const FORUM_TAGS = {
  *
  * This should be a link to the model's User's Guide chapter and
  * and a link to list of topics with the model's tag on the forum,
- * e.g. https://community.naturalcapitalproject.org/tag/carbon
+ * e.g. https://community.naturalcapitalalliance.org/tag/carbon
  */
 export default function ResourcesTab(props) {
   const { docs, isCoreModel, modelID } = props;

@@ -21,7 +21,7 @@ from natcap.invest import spec
 from natcap.invest import ui_server
 from natcap.invest import utils
 from natcap.invest import models
-from pygeoprocessing.geoprocessing_core import GDALUseExceptions
+from pygeoprocessing.utils import GDALUseExceptions
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
@@ -393,7 +393,7 @@ def main(user_args=None):
                     1, "Error when parsing JSON datastack:\n    " + str(error))
 
             # reload validation module first so it's also in the correct language
-            importlib.reload(importlib.import_module('natcap.invest.validation'))
+            importlib.reload(importlib.import_module('natcap.invest.validation_messages'))
             model_module = importlib.reload(importlib.import_module(
                 name=models.model_id_to_pyname[parsed_datastack.model_id]))
 

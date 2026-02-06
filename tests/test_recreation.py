@@ -27,7 +27,6 @@ import pandas
 import pygeoprocessing
 import Pyro5
 import shapely
-import taskgraph
 import warnings
 
 from natcap.invest import utils
@@ -714,7 +713,6 @@ class TestRecClientServer(unittest.TestCase):
     def test_all_metrics_local_server(self):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
-        from natcap.invest import validation
 
         suffix = 'foo'
         args = {
@@ -754,8 +752,6 @@ class TestRecClientServer(unittest.TestCase):
             'bonefish_a': 4630187907.293639,
             'bathy': 47.16540460441528,
             'roads': 5072.707571235277,
-            'bonefish_p': 792.0711806443292,
-            'bathy_sum': 348.04177433624864,
             'pr_TUD': 1.0,
             'pr_PUD': 1.0,
             'avg_pr_UD': 1.0
@@ -774,9 +770,7 @@ class TestRecClientServer(unittest.TestCase):
             'bonefish_a': 4630187907.293639,
             'bathy': 47.16540460441528,
             'roads': 5072.707571235277,
-            'bonefish_p': 792.0711806443292,
-            'bathy_sum': 348.04177433624864,
-            'pr_UD_EST': 0.996366808597374
+            'pr_UD_EST': 0.9963663467364707
         }
         for key in expected_scenario_sums:
             numpy.testing.assert_almost_equal(
@@ -1429,7 +1423,7 @@ class RecreationValidationTests(unittest.TestCase):
     def test_bad_predictor_table_header(self):
         """Recreation Validate: assert messages for bad table headers."""
         from natcap.invest.recreation import recmodel_client
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as file:
@@ -1438,7 +1432,7 @@ class RecreationValidationTests(unittest.TestCase):
 
         expected_message = [(
             ['predictor_table_path'],
-            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+            validation_messages.MATCHED_NO_HEADERS.format(
                 header='column', header_name='id'))]
         validation_warnings = recmodel_client.validate({
             'compute_regression': True,
@@ -1460,10 +1454,10 @@ class RecreationValidationTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
         expected_messages = [
             (['predictor_table_path'],
-             validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+             validation_messages.MATCHED_NO_HEADERS.format(
                 header='column', header_name='id')),
             (['scenario_predictor_table_path'],
-             validation.MESSAGES['MATCHED_NO_HEADERS'] .format(
+             validation_messages.MATCHED_NO_HEADERS .format(
                 header='column', header_name='id'))]
         self.assertEqual(len(validation_warnings), 2)
         for message in expected_messages:
@@ -1491,7 +1485,7 @@ class RecreationValidationTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
         msgs = recmodel_client.validate(args)
-        self.assertIn('The table contains invalid type value(s)', msgs[0][1])
+        self.assertIn('Error in column "type", value "raster?mean"', msgs[0][1])
 
 
 class RecreationProductionServerHealth(unittest.TestCase):

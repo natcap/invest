@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
 import logging
-import os
 import time
 
 import pygeoprocessing
-import taskgraph
 from osgeo import gdal
 
-from .. import gettext
-from .. import spec
-from .. import utils
-from .. import validation
-from ..unit_registry import u
-from . import coastal_blue_carbon
-from ..file_registry import FileRegistry
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
+from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 
@@ -453,15 +450,6 @@ def _create_transition_table(landcover_df, lulc_snapshot_list,
                     column_value = ''
                 row.append(column_value)
             csv_file.write(','.join(row) + '\n')
-
-        # Append legend
-        csv_file.write("\n,legend")
-        csv_file.write(
-            "\n,empty cells indicate that no transitions occur of that type")
-        csv_file.write("\n,disturb (disturbance): change to low- med- or "
-                       "high-impact-disturb")
-        csv_file.write("\n,accum (accumulation)")
-        csv_file.write("\n,NCC (no-carbon-change)")
 
 
 def _create_biophysical_table(landcover_df, target_biophysical_table_path):

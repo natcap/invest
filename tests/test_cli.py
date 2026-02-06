@@ -18,6 +18,7 @@ except ImportError:
 from osgeo import gdal
 gdal.UseExceptions()
 
+
 @contextlib.contextmanager
 def redirect_stdout():
     """Redirect stdout to a stream, which is then yielded."""
@@ -238,7 +239,7 @@ class CLIHeadlessTests(unittest.TestCase):
 
     def test_validate_carbon(self):
         """CLI: Validate a model inputs through the cli."""
-        from natcap.invest import cli, validation
+        from natcap.invest import cli, validation_messages
 
         datastack_dict = {
             'model_id': 'carbon',
@@ -262,7 +263,7 @@ class CLIHeadlessTests(unittest.TestCase):
         # it's expected that these keys are missing because the only
         # key we included was the workspace_dir
         expected_warning = [(['carbon_pools_path', 'lulc_bas_path'],
-                            validation.MESSAGES['MISSING_KEY'])]
+                            validation_messages.MISSING_KEY)]
         self.assertEqual(validation_output, str(expected_warning))
         self.assertEqual(exit_cm.exception.code, 0)
 
@@ -429,7 +430,7 @@ class CLIUnitTests(unittest.TestCase):
         filename = 'foo.py'
         target_filepath = os.path.join(self.workspace_dir, filename)
         target_model = 'carbon'
-        expected_data = 'natcap.invest.carbon.execute(args)'
+        expected_data = 'natcap.invest.carbon.carbon.execute(args)'
         cli.export_to_python(target_filepath, target_model)
 
         self.assertTrue(os.path.exists(target_filepath))
