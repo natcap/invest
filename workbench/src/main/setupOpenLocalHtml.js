@@ -1,6 +1,7 @@
 import {
   ipcMain,
   BrowserWindow,
+  shell,
 } from 'electron';
 import contextMenu from 'electron-context-menu';
 
@@ -13,6 +14,7 @@ export default function setupOpenLocalHtml(parentWindow, isDevMode) {
         url = require('node:url').pathToFileURL(url).toString();
       }
       const [width, height] = parentWindow.getSize();
+
       const win = new BrowserWindow({
         width: width > 1300 ? 1300 : width, // accommodate reports and UG
         height: height,
@@ -21,11 +23,18 @@ export default function setupOpenLocalHtml(parentWindow, isDevMode) {
           partition: url, // do not share the webContents.session of other windows
         },
       });
+
       contextMenu({
         window: win,
         showSaveImageAs: true,
         showSearchWithGoogle: false,
       });
+
+      win.webContents.setWindowOpenHandler((details) => {
+        shell.openExternal(details.url);
+        return { action: 'deny' };
+      });
+
       win.loadURL(url);
       if (isDevMode) {
         win.webContents.openDevTools();
