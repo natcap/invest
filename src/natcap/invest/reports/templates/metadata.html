@@ -1,0 +1,17 @@
+<!--
+Display metadata about outputs of an invest model.
+
+`model_spec_outputs` a list of natcap.invest.spec.Output
+-->
+
+{% macro list_metadata(model_spec_outputs) -%}
+<dl>
+  {% for output in model_spec_outputs %}
+    <dt>{{ output.path }}</dt>
+    <dd>{{ output.about }}</dd>
+    {% if output.units is defined %}
+        <dd>Units: {{ output.units }}</dd>
+    {% endif %}
+  {% endfor %}
+</dl>
+{%- endmacro %}

@@ -30,6 +30,7 @@ MODEL_SPEC = spec.ModelSpec(
     model_id="sdr",
     model_title=gettext("Sediment Delivery Ratio"),
     userguide="sdr.html",
+    reporter="natcap.invest.sdr.reporter",
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),

@@ -16,6 +16,8 @@ import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -678,7 +680,13 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        coastal_blue_carbon.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(coastal_blue_carbon.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        coastal_blue_carbon.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, coastal_blue_carbon.MODEL_SPEC, **execute_kwargs)
 
         # Sample values calculated by hand.  Pixel 0 only accumulates.  Pixel 1
         # has no accumulation (per the biophysical table) and also has no

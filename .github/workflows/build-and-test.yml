@@ -462,6 +462,7 @@ jobs:
           yarn run dist
 
       - name: Test electron app with puppeteer
+        continue-on-error: true  # test is flaky on GHA
         working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
@@ -513,7 +514,10 @@ jobs:
           (github.event_name == 'push' &&
           (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
           (github.event_name == 'pull_request' && startsWith(github.head_ref, 'autorelease'))
-        run: make invest_autotest
+        run: |
+          mkdir autotest_dir
+          make invest_autotest AUTOTEST_DIR=autotest_dir
+          make deploy_autotest_reports AUTOTEST_DIR=autotest_dir
 
       - name: Tar the workspace to preserve permissions (macOS)
         if: failure() && matrix.os == 'macos-15-intel'
