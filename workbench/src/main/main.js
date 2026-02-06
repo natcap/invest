@@ -63,7 +63,10 @@ let mainWindow;
 let splashScreen;
 let forceQuit = false;
 
-contextMenu({});
+contextMenu({
+  showSaveImageAs: true,
+  showSearchWithGoogle: false,
+});
 
 export function destroyWindow() {
   mainWindow = null;
