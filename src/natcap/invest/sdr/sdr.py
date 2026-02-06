@@ -470,6 +470,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Copy of the input drainage map, clipped to the extent of the"
                 " other raster inputs and aligned to the DEM."
             ),
+            created_if="drainage_path",
             data_type=int,
             units=u.none
         ),
@@ -532,6 +533,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "A copy of the aligned drainage map, masked using the mask"
                 " raster."
             ),
+            created_if="drainage_path",
             data_type=int,
             units=u.none
         ),
