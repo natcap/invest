@@ -3,11 +3,13 @@ name: "AutoPR: Create PRs into release branches"
 env:
     SOURCE_BRANCH: main
 on:
-    pull_request:
-        types: [closed]
-        branches:
-            # Triggered when PR into this branch is closed.
-            - main
+    #pull_request:
+    #    types: [closed]
+    #    branches:
+    #        # Triggered when PR into this branch is closed.
+    #        - main
+
+    # Pushes to main (e.g. after a PR) are the only way that this workflow should be triggered.
     push:
         branches:
             - main
