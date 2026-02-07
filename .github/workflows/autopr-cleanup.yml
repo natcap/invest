@@ -3,9 +3,7 @@ on:
     pull_request:
         types: [closed]
         branches:
-            # This workflow trigger event identifies with the triggering branch
-            # being "release/*" even though the autoPR branch triggered the
-            # original PR.
+            # Trigger the workflow when PRs into release/* are closed.
             - 'release/*'
 
 jobs:
@@ -36,7 +34,10 @@ jobs:
 
                 # Delete the branch on github.
                 # The local copy of the branch doesn't matter.
-                git push -d origin "$BRANCH_TO_DELETE"
+                gh api --method DELETE \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    "repos/${{ github.repository }}/git/refs/heads/${BRANCH_TO_DELETE}"
 
                 # If someone wants to restore the branch, they can do so in the
                 # PR itself for as long as github allows it.  As of 2013 they
