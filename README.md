@@ -7,14 +7,14 @@ nature, the scientific community needs to deliver knowledge and tools to
 quantify and forecast this return. InVEST enables decision-makers to quantify
 the importance of natural capital, to assess the tradeoffs associated with
 alternative choices, and to integrate conservation and human development.
-Read more at https://naturalcapitalproject.stanford.edu.
+Read more at https://naturalcapitalalliance.stanford.edu.
 
 
 ## Installation
 
 The InVEST desktop application can be downloaded from
 [releases](https://github.com/natcap/invest/releases), or from our
-[website](https://naturalcapitalproject.stanford.edu/software/invest).
+[website](https://naturalcapitalalliance.stanford.edu/software/invest).
 
 InVEST is also available as a python package.  See the [API
 documentation](https://invest.readthedocs.io) for installation instructions.
