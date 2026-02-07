@@ -2,11 +2,7 @@ name: "AutoPR: Create PRs into release branches"
 env:
     SOURCE_BRANCH: main
 on:
-    pull_request:
-        types: [closed]
-        branches:
-            # Triggered when PR into this branch is closed.
-            - main
+    # Pushes to main (e.g. after a PR) are the only way that this workflow should be triggered.
     push:
         branches:
             - main
@@ -45,7 +41,7 @@ jobs:
                       # A push could include a bunch of commits, so just get
                       # the login name of the user that pushed
                       PR_USERNAME="${{ github.event.push.pusher.username }}"
-                      export PR_MSG="due to a push to `main`."
+                      export PR_MSG='due to a push to `main`.'
                   fi
 
                   # Using grep with pattern ^release filters out any autorelease branches.
@@ -65,10 +61,6 @@ jobs:
                         git checkout main
 
                         export RELEASE_BRANCH=$BRANCH  # needed for envsubst
-                        PR_BODY_FILE=pr_body.txt
-                        cat .github/auto-main-into-release-pr-body.md | envsubst > $PR_BODY_FILE
-                        cat $PR_BODY_FILE  # for debugging
-
                         PR_TITLE="[Auto-generated] Merge main into $BRANCH"
 
                         # Skip this branch if a PR from main into $BRANCH already exists.
@@ -83,9 +75,20 @@ jobs:
                         SHORTREV=$(git rev-parse --short main)
                         CLEAN_BRANCH=$(echo "$BRANCH" | tr '/' '-')
                         AUTOPR_BRANCH="autopr/${SOURCE_BRANCH}-rev${SHORTREV}-into-${CLEAN_BRANCH}"
-                        git checkout -b "${AUTOPR_BRANCH}"
-                        git push origin ${AUTOPR_BRANCH}
-                        export AUTOPR_BRANCH  # needed for envsubst
+                        export AUTOPR_BRANCH="$AUTOPR_BRANCH"  # needed for envsubst
+
+                        # Create the branch via github API to allow GH Actions to authenticate
+                        LONGREV=$(git rev-parse main)
+                        gh api --method POST \
+                            -H "Accept: application/vnd.github+json" \
+                            -H "X-GitHub-Api-Version: 2022-11-28" \
+                            "repos/${{ github.repository }}/git/refs" \
+                            -f "ref=refs/heads/${AUTOPR_BRANCH}" \
+                            -f "sha=${LONGREV}"
+
+                        PR_BODY_FILE=pr_body.txt
+                        cat .github/auto-main-into-release-pr-body.md | envsubst > $PR_BODY_FILE
+                        cat $PR_BODY_FILE  # for debugging
 
                         # This PR will be assigned to $PR_USERNAME, which should be
                         # the person who merged the PR that caused this commit to be
@@ -103,7 +106,11 @@ jobs:
                         if [[ $FAILED -eq 1 ]]
                         then
                             echo "PR failed; deleting autopr branch"
-                            git push -d origin ${AUTOPR_BRANCH}
+                            # Using github api allows us to use github actions to be the actor
+                            gh api --method DELETE \
+                                -H "Accept: application/vnd.github+json" \
+                                -H "X-GitHub-Api-Version: 2022-11-28" \
+                                "repos/${{ github.repository }}/git/refs/heads/${AUTOPR_BRANCH}"
                             ERRORSPRESENT=$((${ERRORSPRESENT} | 1))
                         fi
                     done
