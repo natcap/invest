@@ -2111,6 +2111,12 @@ class ModelSpec(BaseModel):
         # paths, and create them
         for output in self.outputs:
             if output.id in outputs_to_be_created:
+                dir_part = os.path.split(output.path)[0]
+
+                # Skip pattern dirs like "[SCENARIO]"
+                if re.search(r'\[\w+\]', dir_part):
+                    continue
+
                 os.makedirs(os.path.join(
                     args['workspace_dir'], os.path.split(output.path)[0]
                 ), exist_ok=True)
