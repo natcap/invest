@@ -57,6 +57,14 @@ class FileRegistry:
             path_fields = set(re.findall(r'\[(\w+)\]', path))
             # Don't convert id_fields to set, need to preserve order later
             id_fields = re.findall(r'\[(\w+)\]', output.id)
+
+            # If path contains pattern field(s), the ``id`` must also contain
+            # those fields so that users are required to provide substitution
+            # values when indexing the FileRegistry. Otherwise, users could
+            # index the FileRegistry by an ID that doesn't include the pattern
+            # fields, and the FileRegistry wouldn't know what values to
+            # substitute into the path. (*NOTE* The ID can have additional
+            # fields that aren't in the path, but not the other way around.)
             if path_fields and not path_fields.issubset(set(id_fields)):
                 raise ValueError(
                     f"Output id '{output.id}' must include pattern field(s) "
@@ -105,7 +113,7 @@ class FileRegistry:
             raise KeyError(f'Key not found: {key}')
 
         path = self._keys_to_paths[key]
-        if key in self._pattern_fields and self._pattern_fields[key]:
+        if key in self._pattern_fields:
             fields = self._pattern_fields[key]
             if len(field_values) != len(fields):
                 raise KeyError(
@@ -130,6 +138,8 @@ class FileRegistry:
                 raise KeyError('Received field values for a key that has no fields')
             self.registry[key] = path
 
+        # Ensures patterned directories get created when the path is accessed
+        # since they aren't created during model setup like non-patterned paths
         parent_dir = os.path.dirname(path)
         if parent_dir:
             os.makedirs(parent_dir, exist_ok=True)
