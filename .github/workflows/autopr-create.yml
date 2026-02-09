@@ -10,7 +10,7 @@ on:
 
 jobs:
     create-pr-into-release:
-        #if: github.repository == 'natcap/invest'
+        if: github.repository == 'natcap/invest'
         name: "AutoPR main into release branches"
         runs-on: ubuntu-latest
         permissions:
