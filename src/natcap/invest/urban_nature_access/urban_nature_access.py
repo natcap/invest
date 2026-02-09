@@ -479,14 +479,20 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/undersupplied_population.tif",
             about=gettext("The population experiencing an urban nature deficit."),
             data_type=float,
-            units=u.count
+            units=u.count,
+            created_if=(
+                f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
+                f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'")
         ),
         spec.SingleBandRasterOutput(
             id="oversupplied_population",
             path="intermediate/oversupplied_population.tif",
             about=gettext("The population experiencing an urban nature surplus."),
             data_type=float,
-            units=u.count
+            units=u.count,
+            created_if=(
+                f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
+                f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'")
         ),
         spec.SingleBandRasterOutput(
             id="distance_weighted_population_within_[SEARCH_RADIUS]",
@@ -520,7 +526,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="urban_nature_population_ratio",
             path="intermediate/urban_nature_population_ratio.tif",
             about=gettext("The calculated urban nature/population ratio."),
-            created_if="search_radius_mode == 'uniform radius'",
+            created_if=(
+                f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
+                f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'"),
             data_type=float,
             units=u.meter**2 / u.person
         ),
