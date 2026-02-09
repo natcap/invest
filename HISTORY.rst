@@ -111,6 +111,13 @@ Workbench
 * The "Manage Plugins" modal now presents a message upon successful
   installation or removal of a plugin.
   (`#2276 <https://github.com/natcap/invest/issues/2276>`_)
+* Improved the right-click context menu to include "Save Image as"
+  option when right-clicking on an image.
+  (`#2266 <https://github.com/natcap/invest/issues/2266>`_)
+* Improved handling of multiple open windows, such as when opening
+  the User's Guide, or a report.
+  (`#2353 <https://github.com/natcap/invest/issues/2353>`_)
+
 
 Carbon Storage and Sequestration
 ================================
