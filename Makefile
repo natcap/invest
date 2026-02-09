@@ -100,6 +100,7 @@ else
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
+REPORTS_BASE_URL := $(DIST_URL_BASE)/reports
 
 TESTRUNNER := pytest -vs --import-mode=importlib --durations=0
 
@@ -179,7 +180,7 @@ invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
 
 deploy_autotest_reports:
-	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(DIST_URL_BASE)/reports/
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(REPORTS_URL_BASE)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
