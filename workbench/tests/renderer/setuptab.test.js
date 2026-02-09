@@ -166,6 +166,21 @@ describe('Arguments form input types', () => {
     expect(input).not.toHaveValue('b');
   });
 
+  test('render a select input for an option_string with include_default', async () => {
+    const spec = baseArgsSpec('option_string');
+    spec.args.arg.include_default = true;
+    spec.args.arg.options = [
+      { key: 'a', display_name: 'Option A' },
+      { key: 'b', display_name: 'Option B' },
+    ];
+    const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
+    const input = await findByLabelText(`${spec.args.arg.name}`);
+    expect(input).toHaveDisplayValue('Select an option...');
+    expect(input).toHaveValue('placeholderOpt');
+    expect(input).not.toHaveValue('a');
+    expect(input).not.toHaveValue('b');
+  });
+
   test('initial arg values can contain extra args', async () => {
     const spec = baseArgsSpec('number');
     const displayedValue = '1';

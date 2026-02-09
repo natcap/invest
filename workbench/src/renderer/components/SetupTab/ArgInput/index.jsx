@@ -159,6 +159,7 @@ function parseArgType(argtype) {
 export default function ArgInput(props) {
   const uniqueId = useId();
   const inputRef = useRef();
+  const { t, i18n } = useTranslation();
 
   const {
     argkey,
@@ -191,6 +192,12 @@ export default function ArgInput(props) {
   }, [scrollEventCount, value]);
 
   function handleChange(event) {
+    /** Pass input value up to SetupTab for storage & validation. */
+    const { name, value } = event.currentTarget;
+    updateArgValues(name, value);
+  }
+
+  function handleDropdownChange(event) {
     /** Pass input value up to SetupTab for storage & validation. */
     const { name, value } = event.currentTarget;
     updateArgValues(name, value);
@@ -273,16 +280,25 @@ export default function ArgInput(props) {
         {opt.display_name ? opt.display_name : opt.key}
       </option>
     ));
+    if (argSpec.include_default) {
+      const placeholderOpt = (
+        <option value="placeholderOpt" key="placeholderOpt">
+          {t('Select an option...')}
+        </option>
+      );
+      options.splice(0, 0, placeholderOpt);
+    }
     form = (
       <Form.Control
         id={inputId}
         as="select"
         name={argkey}
         value={value}
-        onChange={handleChange}
+        onChange={handleDropdownChange}
         onFocus={handleFocus}
         disabled={!enabled}
         isValid={enabled && isValid}
+        isInvalid={enabled && validationMessage}
         custom
       >
         {options}

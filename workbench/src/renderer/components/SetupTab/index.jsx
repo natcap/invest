@@ -58,6 +58,8 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
     } else if (argsSpec[argkey].type === 'option_string') {
       if (argsDict[argkey]) {
         value = argsDict[argkey];
+      } else if (argsSpec[argkey].include_default) { // default to placeholder
+        value = "placeholderOpt";
       } else if (argsSpec[argkey].options.length > 0) { // default to first
         value = argsSpec[argkey].options[0].key;
       } else {

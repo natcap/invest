@@ -1600,6 +1600,10 @@ class OptionStringInput(Input):
     options is predetermined. If using `dropdown_function` instead, this
     should be an empty list."""
 
+    include_default: bool = False
+    """If True, a placeholder 'Select an option' will be included in the
+    dropdown options list as the default (selected but invalid) option."""
+
     dropdown_function: typing.Union[typing.Callable, None] = None
     """A function that returns a list of the values that this input may take.
     Use this if the set of options must be dynamically generated."""
