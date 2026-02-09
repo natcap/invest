@@ -513,7 +513,7 @@ jobs:
         id: invest-autotest
         if : |
           (github.event_name == 'push' &&
-          (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
+          (startsWith(github.ref, 'refs/heads/task') || github.ref == 'refs/heads/main')) ||
           (github.event_name == 'pull_request' && startsWith(github.head_ref, 'autorelease'))
         run: |
           mkdir autotest_dir
@@ -527,7 +527,7 @@ jobs:
           make print-REPORTS_URL_BASE >> $GITHUB_OUTPUT
 
       - name: Copy latest reports to static GCS URL
-        if: steps.invest-autotest-deploy.outcome == 'success' && github.ref == 'refs/heads/main'
+        if: steps.invest-autotest-deploy.outcome == 'success' && startsWith(github.ref, 'refs/heads/task')
         run: |
           DEST=gs://releases.naturalcapitalproject.org/invest-reports/latest
           gsutil -m rsync ${{ steps.invest-autotest-deploy.outputs.print-REPORTS_URL_BASE }} $DEST
