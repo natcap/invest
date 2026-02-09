@@ -135,7 +135,7 @@ class FileRegistryTests(unittest.TestCase):
         """
         output_spec = [
             spec.FileOutput(
-                id="foo_[SCENARIO]",
+                id="foo_[BAR]_[SCENARIO]",
                 path="intermediate_[SCENARIO]/foo.txt"
             )
         ]
@@ -148,7 +148,8 @@ class FileRegistryTests(unittest.TestCase):
         self.assertFalse(os.path.exists(expected_dir))
 
         # Resolving the path should create the directory
-        resolved_path = file_registry[("foo_[SCENARIO]", "baseline")]
+        resolved_path = file_registry[("foo_[BAR]_[SCENARIO]", "bar",
+                                       "baseline")]
 
         self.assertTrue(os.path.isdir(expected_dir))
         self.assertEqual(
