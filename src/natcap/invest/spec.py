@@ -1600,7 +1600,7 @@ class OptionStringInput(Input):
     options is predetermined. If using `dropdown_function` instead, this
     should be an empty list."""
 
-    include_default: bool = False
+    include_placeholder: bool = False
     """If True, a placeholder 'Select an option' will be included in the
     dropdown options list as the default (selected but invalid) option."""
 

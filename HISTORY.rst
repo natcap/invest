@@ -94,7 +94,7 @@ General
     (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
 * Docker container builds now use debian 13 "Trixie", which includes Python
   3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
-* Added an ``include_default`` attribute to the ModelSpec ``OptionStringInput``
+* Added an ``include_placeholder`` attribute to the ModelSpec ``OptionStringInput``
   class. If ``True``, a placeholder "Select an option" will be included as the
   default (selected but invalid) dropdown option for that input in the workbench.
   (`#2260 <https://github.com/natcap/invest/issues/2260>`_)

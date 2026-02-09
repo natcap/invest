@@ -280,7 +280,7 @@ export default function ArgInput(props) {
         {opt.display_name ? opt.display_name : opt.key}
       </option>
     ));
-    if (argSpec.include_default) {
+    if (argSpec.include_placeholder) {
       const placeholderOpt = (
         <option value="placeholderOpt" key="placeholderOpt">
           {t('Select an option...')}

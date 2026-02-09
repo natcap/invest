@@ -166,9 +166,9 @@ describe('Arguments form input types', () => {
     expect(input).not.toHaveValue('b');
   });
 
-  test('render a select input for an option_string with include_default', async () => {
+  test('render a select input for an option_string with include_placeholder', async () => {
     const spec = baseArgsSpec('option_string');
-    spec.args.arg.include_default = true;
+    spec.args.arg.include_placeholder = true;
     spec.args.arg.options = [
       { key: 'a', display_name: 'Option A' },
       { key: 'b', display_name: 'Option B' },
