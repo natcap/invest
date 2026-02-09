@@ -423,15 +423,6 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="weighted_avg_aspect",
-            path="intermediate_outputs/weighted_avg_aspect.tif",
-            about=gettext(
-                "Average aspect weighted by flow direction."
-            ),
-            data_type=float,
-            units=u.none
-        ),
-        spec.SingleBandRasterOutput(
             id="what_drains_to_stream",
             path="intermediate_outputs/what_drains_to_stream.tif",
             about=gettext(
