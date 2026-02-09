@@ -131,7 +131,7 @@ $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
 print-%:
-	@echo "$* = $($*)"
+	@echo "$*=$($*)"
 
 # Very useful for printing variables within scripts!
 # Like `make print-<variable>, only without also printing the variable name.

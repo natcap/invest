@@ -524,13 +524,13 @@ jobs:
         if: steps.invest-autotest.outcome == 'success' && matrix.os == 'windows-latest'
         run: |
           make deploy_autotest_reports AUTOTEST_DIR=autotest_dir
-          make print-REPORTS_URL_BASE >> $GITHUB_OUTPUT
+          make print-REPORTS_BASE_URL >> $GITHUB_OUTPUT
 
       - name: Copy latest reports to static GCS URL
         if: steps.invest-autotest-deploy.outcome == 'success' && startsWith(github.ref, 'refs/heads/task')
         run: |
           DEST=gs://releases.naturalcapitalproject.org/invest-reports/latest
-          gsutil -m rsync ${{ steps.invest-autotest-deploy.outputs.REPORTS_URL_BASE }} $DEST
+          gsutil -m rsync ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
 
       - name: Tar the workspace to preserve permissions (macOS)
         if: failure() && matrix.os == 'macos-15-intel'
