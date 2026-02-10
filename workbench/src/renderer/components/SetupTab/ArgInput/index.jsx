@@ -197,12 +197,6 @@ export default function ArgInput(props) {
     updateArgValues(name, value);
   }
 
-  function handleDropdownChange(event) {
-    /** Pass input value up to SetupTab for storage & validation. */
-    const { name, value } = event.currentTarget;
-    updateArgValues(name, value);
-  }
-
   // Messages with this pattern include validation feedback about
   // multiple inputs, but the whole message is repeated for each input.
   // It's more readable if filtered on the individual input.
@@ -294,7 +288,7 @@ export default function ArgInput(props) {
         as="select"
         name={argkey}
         value={value}
-        onChange={handleDropdownChange}
+        onChange={handleChange}
         onFocus={handleFocus}
         disabled={!enabled}
         isValid={enabled && isValid}
