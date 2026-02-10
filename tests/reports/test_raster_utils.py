@@ -351,6 +351,62 @@ class RasterPlotFacetsTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+class RasterPlotLongTitleTests(unittest.TestCase):
+    """Snapshot tests for plotting rasters with long titles."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.raster_config = raster_utils.RasterPlotConfig(
+            os.path.join(
+                self.workspace_dir,
+                'raster_with_extra_long_filename-for_testing_text_wrapping_in_images_for_reports.tif'),
+            RasterDatatype.continuous, RasterTransform.linear)
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_plot_raster_list_long_title_extra_wide_1_col(self):
+        """Test title wraps appropriately for 1-col layout, extra-wide AOI."""
+        figname = 'plot_raster_list_long_title_extra_wide_1_col.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (2, 10)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_long_title_wide_2_col(self):
+        """Test title wraps appropriately for 2-col layout, wide AOI."""
+        figname = 'plot_raster_list_long_title_wide_2_col.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (3, 8)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]*2
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_long_title_square_3_col(self):
+        """Test title wraps appropriately for 3-col layout, square AOI."""
+        figname = 'plot_raster_list_long_title_3_col.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]*3
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
 class RasterPlotUnitTextTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with unit text."""
 
