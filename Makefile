@@ -100,6 +100,7 @@ else
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
+REPORTS_BASE_URL := $(DIST_URL_BASE)/reports
 
 TESTRUNNER := pytest -vs --import-mode=importlib --durations=0
 
@@ -130,7 +131,7 @@ $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
 print-%:
-	@echo "$* = $($*)"
+	@echo "$*=$($*)"
 
 # Very useful for printing variables within scripts!
 # Like `make print-<variable>, only without also printing the variable name.
@@ -179,7 +180,7 @@ invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
 
 deploy_autotest_reports:
-	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(DIST_URL_BASE)/reports/
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(REPORTS_BASE_URL)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
