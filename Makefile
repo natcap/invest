@@ -180,7 +180,7 @@ invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
 
 deploy_autotest_reports:
-	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(REPORTS_URL_BASE)
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(REPORTS_BASE_URL)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
