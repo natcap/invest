@@ -73,6 +73,7 @@ General
   Reports exist for the Carbon, Coastal Vulnerability, NDR, & SDR models.
   Reports for other models will be developed and released over time.
   (`#2249 <https://github.com/natcap/invest/issues/2249>`_)
+
     * Reports generated from sample data are available at
       http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/
       (`#2338 <https://github.com/natcap/invest/issues/2338>`_)
