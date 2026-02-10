@@ -2,6 +2,7 @@ import base64
 import collections
 import logging
 import math
+import textwrap
 import os
 from io import BytesIO
 from enum import Enum
@@ -22,7 +23,6 @@ from pydantic.dataclasses import dataclass
 
 from natcap.invest import gettext
 from natcap.invest.spec import ModelSpec
-from natcap.invest.reports.report_constants import TABLE_PAGINATION_THRESHOLD
 
 LOGGER = logging.getLogger(__name__)
 
@@ -307,10 +307,23 @@ def _figure_subplots(xy_ratio, n_plots):
     return fig, axs
 
 
-def _get_title_kwargs(raster_path: str, resampled: bool, subtitle: str = ''):
+def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
+    # Max line widths determined experimentally; may change if needed.
+    if n_plots == 1 or _extra_wide_aoi(xy_ratio):
+        return 50  # 1-column layout
+    elif n_plots == 2 or _wide_aoi(xy_ratio):
+        return 40  # 2-column layout
+    else:
+        return 30  # 3-column layout
+
+
+def _get_title_kwargs(raster_path: str, resampled: bool, line_width: int, subtitle: str = ''):
     filename = os.path.basename(raster_path)
     label = f"{filename}{' (resampled)' if resampled else ''}"
-    label = f"{label}\n{subtitle}" if subtitle else label
+    label = textwrap.fill(label, width=line_width)
+    if subtitle:
+        subtitle = textwrap.fill(subtitle, width=line_width)
+        label = f"{label}\n{subtitle}"
     return {
         'fontfamily': 'monospace',
         'fontsize': TITLE_FONT_SIZE,
@@ -405,7 +418,9 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             imshow_kwargs['vmax'] = 1.5
             colorbar_kwargs['ticks'] = [0, 1]
 
-        ax.set_title(**_get_title_kwargs(raster_path, resampled))
+        title_line_width = _get_title_line_width(n_plots, xy_ratio)
+        ax.set_title(**_get_title_kwargs(raster_path, resampled,
+                                         title_line_width))
 
         units = _get_raster_units(raster_path)
         if units:
@@ -559,7 +574,9 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
                                               tif_list, subtitle_list):
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
         # all rasters are identical size; `resampled` will be the same for all
-        ax.set_title(**_get_title_kwargs(raster_path, resampled, subtitle))
+        title_line_width = _get_title_line_width(n_plots, xy_ratio)
+        ax.set_title(**_get_title_kwargs(raster_path, resampled,
+                                         title_line_width, subtitle))
         units = _get_raster_units(raster_path)
         if units:
             (ylim_kwargs,
