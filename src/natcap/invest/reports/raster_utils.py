@@ -322,7 +322,7 @@ def _get_title_kwargs(raster_path: str, resampled: bool, line_width: int, subtit
     label = f"{filename}{' (resampled)' if resampled else ''}"
     label = textwrap.fill(label, width=line_width)
     if subtitle:
-        subtitle = textwrap.fill(label, width=line_width)
+        subtitle = textwrap.fill(subtitle, width=line_width)
         label = f"{label}\n{subtitle}"
     return {
         'fontfamily': 'monospace',
