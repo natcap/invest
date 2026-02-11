@@ -177,8 +177,6 @@ describe('Arguments form input types', () => {
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveDisplayValue('Select an option...');
     expect(input).toHaveValue('placeholderOpt');
-    expect(input).not.toHaveValue('a');
-    expect(input).not.toHaveValue('b');
   });
 
   test('initial arg values can contain extra args', async () => {

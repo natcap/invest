@@ -159,7 +159,7 @@ function parseArgType(argtype) {
 export default function ArgInput(props) {
   const uniqueId = useId();
   const inputRef = useRef();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const {
     argkey,
