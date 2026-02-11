@@ -2255,7 +2255,7 @@ class ModelSpec(BaseModel):
             if save_file_registry:
                 file_registry_path = os.path.join(
                     preprocessed_args['workspace_dir'],
-                    f'file_registry{preprocessed_args.get("results_suffix", '')}.json')
+                    f'file_registry{preprocessed_args.get("results_suffix", "")}.json')
                 with open(file_registry_path, 'w') as json_file:
                     json.dump(registry, json_file, indent=4)
 
