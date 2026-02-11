@@ -99,6 +99,10 @@ General
     (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
 * Docker container builds now use debian 13 "Trixie", which includes Python
   3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
+* ``results_suffix`` is now optional to include as an input in ``ModelSpec``. All
+  core InVEST models will continue to include this input, but plugins will no
+  longer be required to support it.
+  (`#2229 <https://github.com/natcap/invest/issues/2229>`_)
 
 Workbench
 =========
