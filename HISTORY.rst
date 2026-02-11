@@ -103,6 +103,8 @@ General
     (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
 * Docker container builds now use debian 13 "Trixie", which includes Python
   3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
+* Added optional ``about`` attribute to ``ModelSpec``.
+  (`#2052 <https://github.com/natcap/invest/issues/2052>`_)
 
 Workbench
 =========
