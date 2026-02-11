@@ -2155,7 +2155,7 @@ class ModelSpec(BaseModel):
         file_registry = FileRegistry(
             outputs=self.outputs,
             workspace_dir=args['workspace_dir'],
-            file_suffix=args['results_suffix'])
+            file_suffix=args.get('results_suffix'))
         graph = taskgraph.TaskGraph(file_registry[taskgraph_key],
                                     n_workers=args['n_workers'])
         return args, file_registry, graph
@@ -2255,7 +2255,7 @@ class ModelSpec(BaseModel):
             if save_file_registry:
                 file_registry_path = os.path.join(
                     preprocessed_args['workspace_dir'],
-                    f'file_registry{preprocessed_args["results_suffix"]}.json')
+                    f'file_registry{preprocessed_args.get("results_suffix", '')}.json')
                 with open(file_registry_path, 'w') as json_file:
                     json.dump(registry, json_file, indent=4)
 
@@ -2263,7 +2263,8 @@ class ModelSpec(BaseModel):
                 reporter_module = importlib.import_module(self.reporter)
                 target_html_filepath = os.path.join(
                     preprocessed_args['workspace_dir'],
-                    f'{self.model_id}_report{preprocessed_args["results_suffix"]}.html')
+                    f'{self.model_id}_report{preprocessed_args.get(
+                    "results_suffix", '')}.html')
 
                 with natcap.invest.reports.configure_libraries():
                     reporter_module.report(

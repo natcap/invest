@@ -4,7 +4,7 @@ import tempfile
 import unittest
 
 import geometamaker
-from natcap.invest import spec
+from natcap.invest import spec, models
 from natcap.invest.unit_registry import u
 from osgeo import gdal
 from pydantic import ValidationError
@@ -321,6 +321,15 @@ class ResultsSuffixTests(unittest.TestCase):
     def test_suffix_string_no_entry(self):
         """Utils: test no suffix entry in args."""
         self.assertEqual(spec.SUFFIX.preprocess(None), '')
+
+    def test_suffix_included_in_all_models(self):
+        """Test that all core models include ResultsSuffixInput."""
+        missing_suffix = []
+        for module in models.pyname_to_module.values():
+            if not any([isinstance(i, spec.ResultsSuffixInput)
+                        for i in module.MODEL_SPEC.inputs]):
+                missing_suffix.append(module.MODEL_SPEC.model_id)
+        self.assertEqual(missing_suffix, [])
 
 
 class InputTests(unittest.TestCase):
