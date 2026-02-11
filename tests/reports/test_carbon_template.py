@@ -29,7 +29,7 @@ def _get_render_args(model_spec):
         'report_script': __file__,
         'model_id': model_spec.model_id,
         'model_name': model_spec.model_title,
-        'model_description': model_description,
+        'model_description': model_spec.about,
         'userguide_page': model_spec.userguide,
         'timestamp': timestamp,
         'args_dict': args_dict,

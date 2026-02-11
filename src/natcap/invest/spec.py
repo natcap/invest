@@ -1962,6 +1962,9 @@ class ModelSpec(BaseModel):
     e.g. ``'natcap.invest.ndr.reporter'``
     """
 
+    about: str = ''
+    """A brief description of the model."""
+
     @field_validator('reporter', mode='after')
     @classmethod
     def check_reporter(cls, value: str) -> str:
