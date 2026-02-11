@@ -2263,8 +2263,8 @@ class ModelSpec(BaseModel):
                 reporter_module = importlib.import_module(self.reporter)
                 target_html_filepath = os.path.join(
                     preprocessed_args['workspace_dir'],
-                    f'{self.model_id}_report{preprocessed_args.get(
-                    "results_suffix", '')}.html')
+                    (f'{self.model_id}_report'
+                     f'{preprocessed_args.get("results_suffix", "")}.html'))
 
                 with natcap.invest.reports.configure_libraries():
                     reporter_module.report(
