@@ -131,6 +131,14 @@ Pollination
   model run due to a conflicting geometry check.
   (`#2262 <https://github.com/natcap/invest/issues/2262>`_)
 
+SDR
+===
+* Sediment delivery ratio is now set to 1 in streams, rather than 0. This will
+  cause minor changes, primarily right around streams, to the sediment
+  deposition and avoided export rasters. It is not expected to cause any
+  significant change to results at the watershed scale.
+  (`#2379 <https://github.com/natcap/invest/issues/2379>`_)
+
 
 3.17.2 (2025-12-02)
 -------------------
