@@ -911,8 +911,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
+        workspace_dir = os.path.join(self.workspace_dir, 'workspace')
+        os.mkdir(workspace_dir)
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
-            self.workspace_dir)
+            workspace_dir)
         # modify args to account for user recharge
         args['user_defined_climate_zones'] = False
         args['monthly_alpha'] = False
