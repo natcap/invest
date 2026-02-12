@@ -11,7 +11,6 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
-    model_description = 'This is a description of the carbon model.'
     timestamp = '1970-01-01'
     args_dict = {'suffix': 'test'}
     img_src = 'bAse64eNcoDEdIMagE'
