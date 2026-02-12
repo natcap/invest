@@ -2267,6 +2267,7 @@ class ModelSpec(BaseModel):
                     json.dump(registry, json_file, indent=4)
 
             if generate_report:
+                LOGGER.info('Generating report for results')
                 reporter_module = importlib.import_module(self.reporter)
                 target_html_filepath = os.path.join(
                     preprocessed_args['workspace_dir'],
