@@ -541,8 +541,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="l_aligned",
-            path="intermediate_outputs/l_aligned.tif",
+            id="l",
+            path="L.tif",
             about=gettext(
                 "Map of local recharge. If a user-defined local recharge input"
                 " is provided, this is a copy of that layer, aligned and clipped"
@@ -725,7 +725,7 @@ def execute(args):
     align_index = len(input_align_list) - 1  # this aligns with the DEM
     if args['user_defined_local_recharge']:
         input_align_list.append(args['l_path'])
-        output_align_list.append(file_registry['l_aligned'])
+        output_align_list.append(file_registry['l'])
     elif args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
         output_align_list.append(file_registry['cz_aligned'])
@@ -819,7 +819,7 @@ def execute(args):
         l_avail_task = task_graph.add_task(
             func=_calculate_l_avail,
             args=(
-                file_registry['l_aligned'], gamma,
+                file_registry['l'], gamma,
                 file_registry['l_avail']),
             target_path_list=[file_registry['l_avail']],
             dependent_task_list=[align_task],
@@ -947,14 +947,14 @@ def execute(args):
                 [file_registry['kc_[MONTH]', month] for month in range(12)],
                 alpha_month_map,
                 beta_i, gamma, file_registry['stream'],
-                file_registry['l_aligned'],
+                file_registry['l'],
                 file_registry['l_avail'],
                 file_registry['l_sum_avail'],
                 file_registry['aet'],
                 file_registry['annual_precip'],
                 args['flow_dir_algorithm']),
             target_path_list=[
-                file_registry['l_aligned'],
+                file_registry['l'],
                 file_registry['l_avail'],
                 file_registry['l_sum_avail'],
                 file_registry['aet'],
@@ -973,7 +973,7 @@ def execute(args):
 
     vri_task = task_graph.add_task(
         func=_calculate_vri,
-        args=(file_registry['l_aligned'], file_registry['vri']),
+        args=(file_registry['l'], file_registry['vri']),
         target_path_list=[file_registry['vri']],
         dependent_task_list=vri_dependent_task_list,
         task_name='calculate vri')
@@ -981,7 +981,7 @@ def execute(args):
     aggregate_recharge_task = task_graph.add_task(
         func=_aggregate_recharge,
         args=(
-            args['aoi_path'], file_registry['l_aligned'],
+            args['aoi_path'], file_registry['l'],
             file_registry['vri'],
             file_registry['aggregate_vector']),
         target_path_list=[file_registry['aggregate_vector']],
@@ -995,7 +995,7 @@ def execute(args):
             args=(
                 (file_registry['flow_dir'], 1),
                 file_registry['l_sum']),
-            kwargs={'weight_raster_path_band': (file_registry['l_aligned'], 1)},
+            kwargs={'weight_raster_path_band': (file_registry['l'], 1)},
             target_path_list=[file_registry['l_sum']],
             dependent_task_list=vri_dependent_task_list + [
                 fill_pit_task, flow_dir_task, stream_threshold_task],
@@ -1006,7 +1006,7 @@ def execute(args):
             args=(
                 (file_registry['flow_dir'], 1),
                 file_registry['l_sum']),
-            kwargs={'weight_raster_path_band': (file_registry['l_aligned'], 1)},
+            kwargs={'weight_raster_path_band': (file_registry['l'], 1)},
             target_path_list=[file_registry['l_sum']],
             dependent_task_list=vri_dependent_task_list + [
                 fill_pit_task, flow_dir_task, stream_threshold_task],
@@ -1021,7 +1021,7 @@ def execute(args):
         func=seasonal_water_yield_core.route_baseflow_sum,
         args=(
             file_registry['flow_dir'],
-            file_registry['l_aligned'],
+            file_registry['l'],
             file_registry['l_avail'],
             file_registry['l_sum'],
             file_registry['stream'],
