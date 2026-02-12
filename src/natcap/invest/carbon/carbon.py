@@ -188,17 +188,6 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.FileOutput(
-            id="html_report",
-            path="report.html",
-            about=gettext(
-                "This file presents a summary of all data computed by the model. It also"
-                " includes descriptions of all other output files produced by the model,"
-                " so it is a good place to begin exploring and understanding model"
-                " results. Because this is an HTML file, it can be opened with any web"
-                " browser."
-            )
-        ),
         spec.SingleBandRasterOutput(
             id="c_storage_bas",
             path="c_storage_bas.tif",
