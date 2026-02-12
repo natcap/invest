@@ -222,7 +222,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         target_file.write(TEMPLATE.render(
             report_script=model_spec.reporter,
             invest_version=__version__,
-            report_filename=f'{model_spec.model_id}_report{args_dict["results_suffix"]}.html',
+            report_filepath=target_html_filepath,
             model_id=model_spec.model_id,
             model_name=model_spec.model_title,
             model_description=model_description,

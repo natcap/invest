@@ -11,7 +11,7 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
-    report_filename = 'carbon_report_test.html'
+    report_filepath = 'carbon_report_test.html'
     invest_version = '987.65.0'
     model_description = 'This is a description of the carbon model.'
     timestamp = '1970-01-01'
@@ -30,7 +30,7 @@ def _get_render_args(model_spec):
     return {
         'report_script': model_spec.reporter,
         'invest_version': invest_version,
-        'report_filename': report_filename,
+        'report_filepath': report_filepath,
         'model_id': model_spec.model_id,
         'model_name': model_spec.model_title,
         'model_description': model_description,
