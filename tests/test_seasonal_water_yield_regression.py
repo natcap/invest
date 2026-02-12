@@ -920,7 +920,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
         args['user_defined_local_recharge'] = True
-        recharge_ras_path = os.path.join(args['workspace_dir'], 'L.tif')
+        recharge_ras_path = os.path.join(self.workspace_dir, 'L.tif')
         make_recharge_raster(recharge_ras_path)
         args['l_path'] = recharge_ras_path
 
