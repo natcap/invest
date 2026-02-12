@@ -45,7 +45,7 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(
             set(spec),
             {'model_id', 'model_title', 'userguide', 'aliases', 'reporter',
-             'input_field_order', 'different_projections_ok',
+             'about', 'input_field_order', 'different_projections_ok',
              'validate_spatial_overlap', 'args', 'outputs', 'module_name'})
 
     def test_get_invest_validate(self):
