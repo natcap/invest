@@ -111,6 +111,9 @@ Workbench
 * The "Manage Plugins" modal now presents a message upon successful
   installation or removal of a plugin.
   (`#2276 <https://github.com/natcap/invest/issues/2276>`_)
+* Updated Workbench model FAQ Forum URLs to point to the new canonical tag
+  routes that include both the tag slug and tag ID.
+  (`#2376 <https://github.com/natcap/invest/issues/2376>`_)
 
 Coastal Vulnerability
 =====================
