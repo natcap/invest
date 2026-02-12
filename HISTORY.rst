@@ -125,6 +125,13 @@ Pollination
   model run due to a conflicting geometry check.
   (`#2262 <https://github.com/natcap/invest/issues/2262>`_)
 
+Seasonal Water Yield
+====================
+* The outputs ``L.tif`` and ``l_aligned.tif`` have been consolidated. ``L.tif``
+  in the top level of the workspace is the aligned copy of the local recharge
+  input if one is provided. Otherwise, it is the local recharge layer calculated
+  by the model. (`#2336 <https://github.com/natcap/invest/issues/2336>`_)
+
 
 3.17.2 (2025-12-02)
 -------------------
