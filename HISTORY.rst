@@ -108,6 +108,8 @@ General
   class. If ``True``, a placeholder "Select an option" will be included as the
   default (selected but invalid) dropdown option for that input in the workbench.
   (`#2260 <https://github.com/natcap/invest/issues/2260>`_)
+* Added optional ``about`` attribute to ``ModelSpec``.
+  (`#2052 <https://github.com/natcap/invest/issues/2052>`_)
 
 Workbench
 =========

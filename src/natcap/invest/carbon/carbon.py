@@ -14,11 +14,23 @@ from natcap.invest import gettext
 
 LOGGER = logging.getLogger(__name__)
 
+_model_description = gettext(
+    """
+    The InVEST Carbon Storage and Sequestration model uses maps of land use
+    along with stocks in four carbon pools (aboveground biomass,
+    belowground biomass, soil, and dead organic matter) to estimate the
+    amount of carbon stored in a landscape at baseline or the amount of
+    carbon sequestered over time. Optionally, the market or social value of
+    sequestered carbon, its annual rate of change, and a discount rate can
+    be used to estimate the value of this ecosystem service to society.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="carbon",
     model_title=gettext("Carbon Storage and Sequestration"),
     userguide="carbonstorage.html",
     reporter="natcap.invest.carbon.reporter",
+    about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),

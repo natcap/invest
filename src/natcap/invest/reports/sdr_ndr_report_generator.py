@@ -62,6 +62,14 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict).to_html(na_rep='')
 
+    model_description = model_spec.about
+    model_description += gettext(
+        """
+        If the model has not been calibrated, absolute values may not be
+        accurate and conclusions should be drawn by comparing relative
+        values instead.
+        """)
+
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
             report_script=model_spec.reporter,
@@ -70,6 +78,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             model_id=model_spec.model_id,
             model_name=model_spec.model_title,
             userguide_page=model_spec.userguide,
+            model_description=model_description,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
             inputs_img_src=inputs_img_src,

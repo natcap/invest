@@ -1966,6 +1966,9 @@ class ModelSpec(BaseModel):
     e.g. ``'natcap.invest.ndr.reporter'``
     """
 
+    about: str = ''
+    """A brief description of the model."""
+
     @field_validator('reporter', mode='after')
     @classmethod
     def check_reporter(cls, value: str) -> str:
@@ -2264,6 +2267,7 @@ class ModelSpec(BaseModel):
                     json.dump(registry, json_file, indent=4)
 
             if generate_report:
+                LOGGER.info('Generating report for results')
                 reporter_module = importlib.import_module(self.reporter)
                 target_html_filepath = os.path.join(
                     preprocessed_args['workspace_dir'],
