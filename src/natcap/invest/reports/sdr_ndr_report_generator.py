@@ -4,6 +4,7 @@
 import logging
 import time
 
+from natcap.invest import __version__
 from natcap.invest import gettext
 from natcap.invest.reports import (
     jinja_env, report_constants, sdr_ndr_utils, raster_utils)
@@ -63,7 +64,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
 
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
-            report_script=__file__,
+            report_script=model_spec.reporter,
+            invest_version=__version__,
+            report_filepath=target_html_filepath,
             model_id=model_spec.model_id,
             model_name=model_spec.model_title,
             userguide_page=model_spec.userguide,
