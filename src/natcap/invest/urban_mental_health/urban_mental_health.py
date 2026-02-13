@@ -1296,6 +1296,7 @@ def _translate_tc_target_to_ndvi_target(
 
     Returns:
         None
+
     """
     ndvi_info = pygeoprocessing.get_raster_info(base_ndvi_path)
     tc_info = pygeoprocessing.get_raster_info(tree_cover_path)
@@ -1375,114 +1376,6 @@ def _translate_tc_target_to_ndvi_target(
     LOGGER.info(f"Target NDVI Value: {ndvi_target}")
     df = pandas.DataFrame([ndvi_target[0]])
     df.to_csv(target_output_csv_path, header=False, index=False)
-
-
-    # curve_smooth = gam.predict(centers.reshape(-1, 1))
-
-    # fig, ax = plt.subplots()
-    # ax.plot(centers, curve_smooth, c='r', label='Fitted TC->NDVI curve')
-    # ax.scatter(x, y, c='b', label="Binned means", alpha=0.6)
-    # ax.set_xlabel("Tree cover (%)")
-    # ax.set_ylabel("Predicted NDVI")
-    # fig.tight_layout()
-    # fig.savefig(result_figure_path, dpi=150)
-    # plt.close(fig)
-
-    # return centers, curve_smooth.astype(numpy.float64)
-
-
-# def _apply_tc_target_to_alt_ndvi(base_ndvi_path, population_path,
-#                                  tree_cover_path, tc_target,
-#                                  target_delta_ndvi,
-#                                  nbins=256, nsplines=10):
-#     """Calculate delta_NDVI as difference between target NDVI (calculated from GAM) and baseline_NDVI
-
-#     I.e., computes:
-#     delta_ndvi = target_ndvi - base_ndvi
-
-#     * Note that negative differences are _not_ masked here
-
-#     Args:
-#         base_ndvi_path (str): path to baseline NDVI raster
-#         population_path (str): path to population raster
-#         tree_cover_path (str): path to tree cover raster with pixels expected
-#             as a percentage in range [0, 100]
-#         tc_target (float): target tree canopy cover value as a percentage (in range [0,100])
-#         target_delta_ndvi (str): path to output alternate NDVI raster
-#         nbins (int): number of tree cover bins to use when fitting curve
-#         nsplines (int): number of splines to use in GAM smoothing
-
-#     Returns:
-#         None
-#     """
-
-#     ndvi_target = _fit_tc_to_ndvi_curve(
-#         base_ndvi_path, tree_cover_path, population_path,
-#         tc_target, nbins, nsplines
-#     )
-
-#     ndvi_info = pygeoprocessing.get_raster_info(base_ndvi_path)
-#     tc_info = pygeoprocessing.get_raster_info(tree_cover_path)
-
-#     ndvi_nodata = ndvi_info["nodata"][0]
-#     tc_nodata = tc_info["nodata"][0]
-
-#     # ndvi_target = float(numpy.interp(tc_target, centers, curve))
-
-#     def _calc_delta_using_target_NDVI(ndvi, tcc, ndvi_nodata, tc_nodata,
-#                                       ndvi_target_val):
-#         """
-#         Calculate Delta_NDVI = NDVI_target - baseline NDVI
-        
-#         Args:
-#             ndvi (numpy.ndarray): baseline NDVI array
-#             tcc (numpy.ndarray): tree canopy cover array
-#             ndvi_nodata (float): nodata value for ndvi
-#             tc_nodata (float): nodata value for tree canopy cover
-
-#             ndvi_target_val (float): target NDVI value based on tc_target
-
-#         Returns:
-#             numpy.ndarray: alternate NDVI array
-
-#         """
-
-#         valid_mask = (~pygeoprocessing.array_equals_nodata(ndvi, ndvi_nodata) &
-#                       ~pygeoprocessing.array_equals_nodata(tcc, tc_nodata))
-#         result = numpy.empty(ndvi.shape, dtype=numpy.float32)
-#         result[:] = ndvi_nodata
-
-#         if not numpy.any(valid_mask):
-#             return result
-
-#         # tc_vals = numpy.clip(tc_arr[valid].astype(numpy.float64), 0.0, 1.0)
-#         tcc_vals = tcc[valid_mask].astype(numpy.float64)
-#         tcc_vals = numpy.clip(tcc_vals, 0, 100)
-#         # get predicted NDVI given current tcc, as per the fitted curve
-#         f_tc = numpy.interp(tcc_vals, centers_arr, curve_arr)
-#         # compute difference between target NDVI and predicted NDVI
-#         # i.e., get amount of exposure change need to bring pixel to target NDVI
-#         ndvi_diff = ndvi_target_val - f_tc
-
-#         # apply difference to base NDVI to get alt NDVI
-#         result[valid_mask] = (
-#             ndvi[valid_mask] + ndvi_diff).astype(numpy.float32)
-
-#         return result
-
-#     pygeoprocessing.raster_calculator(
-#         [
-#             (base_ndvi_path, 1),
-#             (tree_cover_path, 1),
-#             (ndvi_nodata, "raw"),
-#             (tc_nodata, "raw"),
-#             (ndvi_target, "raw"),
-#         ],
-#         _calc_delta_using_target_NDVI,
-#         target_delta_ndvi,
-#         ndvi_info["datatype"],
-#         ndvi_nodata
-#     )
 
 
 def calc_baseline_cases(population_raster, base_prevalence_vector,
