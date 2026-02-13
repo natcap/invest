@@ -407,6 +407,35 @@ class RasterPlotLongTitleTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+class RasterPlotSubTitleTests(unittest.TestCase):
+    """Snapshot tests for plotting rasters with subtitles."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.raster_config = raster_utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'raster.tif'),
+            RasterDatatype.continuous, RasterTransform.linear)
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_plot_raster_list_with_subtitle(self):
+        """Test subtitle appears."""
+        figname = 'plot_raster_list_subtitle.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        self.raster_config.subtitle = 'flow algorithm: D8'
+        config_list = [self.raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
 class RasterPlotUnitTextTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with unit text."""
 
@@ -446,6 +475,22 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         make_simple_raster(self.raster_config.raster_path, shape)
 
         config_list = [self.raster_config]*2
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    @patch('natcap.invest.reports.raster_utils._get_raster_units')
+    def test_plot_raster_list_unit_text_and_subtitle(self, mock_get_raster_units):
+        """Test unit text and subtitle do not conflict."""
+        mock_get_raster_units.return_value = 'flux capacitrons'
+        figname = 'plot_raster_list_unit_text_and_subtitle.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        self.raster_config.subtitle = 'flow algorithm: D8'
+        config_list = [self.raster_config]
         fig = raster_utils.plot_raster_list(config_list)
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)

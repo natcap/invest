@@ -17,7 +17,7 @@ TEMPLATE = jinja_env.get_template('models/sdr-ndr-report.html')
 
 def report(file_registry, args_dict, model_spec, target_html_filepath,
            raster_plot_configs: raster_utils.RasterPlotConfigGroup,
-           raster_plot_captions: raster_utils.RasterPlotCaptionGroup,
+           # raster_plot_captions: raster_utils.RasterPlotCaptionGroup,
            results_vector_id, results_vector_cols_to_sum):
     """Generate an HTML summary of model results.
 
@@ -45,11 +45,17 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
 
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         raster_plot_configs.inputs)
+    inputs_caption = raster_utils.caption_raster_list(
+        raster_plot_configs.inputs)
 
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         raster_plot_configs.outputs)
+    outputs_caption = raster_utils.caption_raster_list(
+        raster_plot_configs.outputs)
 
     intermediate_img_src = raster_utils.plot_and_base64_encode_rasters(
+        raster_plot_configs.intermediates)
+    intermediates_caption = raster_utils.caption_raster_list(
         raster_plot_configs.intermediates)
 
     (ws_vector_table, ws_vector_totals_table) = (
@@ -82,12 +88,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
             inputs_img_src=inputs_img_src,
-            inputs_caption=raster_plot_captions.inputs,
+            inputs_caption=inputs_caption,
             outputs_img_src=outputs_img_src,
-            outputs_caption=raster_plot_captions.outputs,
+            outputs_caption=outputs_caption,
             intermediate_outputs_heading=gettext('Stream Network Maps'),
             intermediate_outputs_img_src=intermediate_img_src,
-            intermediate_outputs_caption=raster_plot_captions.intermediates,
+            intermediate_outputs_caption=intermediates_caption,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
             ws_vector_table=ws_vector_table,
             ws_vector_totals_table=ws_vector_totals_table,

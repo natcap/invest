@@ -22,7 +22,7 @@ from osgeo import gdal
 from pydantic.dataclasses import dataclass
 
 from natcap.invest import gettext
-from natcap.invest.spec import ModelSpec
+from natcap.invest.spec import ModelSpec, Input, Output
 
 LOGGER = logging.getLogger(__name__)
 
@@ -143,11 +143,18 @@ class RasterPlotConfig:
     """A definition for how to plot a raster."""
 
     raster_path: str
-    """Filepath to a raster to plot."""
+    """Filepath to a raster to plot. The basename will be the plot title."""
     datatype: RasterDatatype
     """Datatype will determine colormap, legend, and resampling algorithm"""
+    spec: Input | Output
+    """The InVEST specification of the raster."""
     transform: RasterTransform = RasterTransform.linear
     """For highly skewed data, a transformation can help reveal variation."""
+    subtitle: str = ''
+    """An optional subtitle."""
+
+    def __post_init__(self):
+        self.caption = f'{self.spec.id}:{self.spec.about}'
 
 
 @dataclass
@@ -191,6 +198,10 @@ def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
         raster_path = id_lookup_table[raster_id]
         raster_plot_configs.append(RasterPlotConfig(raster_path, *other_args))
     return raster_plot_configs
+
+
+def caption_raster_list(raster_list: list[RasterPlotConfig]):
+    return [config.caption for config in raster_list]
 
 
 def generate_caption_from_raster_list(
@@ -420,7 +431,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
 
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
         ax.set_title(**_get_title_kwargs(raster_path, resampled,
-                                         title_line_width))
+                                         title_line_width, config.subtitle))
 
         units = _get_raster_units(raster_path)
         if units:

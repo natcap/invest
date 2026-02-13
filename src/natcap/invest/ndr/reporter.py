@@ -1,32 +1,9 @@
+from natcap.invest import gettext
 from natcap.invest.reports import raster_utils
-from natcap.invest.reports import sdr_ndr_utils
 from natcap.invest.reports import sdr_ndr_report_generator
 
 CALC_N = 'calc_n'
 CALC_P = 'calc_p'
-
-INPUT_RASTER_PLOT_TUPLES = [
-    ('dem_path', 'continuous'),
-    ('runoff_proxy_path', 'continuous'),
-    ('lulc_path', 'nominal')
-]
-
-OUTPUT_RASTER_PLOT_TUPLES = {
-    CALC_N: [
-        ('n_surface_export', 'continuous', 'linear'),
-        ('n_subsurface_export', 'continuous', 'linear'),
-        ('n_total_export', 'continuous', 'linear'),
-    ],
-    CALC_P: [
-        ('p_surface_export', 'continuous', 'linear')
-    ],
-}
-
-INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
-    ('masked_dem', 'continuous'),
-    ('what_drains_to_stream', 'binary'),
-    ('stream', 'binary_high_contrast'),
-]
 
 RESULTS_VECTOR_COL_NAMES = {
     CALC_N: [
@@ -80,40 +57,73 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         ``None``
     """
 
-    output_raster_plot_tuples = _get_nutrient_dependent_list(
-        args_dict, OUTPUT_RASTER_PLOT_TUPLES)
+    dem_config = raster_utils.RasterPlotConfig(
+        raster_path=args_dict['dem_path'],
+        datatype='continuous',
+        spec=model_spec.get_input('dem_path'))
+    runoff_proxy_config = raster_utils.RasterPlotConfig(
+        raster_path=args_dict['runoff_proxy_path'],
+        datatype='continuous',
+        spec=model_spec.get_input('runoff_proxy_path'))
+    lulc_config = raster_utils.RasterPlotConfig(
+        raster_path=args_dict['lulc_path'],
+        datatype='nominal',
+        spec=model_spec.get_input('lulc_path'))
+    input_raster_plot_configs = [dem_config, runoff_proxy_config, lulc_config]
 
-    input_raster_plot_configs = raster_utils.build_raster_plot_configs(
-        args_dict, INPUT_RASTER_PLOT_TUPLES)
+    n_surface_export_config = raster_utils.RasterPlotConfig(
+        raster_path=file_registry['n_surface_export'],
+        datatype='continuous',
+        spec=model_spec.get_output('n_surface_export'))
+    n_subsurface_export_config = raster_utils.RasterPlotConfig(
+        raster_path=file_registry['n_subsurface_export'],
+        datatype='continuous',
+        spec=model_spec.get_output('n_subsurface_export'))
+    n_total_export_config = raster_utils.RasterPlotConfig(
+        raster_path=file_registry['n_total_export'],
+        datatype='continuous',
+        spec=model_spec.get_output('n_total_export'))
+    p_surface_export_config = raster_utils.RasterPlotConfig(
+        raster_path=file_registry['p_surface_export'],
+        datatype='continuous',
+        spec=model_spec.get_output('p_surface_export'))
 
-    output_raster_plot_configs = raster_utils.build_raster_plot_configs(
-            file_registry, output_raster_plot_tuples)
+    output_raster_plot_configs = []
+    if CALC_N in args_dict:
+        output_raster_plot_configs.extend(
+            [n_surface_export_config,
+             n_subsurface_export_config,
+             n_total_export_config])
+    if CALC_P in args_dict:
+        output_raster_plot_configs.extend([p_surface_export_config])
 
-    intermediate_raster_plot_configs = raster_utils.build_raster_plot_configs(
-            file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
+    masked_dem_config = raster_utils.RasterPlotConfig(
+        raster_path=file_registry['masked_dem'],
+        datatype='continuous',
+        spec=model_spec.get_output('masked_dem'))
+    what_drains_config = raster_utils.RasterPlotConfig(
+        raster_path=file_registry['what_drains_to_stream'],
+        datatype='binary',
+        spec=model_spec.get_output('what_drains_to_stream'))
+    stream_config = raster_utils.RasterPlotConfig(
+        raster_path=file_registry['stream'],
+        datatype='binary_high_contrast',
+        spec=model_spec.get_output('stream'),
+        subtitle=f'flow algorithm: {args_dict["flow_dir_algorithm"]}')
+    stream_config.caption += gettext(
+        'Results were generated using the following flow direction '
+        'algorithm:')
+    stream_config.caption += gettext(
+        'The stream network may look incomplete at  this resolution, and '
+        'therefore it may be necessary to view the  full-resolution raster '
+        'in GIS to assess its accuracy.')
+    intermediate_raster_plot_configs = [
+        masked_dem_config, what_drains_config, stream_config]
 
     raster_plot_configs = raster_utils.RasterPlotConfigGroup(
         input_raster_plot_configs,
         output_raster_plot_configs,
         intermediate_raster_plot_configs)
-
-    input_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'input') for (id, _) in INPUT_RASTER_PLOT_TUPLES],
-        args_dict, file_registry, model_spec)
-    output_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'output') for (id, _, _) in output_raster_plot_tuples],
-        args_dict, file_registry, model_spec)
-    intermediate_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'output') for (id, _) in INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES],
-        args_dict, file_registry, model_spec)
-    intermediate_raster_caption = (
-        sdr_ndr_utils.update_caption_with_stream_map_info(
-            intermediate_raster_caption, args_dict['flow_dir_algorithm']))
-
-    captions = raster_utils.RasterPlotCaptionGroup(
-        inputs=input_raster_caption,
-        outputs=output_raster_caption,
-        intermediates=intermediate_raster_caption)
 
     results_vector_id = 'watershed_results_ndr'
     results_vector_cols_to_sum = _get_nutrient_dependent_list(
@@ -121,5 +131,5 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
-        raster_plot_configs, captions,
+        raster_plot_configs,
         results_vector_id, results_vector_cols_to_sum)
