@@ -57,6 +57,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
         raster_plot_configs.intermediates)
     intermediates_caption = raster_utils.caption_raster_list(
         raster_plot_configs.intermediates)
+    intermediate_outputs_heading = gettext(
+        f'Stream Network Maps (flow algorithm: {args_dict["flow_dir_algorithm"]})')
 
     (ws_vector_table, ws_vector_totals_table) = (
         sdr_ndr_utils.generate_results_table_from_vector(
@@ -91,7 +93,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             inputs_caption=inputs_caption,
             outputs_img_src=outputs_img_src,
             outputs_caption=outputs_caption,
-            intermediate_outputs_heading=gettext('Stream Network Maps'),
+            intermediate_outputs_heading=intermediate_outputs_heading,
             intermediate_outputs_img_src=intermediate_img_src,
             intermediate_outputs_caption=intermediates_caption,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,

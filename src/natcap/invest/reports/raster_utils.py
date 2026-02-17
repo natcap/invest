@@ -150,8 +150,8 @@ class RasterPlotConfig:
     """The InVEST specification of the raster."""
     transform: RasterTransform = RasterTransform.linear
     """For highly skewed data, a transformation can help reveal variation."""
-    subtitle: str = ''
-    """An optional subtitle."""
+    title: str | None = None
+    """An optional plot title. If ``None``, the filename is used."""
 
     def __post_init__(self):
         self.caption = f'{self.spec.id}:{self.spec.about}'
@@ -328,13 +328,9 @@ def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
         return 30  # 3-column layout
 
 
-def _get_title_kwargs(raster_path: str, resampled: bool, line_width: int, subtitle: str = ''):
-    filename = os.path.basename(raster_path)
-    label = f"{filename}{' (resampled)' if resampled else ''}"
+def _get_title_kwargs(title: str, resampled: bool, line_width: int):
+    label = f"{title}{' (resampled)' if resampled else ''}"
     label = textwrap.fill(label, width=line_width)
-    if subtitle:
-        subtitle = textwrap.fill(subtitle, width=line_width)
-        label = f"{label}\n{subtitle}"
     return {
         'fontfamily': 'monospace',
         'fontsize': TITLE_FONT_SIZE,
@@ -430,8 +426,9 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             colorbar_kwargs['ticks'] = [0, 1]
 
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
-        ax.set_title(**_get_title_kwargs(raster_path, resampled,
-                                         title_line_width, config.subtitle))
+        title = config.title if config.title is not None else os.path.basename(
+            raster_path)
+        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width))
 
         units = _get_raster_units(raster_path)
         if units:
@@ -527,7 +524,7 @@ def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
     return base64_encode(figure)
 
 
-def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
+def plot_raster_facets(tif_list, datatype, transform=None, title_list=None):
     """Plot a list of rasters that will all share a fixed colorscale.
 
     When all the rasters have the same shape and represent the same variable,
@@ -541,6 +538,8 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
             ('continuous', 'divergent').
         transform (str): string describing the transformation to apply
             to the colormap. Either 'linear' or 'log'.
+        title_list (list): Optional list of strings to use as subplot titles.
+            If ``None``, the raster filename is used as the title.
 
     """
     raster_info = pygeoprocessing.get_raster_info(tif_list[0])
@@ -552,8 +551,13 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     cmap_str = COLORMAPS[datatype]
     if transform is None:
         transform = 'linear'
-    if subtitle_list is None:
-        subtitle_list = ['']*n_plots
+    if title_list is None:
+        title_list = [os.path.basename(filepath) for filepath in tif_list]
+    if len(title_list) != len(tif_list):
+        raise ValueError(
+            f'length of title_list does not equal length of tif_list \n'
+            f'title_list: {title_list} \n'
+            f'tif_list: {tif_list}')
     resample_alg = resample_alg = RESAMPLE_ALGS[datatype]
     arr, resampled = _read_masked_array(tif_list[0], resample_alg)
     ndarray = numpy.empty((n_plots, *arr.shape))
@@ -581,13 +585,12 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
         cmap.set_under(cmap.colors[0])  # values below vmin (0s) get this color
     else:
         normalizer = plt.Normalize(vmin=vmin, vmax=vmax)
-    for arr, ax, raster_path, subtitle in zip(ndarray, axes.flatten(),
-                                              tif_list, subtitle_list):
+    for arr, ax, raster_path, title in zip(
+            ndarray, axes.flatten(), tif_list, title_list):
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
         # all rasters are identical size; `resampled` will be the same for all
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
-        ax.set_title(**_get_title_kwargs(raster_path, resampled,
-                                         title_line_width, subtitle))
+        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width))
         units = _get_raster_units(raster_path)
         if units:
             (ylim_kwargs,

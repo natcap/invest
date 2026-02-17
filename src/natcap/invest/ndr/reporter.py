@@ -108,11 +108,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     stream_config = raster_utils.RasterPlotConfig(
         raster_path=file_registry['stream'],
         datatype='binary_high_contrast',
-        spec=model_spec.get_output('stream'),
-        subtitle=f'flow algorithm: {args_dict["flow_dir_algorithm"]}')
-    stream_config.caption += gettext(
-        'Results were generated using the following flow direction '
-        'algorithm:')
+        spec=model_spec.get_output('stream'))
     stream_config.caption += gettext(
         'The stream network may look incomplete at  this resolution, and '
         'therefore it may be necessary to view the  full-resolution raster '
