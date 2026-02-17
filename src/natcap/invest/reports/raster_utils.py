@@ -131,7 +131,7 @@ class RasterDatatype(str, Enum):
 class RasterTransform(str, Enum):
     """The transformation to apply to values before mapping to colors.
 
-    Original values are plotted, but the colorbar will be use this scale.
+    Original values are plotted, but the colorbar will use this scale.
     """
 
     linear = 'linear'

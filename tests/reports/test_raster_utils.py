@@ -98,7 +98,8 @@ class RasterPlotLayoutTests(unittest.TestCase):
         self.workspace_dir = tempfile.mkdtemp()
         self.raster_config = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -188,12 +189,14 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         shape = (2, 8)
         continuous_raster = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
-            RasterDatatype.continuous)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
         make_simple_raster(continuous_raster.raster_path, shape)
 
         binary_raster = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'binary.tif'),
-            RasterDatatype.binary)
+            RasterDatatype.binary,
+            spec.Output(id='foo'))
         binary_array = numpy.zeros(shape=shape)
         binary_array[0] = 1
         pygeoprocessing.numpy_array_to_raster(
@@ -203,7 +206,8 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
 
         divergent_raster = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'divergent.tif'),
-            RasterDatatype.divergent)
+            RasterDatatype.divergent,
+            spec.Output(id='foo'))
         divergent_array = numpy.linspace(
             -1, 1, num=numpy.multiply(*shape)).reshape(*shape)
         pygeoprocessing.numpy_array_to_raster(
@@ -213,7 +217,8 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
 
         nominal_raster = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'nominal.tif'),
-            RasterDatatype.nominal)
+            RasterDatatype.nominal,
+            spec.Input(id='foo'))
         make_simple_nominal_raster(nominal_raster.raster_path, shape)
 
         config_list = [
@@ -230,15 +235,21 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         shape = (2, 8)
         continuous_raster_linear = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'),
+            transform=RasterTransform.linear)
         continuous_raster_log = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
-            RasterDatatype.continuous, RasterTransform.log)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'),
+            transform=RasterTransform.log)
         make_simple_raster(continuous_raster_linear.raster_path, shape)
 
         divergent_raster_log = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'divergent.tif'),
-            RasterDatatype.divergent, RasterTransform.log)
+            RasterDatatype.divergent,
+            spec.Output(id='foo'),
+            transform=RasterTransform.log)
         divergent_array = numpy.linspace(
             -1, 1, num=numpy.multiply(*shape)).reshape(*shape)
         pygeoprocessing.numpy_array_to_raster(
@@ -263,7 +274,8 @@ class RasterPlotLegendTests(unittest.TestCase):
         self.workspace_dir = tempfile.mkdtemp()
         self.raster_config = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
-            RasterDatatype.nominal, RasterTransform.linear)
+            RasterDatatype.nominal,
+            spec.Output(id='foo'))
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -351,8 +363,8 @@ class RasterPlotFacetsTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
-class RasterPlotLongTitleTests(unittest.TestCase):
-    """Snapshot tests for plotting rasters with long titles."""
+class RasterPlotTitleTests(unittest.TestCase):
+    """Snapshot tests for plotting rasters with various titles."""
 
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
@@ -361,7 +373,8 @@ class RasterPlotLongTitleTests(unittest.TestCase):
             os.path.join(
                 self.workspace_dir,
                 'raster_with_extra_long_filename-for_testing_text_wrapping_in_images_for_reports.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -406,29 +419,14 @@ class RasterPlotLongTitleTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
-
-class RasterPlotSubTitleTests(unittest.TestCase):
-    """Snapshot tests for plotting rasters with subtitles."""
-
-    def setUp(self):
-        """Override setUp function to create temp workspace directory."""
-        self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
-            os.path.join(self.workspace_dir, 'raster.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
-
-    def tearDown(self):
-        """Override tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
-
-    def test_plot_raster_list_with_subtitle(self):
-        """Test subtitle appears."""
-        figname = 'plot_raster_list_subtitle.png'
+    def test_plot_raster_list_override_title(self):
+        """Test default title can be overriden."""
+        figname = 'plot_raster_list_override_title.png'
         reference = os.path.join(REFS_DIR, figname)
         shape = (4, 4)
         make_simple_raster(self.raster_config.raster_path, shape)
 
-        self.raster_config.subtitle = 'flow algorithm: D8'
+        self.raster_config.title = 'Special Title'
         config_list = [self.raster_config]
         fig = raster_utils.plot_raster_list(config_list)
         actual_png = os.path.join(self.workspace_dir, figname)
@@ -444,7 +442,8 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         self.workspace_dir = tempfile.mkdtemp()
         self.raster_config = raster_utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'test.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -475,22 +474,6 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         make_simple_raster(self.raster_config.raster_path, shape)
 
         config_list = [self.raster_config]*2
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    @patch('natcap.invest.reports.raster_utils._get_raster_units')
-    def test_plot_raster_list_unit_text_and_subtitle(self, mock_get_raster_units):
-        """Test unit text and subtitle do not conflict."""
-        mock_get_raster_units.return_value = 'flux capacitrons'
-        figname = 'plot_raster_list_unit_text_and_subtitle.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (4, 4)
-        make_simple_raster(self.raster_config.raster_path, shape)
-
-        self.raster_config.subtitle = 'flow algorithm: D8'
-        config_list = [self.raster_config]
         fig = raster_utils.plot_raster_list(config_list)
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
