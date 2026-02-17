@@ -154,7 +154,9 @@ class RasterPlotConfig:
     """An optional plot title. If ``None``, the filename is used."""
 
     def __post_init__(self):
-        self.caption = f'{self.spec.id}:{self.spec.about}'
+        if self.title is None:
+            self.title = os.path.basename(self.raster_path)
+        self.caption = f'{self.title}:{self.spec.about}'
 
 
 @dataclass
@@ -426,9 +428,8 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             colorbar_kwargs['ticks'] = [0, 1]
 
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
-        title = config.title if config.title is not None else os.path.basename(
-            raster_path)
-        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width))
+        ax.set_title(**_get_title_kwargs(
+            config.title, resampled, title_line_width))
 
         units = _get_raster_units(raster_path)
         if units:
