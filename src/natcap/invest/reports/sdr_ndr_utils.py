@@ -28,21 +28,3 @@ def generate_results_table_from_vector(filepath, cols_to_sum):
         index=False, na_rep='', classes=css_classes)
 
     return (html_table_main, html_table_totals)
-
-
-def update_caption_with_stream_map_info(caption: list[str], flow_dir_alg: str):
-    stream_map_info_part_1 = gettext((
-        'Results were generated using the following flow direction '
-        'algorithm:'))
-    stream_map_info_part_2 = gettext(
-        ('The stream network may look incomplete at  this resolution, and '
-         'therefore it may be necessary to view the  full-resolution raster '
-         'in GIS to assess its accuracy.'))
-    stream_map_info = (
-        f' {stream_map_info_part_1} {flow_dir_alg.upper()}. '
-        f'{stream_map_info_part_2}')
-    return [
-        (list_item + stream_map_info
-            if list_item.startswith('stream')
-            else list_item)
-        for list_item in caption]

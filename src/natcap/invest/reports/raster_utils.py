@@ -159,20 +159,6 @@ class RasterPlotConfig:
         self.caption = f'{self.title}:{self.spec.about}'
 
 
-@dataclass
-class RasterPlotConfigGroup:
-    inputs: list[RasterPlotConfig] | None
-    outputs: list[RasterPlotConfig] | None
-    intermediates: list[RasterPlotConfig] | None
-
-
-@dataclass
-class RasterPlotCaptionGroup:
-    inputs: list[str] | None
-    outputs: list[str] | None
-    intermediates: list[str] | None
-
-
 def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
     """Build RasterPlotConfigs for use in plotting input or output rasters.
 
@@ -204,22 +190,6 @@ def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
 
 def caption_raster_list(raster_list: list[RasterPlotConfig]):
     return [config.caption for config in raster_list]
-
-
-def generate_caption_from_raster_list(
-        raster_list: list[tuple[str, str]], args_dict,
-        file_registry, model_spec: ModelSpec):
-    """Concatenate filenames and metadata descriptions to create captions."""
-    caption = []
-    for (id, input_or_output) in raster_list:
-        if input_or_output == 'input':
-            filename = os.path.basename(args_dict[id])
-            about_text = model_spec.get_input(id).about
-        elif input_or_output == 'output':
-            about_text = model_spec.get_output(id).about
-            filename = os.path.basename(file_registry[id])
-        caption.append(f'{filename}:{about_text}')
-    return caption
 
 
 def _read_masked_array(filepath, resample_method):

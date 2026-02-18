@@ -484,41 +484,35 @@ class RasterCaptionTests(unittest.TestCase):
     """Unit tests for caption-generating utility."""
 
     def test_generate_caption_from_raster_list(self):
-        raster_list = [('raster_1', 'input'), ('raster_2', 'output')]
         args_dict = {'raster_1': 'path/to/raster_1.tif'}
         file_registry = {'raster_2': 'path/to/raster_2.tif'}
-        model_spec = spec.ModelSpec(
-            model_id='',
-            model_title='',
-            userguide='',
-            module_name='',
-            input_field_order=[['raster_1']],
-            inputs=[
-                spec.SingleBandRasterInput(
-                    id='raster_1',
-                    units=u.none,
-                    about='Map of land use/land cover codes.',
-                ),
-            ],
-            outputs=[
-                spec.SingleBandRasterOutput(
-                    id='raster_2',
-                    path='path/to/raster_2.tif',
-                    units=u.metric_ton / u.hectare,
-                    about=('The total amount of sediment exported from each '
-                           'pixel that reaches the stream.'),
-                )
-            ],
-        )
+
+        about_raster_1 = 'Map of land use/land cover codes.'
+        raster1_config = raster_utils.RasterPlotConfig(
+            raster_path=args_dict['raster_1'],
+            datatype='nominal',
+            spec=spec.Input(
+                id='raster_1',
+                about=about_raster_1))
+
+        about_raster_2 = ('The total amount of sediment exported from each '
+                          'pixel that reaches the stream.')
+        caption_appendix = 'extra text'
+        raster2_config = raster_utils.RasterPlotConfig(
+            raster_path=file_registry['raster_2'],
+            datatype='continuous',
+            spec=spec.Output(
+                id='raster_2',
+                about=about_raster_2))
+        raster2_config.caption += caption_appendix
 
         expected_caption = [
-            'raster_1.tif:Map of land use/land cover codes.',
-            ('raster_2.tif:The total amount of sediment exported from each '
-             'pixel that reaches the stream.')
+            f'raster_1.tif:{about_raster_1}',
+            f'raster_2.tif:{about_raster_2}{caption_appendix}'
         ]
 
-        generated_caption = raster_utils.generate_caption_from_raster_list(
-            raster_list, args_dict, file_registry, model_spec)
+        generated_caption = raster_utils.caption_raster_list(
+            [raster1_config, raster2_config])
 
         self.assertEqual(generated_caption, expected_caption)
 

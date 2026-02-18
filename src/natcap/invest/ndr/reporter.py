@@ -113,16 +113,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     intermediate_raster_plot_configs = [
         masked_dem_config, what_drains_config, stream_config]
 
-    raster_plot_configs = raster_utils.RasterPlotConfigGroup(
-        input_raster_plot_configs,
-        output_raster_plot_configs,
-        intermediate_raster_plot_configs)
-
     results_vector_id = 'watershed_results_ndr'
     results_vector_cols_to_sum = _get_nutrient_dependent_list(
         args_dict, RESULTS_VECTOR_COL_NAMES)
 
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
-        raster_plot_configs,
-        results_vector_id, results_vector_cols_to_sum)
+        input_raster_plot_configs, output_raster_plot_configs,
+        intermediate_raster_plot_configs, results_vector_id,
+        results_vector_cols_to_sum)
