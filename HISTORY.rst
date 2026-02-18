@@ -140,6 +140,7 @@ Workbench
 
 
 Carbon Storage and Sequestration
+================================
 * Previously, the Carbon model generated an HTML report consisting of a table
   of model inputs and a table of aggregate results. That report has been
   replaced with a new report containing the same features plus many more.
