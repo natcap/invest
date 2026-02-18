@@ -1,19 +1,7 @@
-{% set accent_color_suffix = model_id if model_id else 'default' %}
 <style>
   :root {
     --invest-green: #148f68;
-    --accent-color-default: #f0f0f0;
-
-    /* Model-specific accent colors should be added here as needed.
-       Helpful random color generator: https://rgbcolorpicker.com/random/pastel */
-    /* Make sure each accent color has sufficient contrast with black (#000).
-       Minimum 4.5:1; higher is better. Check with https://www.whocanuse.com/. */
-    --accent-color-carbon: #bed4f0;
-    --accent-color-coastal_vulnerability: #fff6d8;
-    --accent-color-ndr: #c2da9d;
-    --accent-color-sdr: #e4b5db;
-
-    --accent-color: var(--accent-color-{{ accent_color_suffix }});
+    --accent-color: #e9efec;
     --caption-border: 1px solid #000;
   }
   * {
