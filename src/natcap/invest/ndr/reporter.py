@@ -1,6 +1,7 @@
 from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
 from natcap.invest.reports import sdr_ndr_report_generator
+from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 
 CALC_N = 'calc_n'
 CALC_P = 'calc_p'
@@ -57,35 +58,35 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         ``None``
     """
 
-    dem_config = raster_utils.RasterPlotConfig(
+    dem_config = RasterPlotConfig(
         raster_path=args_dict['dem_path'],
-        datatype='continuous',
+        datatype=RasterDatatype.continuous,
         spec=model_spec.get_input('dem_path'))
-    runoff_proxy_config = raster_utils.RasterPlotConfig(
+    runoff_proxy_config = RasterPlotConfig(
         raster_path=args_dict['runoff_proxy_path'],
-        datatype='continuous',
+        datatype=RasterDatatype.continuous,
         spec=model_spec.get_input('runoff_proxy_path'))
-    lulc_config = raster_utils.RasterPlotConfig(
+    lulc_config = RasterPlotConfig(
         raster_path=args_dict['lulc_path'],
-        datatype='nominal',
+        datatype=RasterDatatype.nominal,
         spec=model_spec.get_input('lulc_path'))
     input_raster_plot_configs = [dem_config, runoff_proxy_config, lulc_config]
 
-    n_surface_export_config = raster_utils.RasterPlotConfig(
+    n_surface_export_config = RasterPlotConfig(
         raster_path=file_registry['n_surface_export'],
-        datatype='continuous',
+        datatype=RasterDatatype.continuous,
         spec=model_spec.get_output('n_surface_export'))
-    n_subsurface_export_config = raster_utils.RasterPlotConfig(
+    n_subsurface_export_config = RasterPlotConfig(
         raster_path=file_registry['n_subsurface_export'],
-        datatype='continuous',
+        datatype=RasterDatatype.continuous,
         spec=model_spec.get_output('n_subsurface_export'))
-    n_total_export_config = raster_utils.RasterPlotConfig(
+    n_total_export_config = RasterPlotConfig(
         raster_path=file_registry['n_total_export'],
-        datatype='continuous',
+        datatype=RasterDatatype.continuous,
         spec=model_spec.get_output('n_total_export'))
-    p_surface_export_config = raster_utils.RasterPlotConfig(
+    p_surface_export_config = RasterPlotConfig(
         raster_path=file_registry['p_surface_export'],
-        datatype='continuous',
+        datatype=RasterDatatype.continuous,
         spec=model_spec.get_output('p_surface_export'))
 
     output_raster_plot_configs = []
@@ -97,17 +98,17 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     if args_dict[CALC_P]:
         output_raster_plot_configs.extend([p_surface_export_config])
 
-    masked_dem_config = raster_utils.RasterPlotConfig(
+    masked_dem_config = RasterPlotConfig(
         raster_path=file_registry['masked_dem'],
-        datatype='continuous',
+        datatype=RasterDatatype.continuous,
         spec=model_spec.get_output('masked_dem'))
-    what_drains_config = raster_utils.RasterPlotConfig(
+    what_drains_config = RasterPlotConfig(
         raster_path=file_registry['what_drains_to_stream'],
-        datatype='binary',
+        datatype=RasterDatatype.binary,
         spec=model_spec.get_output('what_drains_to_stream'))
-    stream_config = raster_utils.RasterPlotConfig(
+    stream_config = RasterPlotConfig(
         raster_path=file_registry['stream'],
-        datatype='binary_high_contrast',
+        datatype=RasterDatatype.binary_high_contrast,
         spec=model_spec.get_output('stream'))
     stream_config.caption += report_constants.STREAM_CAPTION_APPENDIX
     intermediate_raster_plot_configs = [

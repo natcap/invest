@@ -1,6 +1,9 @@
 from natcap.invest.reports import sdr_ndr_report_generator
 from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
+from natcap.invest.reports.raster_utils import RasterDatatype
+from natcap.invest.reports.raster_utils import RasterTransform
+from natcap.invest.reports.raster_utils import RasterPlotConfig
 
 
 def report(file_registry, args_dict, model_spec, target_html_filepath):
@@ -19,66 +22,66 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         ``None``
     """
     input_raster_plot_configs = [
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=args_dict['dem_path'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_input('dem_path')),
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=args_dict['erodibility_path'],
-            datatype='continuous',
-            spec=model_spec.get_input('dem_path')),
-        raster_utils.RasterPlotConfig(
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_input('erodibility_path')),
+        RasterPlotConfig(
             raster_path=args_dict['erosivity_path'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_input('erosivity_path')),
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=args_dict['lulc_path'],
-            datatype='nominal',
+            datatype=RasterDatatype.nominal,
             spec=model_spec.get_input('lulc_path'))
     ]
 
     output_raster_plot_configs = [
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=file_registry['avoided_erosion'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('avoided_erosion')),
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=file_registry['avoided_export'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('avoided_export'),
-            transform='log'),
-        raster_utils.RasterPlotConfig(
+            transform=RasterTransform.log),
+        RasterPlotConfig(
             raster_path=file_registry['sed_deposition'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('sed_deposition'),
-            transform='log'),
-        raster_utils.RasterPlotConfig(
+            transform=RasterTransform.log),
+        RasterPlotConfig(
             raster_path=file_registry['sed_export'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('sed_export'),
-            transform='log'),
-        raster_utils.RasterPlotConfig(
+            transform=RasterTransform.log),
+        RasterPlotConfig(
             raster_path=file_registry['rkls'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('rkls')),
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=file_registry['usle'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('usle'),
-            transform='log')
+            transform=RasterTransform.log)
     ]
 
-    masked_dem_config = raster_utils.RasterPlotConfig(
+    masked_dem_config = RasterPlotConfig(
         raster_path=file_registry['pit_filled_dem'],
-        datatype='continuous',
+        datatype=RasterDatatype.continuous,
         spec=model_spec.get_output('pit_filled_dem'))
-    what_drains_config = raster_utils.RasterPlotConfig(
+    what_drains_config = RasterPlotConfig(
         raster_path=file_registry['what_drains_to_stream'],
-        datatype='binary',
+        datatype=RasterDatatype.binary,
         spec=model_spec.get_output('what_drains_to_stream'))
-    stream_config = raster_utils.RasterPlotConfig(
+    stream_config = RasterPlotConfig(
         raster_path=file_registry['stream'],
-        datatype='binary_high_contrast',
+        datatype=RasterDatatype.binary_high_contrast,
         spec=model_spec.get_output('stream'))
     stream_config.caption += report_constants.STREAM_CAPTION_APPENDIX
     intermediate_raster_plot_configs = [

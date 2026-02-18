@@ -10,6 +10,7 @@ import pygeoprocessing
 from natcap.invest import __version__
 from natcap.invest import gettext
 from natcap.invest.reports import jinja_env, raster_utils, report_constants
+from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 from natcap.invest.spec import ModelSpec
 from natcap.invest.unit_registry import u
 
@@ -120,57 +121,57 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         ``None``
     """
     input_raster_config_list = [
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=args_dict['lulc_bas_path'],
-            datatype='nominal',
+            datatype=RasterDatatype.nominal,
             spec=model_spec.get_input('lulc_bas_path'))]
 
     output_raster_config_list = [
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=file_registry['c_storage_bas'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('c_storage_bas'))]
     
     intermediate_raster_config_lists = [[
-        raster_utils.RasterPlotConfig(
+        RasterPlotConfig(
             raster_path=file_registry[f'c_{pool_type}_bas'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output(f'c_{pool_type}_bas'))
         for pool_type in _CARBON_POOLS]]
 
     if args_dict['calc_sequestration']:
         input_raster_config_list.append(
-            raster_utils.RasterPlotConfig(
+            RasterPlotConfig(
                 raster_path=args_dict['lulc_alt_path'],
-                datatype='nominal',
+                datatype=RasterDatatype.nominal,
                 spec=model_spec.get_input('lulc_alt_path')))
 
         output_raster_config_list.extend([
-            raster_utils.RasterPlotConfig(
+            RasterPlotConfig(
                 raster_path=file_registry['c_storage_alt'],
-                datatype='continuous',
+                datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('c_storage_alt')),
-            raster_utils.RasterPlotConfig(
+            RasterPlotConfig(
                 raster_path=file_registry['c_change_bas_alt'],
-                datatype='divergent',
+                datatype=RasterDatatype.divergent,
                 spec=model_spec.get_output('c_change_bas_alt'))])
 
         intermediate_raster_config_lists = [[
-            raster_utils.RasterPlotConfig(
+            RasterPlotConfig(
                 raster_path=file_registry[f'c_{pool_type}_bas'],
-                datatype='continuous',
+                datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output(f'c_{pool_type}_bas')),
-            raster_utils.RasterPlotConfig(
+            RasterPlotConfig(
                 raster_path=file_registry[f'c_{pool_type}_alt'],
-                datatype='continuous',
+                datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output(f'c_{pool_type}_alt')),
          ] for pool_type in _CARBON_POOLS]
 
     if args_dict['do_valuation']:
         output_raster_config_list.append(
-            raster_utils.RasterPlotConfig(
+            RasterPlotConfig(
                 raster_path=file_registry['npv_alt'],
-                datatype='divergent',
+                datatype=RasterDatatype.divergent,
                 spec=model_spec.get_output('npv_alt')))
 
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
