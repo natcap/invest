@@ -65,10 +65,15 @@ MAX_SUBPLOT_HEIGHT_INCHES = 7  # 700px / 100 dpi = 7 in
 TITLE_FONT_SIZE = 13  # 13pt ≈ 18.1px
 SUBTITLE_FONT_SIZE = 11  # 11pt ≈ 15.3px
 
+# There is not enough contrast between the colors at opposite ends
+# of divergent colormaps. Truncating them helps a bit.
+truncated_PuOr_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+    'truncated_PuOr', matplotlib.cm.PuOr(numpy.linspace(0.10, 0.90, 256)))
+
 # Mapping 'datatype' to colormaps and resampling algorithms
 COLORMAPS = {
     'continuous': 'viridis',
-    'divergent': 'BrBG',
+    'divergent': truncated_PuOr_cmap,
     # Default for nominal data is matplotlib's tab20.
     # If > 20 colors are needed, colormap will be generated with distinctipy.
     'nominal': 'tab20',
