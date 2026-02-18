@@ -6,7 +6,7 @@ import pandas
 
 from natcap.invest import gettext
 from natcap.invest.reports.report_constants import TABLE_PAGINATION_THRESHOLD
-
+    
 
 def generate_results_table_from_vector(filepath, cols_to_sum):
     vector_df = geopandas.read_file(filepath, engine='fiona')

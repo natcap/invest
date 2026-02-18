@@ -1,5 +1,5 @@
-from natcap.invest import gettext
 from natcap.invest.reports import raster_utils
+from natcap.invest.reports import report_constants
 from natcap.invest.reports import sdr_ndr_report_generator
 
 CALC_N = 'calc_n'
@@ -109,10 +109,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         raster_path=file_registry['stream'],
         datatype='binary_high_contrast',
         spec=model_spec.get_output('stream'))
-    stream_config.caption += gettext(
-        'The stream network may look incomplete at  this resolution, and '
-        'therefore it may be necessary to view the  full-resolution raster '
-        'in GIS to assess its accuracy.')
+    stream_config.caption += report_constants.STREAM_CAPTION_APPENDIX
     intermediate_raster_plot_configs = [
         masked_dem_config, what_drains_config, stream_config]
 

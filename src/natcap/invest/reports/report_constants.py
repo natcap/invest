@@ -12,4 +12,10 @@ RASTER_GROUP_CAPTION = gettext(
     'rasters are available in the output workspace.'
 )
 
+STREAM_CAPTION_APPENDIX = gettext(
+    'The stream network may look incomplete at  this resolution, and '
+    'therefore it may be necessary to view the  full-resolution raster '
+    'in GIS to assess its accuracy.'
+)
+
 TABLE_PAGINATION_THRESHOLD = 10

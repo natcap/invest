@@ -17,45 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/carbon.html')
 
-
-def _get_raster_plot_tuples(args_dict: dict) -> tuple[
-        list[tuple[str, ...]],
-        list[tuple[str, ...]],
-        list[list[tuple[str, ...]]]]:
-    input_raster_plot_tuples = [
-        ('lulc_bas_path', 'nominal'),
-    ]
-    if args_dict['calc_sequestration']:
-        input_raster_plot_tuples.extend([
-            ('lulc_alt_path', 'nominal'),
-        ])
-
-    output_raster_plot_tuples = [
-        ('c_storage_bas', 'continuous', 'linear'),
-    ]
-    if args_dict['calc_sequestration']:
-        output_raster_plot_tuples.extend([
-            ('c_storage_alt', 'continuous', 'linear'),
-            ('c_change_bas_alt', 'divergent', 'linear'),
-        ])
-    if args_dict['do_valuation']:
-        output_raster_plot_tuples.extend([
-            ('npv_alt', 'divergent', 'linear'),
-        ])
-
-    if args_dict['calc_sequestration']:
-        intermediate_output_raster_plot_tuples = [[
-            (f'c_{pool_type}_bas', 'continuous', 'linear'),
-            (f'c_{pool_type}_alt', 'continuous', 'linear')
-         ] for pool_type in ['above', 'below', 'dead', 'soil']]
-    else:
-        intermediate_output_raster_plot_tuples = [[
-            (f'c_{pool_type}_bas', 'continuous', 'linear')
-            for pool_type in ['above', 'below', 'dead', 'soil']]]
-
-    return (input_raster_plot_tuples,
-            output_raster_plot_tuples,
-            intermediate_output_raster_plot_tuples)
+_CARBON_POOLS = ['above', 'below', 'dead', 'soil']
 
 
 def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
@@ -77,6 +39,7 @@ def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
         carbon pool type.
     """
     if args_dict['calc_sequestration']:
+        # make sure this order matches order of `_CARBON_POOLS`
         return [
             gettext('Carbon Maps: Aboveground'),
             gettext('Carbon Maps: Belowground'),
@@ -156,33 +119,75 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     Returns:
         ``None``
     """
-    (input_raster_tuples,
-     output_raster_tuples,
-     intermediate_raster_tuples) = _get_raster_plot_tuples(args_dict)
+    input_raster_config_list = [
+        raster_utils.RasterPlotConfig(
+            raster_path=args_dict['lulc_bas_path'],
+            datatype='nominal',
+            spec=model_spec.get_input('lulc_bas_path'))]
 
-    input_raster_plot_configs = raster_utils.build_raster_plot_configs(
-        args_dict, input_raster_tuples)
+    output_raster_config_list = [
+        raster_utils.RasterPlotConfig(
+            raster_path=file_registry['c_storage_bas'],
+            datatype='continuous',
+            spec=model_spec.get_output('c_storage_bas'))]
+    
+    intermediate_raster_config_lists = [[
+        raster_utils.RasterPlotConfig(
+            raster_path=file_registry[f'c_{pool_type}_bas'],
+            datatype='continuous',
+            spec=model_spec.get_output(f'c_{pool_type}_bas'))
+        for pool_type in _CARBON_POOLS]]
+
+    if args_dict['calc_sequestration']:
+        input_raster_config_list.append(
+            raster_utils.RasterPlotConfig(
+                raster_path=args_dict['lulc_alt_path'],
+                datatype='nominal',
+                spec=model_spec.get_input('lulc_alt_path')))
+
+        output_raster_config_list.extend([
+            raster_utils.RasterPlotConfig(
+                raster_path=file_registry['c_storage_alt'],
+                datatype='continuous',
+                spec=model_spec.get_output('c_storage_alt')),
+            raster_utils.RasterPlotConfig(
+                raster_path=file_registry['c_change_bas_alt'],
+                datatype='divergent',
+                spec=model_spec.get_output('c_change_bas_alt'))])
+
+        intermediate_raster_config_lists = [[
+            raster_utils.RasterPlotConfig(
+                raster_path=file_registry[f'c_{pool_type}_bas'],
+                datatype='continuous',
+                spec=model_spec.get_output(f'c_{pool_type}_bas')),
+            raster_utils.RasterPlotConfig(
+                raster_path=file_registry[f'c_{pool_type}_alt'],
+                datatype='continuous',
+                spec=model_spec.get_output(f'c_{pool_type}_alt')),
+         ] for pool_type in _CARBON_POOLS]
+
+    if args_dict['do_valuation']:
+        output_raster_config_list.append(
+            raster_utils.RasterPlotConfig(
+                raster_path=file_registry['npv_alt'],
+                datatype='divergent',
+                spec=model_spec.get_output('npv_alt')))
+
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        input_raster_plot_configs)
-    input_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'input') for (id, _) in input_raster_tuples],
-        args_dict, file_registry, model_spec)
-
-    output_raster_plot_configs = raster_utils.build_raster_plot_configs(
-            file_registry, output_raster_tuples)
+        input_raster_config_list)
+    input_raster_caption = raster_utils.caption_raster_list(
+        input_raster_config_list)
+    
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        output_raster_plot_configs)
-    output_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'output') for (id, _, _) in output_raster_tuples],
-        args_dict, file_registry, model_spec)
+        output_raster_config_list)
+    output_raster_caption = raster_utils.caption_raster_list(
+        output_raster_config_list)
 
-    intermediate_raster_plot_configs = [raster_utils.build_raster_plot_configs(
-            file_registry, tuples) for tuples in intermediate_raster_tuples]
+    # There can be multiple sections for intermediate rasters
     intermediate_img_srcs = [raster_utils.plot_and_base64_encode_rasters(
-        configs) for configs in intermediate_raster_plot_configs]
-    intermediate_raster_captions = [raster_utils.generate_caption_from_raster_list(
-        [(id, 'output') for (id, _, _) in tuples],
-        args_dict, file_registry, model_spec) for tuples in intermediate_raster_tuples]
+        config_list) for config_list in intermediate_raster_config_lists]
+    intermediate_raster_captions = [raster_utils.caption_raster_list(
+        config_list) for config_list in intermediate_raster_config_lists]
 
     intermediate_headings = _get_intermediate_output_headings(args_dict)
 
