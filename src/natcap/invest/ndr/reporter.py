@@ -89,12 +89,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         spec=model_spec.get_output('p_surface_export'))
 
     output_raster_plot_configs = []
-    if CALC_N in args_dict:
+    if args_dict[CALC_N]:
         output_raster_plot_configs.extend(
             [n_surface_export_config,
              n_subsurface_export_config,
              n_total_export_config])
-    if CALC_P in args_dict:
+    if args_dict[CALC_P]:
         output_raster_plot_configs.extend([p_surface_export_config])
 
     masked_dem_config = raster_utils.RasterPlotConfig(
