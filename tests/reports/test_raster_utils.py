@@ -13,9 +13,10 @@ from osgeo import osr
 import pygeoprocessing
 
 from natcap.invest import spec
-from natcap.invest.unit_registry import u
 from natcap.invest.reports import MATPLOTLIB_PARAMS, raster_utils
-from natcap.invest.reports.raster_utils import RasterDatatype, RasterTransform
+from natcap.invest.reports.raster_utils import RasterDatatype
+from natcap.invest.reports.raster_utils import RasterTransform
+from natcap.invest.reports.raster_utils import RasterPlotConfig
 
 projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
@@ -96,7 +97,7 @@ class RasterPlotLayoutTests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
+        self.raster_config = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
             RasterDatatype.continuous,
             spec.Output(id='foo'))
@@ -187,13 +188,13 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         figname = 'plot_raster_list_datatypes.png'
         reference = os.path.join(REFS_DIR, figname)
         shape = (2, 8)
-        continuous_raster = raster_utils.RasterPlotConfig(
+        continuous_raster = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
             RasterDatatype.continuous,
             spec.Output(id='foo'))
         make_simple_raster(continuous_raster.raster_path, shape)
 
-        binary_raster = raster_utils.RasterPlotConfig(
+        binary_raster = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'binary.tif'),
             RasterDatatype.binary,
             spec.Output(id='foo'))
@@ -204,7 +205,7 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
             origin=(0, 0), projection_wkt=PROJ_WKT,
             target_path=binary_raster.raster_path)
 
-        divergent_raster = raster_utils.RasterPlotConfig(
+        divergent_raster = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'divergent.tif'),
             RasterDatatype.divergent,
             spec.Output(id='foo'))
@@ -215,7 +216,7 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
             origin=(0, 0), projection_wkt=PROJ_WKT,
             target_path=divergent_raster.raster_path)
 
-        nominal_raster = raster_utils.RasterPlotConfig(
+        nominal_raster = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'nominal.tif'),
             RasterDatatype.nominal,
             spec.Input(id='foo'))
@@ -233,19 +234,19 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         figname = 'plot_raster_list_transforms.png'
         reference = os.path.join(REFS_DIR, figname)
         shape = (2, 8)
-        continuous_raster_linear = raster_utils.RasterPlotConfig(
+        continuous_raster_linear = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
             RasterDatatype.continuous,
             spec.Output(id='foo'),
             transform=RasterTransform.linear)
-        continuous_raster_log = raster_utils.RasterPlotConfig(
+        continuous_raster_log = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
             RasterDatatype.continuous,
             spec.Output(id='foo'),
             transform=RasterTransform.log)
         make_simple_raster(continuous_raster_linear.raster_path, shape)
 
-        divergent_raster_log = raster_utils.RasterPlotConfig(
+        divergent_raster_log = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'divergent.tif'),
             RasterDatatype.divergent,
             spec.Output(id='foo'),
@@ -272,7 +273,7 @@ class RasterPlotLegendTests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
+        self.raster_config = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
             RasterDatatype.nominal,
             spec.Output(id='foo'))
@@ -369,7 +370,7 @@ class RasterPlotTitleTests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
+        self.raster_config = RasterPlotConfig(
             os.path.join(
                 self.workspace_dir,
                 'raster_with_extra_long_filename-for_testing_text_wrapping_in_images_for_reports.tif'),
@@ -440,7 +441,7 @@ class RasterPlotUnitTextTests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
+        self.raster_config = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'test.tif'),
             RasterDatatype.continuous,
             spec.Output(id='foo'))
@@ -488,9 +489,9 @@ class RasterCaptionTests(unittest.TestCase):
         file_registry = {'raster_2': 'path/to/raster_2.tif'}
 
         about_raster_1 = 'Map of land use/land cover codes.'
-        raster1_config = raster_utils.RasterPlotConfig(
+        raster1_config = RasterPlotConfig(
             raster_path=args_dict['raster_1'],
-            datatype='nominal',
+            datatype=RasterDatatype.nominal,
             spec=spec.Input(
                 id='raster_1',
                 about=about_raster_1))
@@ -498,9 +499,9 @@ class RasterCaptionTests(unittest.TestCase):
         about_raster_2 = ('The total amount of sediment exported from each '
                           'pixel that reaches the stream.')
         caption_appendix = 'extra text'
-        raster2_config = raster_utils.RasterPlotConfig(
+        raster2_config = RasterPlotConfig(
             raster_path=file_registry['raster_2'],
-            datatype='continuous',
+            datatype=RasterDatatype.continuous,
             spec=spec.Output(
                 id='raster_2',
                 about=about_raster_2))
