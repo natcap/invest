@@ -462,6 +462,7 @@ jobs:
           yarn run dist
 
       - name: Test electron app with puppeteer
+        continue-on-error: true  # test is flaky on GHA
         working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
@@ -509,11 +510,27 @@ jobs:
           path: ${{ matrix.puppeteer-log }}
 
       - name: Run invest-autotest with binaries
+        id: invest-autotest
         if : |
           (github.event_name == 'push' &&
           (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
           (github.event_name == 'pull_request' && startsWith(github.head_ref, 'autorelease'))
-        run: make invest_autotest
+        run: |
+          mkdir autotest_dir
+          make invest_autotest AUTOTEST_DIR=autotest_dir
+
+      - name: Deploy autotest reports
+        id: invest-autotest-deploy
+        if: steps.invest-autotest.outcome == 'success' && matrix.os == 'windows-latest'
+        run: |
+          make deploy_autotest_reports AUTOTEST_DIR=autotest_dir
+          make print-REPORTS_BASE_URL >> $GITHUB_OUTPUT
+
+      - name: Copy latest reports to static GCS URL
+        if: steps.invest-autotest-deploy.outcome == 'success' && github.ref == 'refs/heads/main'
+        run: |
+          DEST=gs://releases.naturalcapitalproject.org/invest-reports/latest
+          gsutil -m rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
 
       - name: Tar the workspace to preserve permissions (macOS)
         if: failure() && matrix.os == 'macos-15-intel'

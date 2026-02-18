@@ -10,6 +10,8 @@ from osgeo import gdal, osr, ogr
 import pygeoprocessing
 from shapely import Polygon
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ucm')
@@ -111,7 +113,17 @@ class UCMTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        natcap.invest.urban_cooling_model.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(
+                natcap.invest.urban_cooling_model.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        natcap.invest.urban_cooling_model.MODEL_SPEC.execute(
+            args, **execute_kwargs)
+        assert_complete_execute(
+            args, natcap.invest.urban_cooling_model.MODEL_SPEC,
+            **execute_kwargs)
+
         results_vector = gdal.OpenEx(os.path.join(
             args['workspace_dir'],
             'uhi_results_%s.shp' % args['results_suffix']))

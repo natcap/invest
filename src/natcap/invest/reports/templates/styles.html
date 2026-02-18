@@ -1,0 +1,250 @@
+{% set accent_color_suffix = model_id if model_id else 'default' %}
+<style>
+  :root {
+    --invest-green: #148f68;
+    --accent-color-default: #f0f0f0;
+
+    /* Model-specific accent colors should be added here as needed.
+       Helpful random color generator: https://rgbcolorpicker.com/random/pastel */
+    /* Make sure each accent color has sufficient contrast with black (#000).
+       Minimum 4.5:1; higher is better. Check with https://www.whocanuse.com/. */
+    --accent-color-carbon: #bed4f0;
+    --accent-color-coastal_vulnerability: #fff6d8;
+    --accent-color-ndr: #c2da9d;
+    --accent-color-sdr: #e4b5db;
+
+    --accent-color: var(--accent-color-{{ accent_color_suffix }});
+    --caption-border: 1px solid #000;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    color: #000000;
+    font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    margin: 0;
+    min-height: calc(100vh - 2rem);
+  }
+  .report-container {
+    background: #fff;
+    max-width: 80rem;
+  }
+  main {
+    margin: 2rem auto 0;
+    padding: 1rem;
+  }
+  footer {
+    margin: 0 auto 2rem;
+    padding: 1rem;
+    .report-info {
+      background: ghostwhite;
+      border-top: var(--caption-border);
+      font-style: italic;
+      padding: 1rem;
+      p {
+        margin: 0.25rem auto;
+        &:first-child {
+          margin-top: 0;
+        }
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+  .accordion-section {
+    border-radius: 1rem;
+    margin-bottom: 1rem;
+    padding: 0;
+    &:last-child {
+      margin-bottom: 0;
+    }
+    .accordion-header {
+      margin: 0;
+    }
+    .accordion-button {
+      background: var(--accent-color);
+      border: 0.25rem solid var(--invest-green);
+      border-radius: 1rem;
+      display: flex;
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      padding: 1.5rem 1rem;
+      text-align: left;
+      align-items: baseline;
+      width: 100%;
+      transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out;
+      &:focus-visible {
+        outline: 0.25rem dotted #000000;
+        outline-offset: -0.75rem;
+      }
+      &:hover {
+        background: var(--invest-green);
+        color: white;
+      }
+      &::before {
+        content: '⏷';
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+    }
+    .accordion-content {
+      display: none;
+    }
+    &.open {
+      border: 0.25rem solid var(--invest-green);
+      .accordion-button {
+        border-width: 0;
+        border-radius: 0.75rem 0.75rem 0 0;
+        &:focus-visible {
+          outline-offset: -0.5rem;
+        }
+        &::before {
+          content: '⏶';
+        }
+      }
+      .accordion-content {
+        display: block;
+        padding: 1rem;
+        &:has(.content-grid) {
+          padding: 0.5rem;
+        }
+      }
+    }
+  }
+  .content-grid {
+    display: flex;
+    flex-wrap: wrap;
+    .content-grid-item {
+      padding: 0.5rem;
+      &:has(> img) {
+        display: flex;
+        justify-content: center;
+        img {
+          max-width: 100%;
+        }
+      }
+    }
+  }
+  .wide-table-wrapper {
+    overflow-x: auto;
+    table > tbody {
+      word-break: break-word;
+    }
+  }
+  .full-width {
+    width: 100%;
+  }
+  h1, h2, h3, h4, th {
+      font-weight: bold;
+  }
+  h1 {
+      font-size: 2rem;
+      margin: 1rem 0;
+  }
+  h2 {
+      font-size: 1.5rem;
+  }
+  h3 {
+    font-size: 1.25rem;
+  }
+  h4 {
+    font-size: 1.125rem;
+  }
+  .section-header {
+    margin-top: 3.0rem;
+  }
+  table {
+      border: 0.25rem solid var(--invest-green);
+      border-collapse: collapse;
+  }
+  thead tr {
+      background: #e9ecef;
+      border-bottom: 0.1875rem solid var(--invest-green);
+  }
+  tbody tr:nth-child(even) {
+      background: ghostwhite;
+  }
+  th {
+      padding: 0.5rem;
+      text-align:left;
+  }
+  td {
+      padding: 0.375rem 0.5rem;
+  }
+  dt {
+    font-weight: bold;
+    margin-top: 1rem;
+  }
+  dd {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  button {
+    cursor: pointer;
+  }
+  /*Because widgets of varying size tend to be below maps,
+  align to top keeps the actual maps aligned*/
+  .vega-embed {
+    vertical-align: top;
+  }
+  .vega-embed .vega-bind-radio label {
+    padding-right: 0.5rem;
+  }
+  /*stack elements vertically so they are less likely to expand
+  the overall width of the chart wrapper*/
+  .vega-bind {
+    display: flex;
+    flex-direction: column;
+  }
+  .vg-tooltip table {
+    border: 0.1rem solid var(--invest-green);
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .caption {
+    background-color: ghostwhite;
+    &:not(.pre-caption) {
+      border-top: var(--caption-border);
+      border-radius: 0 0 1rem 1rem;
+      padding: 0 1rem 1rem;
+      p, dl {
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+    &.pre-caption {
+      border-bottom: var(--caption-border);
+      padding: 1rem 1rem 0;
+      p, dl {
+        &:first-child {
+          margin-top: 0;
+        }
+      }
+    }
+    dl {
+      padding-left: 1rem;
+      .definition-list-item {
+        display: list-item;
+        padding: 0.25rem 0;
+        dt, dd {
+          display: inline;
+        }
+        dt::after {
+          content: ':';
+        }
+        dd {
+          margin-left: 0;
+        }
+      }
+    }
+  }
+  .sources {
+    font-size: 0.875rem;
+    font-style: italic;
+    overflow-wrap: break-word;
+  }
+</style>

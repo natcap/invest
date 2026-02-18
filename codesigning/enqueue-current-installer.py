@@ -21,9 +21,9 @@ def main():
     repo_root = os.path.dirname(this_dir)
     dist_url_proc = subprocess.run(
         ['make', '-C', repo_root, '--no-print-directory',
-         'print-DIST_URL_BASE'],
+         'jprint-DIST_URL_BASE'],
         capture_output=True, check=True)
-    dist_url = dist_url_proc.stdout.decode('utf-8').strip().split(' ')[2]
+    dist_url = dist_url_proc.stdout.decode('utf-8').strip()
 
     os_alias = platform.system().lower()
     if os_alias == 'windows':

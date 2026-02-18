@@ -26,10 +26,23 @@ from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
+_model_description = gettext(
+    """
+    The InVEST Sediment Delivery Ratio (SDR) model quantifies and maps overland 
+    sediment generation and delivery to the stream. It works at the spatial 
+    resolution of the input digital elevation model (DEM). For each pixel, the 
+    model computes the amount of annual soil loss from that pixel, then 
+    computes the sediment delivery ratio (SDR), which is the proportion of 
+    soil loss actually reaching the stream. Sediment retention services are 
+    expressed as avoided erosion and avoided export.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="sdr",
     model_title=gettext("Sediment Delivery Ratio"),
     userguide="sdr.html",
+    reporter="natcap.invest.sdr.reporter",
+    about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
