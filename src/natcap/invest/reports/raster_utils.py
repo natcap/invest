@@ -297,7 +297,8 @@ def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
     elif n_plots == 2 or _wide_aoi(xy_ratio):
         return 40  # 2-column layout
     else:
-        return 30  # 3-column layout
+        # carbon model sample data includes a 31 char title
+        return 31  # 3-column layout
 
 
 def _get_title_kwargs(title: str, resampled: bool, line_width: int):
