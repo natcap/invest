@@ -28,14 +28,14 @@ def _generate_mock_watershed_data(num_features, target_vector_path):
                 'Tennessee', 'Red', 'Arkansas', 'Platte']
     # All polygons can be identical: their specifics don't matter to the tests.
     polygon = shapely.Polygon(((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
-    field_types = [ogr.OFTInteger, ogr.OFTString, ogr.OFTInteger, ogr.OFTInteger]
+    field_types = [ogr.OFTInteger, ogr.OFTString, ogr.OFTReal, ogr.OFTReal]
     field_dict = {
         name: dtype for name, dtype in zip(MAIN_TABLE_COLS, field_types)}
     attribute_list = [
         {'ws_id': i + 1,
          'ws_name': ws_names[i % len(ws_names)],
-         'calculated_value_1': i + 101,
-         'calculated_value_2': i + 201}
+         'calculated_value_1': i + 101.0,
+         'calculated_value_2': i + 201.0}
         for i in range(num_features)
     ]
     projection = osr.SpatialReference()
@@ -163,7 +163,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
 
         # Check totals table values.
         # calculated_value_1 is ws_id + 100; calculated_value_2 is ws_id + 200.
-        expected_totals = [101 + 102, 201 + 202]
+        expected_totals = [101.0 + 102.0, 201.0 + 202.0]
         actual_values = [cell.string for cell in totals_cells]
         expected_values = [str(v) for v in expected_totals]
         self.assertEqual(expected_values, actual_values)
