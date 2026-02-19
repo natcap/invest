@@ -10,6 +10,8 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
+    report_filepath = 'sdr_ndr_report_test.html'
+    invest_version = '987.65.0'
     timestamp = '1970-01-01'
     args_dict = {'suffix': 'test'}
     img_src = 'bAse64eNcoDEdIMagE'
@@ -25,10 +27,13 @@ def _get_render_args(model_spec):
     raster_group_caption = 'This is another test!'
 
     return {
-        'report_script': __file__,
+        'report_script': model_spec.reporter,
+        'invest_version': invest_version,
+        'report_filepath': report_filepath,
         'model_id': model_spec.model_id,
         'model_name': model_spec.model_title,
         'userguide_page': model_spec.userguide,
+        'model_description': model_spec.about,
         'timestamp': timestamp,
         'args_dict': args_dict,
         'inputs_img_src': img_src,
@@ -86,10 +91,13 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
         ws_vector_totals_table = '<table class="test__totals-table"></table>'
 
         html = TEMPLATE.render(
-            report_script=__file__,
+            report_script='natcap.invest.test.reporter',
+            invest_version='987.65.0',
+            report_filepath='sdr_ndr_report_test.html',
             model_id='',
             model_name='',
             userguide_page='',
+            model_description='',
             timestamp='',
             args_dict={},
             inputs_img_src='',
@@ -122,10 +130,13 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
         ws_vector_totals_table = None
 
         html = TEMPLATE.render(
-            report_script=__file__,
+            report_script='natcap.invest.test.reporter',
+            invest_version='987.65.0',
+            report_filepath='sdr_ndr_report_test.html',
             model_id='',
             model_name='',
             userguide_page='',
+            model_description='',
             timestamp='',
             args_dict={},
             inputs_img_src='',

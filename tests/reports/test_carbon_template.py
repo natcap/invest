@@ -11,7 +11,9 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
-    model_description = 'This is a description of the carbon model.'
+
+    report_filepath = 'carbon_report_test.html'
+    invest_version = '987.65.0'
     timestamp = '1970-01-01'
     args_dict = {'suffix': 'test'}
     img_src = 'bAse64eNcoDEdIMagE'
@@ -26,10 +28,12 @@ def _get_render_args(model_spec):
     agg_results_table = '<table class="test__agg-results-table"></table>'
 
     return {
-        'report_script': __file__,
+        'report_script': model_spec.reporter,
+        'invest_version': invest_version,
+        'report_filepath': report_filepath,
         'model_id': model_spec.model_id,
         'model_name': model_spec.model_title,
-        'model_description': model_description,
+        'model_description': model_spec.about,
         'userguide_page': model_spec.userguide,
         'timestamp': timestamp,
         'args_dict': args_dict,

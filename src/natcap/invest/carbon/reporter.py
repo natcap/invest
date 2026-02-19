@@ -7,8 +7,10 @@ import pandas
 from pint import Unit
 import pygeoprocessing
 
+from natcap.invest import __version__
 from natcap.invest import gettext
 from natcap.invest.reports import jinja_env, raster_utils, report_constants
+from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 from natcap.invest.spec import ModelSpec
 from natcap.invest.unit_registry import u
 
@@ -16,45 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/carbon.html')
 
-
-def _get_raster_plot_tuples(args_dict: dict) -> tuple[
-        list[tuple[str, ...]],
-        list[tuple[str, ...]],
-        list[list[tuple[str, ...]]]]:
-    input_raster_plot_tuples = [
-        ('lulc_bas_path', 'nominal'),
-    ]
-    if args_dict['calc_sequestration']:
-        input_raster_plot_tuples.extend([
-            ('lulc_alt_path', 'nominal'),
-        ])
-
-    output_raster_plot_tuples = [
-        ('c_storage_bas', 'continuous', 'linear'),
-    ]
-    if args_dict['calc_sequestration']:
-        output_raster_plot_tuples.extend([
-            ('c_storage_alt', 'continuous', 'linear'),
-            ('c_change_bas_alt', 'divergent', 'linear'),
-        ])
-    if args_dict['do_valuation']:
-        output_raster_plot_tuples.extend([
-            ('npv_alt', 'divergent', 'linear'),
-        ])
-
-    if args_dict['calc_sequestration']:
-        intermediate_output_raster_plot_tuples = [[
-            (f'c_{pool_type}_bas', 'continuous', 'linear'),
-            (f'c_{pool_type}_alt', 'continuous', 'linear')
-         ] for pool_type in ['above', 'below', 'dead', 'soil']]
-    else:
-        intermediate_output_raster_plot_tuples = [[
-            (f'c_{pool_type}_bas', 'continuous', 'linear')
-            for pool_type in ['above', 'below', 'dead', 'soil']]]
-
-    return (input_raster_plot_tuples,
-            output_raster_plot_tuples,
-            intermediate_output_raster_plot_tuples)
+_CARBON_POOLS = ['above', 'below', 'dead', 'soil']
 
 
 def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
@@ -76,6 +40,7 @@ def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
         carbon pool type.
     """
     if args_dict['calc_sequestration']:
+        # make sure this order matches order of `_CARBON_POOLS`
         return [
             gettext('Carbon Maps: Aboveground'),
             gettext('Carbon Maps: Belowground'),
@@ -155,45 +120,75 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     Returns:
         ``None``
     """
+    input_raster_config_list = [
+        RasterPlotConfig(
+            raster_path=args_dict['lulc_bas_path'],
+            datatype=RasterDatatype.nominal,
+            spec=model_spec.get_input('lulc_bas_path'))]
 
-    model_description = gettext(
-        """
-        The InVEST Carbon Storage and Sequestration model uses maps of land use
-        along with stocks in four carbon pools (aboveground biomass,
-        belowground biomass, soil, and dead organic matter) to estimate the
-        amount of carbon stored in a landscape at baseline or the amount of
-        carbon sequestered over time. Optionally, the market or social value of
-        sequestered carbon, its annual rate of change, and a discount rate can
-        be used to estimate the value of this ecosystem service to society.
-        """)
+    output_raster_config_list = [
+        RasterPlotConfig(
+            raster_path=file_registry['c_storage_bas'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('c_storage_bas'))]
+    
+    intermediate_raster_config_lists = [[
+        RasterPlotConfig(
+            raster_path=file_registry[f'c_{pool_type}_bas'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output(f'c_{pool_type}_bas'))
+        for pool_type in _CARBON_POOLS]]
 
-    (input_raster_tuples,
-     output_raster_tuples,
-     intermediate_raster_tuples) = _get_raster_plot_tuples(args_dict)
+    if args_dict['calc_sequestration']:
+        input_raster_config_list.append(
+            RasterPlotConfig(
+                raster_path=args_dict['lulc_alt_path'],
+                datatype=RasterDatatype.nominal,
+                spec=model_spec.get_input('lulc_alt_path')))
 
-    input_raster_plot_configs = raster_utils.build_raster_plot_configs(
-        args_dict, input_raster_tuples)
+        output_raster_config_list.extend([
+            RasterPlotConfig(
+                raster_path=file_registry['c_storage_alt'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('c_storage_alt')),
+            RasterPlotConfig(
+                raster_path=file_registry['c_change_bas_alt'],
+                datatype=RasterDatatype.divergent,
+                spec=model_spec.get_output('c_change_bas_alt'))])
+
+        intermediate_raster_config_lists = [[
+            RasterPlotConfig(
+                raster_path=file_registry[f'c_{pool_type}_bas'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output(f'c_{pool_type}_bas')),
+            RasterPlotConfig(
+                raster_path=file_registry[f'c_{pool_type}_alt'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output(f'c_{pool_type}_alt')),
+         ] for pool_type in _CARBON_POOLS]
+
+    if args_dict['do_valuation']:
+        output_raster_config_list.append(
+            RasterPlotConfig(
+                raster_path=file_registry['npv_alt'],
+                datatype=RasterDatatype.divergent,
+                spec=model_spec.get_output('npv_alt')))
+
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        input_raster_plot_configs)
-    input_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'input') for (id, _) in input_raster_tuples],
-        args_dict, file_registry, model_spec)
-
-    output_raster_plot_configs = raster_utils.build_raster_plot_configs(
-            file_registry, output_raster_tuples)
+        input_raster_config_list)
+    input_raster_caption = raster_utils.caption_raster_list(
+        input_raster_config_list)
+    
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        output_raster_plot_configs)
-    output_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'output') for (id, _, _) in output_raster_tuples],
-        args_dict, file_registry, model_spec)
+        output_raster_config_list)
+    output_raster_caption = raster_utils.caption_raster_list(
+        output_raster_config_list)
 
-    intermediate_raster_plot_configs = [raster_utils.build_raster_plot_configs(
-            file_registry, tuples) for tuples in intermediate_raster_tuples]
+    # There can be multiple sections for intermediate rasters
     intermediate_img_srcs = [raster_utils.plot_and_base64_encode_rasters(
-        configs) for configs in intermediate_raster_plot_configs]
-    intermediate_raster_captions = [raster_utils.generate_caption_from_raster_list(
-        [(id, 'output') for (id, _, _) in tuples],
-        args_dict, file_registry, model_spec) for tuples in intermediate_raster_tuples]
+        config_list) for config_list in intermediate_raster_config_lists]
+    intermediate_raster_captions = [raster_utils.caption_raster_list(
+        config_list) for config_list in intermediate_raster_config_lists]
 
     intermediate_headings = _get_intermediate_output_headings(args_dict)
 
@@ -219,10 +214,12 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
-            report_script=__file__,
+            report_script=model_spec.reporter,
+            invest_version=__version__,
+            report_filepath=target_html_filepath,
             model_id=model_spec.model_id,
             model_name=model_spec.model_title,
-            model_description=model_description,
+            model_description=model_spec.about,
             userguide_page=model_spec.userguide,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
