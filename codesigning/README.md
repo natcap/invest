@@ -8,7 +8,7 @@ three key components to this service:
    storage-backed cloud function that operates as a high-latency queue.
 2. A script (`enqueue-binary.py`) that will enqueue a binary that already
    exists on one of our GCS buckets.
-3. A `systemd` service that runs on a debian:bookworm machine and periodically
+3. A `systemd` service that runs on a debian machine and periodically
    polls the cloud function to dequeue the next item to sign.
 
 ## Deploying the Cloud Function
@@ -29,7 +29,7 @@ function, systemd service and enqueue script.
 
 To deploy the systemd service, you will need to be on a computer that has ssh
 access to `ncp-inkwell`, which is a computer that has a yubikey installed in
-it.  This computer is assumed to run debian:bookworm at this time.  To deploy
+it.  This computer is assumed to run debian at this time.  To deploy
 (non-secret) changes to ncp-inkwell, run this in an environment where
 `ansible-playbook` is available (`pip install ansible` to install):
 
