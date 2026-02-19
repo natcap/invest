@@ -36,6 +36,7 @@ const FORUM_TAGS = {
   stormwater: 'urban-stormwater/37',
   urban_cooling_model: 'urban-cooling/27',
   urban_flood_risk_mitigation: 'urban-flood/12',
+  urban_mental_health: 'urban-mental-health', //TODO - add ID when forum tag is created
   urban_nature_access: 'urban-nature-access/41',
   wave_energy: 'wave-energy/21',
   wind_energy: 'wind-energy/23',
