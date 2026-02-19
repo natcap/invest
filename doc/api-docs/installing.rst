@@ -6,7 +6,7 @@ Installing the InVEST Python Package
 
 .. attention::
      Most users will want to install the InVEST app (Mac disk image or Windows
-     installer) from the `InVEST download page <https://naturalcapitalalliance.stanford.edu/software/invest>`_.
+     installer) from the `InVEST download page <https://naturalcapitalproject.stanford.edu/software/invest>`_.
      The instructions here are for more advanced use cases.
 
 The InVEST package is available for installation from three distribution channels:

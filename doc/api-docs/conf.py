@@ -50,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'InVEST'
-copyright = f'{datetime.now().year}, The Natural Capital Alliance'
+copyright = f'{datetime.now().year}, The Natural Capital Project'
 
 # The full version, including alpha/beta/rc tags.
 release = natcap.invest.__version__
@@ -106,7 +106,7 @@ htmlhelp_basename = 'InVESTdoc'
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   ('index', 'InVEST.tex', 'InVEST Documentation',
-   'The Natural Capital Alliance', 'manual'),
+   'The Natural Capital Project', 'manual'),
 ]
 
 
@@ -116,7 +116,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'invest', 'InVEST Documentation',
-     ['The Natural Capital Alliance'], 1)
+     ['The Natural Capital Project'], 1)
 ]
 
 
@@ -127,7 +127,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'InVEST', 'InVEST Documentation',
-   'The Natural Capital Alliance', 'InVEST',
+   'The Natural Capital Project', 'InVEST',
    'Integrated Valuation of Ecosystem Services and Tradeoffs',
    'Scientific Software'),
 ]

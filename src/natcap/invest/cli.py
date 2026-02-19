@@ -21,7 +21,7 @@ from natcap.invest import spec
 from natcap.invest import ui_server
 from natcap.invest import utils
 from natcap.invest import models
-from pygeoprocessing.utils import GDALUseExceptions
+from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)

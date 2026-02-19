@@ -41,6 +41,7 @@ All changes pushed in this way will appear in this PR.
 
 <sub>
 
-This PR was created because there was a push to `$SOURCE_BRANCH` that triggered this workflow, which is defined at `.github/workflows/autopr-create.yml`
+This PR was created because there was a push to `$SOURCE_BRANCH` that triggered
+this workflow, which is defined at `.github/workflows/autopr-create.yml`
 
 </sub>

@@ -11,7 +11,7 @@ models, it takes in data of various formats (usually including some geospatial d
 processes that data, and produces output files that contain the results.
 Unlike the core models, a plugin is not "official", i.e., not reviewed or maintained
 by NatCap. Plugins may be developed, used, and distributed totally independently of
-the ``natcap/invest`` repo and the Natural Capital Alliance.
+the ``natcap/invest`` repo and the Natural Capital Project.
 
 In a technical sense, an InVEST plugin is a python package that conforms to the
 ``natcap.invest`` plugin API. This makes it possible to run the plugin from the

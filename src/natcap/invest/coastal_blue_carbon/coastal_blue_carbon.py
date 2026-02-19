@@ -72,7 +72,7 @@ density of CO2-equivalent per hectare.  Megatonnes of CO2-equivalent per Ha are
 the units specified in the user's guide, but any such density could be used as
 no conversion of units takes place in the model.
 
-There has been some conversation within the Natural Capital Alliance staff of
+There has been some conversation within the Natural Capital Project staff of
 whether to convert this carbon density per hectare to carbon density per pixel,
 for consistency with the rest of InVEST (which often displays metrics per
 pixel), and also for easier aggregation of spatial metrics such as total carbon

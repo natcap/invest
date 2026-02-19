@@ -8,14 +8,14 @@ message: >-
   metadata from this file.
 type: software
 authors:
-  - name: Natural Capital Alliance
-    website: 'https://naturalcapitalalliance.stanford.edu'
+  - name: Natural Capital Project
+    website: 'https://naturalcapitalproject.stanford.edu'
 identifiers:
   - type: doi
     value: 10.60793/natcap-invest-3.17.2
     description: Persistent identifier for this version of InVEST
 repository-code: 'https://github.com/natcap/invest'
-url: 'https://naturalcapitalalliance.stanford.edu/software/invest'
+url: 'https://naturalcapitalproject.stanford.edu/software/invest'
 repository-artifact: >-
   http://releases.naturalcapitalproject.org/?prefix=invest/3.17.2
 abstract: >-

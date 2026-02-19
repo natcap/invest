@@ -49,12 +49,12 @@
     "resetModules": true
   },
   "keywords": [],
-  "author": "Natural Capital Alliance",
-  "license": "Apache-2.0",
+  "author": "Natural Capital Project",
+  "license": "MIT",
   "dependencies": {
     "@babel/runtime": "^7.13.10",
-    "electron-log": "^5.4.3",
-    "electron-store": "^11.0.2",
+    "electron-log": "^4.3.5",
+    "electron-store": "^8.1.0",
     "i18next": "^22.4.9",
     "localforage": "^1.9.0",
     "node-fetch": "^2.6.7",
@@ -63,7 +63,7 @@
     "react-i18next": "^12.1.4",
     "toml": "^3.0.0",
     "upath": "^2.0.1",
-    "yauzl": "^3.2.0"
+    "yauzl": "^2.10.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.22.5",
@@ -82,8 +82,8 @@
     "bootstrap": "4.3.1",
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
-    "electron": "^40.1.0",
-    "electron-builder": "^26.4.0",
+    "electron": "^25.1.0",
+    "electron-builder": "^24.13.3",
     "eslint": "^8.57.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-plugin-import": "^2.29.1",
@@ -97,13 +97,13 @@
     "i18next-parser": "^9.0.1",
     "jest": "^29.5.0",
     "jest-environment-jsdom": "^29.5.0",
-    "puppeteer-core": "^24.36.1",
+    "puppeteer-core": "^20.6.0",
     "react": "^18.2.0",
     "react-bootstrap": "^1.5.2",
     "react-dom": "^18.2.0",
     "react-icons": "^4.9.0",
-    "rimraf": "^6.1.2",
+    "rimraf": "^3.0.2",
     "vite": "^5.4.14",
-    "yazl": "^3.3.1"
+    "yazl": "^2.5.1"
   }
 }

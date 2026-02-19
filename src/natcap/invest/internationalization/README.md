@@ -29,7 +29,7 @@ pybabel extract \
    --project InVEST \
    --version $(python -m setuptools_scm) \
    --msgid-bugs-address natcap-software@lists.stanford.edu \
-   --copyright-holder "Natural Capital Alliance" \
+   --copyright-holder "Natural Capital Project" \
    --output src/natcap/invest/internationalization/messages.pot \
    src/
 

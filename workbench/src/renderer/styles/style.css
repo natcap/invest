@@ -1,8 +1,7 @@
 :root {
   font-size: 16px;
   --invest-green: #148F68;
-  --digital-green: #008566; /* From Stanford brand guidelines. Better contrast for text than invest-green. */
-  --digital-red: #B1040E; /* From Stanford brand guidelines. */
+  --digital-red: #B1040E;
   --bootstrap-secondary-gray:#6c757d;
 }
 
@@ -783,18 +782,6 @@ input[type=text]::placeholder {
 
 .plugin-user-acknowledgment-error {
   margin-bottom: 1rem;
-}
-
-.plugin-success {
-  color: var(--digital-green);
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.plugin-success > svg {
-  height: 1.5rem;
-  width: 1.5rem;
 }
 
 .plugin-form-text {

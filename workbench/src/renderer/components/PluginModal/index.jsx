@@ -7,7 +7,7 @@ import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
-import { MdCheckCircleOutline, MdClose } from 'react-icons/md';
+import { MdClose } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
@@ -37,8 +37,6 @@ export default function PluginModal(props) {
   const [userAcknowledgment, setUserAcknowledgment] = useState(false);
   const [userAcknowledgmentError, setUserAcknowledgmentError] = useState(false);
   const [pluginSourceMissingError, setPluginSourceMissingError] = useState(false);
-  const [installSuccess, setInstallSuccess] = useState(false);
-  const [removalSuccess, setRemovalSuccess] = useState(false);
 
   const handleModalClose = () => {
     setURL('');
@@ -46,8 +44,6 @@ export default function PluginModal(props) {
     setInstallErr('');
     setUninstallErr('');
     clearFormErrors();
-    setInstallSuccess(false);
-    setRemovalSuccess(false);
     closeModal();
   };
 
@@ -95,8 +91,6 @@ export default function PluginModal(props) {
   };
 
   const addPlugin = () => {
-    setInstallSuccess(false);
-    setRemovalSuccess(false);
     setInstallLoading(true);
     ipcRenderer.invoke(
       ipcMainChannels.ADD_PLUGIN,
@@ -106,7 +100,6 @@ export default function PluginModal(props) {
     ).then(() => {
       setInstallLoading(false);
       updateInvestList();
-      setInstallSuccess(true);
       // clear the input fields
       setURL('');
       setRevision('');
@@ -117,8 +110,6 @@ export default function PluginModal(props) {
   };
 
   const removePlugin = () => {
-    setRemovalSuccess(false);
-    setInstallSuccess(false);
     setUninstallLoading(true);
     openJobs.forEach((job, tabID) => {
       if (job.modelID === pluginToRemove) {
@@ -128,7 +119,6 @@ export default function PluginModal(props) {
     ipcRenderer.invoke(
       ipcMainChannels.REMOVE_PLUGIN, pluginToRemove
     ).then(() => {
-      setRemovalSuccess(true);
       updateInvestList();
       setUninstallLoading(false);
     }).catch((err) => {
@@ -327,17 +317,6 @@ export default function PluginModal(props) {
             {t('This may take several minutes.')}
           </Form.Text>
         </Form.Group>
-          <div aria-live="polite">
-            { installSuccess &&
-              <Form.Text
-                as="span"
-                className="plugin-success"
-              >
-                <MdCheckCircleOutline />
-                {t('Successfully installed plugin')}
-              </Form.Text>
-            }
-          </div>
       </Form>
       <hr />
       <Form aria-labelledby="remove-plugin-form-title">
@@ -380,17 +359,6 @@ export default function PluginModal(props) {
             }
           </Button>
         </Form.Group>
-        <div aria-live="polite">
-          {removalSuccess &&
-            <Form.Text
-              as="span"
-              className="plugin-success"
-            >
-              <MdCheckCircleOutline />
-              {t('Successfully removed plugin')}
-            </Form.Text>
-          }
-        </div>
       </Form>
     </Modal.Body>
   );

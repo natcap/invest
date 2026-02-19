@@ -16,7 +16,7 @@ alternative choices, and to integrate conservation and human development.
 For more information, see:
   * `InVEST API documentation <http://invest.readthedocs.io/>`_
   * InVEST on `GitHub <https://github.com/natcap/invest>`__
-  * The `Natural Capital Alliance website <http://naturalcapitalalliance.stanford.edu>`__.
+  * The `Natural Capital Project website <http://naturalcapitalproject.stanford.edu>`__.
 
 
 .. Everything after this comment will be included in the API docs.
@@ -63,6 +63,6 @@ Support
 =======
 
 Participate in the NatCap forums here:
-http://community.naturalcapitalalliance.org
+http://community.naturalcapitalproject.org
 
 Bugs may be reported at http://github.com/natcap/invest

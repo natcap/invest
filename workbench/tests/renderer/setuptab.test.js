@@ -199,12 +199,11 @@ describe('Arguments form interactions', () => {
   test('Browse button populates an input', async () => {
     const spec = baseArgsSpec('csv');
     const {
-      findByRole, findByLabelText, findByText, queryByText,
+      findByRole, findByLabelText,
     } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     expect(input).toHaveAttribute('type', 'text');
-    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
     expect(await findByRole('button', { name: /browse for/ }))
       .toBeInTheDocument();
 
@@ -216,7 +215,6 @@ describe('Arguments form interactions', () => {
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
-    expect(await findByText(RegExp(VALIDATION_MESSAGE))).toBeInTheDocument();
 
     // Browse again, but cancel it and expect the previous value
     mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'

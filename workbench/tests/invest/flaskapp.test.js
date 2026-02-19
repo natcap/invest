@@ -20,13 +20,14 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import { findInvestBinaries } from '../../src/main/findBinaries';
 import { settingsStore } from '../../src/main/settingsStore';
-import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
+import { checkFirstRun, APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 // This test starts a python subprocess, which can be slow
 jest.setTimeout(120000);
 
 const CORE_PORT = 56789;
+let flaskSubprocess;
 beforeAll(async () => {
   jest.spyOn(ipcRenderer, 'invoke').mockImplementation((channel, arg) => {
     if (channel === ipcMainChannels.GET_SETTING) {
@@ -240,14 +241,11 @@ describe('Test building model UIs and forum links', () => {
         inputFieldOrder={argsSpec.input_field_order}
         argsInitValues={undefined}
         investExecute={() => {}}
+        nWorkers="-1"
         sidebarSetupElementId="foo"
         sidebarFooterElementId="foo"
         executeClicked={false}
         switchTabs={() => {}}
-        investList={{}}
-        t={() => {}}
-        tabID="1"
-        updateJobProperties={() => {}}
       />
     );
     expect(await findByRole('textbox', { name: /workspace/i }))

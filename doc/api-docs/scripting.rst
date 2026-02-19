@@ -313,4 +313,4 @@ See the `GNU gettext manual <https://www.gnu.org/software/gettext/manual/gettext
 Summary
 =======
 
-The InVEST scripting framework was designed to assist InVEST users in automating batch runs or adding custom functionality to the existing InVEST software suite.  Support questions can be directed to the NatCap support forums at `http://community.naturalcapitalalliance.org. <http://community.naturalcapitalalliance.org.>`_
+The InVEST scripting framework was designed to assist InVEST users in automating batch runs or adding custom functionality to the existing InVEST software suite.  Support questions can be directed to the NatCap support forums at `http://community.naturalcapitalproject.org. <http://community.naturalcapitalproject.org.>`_

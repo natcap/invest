@@ -53,9 +53,9 @@ class ErrorBoundary extends React.Component {
                  'of what happened before you saw this message.')}
               <br />
               <a
-                href="https://community.naturalcapitalalliance.org/"
+                href="https://community.naturalcapitalproject.org/"
               >
-                https://community.naturalcapitalalliance.org
+                https://community.naturalcapitalproject.org
               </a>
             </li>
           </ol>

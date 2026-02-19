@@ -136,7 +136,7 @@ function createWindow(parentWindow, isDevMode) {
 
 function openAboutWindow(parentWindow, isDevMode) {
   const child = createWindow(parentWindow, isDevMode);
-  child.loadURL(new URL('about.html', BASE_URL).href);
+  child.loadURL(path.join(BASE_URL, 'about.html'));
 }
 
 function openReportWindow(parentWindow, isDevMode) {
@@ -149,5 +149,5 @@ function openReportWindow(parentWindow, isDevMode) {
   logger.debug(JSON.stringify(process.env, null, 2));
 
   const child = createWindow(parentWindow, isDevMode);
-  child.loadURL(new URL('report_a_problem.html', BASE_URL).href);
+  child.loadURL(path.join(BASE_URL, 'report_a_problem.html'));
 }

@@ -111,7 +111,6 @@ class ArgsForm extends React.Component {
     if (data.filePaths.length) {
       // dialog defaults allow only 1 selection
       this.props.updateArgValues(name, data.filePaths[0]);
-      this.props.updateArgTouched(name);
       this.props.triggerScrollEvent();
     }
   }

@@ -257,7 +257,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "Indicates whether generation of this subwatershed terminated"
                         " early (1) or completed as expected (0). If you encounter a (1),"
                         " please let us know via the forums,"
-                        " community.naturalcapitalalliance.org."
+                        " community.naturalcapitalproject.org."
                     ),
                     units=u.none
                 ),

@@ -618,7 +618,7 @@ class TestCBC2(unittest.TestCase):
         """CBC: Test the model on one transition with no analysis year.
 
         This test came up while looking into an issue reported on the forums:
-        https://community.naturalcapitalalliance.org/t/coastal-blue-carbon-negative-carbon-stocks/780/12
+        https://community.naturalcapitalproject.org/t/coastal-blue-carbon-negative-carbon-stocks/780/12
         """
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)

@@ -645,10 +645,10 @@ def execute(args):
             CROP_TO_PATH_TABLES.regression_yield).get_column(
                 'path').get_validated_dataframe(
                     climate_regression_yield_table_path)
-        for idx, row in crop_regression_df.iterrows():
+        for _, row in crop_regression_df.iterrows():
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if numpy.isnan(row[header]):
-                    crop_regression_df.at[idx, header] = 0
+                    row[header] = 0
 
         yield_regression_headers = [
             x for x in crop_regression_df.columns if x != 'climate_bin']
