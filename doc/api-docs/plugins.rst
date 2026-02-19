@@ -263,6 +263,16 @@ Example: ::
 ^^^^^^^^^^^^^^^
 If you are following the project layout described above, and demonstrated in the demo plugin repo, ``MODEL_SPEC``, ``execute``, and ``validate`` will be properties of the ``foo`` submodule. You must make them available at the level of the ``invest_plugin`` package by importing them into ``__init__.py``. This is demonstrated in the demo plugin repo.
 
+Writing a reporter module
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Some InVEST models include a "reporter" that creates visual summaries of the model results. This is an optional part of a model or plugin, but ``natcap.invest`` includes some utilities and templates to make it convenient to develop a report for your plugin.
+
+Create a Python module that will be responsible for generating the report, and reference it in your plugin's ``ModelSpec``::
+
+    MODEL_SPEC = spec.ModelSpec(
+        model_id="demo",
+        model_title="Demo Plugin",
+        reporter='invest_demo_plugin.reporter',
 
 How InVEST interacts with plugins
 ---------------------------------
