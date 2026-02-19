@@ -9,51 +9,52 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 
-const FORUM_ROOT = 'https://community.naturalcapitalproject.org';
+const FORUM_ROOT = 'https://community.naturalcapitalalliance.org';
 
-// map model names to forum tags:
+// map model names to forum tags
+// forum tag paths include both slug and ID
 const FORUM_TAGS = {
-  annual_water_yield: 'annual-water-yield',
-  carbon: 'carbon',
-  coastal_vulnerability: 'coastal-vulnerability',
-  coastal_blue_carbon: 'blue-carbon',
-  coastal_blue_carbon_preprocessor: 'blue-carbon',
-  crop_production_percentile: 'crop-production',
-  crop_production_regression: 'crop-production',
-  delineateit: 'delineateit',
-  forest_carbon_edge_effect: 'carbon-edge-effects',
-  habitat_quality: 'habitat-quality',
-  habitat_risk_assessment: 'hra',
-  ndr: 'ndr',
-  pollination: 'pollination',
-  recreation: 'recreation',
-  routedem: 'routedem',
-  scenario_generator_proximity: 'scenario-generator',
-  scenic_quality: 'scenic-quality',
-  sdr: 'sdr',
-  seasonal_water_yield: 'seasonal-water-yield',
-  stormwater: 'urban-stormwater',
-  urban_cooling_model: 'urban-cooling',
-  urban_flood_risk_mitigation: 'urban-flood',
-  urban_mental_health: 'urban-mental-health',
-  urban_nature_access: 'urban-nature-access',
-  wave_energy: 'wave-energy',
-  wind_energy: 'wind-energy',
+  annual_water_yield: 'annual-water-yield/19',
+  carbon: 'carbon/1',
+  coastal_vulnerability: 'coastal-vulnerability/8',
+  coastal_blue_carbon: 'blue-carbon/3',
+  coastal_blue_carbon_preprocessor: 'blue-carbon/3',
+  crop_production_percentile: 'crop-production/15',
+  crop_production_regression: 'crop-production/15',
+  delineateit: 'delineateit/14',
+  forest_carbon_edge_effect: 'carbon-edge-effects/13',
+  habitat_quality: 'habitat-quality/4',
+  habitat_risk_assessment: 'hra/9',
+  ndr: 'ndr/7',
+  pollination: 'pollination/18',
+  recreation: 'recreation/10',
+  routedem: 'routedem/38',
+  scenario_generator_proximity: 'scenario-generator/25',
+  scenic_quality: 'scenic-quality/30',
+  sdr: 'sdr/2',
+  seasonal_water_yield: 'seasonal-water-yield/5',
+  stormwater: 'urban-stormwater/37',
+  urban_cooling_model: 'urban-cooling/27',
+  urban_flood_risk_mitigation: 'urban-flood/12',
+  urban_mental_health: 'urban-mental-health', //TODO - add ID when forum tag is created
+  urban_nature_access: 'urban-nature-access/41',
+  wave_energy: 'wave-energy/21',
+  wind_energy: 'wind-energy/23',
 };
 
 /** Render model-relevant links to the User's Guide and Forum.
  *
  * This should be a link to the model's User's Guide chapter and
  * and a link to list of topics with the model's tag on the forum,
- * e.g. https://community.naturalcapitalproject.org/tag/carbon
+ * e.g. https://community.naturalcapitalalliance.org/tag/carbon/1
  */
 export default function ResourcesTab(props) {
   const { docs, isCoreModel, modelID } = props;
 
   let forumURL = FORUM_ROOT;
-  const tagName = FORUM_TAGS[modelID];
-  if (tagName) {
-    forumURL = `${FORUM_ROOT}/tag/${tagName}`;
+  const tagPath = FORUM_TAGS[modelID];
+  if (tagPath) {
+    forumURL = `${FORUM_ROOT}/tag/${tagPath}`;
   }
 
   const { t } = useTranslation();

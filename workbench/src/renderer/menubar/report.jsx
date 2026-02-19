@@ -22,7 +22,7 @@ ReactDom.render(
           <b>{t('If the problem is related to a specific InVEST model, ')}</b>
           {t('please see the guidelines here for reporting problems: ')}
           <a
-            href="https://community.naturalcapitalproject.org/t/guidelines-for-posting-software-support-questions/24"
+            href="https://community.naturalcapitalalliance.org/t/guidelines-for-posting-software-support-questions/24"
           >
             {t('Guidelines for posting software support questions')}
           </a>
@@ -42,11 +42,11 @@ ReactDom.render(
             </li>
             <li>
               {t('Create a post on our forum and upload these items, along ' +
-                 'with a brief description of the problem.')}
+                 'with a brief description of the problem. ')}
               <a
-                href="https://community.naturalcapitalproject.org/"
+                href="https://community.naturalcapitalalliance.org/"
               >
-                https://community.naturalcapitalproject.org
+                https://community.naturalcapitalalliance.org
               </a>
             </li>
           </ol>
@@ -60,9 +60,9 @@ ReactDom.render(
           />
           <img
             src={natcapLogo}
-            width="143"
+            width="119"
             height="119"
-            alt="Natural Capital Project logo"
+            alt="Natural Capital Alliance logo"
           />
         </div>
       </React.Fragment>
