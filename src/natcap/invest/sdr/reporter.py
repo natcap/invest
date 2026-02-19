@@ -1,28 +1,9 @@
-from natcap.invest.reports import sdr_ndr_utils
 from natcap.invest.reports import sdr_ndr_report_generator
 from natcap.invest.reports import raster_utils
-
-INPUT_RASTER_PLOT_TUPLES = [
-    ('dem_path', 'continuous'),
-    ('erodibility_path', 'continuous'),
-    ('erosivity_path', 'continuous'),
-    ('lulc_path', 'nominal'),
-]
-
-OUTPUT_RASTER_PLOT_TUPLES = [
-    ('avoided_erosion', 'continuous', 'linear'),
-    ('avoided_export', 'continuous', 'log'),
-    ('sed_deposition', 'continuous', 'log'),
-    ('sed_export', 'continuous', 'log'),
-    ('rkls', 'continuous', 'linear'),
-    ('usle', 'continuous', 'log'),
-]
-
-INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
-    ('pit_filled_dem', 'continuous'),
-    ('what_drains_to_stream', 'binary'),
-    ('stream', 'binary_high_contrast'),
-]
+from natcap.invest.reports import report_constants
+from natcap.invest.reports.raster_utils import RasterDatatype
+from natcap.invest.reports.raster_utils import RasterTransform
+from natcap.invest.reports.raster_utils import RasterPlotConfig
 
 
 def report(file_registry, args_dict, model_spec, target_html_filepath):
@@ -40,38 +21,71 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     Returns:
         ``None``
     """
+    input_raster_plot_configs = [
+        RasterPlotConfig(
+            raster_path=args_dict['dem_path'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_input('dem_path')),
+        RasterPlotConfig(
+            raster_path=args_dict['erodibility_path'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_input('erodibility_path')),
+        RasterPlotConfig(
+            raster_path=args_dict['erosivity_path'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_input('erosivity_path')),
+        RasterPlotConfig(
+            raster_path=args_dict['lulc_path'],
+            datatype=RasterDatatype.nominal,
+            spec=model_spec.get_input('lulc_path'))
+    ]
 
-    input_raster_plot_configs = raster_utils.build_raster_plot_configs(
-        args_dict, INPUT_RASTER_PLOT_TUPLES)
+    output_raster_plot_configs = [
+        RasterPlotConfig(
+            raster_path=file_registry['avoided_erosion'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('avoided_erosion')),
+        RasterPlotConfig(
+            raster_path=file_registry['avoided_export'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('avoided_export'),
+            transform=RasterTransform.log),
+        RasterPlotConfig(
+            raster_path=file_registry['sed_deposition'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('sed_deposition'),
+            transform=RasterTransform.log),
+        RasterPlotConfig(
+            raster_path=file_registry['sed_export'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('sed_export'),
+            transform=RasterTransform.log),
+        RasterPlotConfig(
+            raster_path=file_registry['rkls'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('rkls')),
+        RasterPlotConfig(
+            raster_path=file_registry['usle'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('usle'),
+            transform=RasterTransform.log)
+    ]
 
-    output_raster_plot_configs = raster_utils.build_raster_plot_configs(
-            file_registry, OUTPUT_RASTER_PLOT_TUPLES)
-
-    intermediate_raster_plot_configs = raster_utils.build_raster_plot_configs(
-            file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
-
-    raster_plot_configs = raster_utils.RasterPlotConfigGroup(
-        input_raster_plot_configs,
-        output_raster_plot_configs,
-        intermediate_raster_plot_configs)
-
-    input_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'input') for (id, _) in INPUT_RASTER_PLOT_TUPLES],
-        args_dict, file_registry, model_spec)
-    output_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'output') for (id, _, _) in OUTPUT_RASTER_PLOT_TUPLES],
-        args_dict, file_registry, model_spec)
-    intermediate_raster_caption = raster_utils.generate_caption_from_raster_list(
-        [(id, 'output') for (id, _) in INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES],
-        args_dict, file_registry, model_spec)
-    intermediate_raster_caption = (
-        sdr_ndr_utils.update_caption_with_stream_map_info(
-            intermediate_raster_caption, args_dict['flow_dir_algorithm']))
-
-    captions = raster_utils.RasterPlotCaptionGroup(
-        inputs=input_raster_caption,
-        outputs=output_raster_caption,
-        intermediates=intermediate_raster_caption)
+    masked_dem_config = RasterPlotConfig(
+        raster_path=file_registry['pit_filled_dem'],
+        datatype=RasterDatatype.continuous,
+        spec=model_spec.get_output('pit_filled_dem'))
+    what_drains_config = RasterPlotConfig(
+        raster_path=file_registry['what_drains_to_stream'],
+        datatype=RasterDatatype.binary,
+        spec=model_spec.get_output('what_drains_to_stream'))
+    stream_config = RasterPlotConfig(
+        raster_path=file_registry['stream'],
+        datatype=RasterDatatype.binary_high_contrast,
+        spec=model_spec.get_output('stream'))
+    stream_config.caption += report_constants.STREAM_CAPTION_APPENDIX
+    intermediate_raster_plot_configs = [
+        masked_dem_config, what_drains_config, stream_config]
 
     results_vector_id = 'watershed_results_sdr'
     results_vector_cols_to_sum = [
@@ -79,5 +93,6 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
-        raster_plot_configs, captions,
-        results_vector_id, results_vector_cols_to_sum)
+        input_raster_plot_configs, output_raster_plot_configs,
+        intermediate_raster_plot_configs, results_vector_id,
+        results_vector_cols_to_sum)

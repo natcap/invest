@@ -22,7 +22,7 @@ from osgeo import gdal
 from pydantic.dataclasses import dataclass
 
 from natcap.invest import gettext
-from natcap.invest.spec import ModelSpec
+from natcap.invest.spec import ModelSpec, Input, Output
 
 LOGGER = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ class RasterDatatype(str, Enum):
 class RasterTransform(str, Enum):
     """The transformation to apply to values before mapping to colors.
 
-    Original values are plotted, but the colorbar will be use this scale.
+    Original values are plotted, but the colorbar will use this scale.
     """
 
     linear = 'linear'
@@ -143,25 +143,20 @@ class RasterPlotConfig:
     """A definition for how to plot a raster."""
 
     raster_path: str
-    """Filepath to a raster to plot."""
+    """Filepath to a raster to plot. The basename will be the plot title."""
     datatype: RasterDatatype
     """Datatype will determine colormap, legend, and resampling algorithm"""
+    spec: Input | Output
+    """The InVEST specification of the raster."""
     transform: RasterTransform = RasterTransform.linear
     """For highly skewed data, a transformation can help reveal variation."""
+    title: str | None = None
+    """An optional plot title. If ``None``, the filename is used."""
 
-
-@dataclass
-class RasterPlotConfigGroup:
-    inputs: list[RasterPlotConfig] | None
-    outputs: list[RasterPlotConfig] | None
-    intermediates: list[RasterPlotConfig] | None
-
-
-@dataclass
-class RasterPlotCaptionGroup:
-    inputs: list[str] | None
-    outputs: list[str] | None
-    intermediates: list[str] | None
+    def __post_init__(self):
+        if self.title is None:
+            self.title = os.path.basename(self.raster_path)
+        self.caption = f'{self.title}:{self.spec.about}'
 
 
 def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
@@ -193,20 +188,8 @@ def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
     return raster_plot_configs
 
 
-def generate_caption_from_raster_list(
-        raster_list: list[tuple[str, str]], args_dict,
-        file_registry, model_spec: ModelSpec):
-    """Concatenate filenames and metadata descriptions to create captions."""
-    caption = []
-    for (id, input_or_output) in raster_list:
-        if input_or_output == 'input':
-            filename = os.path.basename(args_dict[id])
-            about_text = model_spec.get_input(id).about
-        elif input_or_output == 'output':
-            about_text = model_spec.get_output(id).about
-            filename = os.path.basename(file_registry[id])
-        caption.append(f'{filename}:{about_text}')
-    return caption
+def caption_raster_list(raster_list: list[RasterPlotConfig]):
+    return [config.caption for config in raster_list]
 
 
 def _read_masked_array(filepath, resample_method):
@@ -314,16 +297,13 @@ def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
     elif n_plots == 2 or _wide_aoi(xy_ratio):
         return 40  # 2-column layout
     else:
-        return 30  # 3-column layout
+        # carbon model sample data includes a 31 char title
+        return 31  # 3-column layout
 
 
-def _get_title_kwargs(raster_path: str, resampled: bool, line_width: int, subtitle: str = ''):
-    filename = os.path.basename(raster_path)
-    label = f"{filename}{' (resampled)' if resampled else ''}"
+def _get_title_kwargs(title: str, resampled: bool, line_width: int):
+    label = f"{title}{' (resampled)' if resampled else ''}"
     label = textwrap.fill(label, width=line_width)
-    if subtitle:
-        subtitle = textwrap.fill(subtitle, width=line_width)
-        label = f"{label}\n{subtitle}"
     return {
         'fontfamily': 'monospace',
         'fontsize': TITLE_FONT_SIZE,
@@ -419,8 +399,8 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             colorbar_kwargs['ticks'] = [0, 1]
 
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
-        ax.set_title(**_get_title_kwargs(raster_path, resampled,
-                                         title_line_width))
+        ax.set_title(**_get_title_kwargs(
+            config.title, resampled, title_line_width))
 
         units = _get_raster_units(raster_path)
         if units:
@@ -516,7 +496,7 @@ def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
     return base64_encode(figure)
 
 
-def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
+def plot_raster_facets(tif_list, datatype, transform=None, title_list=None):
     """Plot a list of rasters that will all share a fixed colorscale.
 
     When all the rasters have the same shape and represent the same variable,
@@ -530,6 +510,8 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
             ('continuous', 'divergent').
         transform (str): string describing the transformation to apply
             to the colormap. Either 'linear' or 'log'.
+        title_list (list): Optional list of strings to use as subplot titles.
+            If ``None``, the raster filename is used as the title.
 
     """
     raster_info = pygeoprocessing.get_raster_info(tif_list[0])
@@ -541,8 +523,13 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     cmap_str = COLORMAPS[datatype]
     if transform is None:
         transform = 'linear'
-    if subtitle_list is None:
-        subtitle_list = ['']*n_plots
+    if title_list is None:
+        title_list = [os.path.basename(filepath) for filepath in tif_list]
+    if len(title_list) != len(tif_list):
+        raise ValueError(
+            f'length of title_list does not equal length of tif_list \n'
+            f'title_list: {title_list} \n'
+            f'tif_list: {tif_list}')
     resample_alg = resample_alg = RESAMPLE_ALGS[datatype]
     arr, resampled = _read_masked_array(tif_list[0], resample_alg)
     ndarray = numpy.empty((n_plots, *arr.shape))
@@ -570,13 +557,12 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
         cmap.set_under(cmap.colors[0])  # values below vmin (0s) get this color
     else:
         normalizer = plt.Normalize(vmin=vmin, vmax=vmax)
-    for arr, ax, raster_path, subtitle in zip(ndarray, axes.flatten(),
-                                              tif_list, subtitle_list):
+    for arr, ax, raster_path, title in zip(
+            ndarray, axes.flatten(), tif_list, title_list):
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
         # all rasters are identical size; `resampled` will be the same for all
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
-        ax.set_title(**_get_title_kwargs(raster_path, resampled,
-                                         title_line_width, subtitle))
+        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width))
         units = _get_raster_units(raster_path)
         if units:
             (ylim_kwargs,
