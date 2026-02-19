@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE.txt"]
 maintainers = [
-    {name = "Natural Capital Project Software Team"}
+    {name = "Natural Capital Alliance Software Team"}
 ]
 keywords = ["gis", "invest", "ecosystem services"]
 classifiers = [

@@ -60,7 +60,7 @@ class NDRTests(unittest.TestCase):
         output raster, in the buggy version, would have pixel values of -inf
         where they should have been nodata.
 
-        https://community.naturalcapitalproject.org/t/ndr-null-values-in-watershed-results/914
+        https://community.naturalcapitalalliance.org/t/ndr-null-values-in-watershed-results/914
         """
         from natcap.invest.ndr import ndr
 
