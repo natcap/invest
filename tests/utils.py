@@ -84,12 +84,13 @@ def assert_complete_execute(raw_args, model_spec, **kwargs):
     if 'save_file_registry' in kwargs and kwargs['save_file_registry']:
         if not os.path.exists(
             os.path.join(args['workspace_dir'],
-                         f'file_registry{args["results_suffix"]}.json')):
+                         f'file_registry{args.get("results_suffix", "")}.json')):
             raise AssertionError('file registry json file does not exist')
     if 'generate_report' in kwargs and kwargs['generate_report']:
         if not os.path.exists(
             os.path.join(args['workspace_dir'],
-                         f'{model_spec.model_id}_report{args["results_suffix"]}.html')):
+                         (f'{model_spec.model_id}_report'
+                          f'{args.get("results_suffix", "")}.html'))):
             raise AssertionError('model report html file does not exist')
 
 
@@ -106,7 +107,7 @@ def fake_execute(output_spec, workspace):
         dict (FileRegistry.registry)
 
     """
-    file_registry = FileRegistry(output_spec, workspace, '')
+    file_registry = FileRegistry(output_spec, workspace)
     for spec_data in output_spec:
         reg_key = spec_data.id
         if '[' in spec_data.id:
