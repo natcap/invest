@@ -104,6 +104,10 @@ General
     (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
 * Docker container builds now use debian 13 "Trixie", which includes Python
   3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
+* Fixed a bug where output directories containing unresolved patterns
+  were created during model setup, preventing correct creation of
+  substituted output directories at runtime.
+  (`#2213 <https://github.com/natcap/invest/issues/2213>`_)
 * Added an ``include_placeholder`` attribute to the ModelSpec ``OptionStringInput``
   class. If ``True``, a placeholder "Select an option" will be included as the
   default (selected but invalid) dropdown option for that input in the workbench.
@@ -124,6 +128,9 @@ Workbench
 * The "Manage Plugins" modal now presents a message upon successful
   installation or removal of a plugin.
   (`#2276 <https://github.com/natcap/invest/issues/2276>`_)
+* Updated Workbench model FAQ Forum URLs to point to the new canonical tag
+  routes that include both the tag slug and tag ID.
+  (`#2376 <https://github.com/natcap/invest/issues/2376>`_)
 * Improved the right-click context menu to include "Save Image as"
   option when right-clicking on an image.
   (`#2266 <https://github.com/natcap/invest/issues/2266>`_)

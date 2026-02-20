@@ -13,9 +13,10 @@ from osgeo import osr
 import pygeoprocessing
 
 from natcap.invest import spec
-from natcap.invest.unit_registry import u
 from natcap.invest.reports import MATPLOTLIB_PARAMS, raster_utils
-from natcap.invest.reports.raster_utils import RasterDatatype, RasterTransform
+from natcap.invest.reports.raster_utils import RasterDatatype
+from natcap.invest.reports.raster_utils import RasterTransform
+from natcap.invest.reports.raster_utils import RasterPlotConfig
 
 projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
@@ -96,9 +97,10 @@ class RasterPlotLayoutTests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
+        self.raster_config = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -186,14 +188,16 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         figname = 'plot_raster_list_datatypes.png'
         reference = os.path.join(REFS_DIR, figname)
         shape = (2, 8)
-        continuous_raster = raster_utils.RasterPlotConfig(
+        continuous_raster = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
-            RasterDatatype.continuous)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
         make_simple_raster(continuous_raster.raster_path, shape)
 
-        binary_raster = raster_utils.RasterPlotConfig(
+        binary_raster = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'binary.tif'),
-            RasterDatatype.binary)
+            RasterDatatype.binary,
+            spec.Output(id='foo'))
         binary_array = numpy.zeros(shape=shape)
         binary_array[0] = 1
         pygeoprocessing.numpy_array_to_raster(
@@ -201,9 +205,10 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
             origin=(0, 0), projection_wkt=PROJ_WKT,
             target_path=binary_raster.raster_path)
 
-        divergent_raster = raster_utils.RasterPlotConfig(
+        divergent_raster = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'divergent.tif'),
-            RasterDatatype.divergent)
+            RasterDatatype.divergent,
+            spec.Output(id='foo'))
         divergent_array = numpy.linspace(
             -1, 1, num=numpy.multiply(*shape)).reshape(*shape)
         pygeoprocessing.numpy_array_to_raster(
@@ -211,9 +216,10 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
             origin=(0, 0), projection_wkt=PROJ_WKT,
             target_path=divergent_raster.raster_path)
 
-        nominal_raster = raster_utils.RasterPlotConfig(
+        nominal_raster = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'nominal.tif'),
-            RasterDatatype.nominal)
+            RasterDatatype.nominal,
+            spec.Input(id='foo'))
         make_simple_nominal_raster(nominal_raster.raster_path, shape)
 
         config_list = [
@@ -228,17 +234,23 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         figname = 'plot_raster_list_transforms.png'
         reference = os.path.join(REFS_DIR, figname)
         shape = (2, 8)
-        continuous_raster_linear = raster_utils.RasterPlotConfig(
+        continuous_raster_linear = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
-        continuous_raster_log = raster_utils.RasterPlotConfig(
+            RasterDatatype.continuous,
+            spec.Output(id='foo'),
+            transform=RasterTransform.linear)
+        continuous_raster_log = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
-            RasterDatatype.continuous, RasterTransform.log)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'),
+            transform=RasterTransform.log)
         make_simple_raster(continuous_raster_linear.raster_path, shape)
 
-        divergent_raster_log = raster_utils.RasterPlotConfig(
+        divergent_raster_log = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'divergent.tif'),
-            RasterDatatype.divergent, RasterTransform.log)
+            RasterDatatype.divergent,
+            spec.Output(id='foo'),
+            transform=RasterTransform.log)
         divergent_array = numpy.linspace(
             -1, 1, num=numpy.multiply(*shape)).reshape(*shape)
         pygeoprocessing.numpy_array_to_raster(
@@ -261,9 +273,10 @@ class RasterPlotLegendTests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
+        self.raster_config = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
-            RasterDatatype.nominal, RasterTransform.linear)
+            RasterDatatype.nominal,
+            spec.Output(id='foo'))
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -351,17 +364,18 @@ class RasterPlotFacetsTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
-class RasterPlotLongTitleTests(unittest.TestCase):
-    """Snapshot tests for plotting rasters with long titles."""
+class RasterPlotTitleTests(unittest.TestCase):
+    """Snapshot tests for plotting rasters with various titles."""
 
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
+        self.raster_config = RasterPlotConfig(
             os.path.join(
                 self.workspace_dir,
                 'raster_with_extra_long_filename-for_testing_text_wrapping_in_images_for_reports.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -406,6 +420,20 @@ class RasterPlotLongTitleTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
+    def test_plot_raster_list_override_title(self):
+        """Test default title can be overriden."""
+        figname = 'plot_raster_list_override_title.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        self.raster_config.title = 'Special Title'
+        config_list = [self.raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
 
 class RasterPlotUnitTextTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with unit text."""
@@ -413,9 +441,10 @@ class RasterPlotUnitTextTests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = raster_utils.RasterPlotConfig(
+        self.raster_config = RasterPlotConfig(
             os.path.join(self.workspace_dir, 'test.tif'),
-            RasterDatatype.continuous, RasterTransform.linear)
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -456,41 +485,35 @@ class RasterCaptionTests(unittest.TestCase):
     """Unit tests for caption-generating utility."""
 
     def test_generate_caption_from_raster_list(self):
-        raster_list = [('raster_1', 'input'), ('raster_2', 'output')]
         args_dict = {'raster_1': 'path/to/raster_1.tif'}
         file_registry = {'raster_2': 'path/to/raster_2.tif'}
-        model_spec = spec.ModelSpec(
-            model_id='',
-            model_title='',
-            userguide='',
-            module_name='',
-            input_field_order=[['raster_1']],
-            inputs=[
-                spec.SingleBandRasterInput(
-                    id='raster_1',
-                    units=u.none,
-                    about='Map of land use/land cover codes.',
-                ),
-            ],
-            outputs=[
-                spec.SingleBandRasterOutput(
-                    id='raster_2',
-                    path='path/to/raster_2.tif',
-                    units=u.metric_ton / u.hectare,
-                    about=('The total amount of sediment exported from each '
-                           'pixel that reaches the stream.'),
-                )
-            ],
-        )
+
+        about_raster_1 = 'Map of land use/land cover codes.'
+        raster1_config = RasterPlotConfig(
+            raster_path=args_dict['raster_1'],
+            datatype=RasterDatatype.nominal,
+            spec=spec.Input(
+                id='raster_1',
+                about=about_raster_1))
+
+        about_raster_2 = ('The total amount of sediment exported from each '
+                          'pixel that reaches the stream.')
+        caption_appendix = 'extra text'
+        raster2_config = RasterPlotConfig(
+            raster_path=file_registry['raster_2'],
+            datatype=RasterDatatype.continuous,
+            spec=spec.Output(
+                id='raster_2',
+                about=about_raster_2))
+        raster2_config.caption += caption_appendix
 
         expected_caption = [
-            'raster_1.tif:Map of land use/land cover codes.',
-            ('raster_2.tif:The total amount of sediment exported from each '
-             'pixel that reaches the stream.')
+            f'raster_1.tif:{about_raster_1}',
+            f'raster_2.tif:{about_raster_2}{caption_appendix}'
         ]
 
-        generated_caption = raster_utils.generate_caption_from_raster_list(
-            raster_list, args_dict, file_registry, model_spec)
+        generated_caption = raster_utils.caption_raster_list(
+            [raster1_config, raster2_config])
 
         self.assertEqual(generated_caption, expected_caption)
 

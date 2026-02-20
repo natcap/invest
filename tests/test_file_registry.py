@@ -124,6 +124,105 @@ class FileRegistryTests(unittest.TestCase):
             }
         })
 
+    def test_file_registry_with_dir_patterns(self):
+        """Test creation of directory using a pattern.
+
+        I.e., test that indexing a patterned output creates correct directory.
+        This is specifically for patterns that appear in folder names, e.g.
+        'test_[SCENARIO]/output.tif'. Given SCENARIO 'baseline', the directory
+        'test_baseline' should be created when the path is resolved via
+        indexing.
+        """
+        output_spec = [
+            spec.FileOutput(
+                id="foo_[BAR]_[SCENARIO]",
+                path="intermediate_[SCENARIO]/foo.txt"
+            )
+        ]
+
+        file_registry = FileRegistry(output_spec, self.workspace_dir)
+
+        # Before resolving, the substituted directory should not exist
+        expected_dir = os.path.join(self.workspace_dir,
+                                    "intermediate_baseline")
+        self.assertFalse(os.path.exists(expected_dir))
+
+        # Resolving the path should create the directory
+        resolved_path = file_registry[("foo_[BAR]_[SCENARIO]", "bar",
+                                       "baseline")]
+
+        self.assertTrue(os.path.isdir(expected_dir))
+        self.assertEqual(
+            resolved_path,
+            os.path.join(expected_dir, "foo.txt")
+        )
+
+    def test_patterned_directory_requires_id_pattern(self):
+        """Test that a pattern in ``path`` dir will error if not also in ``id``
+
+          Test that an error will raise if there is a pattern the id does not
+          have the pattern too
+        """
+        output_spec = [
+            spec.FileOutput(
+                id="foo",
+                path="intermediate_[SCENARIO]/foo.txt"
+            )
+        ]
+
+        with self.assertRaises(ValueError) as cm:
+            FileRegistry(output_spec, self.workspace_dir)
+
+        self.assertIn(
+            "Output id 'foo' must include pattern field(s) ['SCENARIO'] "
+            "because path 'intermediate_[SCENARIO]/foo.txt' uses them.",
+            str(cm.exception))
+
+    def test_create_output_directories_skips_pattern_dirs(self):
+        """Test that create_output_directories skips directories with patterns."""
+        from natcap.invest import spec
+
+        args = {"workspace_dir": self.workspace_dir,
+                }
+
+        model_spec = spec.ModelSpec(
+            model_id="test_model",
+            results_suffix="",
+            model_title="Test Model",
+            module_name="",
+            userguide="",
+            input_field_order=[],
+            inputs=[],
+            outputs=[
+                spec.SingleBandRasterOutput(
+                    id="foo_[SCENARIO]",
+                    path="[SCENARIO]_path/foo.tif",
+                    about="",
+                    data_type=float,
+                    units=None
+                ),
+                spec.FileOutput(
+                    id="bar",
+                    path="intermediate/bar.txt"
+                )
+            ]
+        )
+
+        model_spec.create_output_directories(args)
+
+        # Check that 'intermediate' dir was created, and patterned dir was
+        # created instead of raw [SCENARIO]_path dir
+        self.assertTrue(os.path.isdir(os.path.join(self.workspace_dir,
+                                                   'intermediate')))
+        self.assertFalse(os.path.exists(os.path.join(self.workspace_dir,
+                                                     "[SCENARIO]_path")))
+
+        file_registry = FileRegistry(model_spec.outputs, self.workspace_dir)
+        # Need to index to create the patterned directory
+        file_registry[("foo_[SCENARIO]", "baseline")]
+        self.assertTrue(os.path.exists(os.path.join(self.workspace_dir,
+                                                    "baseline_path")))
+
     def test_file_registry_invalid_indexing(self):
         """Test errors on indexing with the wrong number of keys."""
         f_reg = FileRegistry([

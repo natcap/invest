@@ -17,6 +17,12 @@
       // https://vega.github.io/vega-embed/#options
       "mode": "vega-lite",
       "scaleFactor": { png: 2 }, // scale on export
+      "actions": {
+        // These don't work in the electron browser context and are
+        // not necessarily useful to invest users.
+        "compiled": false,
+        "source": false,
+      }
     })
       // .then(function (result) {
       //   // Access the Vega view instance as result.view
