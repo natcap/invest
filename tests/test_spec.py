@@ -356,10 +356,9 @@ class MissingResultsSuffixTests(unittest.TestCase):
         """
         from natcap.invest import carbon
 
-        mock_spec = carbon.MODEL_SPEC
-        mock_inputs = carbon.MODEL_SPEC.inputs
-        mock_inputs.pop(1)
-        mock_spec.inputs = mock_inputs
+        # The input at index 1 is the results suffix
+        results_suffix_input = carbon.MODEL_SPEC.inputs.pop(1)
+        assert isinstance(results_suffix_input, spec.ResultsSuffixInput)
 
         args = {
             'workspace_dir': self.workspace_dir,
