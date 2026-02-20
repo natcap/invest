@@ -318,7 +318,7 @@ class UnitTestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        aoi_path = os.path.join('aoi.geojson')
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         # This polygon matches the test data shapefile we used formerly.
         geomstring = """
             POLYGON ((-5.54101768507434 56.1006500736864,
@@ -1109,7 +1109,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
             attribute_list=attribute_list,
             ogr_geom_type=ogr.wkbPoint)
         predictor_list = ['roads', 'parks']
-        server_version_path = 'server_version.pickle'
+        server_version_path = os.path.join(self.workspace_dir, 'server_version.pickle')
         with open(server_version_path, 'ab') as f:
             pickle.dump('version: foo', f)
         target_coefficient_json_path = os.path.join(self.workspace_dir, 'estimates.json')
