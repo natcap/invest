@@ -6,7 +6,7 @@ GIT_SAMPLE_DATA_REPO_REV    := db11c7f31c90e3d1e28e85bcaa10a2aabc56d33b
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 7e0a51c18c6637637c183c295b0e2874a18f3dda
+GIT_TEST_DATA_REPO_REV      := 4c85b32873325ab4611953526b350dab2f74fe50
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
@@ -100,6 +100,7 @@ else
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
+REPORTS_BASE_URL := $(DIST_URL_BASE)/reports
 
 TESTRUNNER := pytest -vs --import-mode=importlib --durations=0
 
@@ -119,15 +120,18 @@ USERGUIDE_BUILD_DIR := $(BUILD_DIR)/sphinx/userguide
 USERGUIDE_TARGET_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 
-INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest
+INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest --workspace $(AUTOTEST_DIR)
 
 
-.PHONY: fetch install binaries apidocs userguide sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide changelog sampledata \
+sampledata_single test clean help check python_packages purge deploy codesign \
+validate_sampledata validate_userguide_filenames invest_autotest deploy_autotest_reports \
+$(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
 print-%:
-	@echo "$* = $($*)"
+	@echo "$*=$($*)"
 
 # Very useful for printing variables within scripts!
 # Like `make print-<variable>, only without also printing the variable name.
@@ -137,22 +141,27 @@ jprint-%:
 
 help:
 	@echo "Please use make <target> where <target> is one of"
-	@echo "  check             to verify all needed programs and packages are installed"
-	@echo "  env               to create a virtualenv with packages from requirements.txt, requirements-dev.txt"
-	@echo "  fetch             to clone all managed repositories"
-	@echo "  install           to build and install a wheel of natcap.invest into the active python installation"
-	@echo "  binaries          to build pyinstaller binaries"
-	@echo "  apidocs           to build HTML API documentation"
-	@echo "  userguide         to build HTML version of the users guide"
-	@echo "  changelog         to build HTML version of the changelog"
-	@echo "  python_packages   to build natcap.invest wheel and source distributions"
-	@echo "  codesign          to enqueue a built binary for signing using our codesigning service"
-	@echo "  sampledata        to build sample data zipfiles"
-	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
-	@echo "  test              to run pytest on the tests directory"
-	@echo "  clean             to remove temporary directories and files (but not dist/)"
-	@echo "  purge             to remove temporary directories, cloned repositories and the built environment."
-	@echo "  help              to print this help and exit"
+	@echo "  check                        to verify all needed programs and packages are installed"
+	@echo "  env                          to create a virtualenv with packages from requirements.txt, requirements-dev.txt"
+	@echo "  fetch                        to clone all managed repositories"
+	@echo "  install                      to build and install a wheel of natcap.invest into the active python installation"
+	@echo "  binaries                     to build pyinstaller binaries"
+	@echo "  apidocs                      to build HTML API documentation"
+	@echo "  userguide                    to build HTML version of the users guide"
+	@echo "  changelog                    to build HTML version of the changelog"
+	@echo "  python_packages              to build natcap.invest wheel and source distributions"
+	@echo "  codesign                     to enqueue a built binary for signing using our codesigning service"
+	@echo "  sampledata                   to build sample data zipfiles"
+	@echo "  sampledata_single            to build a single self-contained data zipfile.  Used for advanced NSIS install."
+	@echo "  test                         to run pytest on the tests directory"
+	@echo "  validate_sampledata          to run invest model validation on sampledata datastacks"
+	@echo "  validate_userguide_filenames to validate that userguide filenames exist"
+	@echo "  invest_autotest              to run invest via the CLI on all sampledata datastacks"
+	@echo "  deploy_autotest_reports      to deploy to GCS any model's HTML report generated by the autotest"
+	@echo "  deploy                       to deploy any artifacts in dist/ folder to GCS"
+	@echo "  clean                        to remove temporary directories and files (but not dist/)"
+	@echo "  purge                        to remove temporary directories, cloned repositories and the built environment."
+	@echo "  help                         to print this help and exit"
 
 $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
@@ -169,6 +178,9 @@ validate_userguide_filenames: $(GIT_UG_REPO_PATH)
 
 invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
+
+deploy_autotest_reports:
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(REPORTS_BASE_URL)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)

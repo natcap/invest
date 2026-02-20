@@ -19,6 +19,8 @@ from shapely.geometry import box
 from shapely.geometry import MultiPoint
 from shapely.geometry import Point
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -86,7 +88,13 @@ class DelineateItTests(unittest.TestCase):
             'results_suffix': 'w',
             'n_workers': None,  # Trigger error and default to -1
         }
-        delineateit.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(delineateit.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        delineateit.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, delineateit.MODEL_SPEC, **execute_kwargs)
 
         vector = gdal.OpenEx(os.path.join(args['workspace_dir'],
                                           'watersheds_w.gpkg'), gdal.OF_VECTOR)

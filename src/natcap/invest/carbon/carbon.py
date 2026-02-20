@@ -1,8 +1,6 @@
 # coding=UTF-8
 """Carbon Storage and Sequestration."""
-import codecs
 import logging
-import time
 
 from osgeo import gdal
 import numpy
@@ -16,10 +14,23 @@ from natcap.invest import gettext
 
 LOGGER = logging.getLogger(__name__)
 
+_model_description = gettext(
+    """
+    The InVEST Carbon Storage and Sequestration model uses maps of land use
+    along with stocks in four carbon pools (aboveground biomass,
+    belowground biomass, soil, and dead organic matter) to estimate the
+    amount of carbon stored in a landscape at baseline or the amount of
+    carbon sequestered over time. Optionally, the market or social value of
+    sequestered carbon, its annual rate of change, and a discount rate can
+    be used to estimate the value of this ecosystem service to society.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="carbon",
     model_title=gettext("Carbon Storage and Sequestration"),
     userguide="carbonstorage.html",
+    reporter="natcap.invest.carbon.reporter",
+    about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
@@ -164,7 +175,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="do_valuation",
             allowed="do_valuation",
-            units=None
         ),
         spec.PercentInput(
             id="rate_change",
@@ -175,21 +185,9 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="do_valuation",
             allowed="do_valuation",
-            units=None
         )
     ],
     outputs=[
-        spec.FileOutput(
-            id="html_report",
-            path="report.html",
-            about=gettext(
-                "This file presents a summary of all data computed by the model. It also"
-                " includes descriptions of all other output files produced by the model,"
-                " so it is a good place to begin exploring and understanding model"
-                " results. Because this is an HTML file, it can be opened with any web"
-                " browser."
-            )
-        ),
         spec.SingleBandRasterOutput(
             id="c_storage_bas",
             path="c_storage_bas.tif",
@@ -230,7 +228,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="npv_alt",
             path="npv_alt.tif",
             about=gettext(
-                "Rasters showing the economic value of carbon sequestered between the"
+                "Raster showing the economic value of carbon sequestered between the"
                 " baseline and the alternate landscape dates."
             ),
             created_if="lulc_alt_path",
@@ -389,7 +387,6 @@ def execute(args):
     raster_size_set = set()
     valid_lulc_keys = []
     valid_scenarios = []
-    tifs_to_summarize = set()  # passed to _generate_report()
 
     for scenario_type in ['bas', 'alt']:
         lulc_key = "lulc_%s_path" % (scenario_type)
@@ -452,7 +449,6 @@ def execute(args):
             dependent_task_list=carbon_map_task_lookup[scenario_type],
             task_name='sum_rasters_for_total_c_%s' % output_key)
         sum_rasters_task_lookup[scenario_type] = sum_rasters_task
-        tifs_to_summarize.add(file_registry[output_key])
 
     # calculate sequestration
     diff_rasters_task_lookup = {}
@@ -474,7 +470,6 @@ def execute(args):
                 sum_rasters_task_lookup['alt']],
             task_name='diff_rasters_for_%s' % output_key)
         diff_rasters_task_lookup['alt'] = diff_rasters_task
-        tifs_to_summarize.add(file_registry[output_key])
 
     # calculate net present value
     calculate_npv_tasks = []
@@ -499,38 +494,13 @@ def execute(args):
                 dependent_task_list=[diff_rasters_task_lookup['alt']],
                 task_name='calculate_%s' % output_key)
             calculate_npv_tasks.append(calculate_npv_task)
-            tifs_to_summarize.add(file_registry[output_key])
 
-    # Report aggregate results
-    tasks_to_report = (list(sum_rasters_task_lookup.values())
-                       + list(diff_rasters_task_lookup.values())
-                       + calculate_npv_tasks)
-    _ = graph.add_task(
-        _generate_report,
-        args=(tifs_to_summarize, args, file_registry),
-        target_path_list=[file_registry['html_report']],
-        dependent_task_list=tasks_to_report,
-        task_name='generate_report')
     graph.join()
     return file_registry.registry
 
 
 # element-wise sum function to pass to raster_map
 def sum_op(*xs): return numpy.sum(xs, axis=0)
-
-
-def _accumulate_totals(raster_path):
-    """Sum all non-nodata pixels in `raster_path` and return result."""
-    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
-    raster_sum = 0.0
-    for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
-        # The float64 dtype in the sum is needed to reduce numerical error in
-        # the sum.  Users calculated the sum with ArcGIS zonal statistics,
-        # noticed a difference and wrote to us about it on the forum.
-        raster_sum += numpy.sum(
-            block[~pygeoprocessing.array_equals_nodata(
-                    block, nodata)], dtype=numpy.float64)
-    return raster_sum
 
 
 def _generate_carbon_map(
@@ -610,124 +580,6 @@ def _calculate_npv(c_change_carbon_path, valuation_constant, npv_out_path):
         op=lambda carbon: carbon * valuation_constant,
         rasters=[c_change_carbon_path],
         target_path=npv_out_path)
-
-
-def _generate_report(raster_file_set, model_args, file_registry):
-    """Generate a human readable HTML report of summary stats of model run.
-
-    Args:
-        raster_file_set (set): paths to rasters that need summary stats.
-        model_args (dict): InVEST argument dictionary.
-        file_registry (dict): file path dictionary for InVEST workspace.
-
-    Returns:
-        None.
-    """
-    with codecs.open(file_registry['html_report'], 'w', encoding='utf-8') as report_doc:
-        # Boilerplate header that defines style and intro header.
-        header = (
-            """
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-            <meta charset="utf-8">
-            <title>Carbon Results</title>
-            <style type="text/css">
-                body {
-                    --invest-green: #148f68;
-                    background: #ffffff;
-                    color: #000000;
-                    font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
-                }
-                h1, h2, th {
-                    font-weight: bold;
-                }
-                h1, h2 {
-                    color: var(--invest-green);
-                }
-                h1 {
-                    font-size: 2rem;
-                }
-                h2 {
-                    font-size: 1.5rem;
-                }
-                table {
-                    border: 0.25rem solid var(--invest-green);
-                    border-collapse: collapse;
-                }
-                thead tr {
-                    background: #e9ecef;
-                    border-bottom: 0.1875rem solid var(--invest-green);
-                }
-                tbody tr:nth-child(even) {
-                    background: ghostwhite;
-                }
-                th {
-                    padding: 0.5rem;
-                    text-align:left;
-                }
-                td {
-                    padding: 0.375rem 0.5rem;
-                }
-                .number {
-                    text-align: right;
-                    font-family: monospace;
-                }
-            </style>
-            </head>
-            <body>
-            <h1>InVEST Carbon Model Results</h1>
-            <p>This document summarizes the results from
-            running the InVEST carbon model with the following data.</p>
-            """
-        )
-
-        report_doc.write(header)
-        report_doc.write('<p>Report generated at %s</p>' % (
-            time.strftime("%Y-%m-%d %H:%M")))
-
-        # Report input arguments
-        report_doc.write('<h2>Inputs</h2>')
-        report_doc.write('<table><thead><tr><th>arg id</th><th>arg value</th>'
-                         '</tr></thead><tbody>')
-        for key, value in model_args.items():
-            report_doc.write('<tr><td>%s</td><td>%s</td></tr>' % (key, value))
-        report_doc.write('</tbody></table>')
-
-        # Report aggregate results
-        report_doc.write('<h2>Aggregate Results</h2>')
-        report_doc.write(
-            '<table><thead><tr><th>Description</th><th>Value</th><th>Units'
-            '</th><th>Raw File</th></tr></thead><tbody>')
-
-        carbon_units = 'metric tons'
-
-        # value lists are [sort priority, description, statistic, units]
-        report = [
-            (file_registry['c_storage_bas'], 'Baseline Carbon Storage',
-             carbon_units),
-            (file_registry['c_storage_alt'], 'Alternate Carbon Storage',
-             carbon_units),
-            (file_registry['c_change_bas_alt'], 'Change in Carbon Storage',
-             carbon_units),
-            (file_registry['npv_alt'],
-             'Net Present Value of Carbon Change', 'currency units'),
-        ]
-
-        for raster_uri, description, units in report:
-            if raster_uri in raster_file_set:
-                total = _accumulate_totals(raster_uri)
-                raster_info = pygeoprocessing.get_raster_info(raster_uri)
-                pixel_area = abs(numpy.prod(raster_info['pixel_size']))
-                # Since each pixel value is in Mg/ha, ``total`` is in (Mg/ha * px) = Mg•px/ha.
-                # Adjusted sum = ([total] Mg•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = Mg.
-                summary_stat = total * pixel_area / 10000
-                report_doc.write(
-                    '<tr><td>%s</td><td class="number" data-summary-stat="%s">'
-                    '%.2f</td><td>%s</td><td>%s</td></tr>' % (
-                        description, description, summary_stat, units,
-                        raster_uri))
-        report_doc.write('</tbody></table></body></html>')
 
 
 @validation.invest_validator

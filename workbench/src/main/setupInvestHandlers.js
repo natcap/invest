@@ -66,6 +66,13 @@ export function setupInvestRunHandlers() {
     const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
     const language = settingsStore.get('language');
     const nWorkers = settingsStore.get('nWorkers');
+    let resultsSuffix = args?.results_suffix || '';
+    if (resultsSuffix && !resultsSuffix.startsWith('_')) {
+      resultsSuffix = `_${resultsSuffix}`;
+    }
+    const reportFilepath = path.join(
+      args.workspace_dir, `${modelID}_report${resultsSuffix}.html`
+    );
 
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -168,8 +175,14 @@ export function setupInvestRunHandlers() {
 
     investRun.on('exit', (code, signal) => {
       delete runningJobs[tabID];
+      // not all models will create an html report
+      let htmlfile = '';
+      if (fs.existsSync(reportFilepath)) {
+        htmlfile = reportFilepath;
+      }
       event.reply(`invest-exit-${tabID}`, {
         code: code,
+        htmlfile: htmlfile,
       });
       logger.debug(`invest exited with code: ${code} and signal: ${signal}`);
       fs.unlink(datastackPath, (err) => {

@@ -1,0 +1,38 @@
+<!--
+  - `text` can be a string or a sequence of strings.
+  - `source_list` should be a list of strings.
+  - If `definition_list` is `True`, `text` should be a sequence of strings
+    in the form `{term}:{definition}`.
+  - `pre_caption` should be set to `True` if this caption appears before
+    (i.e., above) the figure it describes.
+-->
+
+{% macro caption(
+  text, source_list=None, definition_list=False, pre_caption=False
+) -%}
+  {% if text is string %}
+    {% set text = [text] %}
+  {% endif %}
+  <div class="caption {{ 'pre-caption' if pre_caption else '' }}">
+    {% if definition_list %}
+      <dl>
+        {% for item in text %}
+          {% set parts = item.split(':') %}
+          <div class="definition-list-item">
+            <dt>{{ parts[0] }}</dt>
+            <dd>{{ ':'.join(parts[1:]) }}</dd>
+          </div>
+        {% endfor %}
+      </dl>
+    {% else %}
+      {% for paragraph in text %}
+        <p>{{ paragraph }}</p>
+      {% endfor %}
+      {% if source_list %}
+        <p class="sources">
+          Sources: {{ source_list | join('; ') }}
+        </p>
+      {% endif %}
+    {% endif %}
+  </div>
+{%- endmacro %}

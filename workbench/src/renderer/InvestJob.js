@@ -94,6 +94,7 @@ export default class InvestJob {
    * @param {string} obj.modelTitle - colloquial name of the invest model
    * @param {object} obj.argsValues - an invest "args dict" with initial values
    * @param {string} obj.logfile - path to an existing invest logfile
+   * @param {string} obj.htmlfile - path to an existing html report
    * @param {string} obj.status - one of 'running'|'error'|'success'
    * @param {string} obj.type - 'plugin' or 'core'
    */
@@ -103,6 +104,7 @@ export default class InvestJob {
       modelTitle,
       argsValues,
       logfile,
+      htmlfile,
       status,
       type,
     }
@@ -116,6 +118,7 @@ export default class InvestJob {
     this.modelTitle = modelTitle;
     this.argsValues = argsValues;
     this.logfile = logfile;
+    this.htmlfile = htmlfile;
     this.status = status;
     this.type = type;
     this.hash = null;
