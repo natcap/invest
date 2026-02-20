@@ -12,6 +12,9 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
@@ -60,7 +63,7 @@ class NDRTests(unittest.TestCase):
         output raster, in the buggy version, would have pixel values of -inf
         where they should have been nodata.
 
-        https://community.naturalcapitalproject.org/t/ndr-null-values-in-watershed-results/914
+        https://community.naturalcapitalalliance.org/t/ndr-null-values-in-watershed-results/914
         """
         from natcap.invest.ndr import ndr
 
@@ -207,7 +210,13 @@ class NDRTests(unittest.TestCase):
                 os.path.join(self.workspace_dir, 'watershed_results_ndr.gpkg'),
                 'wb') as f:
             f.write(b'')
-        ndr.execute(args)
+
+        execute_kwargs = {
+            'generate_report': bool(ndr.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        ndr.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(args, ndr.MODEL_SPEC, **execute_kwargs)
 
         result_vector = ogr.Open(os.path.join(
             args['workspace_dir'], 'watershed_results_ndr.gpkg'))

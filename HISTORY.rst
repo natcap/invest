@@ -67,6 +67,16 @@ Unreleased Changes
 
 General
 =======
+* Some InVEST models now generate visual summaries of results,
+  called "reports". A report is an html document available in the output
+  workspace and also viewable from the Workbench after the model run completes.
+  Reports exist for the Carbon, Coastal Vulnerability, NDR, & SDR models.
+  Reports for other models will be developed and released over time.
+  (`#2249 <https://github.com/natcap/invest/issues/2249>`_)
+
+    * Reports generated from sample data are available at
+      http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/
+      (`#2338 <https://github.com/natcap/invest/issues/2338>`_)
 * Now testing and building against Python 3.14.
   No longer testing and building with Python 3.9, which reached EOL.
   (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
@@ -76,12 +86,78 @@ General
   can be found on the package, as well as on the module, to maintain
   backwards-compatibility.
   (`#2277 <https://github.com/natcap/invest/issues/2277>`_)
+* Changes for Natural Capital Alliance launch (formerly Natural Capital Project):
+
+    * Workbench: Update NatCap name and logo; update Forum URL to point to
+      community.naturalcapitalalliance.org; update NatCap website URL to point to
+      naturalcapitalalliance.stanford.edu
+      (`#2284 <https://github.com/natcap/invest/issues/2284>`_)
+    * Updated NatCap name, website URL, and Forum URL throughout the codebase,
+      including API docs (`#2287 <https://github.com/natcap/invest/issues/2287>`_)
+* Updated to ``pygeoprocessing`` 2.4.10:
+
+  * Fixed an import error caused by ``GDALUseExceptions`` moving from
+    ``pygeoprocessing.geoprocessing_core`` into ``pygeoprocessing.utils``.
+    (`#2297 <https://github.com/natcap/invest/issues/2297>`_)
+  * ``pygeoprocessing.zonal_statistics`` now supports 3D and Measured Polygon
+    and MultiPolygon geometries.
+    (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
+* Docker container builds now use debian 13 "Trixie", which includes Python
+  3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
+* Fixed a bug where output directories containing unresolved patterns
+  were created during model setup, preventing correct creation of
+  substituted output directories at runtime.
+  (`#2213 <https://github.com/natcap/invest/issues/2213>`_)
+* Added an ``include_placeholder`` attribute to the ModelSpec ``OptionStringInput``
+  class. If ``True``, a placeholder "Select an option" will be included as the
+  default (selected but invalid) dropdown option for that input in the workbench.
+  (`#2260 <https://github.com/natcap/invest/issues/2260>`_)
+* Added optional ``about`` attribute to ``ModelSpec``.
+  (`#2052 <https://github.com/natcap/invest/issues/2052>`_)
+
+Workbench
+=========
+* Fixed a bug where trying to save a datastack with an invalid filepath would
+  result in the "archiving" message hanging forever. Now all types of datastack
+  archiving errors will be indicated in the sidebar.
+  (`#1995 <https://github.com/natcap/invest/issues/1995>`_)
+* The Workbench model input fields now display as valid or invalid after using
+  the file browse button to populate an input, rather than requiring the user
+  to "touch" the field again in order to see the validation status.
+  (`#2149 <https://github.com/natcap/invest/issues/2149>`_)
+* The "Manage Plugins" modal now presents a message upon successful
+  installation or removal of a plugin.
+  (`#2276 <https://github.com/natcap/invest/issues/2276>`_)
+* Updated Workbench model FAQ Forum URLs to point to the new canonical tag
+  routes that include both the tag slug and tag ID.
+  (`#2376 <https://github.com/natcap/invest/issues/2376>`_)
+* Improved the right-click context menu to include "Save Image as"
+  option when right-clicking on an image.
+  (`#2266 <https://github.com/natcap/invest/issues/2266>`_)
+* Improved handling of multiple open windows, such as when opening
+  the User's Guide, or a report.
+  (`#2353 <https://github.com/natcap/invest/issues/2353>`_)
+
+
+Carbon Storage and Sequestration
+================================
+* Previously, the Carbon model generated an HTML report consisting of a table
+  of model inputs and a table of aggregate results. That report has been
+  replaced with a new report containing the same features plus many more.
+  (`#2249 <https://github.com/natcap/invest/issues/2249>`_,
+  `#2331 <https://github.com/natcap/invest/issues/2331>`_)
 
 Coastal Vulnerability
 =====================
 * Various updates to model input and output data metadata, including
   correcting the units of some intermediate outputs.
   (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
+
+Crop Production
+===============
+* Fixed a bug where ``nan`` values in the crop regression DataFrame were not
+  modified in-place under pandas 3.0.0, preventing correct reclassification to 0.
+  (`#2310 <https://github.com/natcap/invest/issues/2310>`_)
 
 Pollination
 ===========

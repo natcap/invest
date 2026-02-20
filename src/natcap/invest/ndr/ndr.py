@@ -21,10 +21,26 @@ LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
+_model_description = gettext(
+    """
+    The InVEST Nutrient Delivery Ratio model maps nutrient sources from 
+    watersheds and their transport to the stream. This spatial information 
+    can be used to assess the service of nutrient retention by natural 
+    vegetation. The model represents the long-term, steady-state flow of 
+    nutrients through empirical relationships. Sources of nutrients across 
+    the landscape, also called nutrient loads, are determined based on a 
+    land use/land cover (LULC) map and associated loading rates. Nutrient 
+    loads are divided into sediment-bound and dissolved parts, which will be 
+    transported through surface and subsurface flow, respectively, stopping 
+    when they reach a stream.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="ndr",
     model_title=gettext("Nutrient Delivery Ratio"),
     userguide="ndr.html",
+    reporter="natcap.invest.ndr.reporter",
+    about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),

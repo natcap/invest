@@ -1,8 +1,8 @@
 import path from 'path';
 
 import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import contextMenu from 'electron-context-menu';
 
-import setupContextMenu from './setupContextMenu';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
 
@@ -126,7 +126,10 @@ function createWindow(parentWindow, isDevMode) {
       additionalArguments: [devModeArg],
     },
   });
-  setupContextMenu(win);
+  contextMenu({
+    window: win,
+    showSearchWithGoogle: false,
+  });
   win.setMenu(null);
   if (isDevMode) {
     win.webContents.openDevTools();
@@ -136,7 +139,7 @@ function createWindow(parentWindow, isDevMode) {
 
 function openAboutWindow(parentWindow, isDevMode) {
   const child = createWindow(parentWindow, isDevMode);
-  child.loadURL(path.join(BASE_URL, 'about.html'));
+  child.loadURL(new URL('about.html', BASE_URL).href);
 }
 
 function openReportWindow(parentWindow, isDevMode) {
@@ -149,5 +152,5 @@ function openReportWindow(parentWindow, isDevMode) {
   logger.debug(JSON.stringify(process.env, null, 2));
 
   const child = createWindow(parentWindow, isDevMode);
-  child.loadURL(path.join(BASE_URL, 'report_a_problem.html'));
+  child.loadURL(new URL('report_a_problem.html', BASE_URL).href);
 }

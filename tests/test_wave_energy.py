@@ -18,6 +18,8 @@ from shapely.geometry import Point
 from natcap.invest import utils
 import pygeoprocessing
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
@@ -434,7 +436,13 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         # Testing if intermediate/output were overwritten
         _make_empty_files(args['workspace_dir'])
 
-        wave_energy.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(wave_energy.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        wave_energy.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, wave_energy.MODEL_SPEC, **execute_kwargs)
 
         raster_results = [
             'wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif', 'capwe_mwh.tif',

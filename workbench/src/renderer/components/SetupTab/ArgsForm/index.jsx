@@ -7,7 +7,7 @@ import ArgInput from '../ArgInput';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { withTranslation } from 'react-i18next';
 
-const { ipcRenderer } = window.Workbench.electron;
+const { getFilePath, ipcRenderer } = window.Workbench.electron;
 
 /** Prevent the default case for onDragOver so onDrop event will be fired. */
 function dragOverHandler(event) {
@@ -45,7 +45,7 @@ class ArgsForm extends React.Component {
       alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
       return;
     }
-    loadParametersFromFile(fileList[0].path);
+    loadParametersFromFile(getFilePath(fileList[0]));
   }
 
   /** Handle drag enter events for the Form elements. */
@@ -87,7 +87,7 @@ class ArgsForm extends React.Component {
     if (fileList.length !== 1) {
       alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
     } else if (fileList.length === 1) {
-      updateArgValues(name, fileList[0].path);
+      updateArgValues(name, getFilePath(fileList[0]));
     } else {
       throw new Error('Error handling input file drop');
     }
@@ -111,6 +111,7 @@ class ArgsForm extends React.Component {
     if (data.filePaths.length) {
       // dialog defaults allow only 1 selection
       this.props.updateArgValues(name, data.filePaths[0]);
+      this.props.updateArgTouched(name);
       this.props.triggerScrollEvent();
     }
   }
