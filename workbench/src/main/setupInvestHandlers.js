@@ -100,7 +100,7 @@ export function setupInvestRunHandlers() {
       cmdArgs = [
         'run',
         `--prefix "${settingsStore.get(`plugins.${modelID}.env`)}"`,
-        'invest',
+        'python -m natcap.invest',
         LOGLEVELMAP[loggingLevel],
         TGLOGLEVELMAP[taskgraphLoggingLevel],
         `--language "${language}"`,

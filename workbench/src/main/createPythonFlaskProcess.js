@@ -127,7 +127,7 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
   const args = [
     'run', '--prefix', `"${modelEnvPath}"`,
-    'invest', '--debug', 'serve', '--port', port];
+    'python -m natcap.invest', '--debug', 'serve', '--port', port];
   logger.debug('spawning command:', micromamba, args);
   // shell mode is necessary in dev mode & relying on a conda env
   const pythonServerProcess = spawn(micromamba, args, { shell: true });
