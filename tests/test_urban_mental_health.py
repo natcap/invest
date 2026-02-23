@@ -431,6 +431,76 @@ class UMHTests(unittest.TestCase):
 
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
+    def test_population_aligned_bbox_matches_snapped_processing_bbox(self):
+        """Population resample bbox should match AOI buffered bbox w/ snapping.
+
+        Because the (vector-derived) AOI-buffered bbox  will almost never land
+        exactly on raster grid edges, there will be a small discrepancy between
+        the target buffered AOI bbox and the output bounding box of the
+        resampled population raster.
+
+        pygeoprocessing.align_and_resize_raster_stack snaps the target
+        bounding box to the pixel grid of the alignment raster
+        (origin + integer multiples of pixel size).
+
+        This tests that population_aligned bbox == the preprocessed ndvi bbox
+        and both equal the AOI-buffered bbox snapped outward to that grid.
+        """
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        urban_mental_health.execute(args)
+
+        suffix = args['results_suffix']
+        intermediate = os.path.join(self.workspace_dir, "intermediate")
+
+        pop_aligned_path = os.path.join(
+            intermediate, f"population_aligned_{suffix}.tif")
+        pop_bbox = pygeoprocessing.get_raster_info(
+            pop_aligned_path)['bounding_box']
+
+        ndvi_raster_path = os.path.join(
+            intermediate, f"ndvi_base_aligned_{suffix}.tif")
+        ndvi_info = pygeoprocessing.get_raster_info(
+            ndvi_raster_path)
+        ndvi_bbox = ndvi_info['bounding_box']
+
+        # Quick check - population aligned bbox matches the ndvi bbox
+        numpy.testing.assert_allclose(pop_bbox, ndvi_bbox)
+
+        # Build AOI buffered bbox (vector-derived)
+        aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
+        aoi_bbox = numpy.array(aoi_info['bounding_box'], dtype=numpy.float64)
+        r = float(args['search_radius'])
+        buffered_bbox = (aoi_bbox + numpy.array([-r, -r, r, r])).tolist()
+
+        # Snap buffered bbox outward to the processing grid.
+        # Note y pixel size is typically negative. We use abs() for step
+        # sizes and take ndvi_bbox as grid anchor
+        x_step = abs(ndvi_info['pixel_size'][0])
+        y_step = abs(ndvi_info['pixel_size'][1])
+
+        gxmin, gymin, gxmax, gymax = ndvi_bbox  # grid bbox
+        bxmin, bymin, bxmax, bymax = buffered_bbox
+
+        def _snap_down(v, anchor, step):
+            """Largest value on the grid <= v."""
+            return anchor + numpy.floor((v - anchor) / step) * step
+
+        def _snap_up(v, anchor, step):
+            """Smallest value on the grid >= v."""
+            return anchor + numpy.ceil((v - anchor) / step) * step
+
+        snapped_bbox = [
+            float(_snap_down(bxmin, gxmin, x_step)),
+            float(_snap_down(bymin, gymin, y_step)),
+            float(_snap_up(bxmax, gxmax, x_step)),
+            float(_snap_up(bymax, gymax, y_step)),
+        ]
+
+        # processing bbox should be the buffered bbox snapped outward to grid
+        numpy.testing.assert_allclose(pop_bbox, snapped_bbox, rtol=0, atol=1e-6)
+
     def test_AOI_larger_than_lulc_base_ndvi_scenario(self):
         """Test warning raised but model runs if LULC raster too small"""
         from natcap.invest.urban_mental_health import urban_mental_health
@@ -757,7 +827,7 @@ class UMHTests(unittest.TestCase):
         self.assertNotIn("sum_cost", df.columns)
 
     def test_lulc_scenario_with_basic_inputs(self):
-        """Test UMH LULC inputs scenario with basic LULC and attr table inputs"
+        """Test UMH LULC inputs scenario with basic LULC and attr table inputs
 
         Test that LULC rasters are reclassified to NDVI based on attribute
         table values. Then test that delta NDVI is calculated correctly.
