@@ -477,7 +477,7 @@ def main(user_args=None):
                 create_logfile=True,
                 generate_metadata=True,
                 save_file_registry=True,
-                check_outputs=True)
+                check_outputs=False)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)

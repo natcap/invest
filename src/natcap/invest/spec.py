@@ -2142,7 +2142,7 @@ class ModelSpec(BaseModel):
 
     def execute(self, args, create_logfile=False, log_level=logging.NOTSET,
             generate_metadata=False, save_file_registry=False,
-            check_outputs=True):
+            check_outputs=False):
         """Invest model execute function wrapper.
 
         Performs additonal work before and after the execute function runs:
