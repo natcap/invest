@@ -20,10 +20,22 @@ from natcap.invest.unit_registry import u
 LOGGER = logging.getLogger(__name__)
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
 
+_model_description = gettext(
+    """
+    The InVEST Urban Mental Health model estimates the impacts of nature
+    exposure, and more specifically residential greenness, on mental health.
+    Residential nature exposure is defined as the average NDVI within a
+    distance of a residence that benefits human mental health. The mental
+    health model calculates the preventable mental disorder cases at the pixel
+    level, based on the selected urban greening scenario.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="urban_mental_health",
     model_title=gettext("Urban Mental Health"),
     userguide="",  # TODO - add this model to UG
+    reporter="", # TODO - add "natcap.invest.urban_mental_health.reporter",
+    about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("umh",),
