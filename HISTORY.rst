@@ -65,18 +65,25 @@
 Unreleased Changes
 ------------------
 
-General
-=======
+Highlights
+==========
 * Some InVEST models now generate visual summaries of results,
   called "reports". A report is an html document available in the output
   workspace and also viewable from the Workbench after the model run completes.
-  Reports exist for the Carbon, Coastal Vulnerability, NDR, & SDR models.
-  Reports for other models will be developed and released over time.
-  (`#2249 <https://github.com/natcap/invest/issues/2249>`_)
+  Reports exist for the Carbon, Coastal Vulnerability, NDR, & SDR models
+  and will be developed for other models over time.
 
     * Reports generated from sample data are available at
       http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/
-      (`#2338 <https://github.com/natcap/invest/issues/2338>`_)
+
+
+General
+=======
+* InVEST models can now include a ``reporter`` module that generates
+  a visual summary of results. If a reporter exists, it is run by the Workbench
+  or the ``invest`` CLI after the model's ``execute`` function completes.
+  (`#2249 <https://github.com/natcap/invest/issues/2249>`_)
+  (`#2338 <https://github.com/natcap/invest/issues/2338>`_)
 * Now testing and building against Python 3.14.
   No longer testing and building with Python 3.9, which reached EOL.
   (`#2269 <https://github.com/natcap/invest/issues/2269>`_)
