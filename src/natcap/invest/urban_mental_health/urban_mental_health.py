@@ -653,13 +653,11 @@ def execute(args):
             'target_population_raster_path': file_registry[
                 'population_aligned'],
             'target_pixel_size': pixel_size,
-            'target_bb': pygeoprocessing.get_raster_info(
-                output_align_list[0])['bounding_box'],
+            'target_bb': aoi_buffered_bbox,
             'target_projection_wkt': aoi_projection,
             'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['population_aligned']],
-        dependent_task_list=[align_task],
         task_name='Resample population to same resolution as other inputs')
 
     if args['scenario'] == 'lulc':
@@ -727,7 +725,7 @@ def execute(args):
         masked_alt_ndvi_task = task_graph.add_task(
             func=mask_ndvi,
             args=(file_registry['ndvi_alt_aligned'],
-                    file_registry['ndvi_alt_aligned_masked']),
+                  file_registry['ndvi_alt_aligned_masked']),
             kwargs={  # use LULC to mask if provided
                 'input_lulc': file_registry[f'lulc_{mask_alt_tag}_aligned'],
                 'lulc_df': lulc_df,
@@ -804,8 +802,9 @@ def execute(args):
               args['baseline_prevalence_vector'],
               file_registry['baseline_prevalence_raster'],
               file_registry['baseline_cases']),
-        target_path_list=[file_registry['baseline_cases']],
-        dependent_task_list=[delta_ndvi_task, population_align_task],
+        target_path_list=[file_registry['baseline_prevalence_raster'],
+                          file_registry['baseline_cases']],
+        dependent_task_list=[population_align_task],
         task_name="calculate baseline cases"
     )
 
