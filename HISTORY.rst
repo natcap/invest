@@ -111,6 +111,9 @@ Workbench
 * The "Manage Plugins" modal now presents a message upon successful
   installation or removal of a plugin.
   (`#2276 <https://github.com/natcap/invest/issues/2276>`_)
+* Updated Workbench model FAQ Forum URLs to point to the new canonical tag
+  routes that include both the tag slug and tag ID.
+  (`#2376 <https://github.com/natcap/invest/issues/2376>`_)
 
 Coastal Vulnerability
 =====================
@@ -138,6 +141,13 @@ SDR
   deposition and avoided export rasters. It is not expected to cause any
   significant change to results at the watershed scale.
   (`#2379 <https://github.com/natcap/invest/issues/2379>`_)
+
+Seasonal Water Yield
+====================
+* The outputs ``L.tif`` and ``l_aligned.tif`` have been consolidated. ``L.tif``
+  in the top level of the workspace is the aligned copy of the local recharge
+  input if one is provided. Otherwise, it is the local recharge layer calculated
+  by the model. (`#2336 <https://github.com/natcap/invest/issues/2336>`_)
 
 
 3.17.2 (2025-12-02)
