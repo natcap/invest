@@ -114,6 +114,10 @@ General
   (`#2260 <https://github.com/natcap/invest/issues/2260>`_)
 * Added optional ``about`` attribute to ``ModelSpec``.
   (`#2052 <https://github.com/natcap/invest/issues/2052>`_)
+* ``results_suffix`` is now optional to include as an input in ``ModelSpec``. All
+  core InVEST models will continue to include this input, but plugins will no
+  longer be required to support it.
+  (`#2229 <https://github.com/natcap/invest/issues/2229>`_)
 
 Workbench
 =========
