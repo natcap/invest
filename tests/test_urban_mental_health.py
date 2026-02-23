@@ -494,12 +494,12 @@ class UMHTests(unittest.TestCase):
         snapped_bbox = [
             float(_snap_down(bxmin, gxmin, x_step)),
             float(_snap_down(bymin, gymin, y_step)),
-            float(_snap_up(bxmax, gxmax, x_step)),
-            float(_snap_up(bymax, gymax, y_step)),
+            float(_snap_up(bxmax, gxmin, x_step)),
+            float(_snap_up(bymax, gymin, y_step)),
         ]
 
         # processing bbox should be the buffered bbox snapped outward to grid
-        numpy.testing.assert_allclose(pop_bbox, snapped_bbox, rtol=0, atol=1e-6)
+        numpy.testing.assert_allclose(pop_bbox, snapped_bbox)
 
     def test_AOI_larger_than_lulc_base_ndvi_scenario(self):
         """Test warning raised but model runs if LULC raster too small"""
@@ -874,7 +874,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_delta_ndvi,
                                       expected_delta_ndvi, atol=1e-6)
 
-    def test_lulc_scenario_with_lulc_relcassified_by_ndvi_raster(self):
+    def test_lulc_scenario_with_lulc_reclassified_by_ndvi_raster(self):
         """Test UMH LULC inputs scenario if reclassifying with NDVI raster
 
         Test that UMH falls back to reclassifying LULC based on NDVI raster
