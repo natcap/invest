@@ -423,15 +423,6 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="weighted_avg_aspect",
-            path="intermediate_outputs/weighted_avg_aspect.tif",
-            about=gettext(
-                "Average aspect weighted by flow direction."
-            ),
-            data_type=float,
-            units=u.none
-        ),
-        spec.SingleBandRasterOutput(
             id="what_drains_to_stream",
             path="intermediate_outputs/what_drains_to_stream.tif",
             about=gettext(
@@ -470,6 +461,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Copy of the input drainage map, clipped to the extent of the"
                 " other raster inputs and aligned to the DEM."
             ),
+            created_if="drainage_path",
             data_type=int,
             units=u.none
         ),
@@ -532,6 +524,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "A copy of the aligned drainage map, masked using the mask"
                 " raster."
             ),
+            created_if="drainage_path",
             data_type=int,
             units=u.none
         ),

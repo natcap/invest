@@ -438,13 +438,6 @@ MODEL_SPEC = spec.ModelSpec(
             )
         ),
         spec.FileOutput(
-            id="scenario_[PREDICTOR]",
-            path="intermediate/scenario/[PREDICTOR].json",
-            about=gettext(
-                "aggregated scenario predictor values within each polygon"
-            )
-        ),
-        spec.FileOutput(
             id="server_version",
             path="intermediate/server_version.pickle",
             about=gettext("Server version info")

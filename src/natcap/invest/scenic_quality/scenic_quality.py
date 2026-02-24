@@ -184,6 +184,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "This raster layer contains the weighted sum of the valuation"
                 " rasters created for each point."
             ),
+            created_if="do_valuation",
             data_type=float,
             units=u.none
         ),
@@ -237,6 +238,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " b coefficients. The viewshed’s value is only evaluated for"
                 " visible pixels."
             ),
+            created_if="do_valuation",
             data_type=float,
             units=u.none
         ),

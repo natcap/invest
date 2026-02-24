@@ -285,6 +285,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="downslope_distance",
             path="downslope_distance.tif",
             about=gettext("Flow distance from each pixel to a stream."),
+            created_if="calculate_downslope_distance",
             data_type=float,
             units=u.pixel
         )
