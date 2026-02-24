@@ -75,8 +75,8 @@ Highlights
 
     * Reports generated from sample data are available at
       http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/
-* The Natural Capital Project has changed its name to the Natural Capital Alliance.
-  We hope this signals an openness to new collaborations and contributions to our
+* The Natural Capital Project has changed its name to the Natural Capital Alliance
+  to reflect an openness to new collaborations and contributions to our
   software & science. Nothing is changing in how InVEST is developed, but names
   and logos were updated.
 
