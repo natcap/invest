@@ -20,7 +20,7 @@ export default function setupOpenLocalHtml(parentWindow, isDevMode) {
       const [width, height] = parentWindow.getSize();
 
       const win = new BrowserWindow({
-        width: width > 1300 ? 1300 : width, // accommodate reports and UG
+        width: (width > 1300 && !isDevMode) ? 1300 : width, // accommodate reports and UG
         height: height,
         frame: true,
         webPreferences: {
