@@ -1491,7 +1491,11 @@ def _calculate_sdr(
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             sdr_max / (1+numpy.exp((ic_0-ic_factor[valid_mask])/k_factor)))
-        result[stream == 1] = 0.0
+        # set SDR to 1 on streams, representing 100% sediment delivery, no
+        # retention. otherwise SDR would be undefined in streams, but then the
+        # nodata would propagate upslope.
+        # https://github.com/natcap/invest/issues/2379
+        result[stream == 1] = 1
         return result
 
     pygeoprocessing.raster_calculator(

@@ -137,8 +137,8 @@ class SDRTests(unittest.TestCase):
         expected_watershed_totals = {
             'usle_tot': 2.62457418442,
             'sed_export': 0.09748090804,
-            'sed_dep': 1.71672844887,
-            'avoid_exp': 10199.46875,
+            'sed_dep': 1.71813157,
+            'avoid_exp': 10199.466725,
             'avoid_eros': 274444.75,
         }
 
