@@ -127,6 +127,8 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
   const args = [
     'run', '--prefix', `"${modelEnvPath}"`,
+    // calling invest with python avoids issues with unescaped
+    // spaces in the python path in the conda bin/invest script
     'python -m natcap.invest', '--debug', 'serve', '--port', port];
   logger.debug('spawning command:', micromamba, args);
   // shell mode is necessary in dev mode & relying on a conda env
