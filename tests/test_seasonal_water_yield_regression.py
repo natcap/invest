@@ -919,14 +919,16 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
+        workspace_dir = os.path.join(self.workspace_dir, 'workspace')
+        os.mkdir(workspace_dir)
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
-            self.workspace_dir)
+            workspace_dir)
         # modify args to account for user recharge
         args['user_defined_climate_zones'] = False
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
         args['user_defined_local_recharge'] = True
-        recharge_ras_path = os.path.join(args['workspace_dir'], 'L.tif')
+        recharge_ras_path = os.path.join(self.workspace_dir, 'L.tif')
         make_recharge_raster(recharge_ras_path)
         args['l_path'] = recharge_ras_path
 
