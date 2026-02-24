@@ -15,19 +15,22 @@
     let el = document.getElementById(elId);
     vegaEmbed('#'+elId, chart_spec, {
       // https://vega.github.io/vega-embed/#options
-      "mode": "vega-lite",
-      "scaleFactor": { png: 2 }, // scale on export
-      "actions": {
+      mode: 'vega-lite',
+      scaleFactor: { png: 2 }, // scale on export
+      actions: {
         // These don't work in the electron browser context and are
         // not necessarily useful to invest users.
-        "compiled": false,
-        "source": false,
+        compiled: false,
+        source: false,
       }
     })
-      // .then(function (result) {
-      //   // Access the Vega view instance as result.view
-      //   // (https://vega.github.io/vega/docs/api/view/)
-      // })
-      .catch(error => showError(el, error));
+    .then(function (_result) {
+      if (el.classList.contains('loading')) {
+        el.classList.remove('loading');
+      }
+      // Access the Vega view instance as result.view
+      // (https://vega.github.io/vega/docs/api/view/)
+    })
+    .catch(error => showError(el, error));
   }
 </script>
