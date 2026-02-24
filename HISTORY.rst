@@ -75,7 +75,10 @@ Highlights
 
     * Reports generated from sample data are available at
       http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/
-
+* The Natural Capital Project has changed its name to the Natural Capital Alliance.
+  We hope this signals an openness to new collaborations and contributions to our
+  software & science. Nothing is changing in how InVEST is developed, but names
+  and logos were updated.
 
 General
 =======
@@ -96,22 +99,20 @@ General
   can be found on the package, as well as on the module, to maintain
   backwards-compatibility.
   (`#2277 <https://github.com/natcap/invest/issues/2277>`_)
-* Changes for Natural Capital Alliance launch (formerly Natural Capital Project):
-
+* Changes for Natural Capital Alliance launch (formerly Natural Capital Project)
     * Workbench: Update NatCap name and logo; update Forum URL to point to
       community.naturalcapitalalliance.org; update NatCap website URL to point to
       naturalcapitalalliance.stanford.edu
       (`#2284 <https://github.com/natcap/invest/issues/2284>`_)
     * Updated NatCap name, website URL, and Forum URL throughout the codebase,
       including API docs (`#2287 <https://github.com/natcap/invest/issues/2287>`_)
-* Updated to ``pygeoprocessing`` 2.4.10:
-
-  * Fixed an import error caused by ``GDALUseExceptions`` moving from
-    ``pygeoprocessing.geoprocessing_core`` into ``pygeoprocessing.utils``.
-    (`#2297 <https://github.com/natcap/invest/issues/2297>`_)
-  * ``pygeoprocessing.zonal_statistics`` now supports 3D and Measured Polygon
-    and MultiPolygon geometries.
-    (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
+* Updated to ``pygeoprocessing`` 2.4.10
+    * Fixed an import error caused by ``GDALUseExceptions`` moving from
+      ``pygeoprocessing.geoprocessing_core`` into ``pygeoprocessing.utils``.
+      (`#2297 <https://github.com/natcap/invest/issues/2297>`_)
+    * ``pygeoprocessing.zonal_statistics`` now supports 3D and Measured Polygon
+      and MultiPolygon geometries.
+      (`#2295 <https://github.com/natcap/invest/issues/2295>`_)
 * Docker container builds now use debian 13 "Trixie", which includes Python
   3.13 and GDAL 3.10. (`#1952 <https://github.com/natcap/invest/issues/1952>`_)
 * Fixed a bug where output directories containing unresolved patterns
