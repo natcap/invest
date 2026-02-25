@@ -129,8 +129,6 @@ General
   core InVEST models will continue to include this input, but plugins will no
   longer be required to support it.
   (`#2229 <https://github.com/natcap/invest/issues/2229>`_)
-* Temporarily removed Python 3.10 from CI and PyPI wheel builds.
-  (`#2424 <https://github.com/natcap/invest/issues/2424>`_)
 * Docker container builds now include the InVEST license and NOTICES.txt.
   (`#2422 <https://github.com/natcap/invest/issues/2422>`_)
 
