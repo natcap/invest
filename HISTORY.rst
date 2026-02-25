@@ -129,7 +129,7 @@ General
   core InVEST models will continue to include this input, but plugins will no
   longer be required to support it.
   (`#2229 <https://github.com/natcap/invest/issues/2229>`_)
-* No PyPI wheels will initially be released for Python 3.10.
+* Temporarily removed Python 3.10 from CI and PyPI wheel builds.
   (`#2424 <https://github.com/natcap/invest/issues/2424>`_)
 
 Workbench
