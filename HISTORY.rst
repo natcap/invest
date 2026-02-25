@@ -131,6 +131,8 @@ General
   (`#2229 <https://github.com/natcap/invest/issues/2229>`_)
 * Temporarily removed Python 3.10 from CI and PyPI wheel builds.
   (`#2424 <https://github.com/natcap/invest/issues/2424>`_)
+* Docker container builds now include the InVEST license and NOTICES.txt.
+  (`#2422 <https://github.com/natcap/invest/issues/2422>`_)
 
 Workbench
 =========
