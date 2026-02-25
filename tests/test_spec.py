@@ -4,11 +4,16 @@ import tempfile
 import unittest
 
 import geometamaker
-from natcap.invest import spec
-from natcap.invest.file_registry import FileRegistry
+import numpy
+import pygeoprocessing
+from natcap.invest import spec, models
 from natcap.invest.unit_registry import u
 from osgeo import gdal
-from osgeo import ogr
+from osgeo import osr
+from pydantic import ValidationError
+
+from .utils import assert_complete_execute, fake_execute
+
 
 gdal.UseExceptions()
 
@@ -260,38 +265,6 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
 
-def _fake_execute(output_spec, workspace):
-    """A utility function to support the metadata test."""
-    file_registry = FileRegistry(output_spec, workspace, '')
-    for spec_data in output_spec:
-        reg_key = spec_data.id
-        if '[' in spec_data.id:
-            reg_key = (spec_data.id, 'A')
-        filepath = file_registry[reg_key]
-        if isinstance(spec_data, spec.SingleBandRasterOutput):
-            driver = gdal.GetDriverByName('GTIFF')
-            raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
-            band = raster.GetRasterBand(1)
-            band.SetNoDataValue(2)
-        elif isinstance(spec_data, spec.VectorOutput):
-            driver = gdal.GetDriverByName('GPKG')
-            target_vector = driver.CreateDataSource(filepath)
-            layer_name = os.path.basename(os.path.splitext(filepath)[0])
-            target_layer = target_vector.CreateLayer(
-                layer_name, geom_type=ogr.wkbPolygon)
-            for field_spec in spec_data.fields:
-                target_layer.CreateField(ogr.FieldDefn(field_spec.id, ogr.OFTInteger))
-        elif isinstance(spec_data, spec.CSVOutput):
-            columns = [field_spec.id for field_spec in spec_data.columns]
-            with open(filepath, 'w') as file:
-                file.write(','.join(columns))
-        else:
-            # Such as taskgraph.db, just create the file.
-            with open(filepath, 'w') as file:
-                pass
-    return file_registry.registry
-
-
 class TestMetadataFromSpec(unittest.TestCase):
     """Tests for metadata-generation functions."""
 
@@ -305,83 +278,26 @@ class TestMetadataFromSpec(unittest.TestCase):
 
     def test_write_metadata_for_outputs(self):
         """Test writing metadata for an invest output workspace."""
-
-        # An example invest output spec
-        output_spec = [
-            spec.SingleBandRasterOutput(
-                id="urban_nature_supply_percapita",
-                path="output/urban_nature_supply_percapita.tif",
-                about="The calculated supply per capita of urban nature.",
-                data_type=float,
-                units=u.m**2
-            ),
-            spec.VectorOutput(
-                id="admin_boundaries",
-                path="output/admin_boundaries.gpkg",
-                about=("A copy of the user's administrative boundaries "
-                       "vector with a single layer."),
-                geometry_types=spec.POLYGONS,
-                fields=[
-                    spec.NumberOutput(
-                        id="SUP_DEMadm_cap",
-                        units=u.m**2/u.person,
-                        about="The average urban nature supply/demand"
-                    )
-                ]
-            ),
-            spec.CSVOutput(
-                id="table",
-                path="output/table.csv",
-                about=("A biophysical table."),
-                columns=[
-                    spec.NumberOutput(
-                        id="foo",
-                        units=u.m**2/u.person,
-                        about="bar"
-                    )
-                ]
-            ),
-            spec.SingleBandRasterOutput(
-                id="mask_[A]",  # testing with a pattern
-                path="intermediate/mask_[A].tif",
-                about="A mask for the final raster output.",
-                data_type=float,
-                units=u.m**2
-            ),
-            spec.TASKGRAPH_CACHE.model_copy(update=dict(
-                path="intermediate/taskgraph_cache/taskgraph.db")
-            )
-        ]
-
-        model_spec = spec.ModelSpec(
-            model_id='urban_nature_access',
-            model_title='Urban Nature Access',
-            userguide='',
-            aliases=[],
-            input_field_order=[],
-            inputs=[],
-            module_name='',
-            outputs=output_spec
-        )
+        from .utils import SAMPLE_MODEL_SPEC
         
         # Generate an output workspace with real files, without
         # running an invest model.
         args_dict = {'workspace_dir': self.workspace_dir}
-        model_spec.create_output_directories(args_dict)
-        file_registry = _fake_execute(model_spec.outputs, self.workspace_dir)
-        model_spec.generate_metadata_for_outputs(file_registry, args_dict)
+        SAMPLE_MODEL_SPEC.create_output_directories(args_dict)
+        file_registry = fake_execute(SAMPLE_MODEL_SPEC.outputs, self.workspace_dir)
+        SAMPLE_MODEL_SPEC.generate_metadata_for_outputs(file_registry, args_dict)
 
         files, messages = geometamaker.validate_dir(self.workspace_dir)
         self.assertEqual(len(files), 4)
         self.assertFalse(any(messages))
 
         # Test some specific content of the metadata
-        vector_spec = model_spec.get_output('admin_boundaries')
+        vector_spec = SAMPLE_MODEL_SPEC.get_output('admin_boundaries')
         resource = geometamaker.describe(
             os.path.join(self.workspace_dir, vector_spec.path))
         self.assertCountEqual(
             resource.get_keywords(),
-            [model_spec.model_id, 'InVEST'])
+            [SAMPLE_MODEL_SPEC.model_id, 'InVEST'])
         self.assertEqual(
             resource.get_field_description('SUP_DEMadm_cap').description,
             vector_spec.get_field('SUP_DEMadm_cap').about)
@@ -408,6 +324,77 @@ class ResultsSuffixTests(unittest.TestCase):
     def test_suffix_string_no_entry(self):
         """Utils: test no suffix entry in args."""
         self.assertEqual(spec.SUFFIX.preprocess(None), '')
+
+    def test_suffix_included_in_all_models(self):
+        """Test that all core models include ResultsSuffixInput."""
+        missing_suffix = []
+        for module in models.pyname_to_module.values():
+            if not any([isinstance(i, spec.ResultsSuffixInput)
+                        for i in module.MODEL_SPEC.inputs]):
+                missing_suffix.append(module.MODEL_SPEC.model_id)
+        self.assertEqual(missing_suffix, [])
+
+
+class MissingResultsSuffixTests(unittest.TestCase):
+    """Test ModelSpec.execute for model without ResultsSuffixInput."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_spec_no_results_suffix(self):
+        """Test ModelSpec.execute succeeds without ResultsSuffixInput.
+
+        This test uses the carbon model, as it can be run with minimal
+          inputs and has a reporter
+        """
+        from natcap.invest import carbon
+
+        # The input at index 1 is the results suffix
+        results_suffix_input = carbon.MODEL_SPEC.inputs.pop(1)
+        assert isinstance(results_suffix_input, spec.ResultsSuffixInput)
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        # Create LULC raster and pools csv in workspace and add them to args.
+        args['lulc_bas_path'] = os.path.join(args['workspace_dir'],
+                                       'lulc_bas_path.tif')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        projection_wkt = srs.ExportToWkt()
+        # origin hand-picked for this epsg:
+        origin = (461261, 4923265)
+
+        array = numpy.ones((5, 5), dtype=numpy.int32)
+        pixel_size = (1, -1)
+
+        pygeoprocessing.numpy_array_to_raster(
+            array, -1, pixel_size, origin, projection_wkt,
+            args['lulc_bas_path'])
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        with open(args['carbon_pools_path'], 'w') as open_table:
+            open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
+            open_table.write('15,10,60,1,1,"lulc code 1"\n')
+            open_table.write('5,3,20,0,2,"lulc code 2"\n')
+
+        execute_kwargs = {
+            'generate_report': bool(carbon.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        carbon.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, carbon.MODEL_SPEC, **execute_kwargs)
 
 
 class InputTests(unittest.TestCase):
@@ -504,3 +491,27 @@ class InputTests(unittest.TestCase):
         self.assertEqual(option_string_input.preprocess('Foo'), 'foo')
         self.assertEqual(option_string_input.preprocess(''), None)
         self.assertEqual(option_string_input.preprocess(None), None)
+
+
+class ModelSpecTests(unittest.TestCase):
+    """Tests for natcap.invest.spec.ModelSpec."""
+
+    def test_reporter_field_validator(self):
+        """Test that the field validator raises pydantic.ValidationError."""
+
+        data = {
+            'model_id': 'foo',
+            'model_title': 'Foo',
+            'userguide': '',
+            'input_field_order': [],
+            'inputs': [],
+            'outputs': [],
+            'module_name': 'foo',
+        }
+
+        _ = spec.ModelSpec(**data, reporter='')
+        with self.assertRaises(ValidationError):
+            spec.ModelSpec(**data, reporter='foo.bar')
+        with self.assertRaises(ValidationError):
+            # This module is importable, but has no 'report' attribute
+            spec.ModelSpec(**data, reporter='natcap.invest')

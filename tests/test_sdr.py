@@ -9,6 +9,8 @@ import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
@@ -133,7 +135,13 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
 
-        sdr.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(sdr.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        sdr.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(args, sdr.MODEL_SPEC, **execute_kwargs)
+
         expected_watershed_totals = {
             'usle_tot': 2.62457418442,
             'sed_export': 0.09748090804,

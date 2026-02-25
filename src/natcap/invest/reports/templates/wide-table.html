@@ -1,0 +1,19 @@
+<!--
+  Use this macro whenever a table has enough columns that there is
+  a decent chance it will overflow its container. The result will be
+  a table with a modified font size (whole px sizes only; default: 14px,
+  minimum: 12px), wrapped in a horizontally-scrollable container.
+-->
+
+{% macro wide_table(table, font_size_px=14) -%}
+  {% set font_size_px = font_size_px | int %}
+  {% if font_size_px < 12 %}
+    {% set font_size_px = 12 %}
+  {% endif %}
+  <div
+    class="wide-table-wrapper"
+    style="font-size: {{ font_size_px / 16}}rem;"
+  >
+    {{ table }}
+  </div>
+{%- endmacro %}

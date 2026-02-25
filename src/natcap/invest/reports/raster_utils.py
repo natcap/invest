@@ -1,0 +1,665 @@
+import base64
+import collections
+import logging
+import math
+import textwrap
+import os
+from io import BytesIO
+from enum import Enum
+
+import distinctipy
+import geometamaker
+import numpy
+import pygeoprocessing
+import matplotlib
+import matplotlib.colors
+from matplotlib.colors import ListedColormap
+import matplotlib.patches
+import matplotlib.pyplot as plt
+import pandas
+import yaml
+from osgeo import gdal
+from pydantic.dataclasses import dataclass
+
+from natcap.invest import gettext
+from natcap.invest.spec import ModelSpec, Input, Output
+
+LOGGER = logging.getLogger(__name__)
+
+MPL_SAVE_FIG_KWARGS = {
+    'format': 'png',
+    'bbox_inches': 'tight'
+}
+
+# Our CSS sets report container max width to 80rem, which is 1280px
+# (with default browser settings, i.e., root font size = 16px).
+# After accounting for padding and borders,
+# an img typically has a max width of 75.5rem, or 1208px.
+# It's best if figures are sized to fill their containers
+# with minimal rescaling, since they contain rasterized text.
+# In addition, while our CSS will scale an image down to fit within its
+# container, it will not scale an image up to fill the width of its container.
+# (This is by design, to prevent images from becoming too tall.)
+# Other variables:
+#   - When creating a figure, e.g., with plt.subplots, default dpi is 100.
+#   - Creating a figure with layout='compressed' may automagically adjust
+#     subplot sizes and grid spacing (potentially affecting overall figure
+#     size) to ensure colorbars/legends don't overlap or get cut off.
+#   - Savefig with tight bbox layout shrinks the figure after it is sized.
+# In practice, with all the variables mentioned above, final image width tends
+# to be a few hundredths of an inch larger than what is specified when creating
+# the figure. With that in mind, we set max figure width slightly smaller than
+# the desired image width.
+MAX_FIGURE_WIDTH_DEFAULT = 12  # 1208px/100dpi = 12.08in => round down to 12.
+# Two-column grids of "wide AOI" rasters (1 < X/Y ratio <= 4) require a
+# deviation from the default, since such figures end up significantly narrower
+# than the figure width we specify. To compensate, figure width for such
+# layouts is set to a larger number, determined experimentally.
+MAX_FIGURE_WIDTH_2_COL_WIDE_AOI = 15  # image will shrink to approx. 12 in.
+# The goal of max height is to ensure a given subplot fits within the vertical
+# bounds of a maximized window on any laptop/desktop screen. At one extreme,
+# some laptop screens are only 768px high. Allowing some buffer for browser
+# toolbars (~ 10% of window height) leaves around 700px for the subplot itself.
+MAX_SUBPLOT_HEIGHT_INCHES = 7  # 700px / 100 dpi = 7 in
+
+TITLE_FONT_SIZE = 13  # 13pt ≈ 18.1px
+SUBTITLE_FONT_SIZE = 11  # 11pt ≈ 15.3px
+
+# There is not enough contrast between the colors at opposite ends
+# of divergent colormaps. Truncating them helps a bit.
+truncated_PuOr_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+    'truncated_PuOr', matplotlib.cm.PuOr(numpy.linspace(0.10, 0.90, 256)))
+
+# Mapping 'datatype' to colormaps and resampling algorithms
+COLORMAPS = {
+    'continuous': 'viridis',
+    'divergent': truncated_PuOr_cmap,
+    # Default for nominal data is matplotlib's tab20.
+    # If > 20 colors are needed, colormap will be generated with distinctipy.
+    'nominal': 'tab20',
+    # This `1` color has good (but not especially high) contrast against both
+    # black (the `0` color) and white (the figure background).
+    'binary': ListedColormap(["#000000", "#aa44dd"]),
+    # The `1` color has very high contrast against the `0` color but
+    # very low contrast against white (the figure background).
+    'binary_high_contrast': ListedColormap(["#1a1a1a", "#4de4ff"]),
+}
+RESAMPLE_ALGS = {
+    'continuous': 'bilinear',
+    'divergent': 'bilinear',
+    'nominal': 'nearest',
+    'binary': 'nearest',
+    'binary_high_contrast': 'nearest'
+}
+
+# XY-ratio thresholds used in determining grid layouts and legend layouts
+WIDE_AOI_THRESHOLD = 1
+EX_WIDE_AOI_THRESHOLD = 4
+
+# GDAL metadata keys and corresponding column headers for stats tables
+STATS_LIST = [
+    ('STATISTICS_MINIMUM', gettext('Minimum')),
+    ('STATISTICS_MAXIMUM', gettext('Maximum')),
+    ('STATISTICS_MEAN', gettext('Mean')),
+    ('STATISTICS_VALID_PERCENT', gettext('Valid percent')),
+]
+
+COUNT_COL_NAME = gettext('Count')
+NODATA_COL_NAME = gettext('Nodata value')
+UNITS_COL_NAME = gettext('Units')
+UNKNOWN_VAL_TEXT = gettext('unknown')
+UNITS_TEXT = gettext('Units')
+
+
+class RasterDatatype(str, Enum):
+    """The type of measurement represented by the raster."""
+
+    binary = 'binary'
+    """
+    Use `binary` where `1` pixels are likely to be adjacent to white
+    background and `0` (black) pixels, as in what_drains_to_stream maps.
+    """
+    binary_high_contrast = 'binary_high_contrast'
+    """
+    Use `binary_high_contrast` where `1` pixels are likely to be surrounded
+    # by `0` pixels but _not_ adjacent to white background,
+    # as in stream network maps.
+    """
+    continuous = 'continuous'
+    """For numeric data."""
+    divergent = 'divergent'
+    """For rasters where values span positive and negative values."""
+    nominal = 'nominal'
+    """For rasters where the pixel values represent categories."""
+
+
+class RasterTransform(str, Enum):
+    """The transformation to apply to values before mapping to colors.
+
+    Original values are plotted, but the colorbar will use this scale.
+    """
+
+    linear = 'linear'
+    log = 'log'
+
+
+@dataclass
+class RasterPlotConfig:
+    """A definition for how to plot a raster."""
+
+    raster_path: str
+    """Filepath to a raster to plot. The basename will be the plot title."""
+    datatype: RasterDatatype
+    """Datatype will determine colormap, legend, and resampling algorithm"""
+    spec: Input | Output
+    """The InVEST specification of the raster."""
+    transform: RasterTransform = RasterTransform.linear
+    """For highly skewed data, a transformation can help reveal variation."""
+    title: str | None = None
+    """An optional plot title. If ``None``, the filename is used."""
+
+    def __post_init__(self):
+        if self.title is None:
+            self.title = os.path.basename(self.raster_path)
+        self.caption = f'{self.title}:{self.spec.about}'
+
+
+def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
+    """Build RasterPlotConfigs for use in plotting input or output rasters.
+
+    Args:
+        id_lookup_table (dict): Where to look up each raster id to find its
+            filepath. Typically this will be either the ``args`` dict that was
+            passed to the model's ``execute`` method, or the ``FileRegistry``
+            that was generated by the model run.
+        raster_plot_tuples (list[tuple[str]]): A list of 2- and/or 3-tuples,
+            each of which should contain the following:
+            - first, the id of the raster (as defined in the model spec),
+            - second, the datatype of the raster ('continuous', 'divergent',
+            'nominal', 'binary', or 'binary_high_contrast'), and
+            - third (optionally), the transform to apply to the colormap when
+            plotting (either 'linear' or 'log'; will default to 'linear' if
+            not specified).
+
+    Returns:
+        A list of ``RasterPlotConfig`` suitable for passing to
+            ``natcap.invest.reports.raster_utils.plot_and_base64_encode_rasters``
+
+    """
+    raster_plot_configs = []
+    for (raster_id, *other_args) in raster_plot_tuples:
+        raster_path = id_lookup_table[raster_id]
+        raster_plot_configs.append(RasterPlotConfig(raster_path, *other_args))
+    return raster_plot_configs
+
+
+def caption_raster_list(raster_list: list[RasterPlotConfig]):
+    return [config.caption for config in raster_list]
+
+
+def _read_masked_array(filepath, resample_method):
+    """Read a raster into a masked numpy array.
+
+    If the raster is large, build overviews and then read array from the
+    smallest-sized overview. Nodata values are assigned ``numpy.nan``
+    to facilitate matplotlib plotting.
+
+    Args:
+        filepath (str): path to the raster file.
+        resample_method (str): GDAL resampling method to use if resampling
+
+    Returns:
+        tuple: A 2-tuple containing:
+            - masked_array (numpy.ndarray): the raster data as a numpy array
+            - resampled (boolean): whether or not the array is an overview
+
+    """
+    info = pygeoprocessing.get_raster_info(filepath)
+    nodata = info['nodata'][0]
+    resampled = False
+    if os.path.getsize(filepath) > 4e6:
+        resampled = True
+        raster = gdal.OpenEx(filepath)
+        band = raster.GetRasterBand(1)
+        if band.GetOverviewCount() == 0:
+            pygeoprocessing.build_overviews(
+                filepath,
+                internal=False,
+                resample_method=resample_method,
+                overwrite=False, levels='auto')
+
+        raster = gdal.OpenEx(filepath)
+        band = raster.GetRasterBand(1)
+        n = band.GetOverviewCount()
+        array = band.GetOverview(n - 1).ReadAsArray()
+        raster = band = None
+    else:
+        array = pygeoprocessing.raster_to_numpy_array(filepath)
+    masked_array = numpy.full(array.shape, numpy.nan)
+    if nodata is not None:
+        valid_mask = ~numpy.isclose(array, nodata, equal_nan=True)
+    else:
+        valid_mask = numpy.full(array.shape, True)
+    masked_array[valid_mask] = array[valid_mask]
+    return (masked_array, resampled)
+
+
+def _get_aspect_ratio(map_bbox):
+    return (map_bbox[2] - map_bbox[0]) / (map_bbox[3] - map_bbox[1])
+
+
+def _wide_aoi(xy_ratio):
+    return xy_ratio > WIDE_AOI_THRESHOLD and xy_ratio <= EX_WIDE_AOI_THRESHOLD
+
+
+def _extra_wide_aoi(xy_ratio):
+    return xy_ratio > EX_WIDE_AOI_THRESHOLD
+
+
+def _choose_n_rows_n_cols(xy_ratio, n_plots):
+    if _extra_wide_aoi(xy_ratio):
+        n_cols = 1
+    elif _wide_aoi(xy_ratio):
+        n_cols = 2
+    else:
+        n_cols = 3
+
+    if n_cols > n_plots:
+        n_cols = n_plots
+    n_rows = int(math.ceil(n_plots / n_cols))
+    return n_rows, n_cols
+
+
+def _figure_subplots(xy_ratio, n_plots):
+    n_rows, n_cols = _choose_n_rows_n_cols(xy_ratio, n_plots)
+
+    figure_width = MAX_FIGURE_WIDTH_DEFAULT
+    if (n_cols == 2) and (_wide_aoi(xy_ratio)):
+        figure_width = MAX_FIGURE_WIDTH_2_COL_WIDE_AOI
+    sub_width = figure_width / n_cols
+    sub_height = (sub_width / xy_ratio)
+    figure_height = sub_height * n_rows
+    max_figure_height = MAX_SUBPLOT_HEIGHT_INCHES * n_rows
+    if figure_height > max_figure_height:
+        # Constrain height, then adjust width accordingly.
+        downscale_factor = max_figure_height / figure_height
+        figure_height = max_figure_height
+        figure_width *= downscale_factor
+
+    fig, axs = plt.subplots(
+        n_rows, n_cols, figsize=(figure_width, figure_height),
+        layout='compressed')
+    plt.close()
+    if n_plots == 1:
+        axs = numpy.array([axs])
+    return fig, axs
+
+
+def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
+    # Max line widths determined experimentally; may change if needed.
+    if n_plots == 1 or _extra_wide_aoi(xy_ratio):
+        return 50  # 1-column layout
+    elif n_plots == 2 or _wide_aoi(xy_ratio):
+        return 40  # 2-column layout
+    else:
+        # carbon model sample data includes a 31 char title
+        return 31  # 3-column layout
+
+
+def _get_title_kwargs(title: str, resampled: bool, line_width: int):
+    label = f"{title}{' (resampled)' if resampled else ''}"
+    label = textwrap.fill(label, width=line_width)
+    return {
+        'fontfamily': 'monospace',
+        'fontsize': TITLE_FONT_SIZE,
+        'fontweight': 700,
+        'label': label,
+        'loc': 'left',
+        'pad': 1.5 * SUBTITLE_FONT_SIZE,
+        'verticalalignment': 'bottom',
+    }
+
+
+def _get_units_text_kwargs(units: str, raster_height: int):
+    # This -0.1 multiplier is a bit of a 'magic number' but seems to work for now.
+    subtitle_offset = -0.1 * raster_height
+    # Set ylim top < 0 to add some padding above the plot.
+    ylim_args = {
+        'bottom': raster_height,
+        'top': subtitle_offset,
+    }
+    # Place subtitle text immediately above that padding.
+    text_args = {
+        'fontsize': SUBTITLE_FONT_SIZE,
+        'horizontalalignment': 'left',
+        's': f'{UNITS_TEXT}: {units}',
+        'verticalalignment': 'bottom',
+        'x': -0.5,
+        'y': subtitle_offset,
+    }
+    return (ylim_args, text_args)
+
+
+def _get_legend_kwargs(num_patches: int, n_plots: int, xy_ratio: float):
+    # Num legend cols/rows determined experimentally; may change if needed.
+    MAX_LEGEND_COLS_1_COL_LAYOUT = 10
+    MAX_LEGEND_COLS_2_COL_LAYOUT = 6
+    MAX_LEGEND_ROWS = 30
+    if _wide_aoi(xy_ratio) or _extra_wide_aoi(xy_ratio):
+        bbox_to_anchor = (-0.01, 0)
+        if n_plots == 1 or _extra_wide_aoi(xy_ratio):
+            ncol = MAX_LEGEND_COLS_1_COL_LAYOUT
+        else:
+            ncol = MAX_LEGEND_COLS_2_COL_LAYOUT
+    else:
+        bbox_to_anchor = (1.02, 1)
+        ncol = math.ceil(num_patches / MAX_LEGEND_ROWS)
+    return {
+        'bbox_to_anchor': bbox_to_anchor,
+        'loc': 'upper left',
+        'ncol': ncol,
+    }
+
+
+def plot_raster_list(raster_list: list[RasterPlotConfig]):
+    """Plot a list of rasters.
+
+    Args:
+        raster_list (list[RasterPlotConfig]): a list of RasterPlotConfig
+            objects, each of which contains the path to a raster, the type
+            of data in the raster ('continuous', 'divergent', 'nominal',
+            'binary', or 'binary_high_contrast'), and the transformation to
+            apply to the colormap ('linear' or 'log').
+
+    Returns:
+        ``matplotlib.figure.Figure``
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_list[0].raster_path)
+    bbox = raster_info['bounding_box']
+    n_plots = len(raster_list)
+    xy_ratio = _get_aspect_ratio(bbox)
+    fig, axs = _figure_subplots(xy_ratio, n_plots)
+
+    for ax, config in zip(axs.flatten(), raster_list):
+        raster_path = config.raster_path
+        dtype = config.datatype
+        transform = config.transform
+        resample_alg = RESAMPLE_ALGS[dtype]
+        arr, resampled = _read_masked_array(raster_path, resample_alg)
+        imshow_kwargs = {}
+        colorbar_kwargs = {}
+        imshow_kwargs['norm'] = transform
+        imshow_kwargs['interpolation'] = 'none'
+        cmap = COLORMAPS[dtype]
+        if dtype == 'divergent':
+            if transform == 'log':
+                transform = matplotlib.colors.SymLogNorm(linthresh=0.03)
+            else:
+                transform = matplotlib.colors.CenteredNorm()
+            imshow_kwargs['norm'] = transform
+        if dtype.startswith('binary'):
+            transform = matplotlib.colors.BoundaryNorm([0, 0.5, 1], cmap.N)
+            imshow_kwargs['vmin'] = -0.5
+            imshow_kwargs['vmax'] = 1.5
+            colorbar_kwargs['ticks'] = [0, 1]
+
+        title_line_width = _get_title_line_width(n_plots, xy_ratio)
+        ax.set_title(**_get_title_kwargs(
+            config.title, resampled, title_line_width))
+
+        units = _get_raster_units(raster_path)
+        if units:
+            (ylim_kwargs,
+             text_kwargs) = _get_units_text_kwargs(units, len(arr))
+            ax.set_ylim(**ylim_kwargs)
+            ax.text(**text_kwargs)
+
+        if dtype == 'nominal':
+            # typically a 'nominal' raster would be an int type, but we replaced
+            # nodata with nan, so the array is now a float.
+            values, counts = numpy.unique(arr[~numpy.isnan(arr)], return_counts=True)
+            values = values[numpy.argsort(-counts)].astype(int)  # descending order
+            # We need enough colors to cover the full range of values.
+            # If there is only one color per unique value, and the range of
+            # values is larger than the number of unique values, matplotlib's
+            # normalization can cause multiple values to be represented by the
+            # same color.
+            # (Future work may involve writing a custom normalizer to prevent
+            # this problem and generate only one color for each unique value.)
+            num_colors = numpy.max(values) - numpy.min(values) + 1
+            # If > 20 colors needed, generate colormap to override default.
+            if num_colors > 20:
+                # Values of pastel_factor and rng have been chosen specifically
+                # for Carbon (Willamette) sample data. If/when we create a
+                # report using sample data that is ill-suited to the color
+                # palette generated with these values, we will take a different
+                # approach to customizing color palettes.
+                cmap = ListedColormap(
+                    distinctipy.get_colors(
+                        num_colors, pastel_factor=0.6, rng=0))
+
+            mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
+            colors = [mappable.cmap(mappable.norm(value)) for value in values]
+            patches = [matplotlib.patches.Patch(
+                color=colors[i],
+                label=f'{values[i]}') for i in range(len(values))]
+            leg = ax.legend(handles=patches, **_get_legend_kwargs(
+                len(patches), n_plots, xy_ratio))
+            leg.set_in_layout(True)
+        else:
+            mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
+            fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
+    [ax.set_axis_off() for ax in axs.flatten()]
+    return fig
+
+
+def base64_encode(figure):
+    """Encode a Matplotlib-generated figure as a base64 string.
+
+    Args:
+        figure (matplotlib.Figure): the figure to encode.
+
+    Returns:
+        A string representing the figure as a base64-encoded PNG.
+    """
+    figfile = BytesIO()
+    figure.savefig(figfile, **MPL_SAVE_FIG_KWARGS)
+    figfile.seek(0)  # rewind to beginning of file
+    return base64.b64encode(figfile.getvalue()).decode('utf-8')
+
+
+def base64_encode_file(filepath):
+    """Encode a binary file as a base64 string.
+
+    Args:
+        filepath (str): the file to encode.
+
+    Returns:
+        A string representing the file as a base64-encoded string.
+    """
+    with open(filepath, 'rb') as file:
+        s = base64.b64encode(file.read()).decode('utf-8')
+    return s
+
+
+def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
+    """Plot and base-64-encode a list of rasters.
+
+    Args:
+        raster_dtype_list (list[RasterPlotConfig]): a list of RasterPlotConfig
+            objects, each of which contains the path to a raster, the type
+            of data in the raster ('continuous', 'divergent', 'nominal',
+            'binary', or 'binary_high_contrast'), and the transformation to
+            apply to the colormap ('linear' or 'log').
+
+    Returns:
+        A string representing a base64-encoded PNG in which each of the
+            provided rasters is plotted as a subplot.
+    """
+    figure = plot_raster_list(raster_list)
+
+    return base64_encode(figure)
+
+
+def plot_raster_facets(tif_list, datatype, transform=None, title_list=None):
+    """Plot a list of rasters that will all share a fixed colorscale.
+
+    When all the rasters have the same shape and represent the same variable,
+    it's useful to scale the colorbar to the global min/max values across
+    all rasters, so that the colors are visually comparable across the maps.
+    All rasters share a datatype and a transform.
+
+    Args:
+        tif_list (list): list of filepaths to rasters
+        datatype (str): string describing the datatype of rasters. One of
+            ('continuous', 'divergent').
+        transform (str): string describing the transformation to apply
+            to the colormap. Either 'linear' or 'log'.
+        title_list (list): Optional list of strings to use as subplot titles.
+            If ``None``, the raster filename is used as the title.
+
+    """
+    raster_info = pygeoprocessing.get_raster_info(tif_list[0])
+    bbox = raster_info['bounding_box']
+    n_plots = len(tif_list)
+    xy_ratio = _get_aspect_ratio(bbox)
+    fig, axes = _figure_subplots(xy_ratio, n_plots)
+
+    cmap_str = COLORMAPS[datatype]
+    if transform is None:
+        transform = 'linear'
+    if title_list is None:
+        title_list = [os.path.basename(filepath) for filepath in tif_list]
+    if len(title_list) != len(tif_list):
+        raise ValueError(
+            f'length of title_list does not equal length of tif_list \n'
+            f'title_list: {title_list} \n'
+            f'tif_list: {tif_list}')
+    resample_alg = resample_alg = RESAMPLE_ALGS[datatype]
+    arr, resampled = _read_masked_array(tif_list[0], resample_alg)
+    ndarray = numpy.empty((n_plots, *arr.shape))
+    ndarray[0] = arr
+    for i, tif in enumerate(tif_list):
+        # We already got the first one to initialize the ndarray with correct shape
+        if i == 0:
+            continue
+        arr, resampled = _read_masked_array(tif, RESAMPLE_ALGS[datatype])
+        ndarray[i] = arr
+    # Perhaps this could be optimized by reading min/max from tif metadata
+    # instead of storing all arrays in memory
+    vmin = numpy.nanmin(ndarray)
+    vmax = numpy.nanmax(ndarray)
+    cmap = plt.get_cmap(cmap_str)
+    if datatype == 'divergent':
+        if transform == 'log':
+            normalizer = matplotlib.colors.SymLogNorm(linthresh=0.03, vmin=vmin, vmax=vmax)
+        else:
+            normalizer = matplotlib.colors.CenteredNorm(vmin=vmin, vmax=vmax)
+    if transform == 'log':
+        if numpy.isclose(vmin, 0.0):
+            vmin = 1e-6
+        normalizer = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
+        cmap.set_under(cmap.colors[0])  # values below vmin (0s) get this color
+    else:
+        normalizer = plt.Normalize(vmin=vmin, vmax=vmax)
+    for arr, ax, raster_path, title in zip(
+            ndarray, axes.flatten(), tif_list, title_list):
+        mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
+        # all rasters are identical size; `resampled` will be the same for all
+        title_line_width = _get_title_line_width(n_plots, xy_ratio)
+        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width))
+        units = _get_raster_units(raster_path)
+        if units:
+            (ylim_kwargs,
+             text_kwargs) = _get_units_text_kwargs(units, len(arr))
+            ax.set_ylim(**ylim_kwargs)
+            ax.text(**text_kwargs)
+        fig.colorbar(mappable, ax=ax)
+    [ax.set_axis_off() for ax in axes.flatten()]
+    return fig
+
+
+# TODO: this may end up in the geometamaker API
+# https://github.com/natcap/geometamaker/issues/111
+def geometamaker_load(filepath):
+    # All geometamaker docs are written with utf-8 encoding
+    with open(filepath, 'r', encoding='utf-8') as file:
+        yaml_string = file.read()
+        yaml_dict = yaml.safe_load(yaml_string)
+        if not yaml_dict or ('metadata_version' not in yaml_dict
+                             and 'geometamaker_version' not in yaml_dict):
+            message = (f'{filepath} exists but is not compatible with '
+                       f'geometamaker.')
+            raise ValueError(message)
+
+    return geometamaker.geometamaker.RESOURCE_MODELS[yaml_dict['type']](
+        **yaml_dict)
+
+
+def _build_stats_table_row(resource, band):
+    row = {}
+    for (stat_key, display_name) in STATS_LIST:
+        stat_val = band.gdal_metadata.get(stat_key)
+        if stat_val is not None:
+            row[display_name] = float(stat_val)
+        else:
+            row[display_name] = UNKNOWN_VAL_TEXT
+    (width, height) = (
+        resource.data_model.raster_size['width'],
+        resource.data_model.raster_size['height'])
+    row[COUNT_COL_NAME] = width * height
+    row[NODATA_COL_NAME] = band.nodata
+    # band.units may be '', which can mean 'unitless', 'unknown', or 'other'
+    row[UNITS_COL_NAME] = band.units
+    return row
+
+
+def _get_raster_metadata(filepath):
+    if isinstance(filepath, collections.abc.Mapping):
+        for path in filepath.values():
+            return _get_raster_metadata(path)
+    else:
+        try:
+            resource = geometamaker_load(f'{filepath}.yml')
+        except (FileNotFoundError, ValueError) as err:
+            LOGGER.debug(err)
+            return None
+        if isinstance(resource, geometamaker.models.RasterResource):
+            return resource
+
+
+def _get_raster_units(filepath):
+    resource = _get_raster_metadata(filepath)
+    return resource.get_band_description(1).units if resource else None
+
+
+def raster_workspace_summary(file_registry):
+    """Create a table of stats for all rasters in a file_registry."""
+    raster_summary = {}
+    for path in file_registry.values():
+        resource = _get_raster_metadata(path)
+        band = resource.get_band_description(1) if resource else None
+        if band:
+            filename = os.path.basename(resource.path)
+            raster_summary[filename] = _build_stats_table_row(
+                resource, band)
+
+    return pandas.DataFrame(raster_summary).T
+
+
+def raster_inputs_summary(args_dict):
+    """Create a table of stats for all rasters in an args_dict."""
+    raster_summary = {}
+    for v in args_dict.values():
+        if isinstance(v, str) and os.path.isfile(v):
+            resource = geometamaker.describe(v, compute_stats=True)
+            if isinstance(resource, geometamaker.models.RasterResource):
+                filename = os.path.basename(resource.path)
+                band = resource.get_band_description(1)
+                raster_summary[filename] = _build_stats_table_row(
+                    resource, band)
+                # Remove 'Units' column if all units are blank
+                if not any(raster_summary[filename][UNITS_COL_NAME]):
+                    del raster_summary[filename][UNITS_COL_NAME]
+
+    return pandas.DataFrame(raster_summary).T

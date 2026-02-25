@@ -265,8 +265,11 @@ export function setupAddPlugin(i18n) {
             logger.error('Error downloading plugin source code:');
             throw error;
           } finally {
+            logger.info('cleaning up temporary plugin source directory');
             // We only needed the pyproject.toml content, the rest can go.
-            fs.rmSync(tmpPluginDir, { recursive: true, force: true });
+            fs.rm(tmpPluginDir,
+              { recursive: true, force: true, maxRetries: 5 },
+              (err) => logger.error(err));
           }
         } else { // install from local path
           logger.info(`adding plugin from ${localPath}`);

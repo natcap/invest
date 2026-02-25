@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, webUtils } = require('electron');
 // using `import` for electron messes with vite and yields a bad bundle.
 // `import`` is okay for local modules though
 import { ipcMainChannels } from '../main/ipcMainChannels';
@@ -74,5 +74,6 @@ export default {
         }
       },
     },
+    getFilePath: (file) => webUtils.getPathForFile(file)
   },
 };

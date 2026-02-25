@@ -11,6 +11,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -597,7 +599,13 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
 
-        seasonal_water_yield.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(seasonal_water_yield.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        seasonal_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, seasonal_water_yield.MODEL_SPEC, **execute_kwargs)
 
         # generate aggregated results csv table for assertion
         agg_results_csv_path = os.path.join(
