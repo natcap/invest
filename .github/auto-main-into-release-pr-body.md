@@ -1,7 +1,7 @@
 Merge `$SOURCE_BRANCH` into `$RELEASE_BRANCH` $PR_MESSAGE
 
 This PR has been triggered in an effort to update `$RELEASE_BRANCH` with the
-changes that were just added to `$SOURCE_BRANCH`.
+changes that were just added to `$SOURCE_BRANCH [in this commit`]($COMMIT_URL).
 
 ### If there aren't any conflicts and tests pass
 
@@ -42,5 +42,9 @@ All changes pushed in this way will appear in this PR.
 <sub>
 
 This PR was created because there was a push to `$SOURCE_BRANCH` that triggered this workflow, which is defined at `.github/workflows/autopr-create.yml`
+<br/>
+This workflow was triggered by $PR_USERNAME with the event $GH_EVENT.
+<br/>
+
 
 </sub>

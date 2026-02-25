@@ -40,7 +40,9 @@ jobs:
                       # event_name is presumed to have been a push.
                       export PR_MSG='due to a push to `main`.'
                   fi
-                  PR_USERNAME="${{ github.triggering_actor }}"
+                  export PR_USERNAME="${{ github.triggering_actor }}"
+                  export COMMIT_URL="https://github.com/${{ github.repository }}/commits/${{ github.sha }}"
+                  export GH_EVENT="${{ github.event }}"
 
                   # Using grep with pattern ^release filters out any autorelease branches.
                   # If no release branches are found, exit github actions.
