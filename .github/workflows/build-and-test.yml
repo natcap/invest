@@ -75,7 +75,6 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, macos-15-intel, ubuntu-latest]
-
     steps:
       - uses: actions/checkout@v6
         with:
