@@ -39,4 +39,4 @@ All changes pushed in this way will appear in this PR.
 
 <hr>
 
-<sub> This PR was created because there was a push to `$SOURCE_BRANCH` that triggered this workflow, which is defined at `.github/workflows/autopr-create.yml`. This workflow was triggered by `$PR_USERNAME` with the event `$GH_EVENT`. </sub>
+<sub> This PR was created because there was a push to `$SOURCE_BRANCH` that triggered this workflow, which is defined at `.github/workflows/autopr-create.yml`. This workflow was triggered by `$PR_USERNAMES` with the event `$GH_EVENT`. </sub>
