@@ -34,13 +34,12 @@ jobs:
                   if [[ "${{ github.event_name }}" == "pull_request" ]]
                   then
                       PR_NUM="${{ github.event.pull_request.number }}"
-                      echo "Latest PR on main ($PR_NUM) was authored by $PR_USERNAME."
                       export PR_MSG="due to #$PR_NUM."
                   else
                       # event_name is presumed to have been a push.
                       export PR_MSG='due to a push to `main`.'
                   fi
-                  export PR_USERNAME="${{ github.triggering_actor }}"
+                  export PR_USERNAMES=$(python scripts/who-authored-the-pr.py ${{ github.sha }})
                   export COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
                   export GH_EVENT="${{ github.event }}"
 
@@ -90,15 +89,15 @@ jobs:
                         cat .github/auto-main-into-release-pr-body.md | envsubst > $PR_BODY_FILE
                         cat $PR_BODY_FILE  # for debugging
 
-                        # This PR will be assigned to $PR_USERNAME, which should be
+                        # This PR will be assigned to $PR_USERNAMES, which should be
                         # the person who merged the PR that caused this commit to be
                         # created. Others could of course be assigned later.
                         FAILED=0
                         gh pr create \
                             --head ${AUTOPR_BRANCH} \
                             --base ${RELEASE_BRANCH} \
-                            --reviewer "${PR_USERNAME}" \
-                            --assignee "${PR_USERNAME}" \
+                            --reviewer "${PR_USERNAMES}" \
+                            --assignee "${PR_USERNAMES}" \
                             --label "auto" \
                             --title "${PR_TITLE}" \
                             --body-file $PR_BODY_FILE || FAILED=1
