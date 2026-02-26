@@ -49,7 +49,7 @@ def main(args=None):
         pr_authors.add(pr_created_by_user)
         LOGGER.info(f"PR {pr_num} was created by {pr_created_by_user}")
 
-    return json.dumps({"authors": list(pr_authors)})
+    return ",".join(sorted(pr_authors))
 
 
 if __name__ == '__main__':
