@@ -1,5 +1,20 @@
+"""Determine who authored the changes in a merge commit.
+
+Suppose we have a commit with SHA __A__ that was created by a PR.  It is useful
+for our automation to be able to identify who authored the PR that resulted in
+the merge commit.  This script accomplishes this.
+
+Usage:
+
+    $ python scripts/who-authored-the-pr.py 2376d54cc9e7acb446ecc81dc9cd4d6eb8ec3775
+
+Note that logging will be sent to standard out, so this is an example of
+capturing the output of this program for use in a shell script:
+
+    $ usernames=$(python scripts/who-authored-the-pr.py 2376d54cc9e7acb446ecc81dc9cd4d6eb8ec3775)
+    $ echo $usernames
+"""
 import argparse
-import json
 import logging
 
 import requests
@@ -13,13 +28,16 @@ GITHUB_HEADERS = {
 }
 
 
-def github_api(endpoint, payload=None):
-    req = requests.get(endpoint, None)
-    req.raise_for_status()
-    return req.json()
-
-
 def main(args=None):
+    """Determine who created the PR that created the target commit.
+
+    Args:
+        args (list or None): A list of string arguments to provide to argparse,
+            or else ``None``.
+
+    Returns:
+        A comma-separated list of usernames of users who created the target PR.
+    """
     parser = argparse.ArgumentParser(
         prog=__name__,
         description="Given a commit SHA, identify who wrote the PR.",
@@ -36,7 +54,9 @@ def main(args=None):
     git_sha = args.sha
 
     # find out if any PRs were associated with this commit specifically.
-    resp = requests.get(f'https://api.github.com/repos/{github_repo}/commits/{git_sha}/pulls')
+    resp = requests.get(
+        f'https://api.github.com/repos/{github_repo}/commits/{git_sha}/pulls',
+        headers=GITHUB_HEADERS)
     resp.raise_for_status()
 
     # Handling the case where we have an "octopus PR", where a single commit
