@@ -453,10 +453,8 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(pop_bbox, delta_ndvi_bbox)
 
         # Build AOI buffered bbox (vector-derived)
-        aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
-        aoi_bbox = numpy.array(aoi_info['bounding_box'], dtype=numpy.float64)
-        r = float(args['search_radius'])
-        buffered_bbox = (aoi_bbox + numpy.array([-r, -r, r, r])).tolist()
+        buffered_bbox = pygeoprocessing.get_vector_info(
+            file_reg['aoi_buffered'])['bounding_box']
 
         # Snap buffered bbox outward to the processing grid.
         # Note y pixel size is typically negative. We use abs() for step
