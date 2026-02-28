@@ -4,6 +4,7 @@ import os
 import shutil
 import tempfile
 
+import geopandas
 import numpy
 import pandas
 import pygeoprocessing
@@ -325,6 +326,18 @@ MODEL_SPEC = spec.ModelSpec(
                     )
                 ]
             ),
+            spec.VectorOutput(
+                id="aoi_buffered",
+                path="intermediate/aoi_buffered.gpkg",
+                about=gettext(
+                    "AOI buffered by search radius to ensure correct edge "
+                    "pixel calculation. This is used as the processing extent "
+                    "for the model."),
+                geometry_types={"MULTIPOLYGON", "POLYGON"},
+                fields=[],
+                projected=True,
+                projection_units=u.meter
+            ),
             spec.SingleBandRasterOutput(
                 id="baseline_cases",
                 path="intermediate/baseline_cases.tif",
@@ -607,13 +620,13 @@ def execute(args):
     aoi_projection = aoi_info["projection_wkt"]
     aoi_sr = osr.SpatialReference()
     aoi_sr.ImportFromWkt(aoi_projection)
-    aoi_bbox = aoi_info["bounding_box"]
 
-    # Expand target bounding box to ensure correct edge pixel calculation
-    aoi_buffered_bbox = aoi_bbox + numpy.array(
-        [-args['search_radius'], -args['search_radius'],
-            args['search_radius'], args['search_radius']])
-    aoi_buffered_bbox = list(aoi_buffered_bbox)
+    # Buffer AOI by search_radius
+    gdf = geopandas.read_file(args['aoi_path'])
+    gdf["geometry"] = gdf.buffer(args['search_radius'])
+    gdf.to_file(file_registry['aoi_buffered'], driver='GPKG')
+    aoi_buffered_bbox = pygeoprocessing.get_vector_info(
+        file_registry['aoi_buffered'])['bounding_box']
 
     raster_to_method_dict = {'ndvi_base': 'cubic', 'ndvi_alt': 'cubic',
                              'lulc_base': 'near', 'lulc_alt': 'near'}
@@ -642,7 +655,10 @@ def execute(args):
               pixel_size, aoi_buffered_bbox),
         kwargs={
             'raster_align_index': align_index,
-            'target_projection_wkt': aoi_projection},
+            'target_projection_wkt': aoi_projection,
+            'mask_options': {
+                'mask_vector_path': file_registry['aoi_buffered']
+            }},
         target_path_list=output_align_list,
         task_name='align input rasters')
 

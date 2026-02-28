@@ -196,17 +196,16 @@ class UMHTests(unittest.TestCase):
         """
         from natcap.invest.urban_mental_health import urban_mental_health
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
 
-        intermediate = os.path.join(self.workspace_dir, "intermediate")
-        suffix = args['results_suffix']
         # Assert that top row was removed as its outside of search_radius distance of AOI
         expected_base_aligned = numpy.array( #this is copied from base_ndvi without top row
-            [[.5, .6, .7], 
-            [.8, .9, .10], 
-            [.11, .12, FLOAT32_NODATA]])
+            [[.5, .6, .7],
+             [.8, .9, .10],
+             [FLOAT32_NODATA, .12, FLOAT32_NODATA]])
         actual_base_aligned = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(intermediate, f'ndvi_base_aligned_{suffix}.tif'))
+            file_reg['ndvi_base_aligned'])
+
         numpy.testing.assert_allclose(actual_base_aligned,
                                       expected_base_aligned, atol=1e-6)
 
@@ -214,27 +213,24 @@ class UMHTests(unittest.TestCase):
         # calculated by hand)
         expected_base_convolve = numpy.array(
             [[0.633333, 0.675, 0.4666667],
-             [0.5775, 0.504, 0.5666667],
-             [0.3433333, 0.3766667, FLOAT32_NODATA]])
+             [0.733333, 0.504, 0.5666667],
+             [FLOAT32_NODATA, 0.51, FLOAT32_NODATA]])
         actual_base_convolve = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(intermediate, f'ndvi_base_buffer_mean_{suffix}.tif'))
+            file_reg['ndvi_base_buffer_mean'])
         numpy.testing.assert_allclose(actual_base_convolve,
                                       expected_base_convolve, atol=1e-6)
 
         expected_alt_convolve = numpy.array(
             [[0.466667, 0.36, 0.413333],
-             [0.35, 0.33, 0.345],
-             [0.41, 0.1925, 0.203333]])
-
-        output_delta_ndvi = os.path.join(
-            intermediate, f'delta_ndvi_{suffix}.tif')
+             [0.413333, 0.33, 0.36],
+             [FLOAT32_NODATA, 0.155, FLOAT32_NODATA]])
 
         actual_delta_ndvi = pygeoprocessing.raster_to_numpy_array(
-            output_delta_ndvi)
+            file_reg['delta_ndvi'])
 
         expected_delta_ndvi = expected_alt_convolve - expected_base_convolve
-        mask = (expected_base_convolve == PGP_FLOAT32_NODATA) | (
-            expected_alt_convolve == PGP_FLOAT32_NODATA)
+        mask = (expected_base_convolve == FLOAT32_NODATA) | (
+            expected_alt_convolve == FLOAT32_NODATA)
         expected_delta_ndvi[mask] = PGP_FLOAT32_NODATA
 
         numpy.testing.assert_allclose(actual_delta_ndvi, expected_delta_ndvi,
@@ -310,11 +306,10 @@ class UMHTests(unittest.TestCase):
             projection_wkt=srs.ExportToWkt(),
             target_path=args['ndvi_base'])
 
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
 
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(self.workspace_dir, "output",
-                         "preventable_cases_test1.tif"))
+            file_reg['preventable_cases'])
         # most are nodata because AOI is just under 1 pixel
         # shape is 3x4 (rather than 3x3) because when ndvi_base is resampled,
         # it causes extra nodata column to right of AOI
@@ -388,15 +383,12 @@ class UMHTests(unittest.TestCase):
                                 Polygon([(xmin, ymin), (xmax, ymin),
                                          (xmax, ymax), (xmin, ymax),
                                          (xmin, ymin)])])
-        
-        urban_mental_health.execute(args)
+
+        file_reg = urban_mental_health.execute(args)
 
         # check output prev cases
-        preventable_cases_path = os.path.join(
-            self.workspace_dir, "output",
-            f"preventable_cases_{args['results_suffix']}.tif")
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
-            preventable_cases_path)
+            file_reg["preventable_cases"])
 
         expected_prev_cases = numpy.full((4, 3), PGP_FLOAT32_NODATA)
         expected_prev_cases[1, 1] = -49.75519
@@ -418,14 +410,11 @@ class UMHTests(unittest.TestCase):
             array.astype(numpy.float32), FLOAT32_NODATA, (100, -100), origin,
             projection_wkt, args['population_raster'])
 
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
 
         # check output prev cases
-        preventable_cases_path = os.path.join(
-            self.workspace_dir, "output",
-            f"preventable_cases_{args['results_suffix']}.tif")
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
-            preventable_cases_path)
+            file_reg["preventable_cases"])
 
         expected_prev_cases = numpy.full((4, 3), PGP_FLOAT32_NODATA)
         # data only exists where population raster covers AOI
@@ -451,24 +440,17 @@ class UMHTests(unittest.TestCase):
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
 
-        suffix = args['results_suffix']
-        intermediate = os.path.join(self.workspace_dir, "intermediate")
-
-        pop_aligned_path = os.path.join(
-            intermediate, f"population_aligned_{suffix}.tif")
         pop_bbox = pygeoprocessing.get_raster_info(
-            pop_aligned_path)['bounding_box']
+            file_reg["population_aligned"])['bounding_box']
 
-        ndvi_raster_path = os.path.join(
-            intermediate, f"delta_ndvi_{suffix}.tif")
-        ndvi_info = pygeoprocessing.get_raster_info(
-            ndvi_raster_path)
-        ndvi_bbox = ndvi_info['bounding_box']
+        delta_ndvi_info = pygeoprocessing.get_raster_info(
+            file_reg["delta_ndvi"])
+        delta_ndvi_bbox = delta_ndvi_info['bounding_box']
 
         # Quick check - population aligned bbox matches the ndvi bbox
-        numpy.testing.assert_allclose(pop_bbox, ndvi_bbox)
+        numpy.testing.assert_allclose(pop_bbox, delta_ndvi_bbox)
 
         # Build AOI buffered bbox (vector-derived)
         aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
@@ -479,10 +461,10 @@ class UMHTests(unittest.TestCase):
         # Snap buffered bbox outward to the processing grid.
         # Note y pixel size is typically negative. We use abs() for step
         # sizes and take ndvi_bbox as grid anchor
-        x_step = abs(ndvi_info['pixel_size'][0])
-        y_step = abs(ndvi_info['pixel_size'][1])
+        x_step = abs(delta_ndvi_info['pixel_size'][0])
+        y_step = abs(delta_ndvi_info['pixel_size'][1])
 
-        gxmin, gymin, gxmax, gymax = ndvi_bbox  # grid bbox
+        gxmin, gymin, gxmax, gymax = delta_ndvi_bbox  # grid bbox
         bxmin, bymin, bxmax, bymax = buffered_bbox
 
         def _snap_down(v, anchor, step):
@@ -516,7 +498,7 @@ class UMHTests(unittest.TestCase):
 
         with self.assertLogs(urban_mental_health.LOGGER,
                              level="WARNING") as context:
-            urban_mental_health.execute(args)
+            file_reg = urban_mental_health.execute(args)
 
         # Check that a WARNING-level log contains warning_text
         warning_text = "The extent of bounding box of the AOI buffered by " \
@@ -527,11 +509,7 @@ class UMHTests(unittest.TestCase):
         )
 
         # Check that model still ran and expected output was created
-        output_path = os.path.join(
-            self.workspace_dir, "output",
-            f"preventable_cases_{args['results_suffix']}.tif"
-        )
-        self.assertTrue(os.path.isfile(output_path))
+        self.assertTrue(os.path.isfile(file_reg["preventable_cases"]))
 
     def test_masking_without_lulc(self):
         """Test NDVI threshold masking (given no lulc input for mask)"""
@@ -820,11 +798,9 @@ class UMHTests(unittest.TestCase):
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
         # Check CSV
-        stats_csv = os.path.join(self.workspace_dir, "output",
-                                 "preventable_cases_cost_sum_test1.csv")
-        df = pandas.read_csv(stats_csv)
+        df = pandas.read_csv(file_reg["preventable_cases_cost_sum_table"])
         self.assertIn("sum_cases", df.columns)
         self.assertNotIn("sum_cost", df.columns)
 
@@ -851,8 +827,8 @@ class UMHTests(unittest.TestCase):
         # Expected result calculated by hand
         expected_ndvi_alt_buffer_mean = numpy.array(
             [[.133333, .15, .15],
-             [0.125, .175, PGP_FLOAT32_NODATA],
-             [.13333333, .16666667, PGP_FLOAT32_NODATA]])
+             [0.133333, .175, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, .2, PGP_FLOAT32_NODATA]])
         actual_ndvi_alt_buffer_mean_path = os.path.join(
             self.workspace_dir, "intermediate",
             f"ndvi_alt_buffer_mean_{args['results_suffix']}.tif")
@@ -866,7 +842,7 @@ class UMHTests(unittest.TestCase):
         expected_delta_ndvi = numpy.array(
             [[-0.0333333, 0, -0.05],
              [0, 0, PGP_FLOAT32_NODATA],
-             [-0.01666669, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
 
         actual_delta_ndvi_path = os.path.join(
             self.workspace_dir, "intermediate",
@@ -889,34 +865,29 @@ class UMHTests(unittest.TestCase):
         lulc_attr_table = lulc_attr_table.drop(columns=['ndvi'])
         lulc_attr_table.to_csv(args['lulc_attr_csv'])
 
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
 
         # assert that model ran using NDVI raster for reclassification
         # (calculated by hand using base_ndvi (_not_ alt_ndvi) averages)
-        ndvi_lucode_1 = 0.503333  # (.5 + .9 + .1133 + nodata) / 3
+        ndvi_lucode_1 = 0.7  # (.5 + .9  + nodata) / 2
         ndvi_lucode_2 = 0.55  # (.6 + .7 + .8 + .12) / 4
         expected_ndvi_alt = numpy.array(
             [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_1],
              [ndvi_lucode_1, ndvi_lucode_2, PGP_FLOAT32_NODATA],
-             [ndvi_lucode_1, ndvi_lucode_2, PGP_FLOAT32_NODATA]]
+             [PGP_FLOAT32_NODATA, ndvi_lucode_2, PGP_FLOAT32_NODATA]]
         )
-        actual_ndvi_alt_path = os.path.join(
-            self.workspace_dir, "intermediate",
-            f"ndvi_alt_aligned_masked_{args['results_suffix']}.tif")
         actual_ndvi_alt = pygeoprocessing.raster_to_numpy_array(
-            actual_ndvi_alt_path)
+            file_reg["ndvi_alt_aligned_masked"])
         numpy.testing.assert_allclose(actual_ndvi_alt, expected_ndvi_alt,
                                       atol=1e-6)
 
         expected_ndvi_base = numpy.array(
             [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_2],
              [ndvi_lucode_2, ndvi_lucode_1, ndvi_lucode_2],
-             [ndvi_lucode_1, PGP_FLOAT32_NODATA, ndvi_lucode_1]])
-        actual_ndvi_base_path = os.path.join(
-            self.workspace_dir, "intermediate",
-            f"ndvi_base_aligned_masked_{args['results_suffix']}.tif")
+             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+
         actual_ndvi_base = pygeoprocessing.raster_to_numpy_array(
-            actual_ndvi_base_path)
+            file_reg["ndvi_base_aligned_masked"])
         numpy.testing.assert_allclose(actual_ndvi_base, expected_ndvi_base,
                                       atol=1e-6)
 
