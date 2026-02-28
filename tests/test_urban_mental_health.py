@@ -10,6 +10,8 @@ import pygeoprocessing
 from shapely import Polygon
 from osgeo import gdal, ogr, osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 
 # FLOAT32_NODATA is used as a "custom" nodata vs PGP_FLOAT32_NODATA is
@@ -86,11 +88,13 @@ def make_raster_from_array(base_raster_path, array):
 
 def make_synthetic_data_and_params(workspace_dir, model_option):
     """Make all data needed to run UMH model
-    
+
     Args:
         workspace_dir (str): path to workspace directory
-        model_option (int): One of: 1 (Tree cover and NDVI inputs), 2 (LULC inputs),
-            or 3 (NDVI inputs) """
+        model_option (int): Which scenario option to create input data for,
+            either 'lulc' or 'ndvi'
+
+    """
 
     # make synthetic input data
     baseline_prevalence_path = os.path.join(
@@ -105,8 +109,10 @@ def make_synthetic_data_and_params(workspace_dir, model_option):
                                     (ORIGIN_X, ORIGIN_Y),
                                     (ORIGIN_X, ORIGIN_Y-250)])])
 
+    # make pop are different shape than ndvi to test if resampled correctly
     pop_array = numpy.array(
-            [[12, 22, 10], [20, 30, 80], [90, 14, 14], [16, 17, 30]])
+        [[12, 22, 10], [20, 30, 80], [90, 14, 14],
+         [16, 17, 30], [16, 17, 30]])
     pop_path = os.path.join(workspace_dir, "population.tif")
     make_raster_from_array(pop_path, pop_array)
 
@@ -131,12 +137,7 @@ def make_synthetic_data_and_params(workspace_dir, model_option):
         'workspace_dir': workspace_dir,
     }
 
-    if model_option == 1:
-        args['scenario'] = 'tcc_ndvi'
-        args['tc_raster'] = '' #TODO
-        args['tc_target'] = '' #TODO
-
-    elif model_option == 2:
+    if model_option == 'lulc':
         args['scenario'] = 'lulc'
         # make lulc arrays
         lulc_base_array = numpy.array(
@@ -159,13 +160,16 @@ def make_synthetic_data_and_params(workspace_dir, model_option):
         lulc_attr_table.to_csv(lulc_attr_path)
         args['lulc_attr_csv'] = lulc_attr_path
 
-    elif model_option == 3:
+    elif model_option == 'ndvi':
         args['scenario'] = 'ndvi'
         ndvi_alt_array = numpy.array(
             [[.12, .22, .1], [.2, .3, .8], [.9, .14, .14], [.16, .17, .3]])
         ndvi_alt_path = os.path.join(workspace_dir, "ndvi_alt.tif")
         make_raster_from_array(ndvi_alt_path, ndvi_alt_array)
         args['ndvi_alt'] = ndvi_alt_path
+
+    else:
+        raise ValueError("model_option must be 'lulc' or 'ndvi'")
 
     return args
 
@@ -190,19 +194,18 @@ class UMHTests(unittest.TestCase):
         NDVI calculation is correct. Also test nodata propagates correctly,
         (i.e., output has nodata pixels anywhere either input is nodata).
         """
-        from natcap.invest import urban_mental_health
-        args = make_synthetic_data_and_params(self.workspace_dir, 3)
-        urban_mental_health.execute(args)
+        from natcap.invest.urban_mental_health import urban_mental_health
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        file_reg = urban_mental_health.execute(args)
 
-        intermediate = os.path.join(self.workspace_dir, "intermediate")
-        suffix = args['results_suffix']
         # Assert that top row was removed as its outside of search_radius distance of AOI
         expected_base_aligned = numpy.array( #this is copied from base_ndvi without top row
-            [[.5, .6, .7], 
-            [.8, .9, .10], 
-            [.11, .12, FLOAT32_NODATA]])
+            [[.5, .6, .7],
+             [.8, .9, .10],
+             [FLOAT32_NODATA, .12, FLOAT32_NODATA]])
         actual_base_aligned = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(intermediate, f'ndvi_base_aligned_{suffix}.tif'))
+            file_reg['ndvi_base_aligned'])
+
         numpy.testing.assert_allclose(actual_base_aligned,
                                       expected_base_aligned, atol=1e-6)
 
@@ -210,39 +213,42 @@ class UMHTests(unittest.TestCase):
         # calculated by hand)
         expected_base_convolve = numpy.array(
             [[0.633333, 0.675, 0.4666667],
-             [0.5775, 0.504, 0.5666667],
-             [0.3433333, 0.3766667, FLOAT32_NODATA]])
+             [0.733333, 0.504, 0.5666667],
+             [FLOAT32_NODATA, 0.51, FLOAT32_NODATA]])
         actual_base_convolve = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(intermediate, f'ndvi_base_buffer_mean_{suffix}.tif'))
+            file_reg['ndvi_base_buffer_mean'])
         numpy.testing.assert_allclose(actual_base_convolve,
                                       expected_base_convolve, atol=1e-6)
 
         expected_alt_convolve = numpy.array(
             [[0.466667, 0.36, 0.413333],
-             [0.35, 0.33, 0.345],
-             [0.41, 0.1925, 0.203333]])
-
-        output_delta_ndvi = os.path.join(
-            intermediate, f'delta_ndvi_{suffix}.tif')
+             [0.413333, 0.33, 0.36],
+             [FLOAT32_NODATA, 0.155, FLOAT32_NODATA]])
 
         actual_delta_ndvi = pygeoprocessing.raster_to_numpy_array(
-            output_delta_ndvi)
+            file_reg['delta_ndvi'])
 
         expected_delta_ndvi = expected_alt_convolve - expected_base_convolve
-        mask = (expected_base_convolve == PGP_FLOAT32_NODATA) | (
-            expected_alt_convolve == PGP_FLOAT32_NODATA)
+        mask = (expected_base_convolve == FLOAT32_NODATA) | (
+            expected_alt_convolve == FLOAT32_NODATA)
         expected_delta_ndvi[mask] = PGP_FLOAT32_NODATA
 
         numpy.testing.assert_allclose(actual_delta_ndvi, expected_delta_ndvi,
                                       atol=1e-6)
 
-    def test_option3(self):
-        "Test umh option 3 (ndvi)"
-        from natcap.invest import urban_mental_health
+    def test_ndvi_scenario(self):
+        "Test UMH NDVI scenario runs and has correct nodata and values"
+        from natcap.invest.urban_mental_health import urban_mental_health
 
-        args = make_synthetic_data_and_params(self.workspace_dir, 3)
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        execute_kwargs = {
+            'generate_report': bool(urban_mental_health.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        urban_mental_health.MODEL_SPEC.execute(args, **execute_kwargs)
 
-        urban_mental_health.execute(args)
+        assert_complete_execute(
+            args, urban_mental_health.MODEL_SPEC, **execute_kwargs)
 
         expected_baseline_cases = numpy.array(
             [[200, 300, 800], [900, 140, 140],
@@ -278,14 +284,14 @@ class UMHTests(unittest.TestCase):
                                       expected_preventable_cases, atol=1e-5)
 
     def test_diff_prj_inputs(self):
-        """Test model option 3 given inputs of different projections.
+        """Test NDVI scenario option given inputs of different projections.
 
         Check that output preventable cases geotiff is clipped
         correctly given inputs of different projections
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
-        args = make_synthetic_data_and_params(self.workspace_dir, 3)
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
 
         # create NDVI base with different projection
         ndvi_base_array = numpy.array(
@@ -300,11 +306,10 @@ class UMHTests(unittest.TestCase):
             projection_wkt=srs.ExportToWkt(),
             target_path=args['ndvi_base'])
 
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
 
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(self.workspace_dir, "output",
-                         "preventable_cases_test1.tif"))
+            file_reg['preventable_cases'])
         # most are nodata because AOI is just under 1 pixel
         # shape is 3x4 (rather than 3x3) because when ndvi_base is resampled,
         # it causes extra nodata column to right of AOI
@@ -318,10 +323,10 @@ class UMHTests(unittest.TestCase):
         Test that if AOI is larger than the input NDVI extent by search_radius
         distance, the model raises a warning.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         # make synthetic input data
-        args = make_synthetic_data_and_params(self.workspace_dir, 3)
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
 
         # overwrite AOI referenced in args with larger AOI
         xmin = ORIGIN_X
@@ -346,10 +351,10 @@ class UMHTests(unittest.TestCase):
         )
 
     def test_search_radius_smaller_than_resolution(self):
-        """Test that search_radius < pixel size/2 of NDVI raises error on option 3"""
-        from natcap.invest import urban_mental_health
+        """Test search_radius < pixelsize/2 of NDVI raises error on NDVI scn"""
+        from natcap.invest.urban_mental_health import urban_mental_health
 
-        args = make_synthetic_data_and_params(self.workspace_dir, 3)
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
         args["search_radius"] = 2
         with self.assertRaises(ValueError) as context:
             urban_mental_health.execute(args)
@@ -364,9 +369,9 @@ class UMHTests(unittest.TestCase):
         population raster is nodata. That is, valid extent of outputs match
         extent of population raster input.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
-        args = make_synthetic_data_and_params(self.workspace_dir, 3)
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
 
         # make AOI larger than default so pop raster can only cover part of it
         xmin = ORIGIN_X + 100  # same as default
@@ -378,15 +383,12 @@ class UMHTests(unittest.TestCase):
                                 Polygon([(xmin, ymin), (xmax, ymin),
                                          (xmax, ymax), (xmin, ymax),
                                          (xmin, ymin)])])
-        
-        urban_mental_health.execute(args)
+
+        file_reg = urban_mental_health.execute(args)
 
         # check output prev cases
-        preventable_cases_path = os.path.join(
-            self.workspace_dir, "output",
-            f"preventable_cases_{args['results_suffix']}.tif")
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
-            preventable_cases_path)
+            file_reg["preventable_cases"])
 
         expected_prev_cases = numpy.full((4, 3), PGP_FLOAT32_NODATA)
         expected_prev_cases[1, 1] = -49.75519
@@ -408,14 +410,11 @@ class UMHTests(unittest.TestCase):
             array.astype(numpy.float32), FLOAT32_NODATA, (100, -100), origin,
             projection_wkt, args['population_raster'])
 
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
 
         # check output prev cases
-        preventable_cases_path = os.path.join(
-            self.workspace_dir, "output",
-            f"preventable_cases_{args['results_suffix']}.tif")
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
-            preventable_cases_path)
+            file_reg["preventable_cases"])
 
         expected_prev_cases = numpy.full((4, 3), PGP_FLOAT32_NODATA)
         # data only exists where population raster covers AOI
@@ -423,11 +422,72 @@ class UMHTests(unittest.TestCase):
 
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
-    def test_AOI_larger_than_lulc_base_option3(self):
-        """Test warning raised but model runs if LULC raster too small"""
-        from natcap.invest import urban_mental_health
+    def test_population_aligned_bbox_matches_snapped_processing_bbox(self):
+        """Population resample bbox should match AOI buffered bbox w/ snapping.
 
-        args = make_synthetic_data_and_params(self.workspace_dir, 3)
+        Because the (vector-derived) AOI-buffered bbox  will almost never land
+        exactly on raster grid edges, there will be a small discrepancy between
+        the target buffered AOI bbox and the output bounding box of the
+        resampled population raster.
+
+        pygeoprocessing.align_and_resize_raster_stack snaps the target
+        bounding box to the pixel grid of the alignment raster
+        (origin + integer multiples of pixel size).
+
+        This tests that population_aligned bbox == the preprocessed ndvi bbox
+        and both equal the AOI-buffered bbox snapped outward to that grid.
+        """
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        file_reg = urban_mental_health.execute(args)
+
+        pop_bbox = pygeoprocessing.get_raster_info(
+            file_reg["population_aligned"])['bounding_box']
+
+        delta_ndvi_info = pygeoprocessing.get_raster_info(
+            file_reg["delta_ndvi"])
+        delta_ndvi_bbox = delta_ndvi_info['bounding_box']
+
+        # Quick check - population aligned bbox matches the ndvi bbox
+        numpy.testing.assert_allclose(pop_bbox, delta_ndvi_bbox)
+
+        # Build AOI buffered bbox (vector-derived)
+        buffered_bbox = pygeoprocessing.get_vector_info(
+            file_reg['aoi_buffered'])['bounding_box']
+
+        # Snap buffered bbox outward to the processing grid.
+        # Note y pixel size is typically negative. We use abs() for step
+        # sizes and take ndvi_bbox as grid anchor
+        x_step = abs(delta_ndvi_info['pixel_size'][0])
+        y_step = abs(delta_ndvi_info['pixel_size'][1])
+
+        gxmin, gymin, gxmax, gymax = delta_ndvi_bbox  # grid bbox
+        bxmin, bymin, bxmax, bymax = buffered_bbox
+
+        def _snap_down(v, anchor, step):
+            """Largest value on the grid <= v."""
+            return anchor + numpy.floor((v - anchor) / step) * step
+
+        def _snap_up(v, anchor, step):
+            """Smallest value on the grid >= v."""
+            return anchor + numpy.ceil((v - anchor) / step) * step
+
+        snapped_bbox = [
+            float(_snap_down(bxmin, gxmin, x_step)),
+            float(_snap_down(bymin, gymin, y_step)),
+            float(_snap_up(bxmax, gxmin, x_step)),
+            float(_snap_up(bymax, gymin, y_step)),
+        ]
+
+        # processing bbox should be the buffered bbox snapped outward to grid
+        numpy.testing.assert_allclose(pop_bbox, snapped_bbox)
+
+    def test_AOI_larger_than_lulc_base_ndvi_scenario(self):
+        """Test warning raised but model runs if LULC raster too small"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
 
         array = numpy.array(([1, 2], [4, 2]))
         lulc_base = os.path.join(self.workspace_dir, "lulc_base.tif")
@@ -436,7 +496,7 @@ class UMHTests(unittest.TestCase):
 
         with self.assertLogs(urban_mental_health.LOGGER,
                              level="WARNING") as context:
-            urban_mental_health.execute(args)
+            file_reg = urban_mental_health.execute(args)
 
         # Check that a WARNING-level log contains warning_text
         warning_text = "The extent of bounding box of the AOI buffered by " \
@@ -447,15 +507,11 @@ class UMHTests(unittest.TestCase):
         )
 
         # Check that model still ran and expected output was created
-        output_path = os.path.join(
-            self.workspace_dir, "output",
-            f"preventable_cases_{args['results_suffix']}.tif"
-        )
-        self.assertTrue(os.path.isfile(output_path))
+        self.assertTrue(os.path.isfile(file_reg["preventable_cases"]))
 
     def test_masking_without_lulc(self):
         """Test NDVI threshold masking (given no lulc input for mask)"""
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         array = numpy.array(([.1, -.3, -6], [.1, .2, .9],
                              [.1, -.2, FLOAT32_NODATA], [.2, .5, .9]))
@@ -479,7 +535,7 @@ class UMHTests(unittest.TestCase):
 
     def test_lulc_masking(self):
         """Test that lulc masks correctly"""
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         array = numpy.array(([.1, .3, .1], [.1, .2, .9],
                              [.1, .2, .4], [.2, .5, .9]))
@@ -520,7 +576,7 @@ class UMHTests(unittest.TestCase):
         for valid pixels. Ensure that nodata propagates correctly
         (output should be nodata where pop or prevalance are nodata)
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         pop_array = numpy.array(([FLOAT32_NODATA, 30, 10], [10, 20, 90],
                                  [100, 20, 40], [20, 5, .9]))
@@ -578,7 +634,7 @@ class UMHTests(unittest.TestCase):
         Test that preventable_cases decreases with negative delta_ndvi and
         increases with positive delta_ndvi (given effect size < 1).
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         ndvi_array = numpy.array(([FLOAT32_NODATA, .3, .1], [.2, 0, 0],
                                   [-.1, .3, .1], [-0.2, .5, 1]))
@@ -626,7 +682,7 @@ class UMHTests(unittest.TestCase):
 
         prev cost = equals preventable_cases * health_cost_rate for valid
         pixels; nodata preserved."""
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         preventable_cases = os.path.join(self.workspace_dir, "prev_cases.tif")
         pc_array = numpy.array(([FLOAT32_NODATA, 40, 0], [1, 100, 10],
@@ -652,7 +708,7 @@ class UMHTests(unittest.TestCase):
           the sum total cases and costs aggregated across all polygons in AOI
 
           """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         aoi_vector = os.path.join(self.workspace_dir, "aoi.shp")
         fields = {"id": ogr.OFTReal}
@@ -732,39 +788,45 @@ class UMHTests(unittest.TestCase):
         self.assertEqual(actual_attributes, expected_attributes)
 
     def test_execute_without_health_cost_skips_cost_outputs(self):
-        """Test model option 3 without health input
+        """Test NDVI scenario option without health input
 
         Test that `execute` runs without health cost input and produces CSV
         without cost column.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
-        args = make_synthetic_data_and_params(self.workspace_dir, 3)
-        urban_mental_health.execute(args)
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        file_reg = urban_mental_health.execute(args)
         # Check CSV
-        stats_csv = os.path.join(self.workspace_dir, "output",
-                                 "preventable_cases_cost_sum_test1.csv")
-        df = pandas.read_csv(stats_csv)
+        df = pandas.read_csv(file_reg["preventable_cases_cost_sum_table"])
         self.assertIn("sum_cases", df.columns)
         self.assertNotIn("sum_cost", df.columns)
 
-    def test_option2_basic_inputs(self):
-        """Test UMH option 2 (LULC inputs) with basic LULC and attr table inputs"
+    def test_lulc_scenario_with_basic_inputs(self):
+        """Test UMH LULC inputs scenario with basic LULC and attr table inputs
 
         Test that LULC rasters are reclassified to NDVI based on attribute
         table values. Then test that delta NDVI is calculated correctly.
         """
-        from natcap.invest import urban_mental_health
-        args = make_synthetic_data_and_params(self.workspace_dir, 2)
+        from natcap.invest.urban_mental_health import urban_mental_health
 
-        urban_mental_health.execute(args)
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+        execute_kwargs = {
+            'generate_report': bool(urban_mental_health.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+
+        urban_mental_health.MODEL_SPEC.execute(args, **execute_kwargs)
+
+        assert_complete_execute(
+            args, urban_mental_health.MODEL_SPEC, **execute_kwargs)
 
         # LULC reclassified to NDVI based on attr table, then convolved
         # Expected result calculated by hand
         expected_ndvi_alt_buffer_mean = numpy.array(
             [[.133333, .15, .15],
-             [0.125, .175, PGP_FLOAT32_NODATA],
-             [.13333333, .16666667, PGP_FLOAT32_NODATA]])
+             [0.133333, .175, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, .2, PGP_FLOAT32_NODATA]])
         actual_ndvi_alt_buffer_mean_path = os.path.join(
             self.workspace_dir, "intermediate",
             f"ndvi_alt_buffer_mean_{args['results_suffix']}.tif")
@@ -778,7 +840,7 @@ class UMHTests(unittest.TestCase):
         expected_delta_ndvi = numpy.array(
             [[-0.0333333, 0, -0.05],
              [0, 0, PGP_FLOAT32_NODATA],
-             [-0.01666669, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
 
         actual_delta_ndvi_path = os.path.join(
             self.workspace_dir, "intermediate",
@@ -788,47 +850,42 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_delta_ndvi,
                                       expected_delta_ndvi, atol=1e-6)
 
-    def test_option2_lulc_relcassified_by_ndvi_raster(self):
-        """Test UMH option 2 (LULC) if reclassifying with NDVI raster
+    def test_lulc_scenario_with_lulc_reclassified_by_ndvi_raster(self):
+        """Test UMH LULC inputs scenario if reclassifying with NDVI raster
 
         Test that UMH falls back to reclassifying LULC based on NDVI raster
         if ``ndvi`` column not provided in attribute table.
         """
-        from natcap.invest import urban_mental_health
-        args = make_synthetic_data_and_params(self.workspace_dir, 2)
+        from natcap.invest.urban_mental_health import urban_mental_health
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
         # open LULC attribute table and drop ndvi column
         lulc_attr_table = pandas.read_csv(args['lulc_attr_csv'])
         lulc_attr_table = lulc_attr_table.drop(columns=['ndvi'])
         lulc_attr_table.to_csv(args['lulc_attr_csv'])
 
-        urban_mental_health.execute(args)
+        file_reg = urban_mental_health.execute(args)
 
         # assert that model ran using NDVI raster for reclassification
         # (calculated by hand using base_ndvi (_not_ alt_ndvi) averages)
-        ndvi_lucode_1 = 0.503333  # (.5 + .9 + .1133 + nodata) / 3
+        ndvi_lucode_1 = 0.7  # (.5 + .9  + nodata) / 2
         ndvi_lucode_2 = 0.55  # (.6 + .7 + .8 + .12) / 4
         expected_ndvi_alt = numpy.array(
             [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_1],
              [ndvi_lucode_1, ndvi_lucode_2, PGP_FLOAT32_NODATA],
-             [ndvi_lucode_1, ndvi_lucode_2, PGP_FLOAT32_NODATA]]
+             [PGP_FLOAT32_NODATA, ndvi_lucode_2, PGP_FLOAT32_NODATA]]
         )
-        actual_ndvi_alt_path = os.path.join(
-            self.workspace_dir, "intermediate",
-            f"ndvi_alt_aligned_masked_{args['results_suffix']}.tif")
         actual_ndvi_alt = pygeoprocessing.raster_to_numpy_array(
-            actual_ndvi_alt_path)
+            file_reg["ndvi_alt_aligned_masked"])
         numpy.testing.assert_allclose(actual_ndvi_alt, expected_ndvi_alt,
                                       atol=1e-6)
 
         expected_ndvi_base = numpy.array(
             [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_2],
              [ndvi_lucode_2, ndvi_lucode_1, ndvi_lucode_2],
-             [ndvi_lucode_1, PGP_FLOAT32_NODATA, ndvi_lucode_1]])
-        actual_ndvi_base_path = os.path.join(
-            self.workspace_dir, "intermediate",
-            f"ndvi_base_aligned_masked_{args['results_suffix']}.tif")
+             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+
         actual_ndvi_base = pygeoprocessing.raster_to_numpy_array(
-            actual_ndvi_base_path)
+            file_reg["ndvi_base_aligned_masked"])
         numpy.testing.assert_allclose(actual_ndvi_base, expected_ndvi_base,
                                       atol=1e-6)
 
@@ -837,7 +894,7 @@ class UMHTests(unittest.TestCase):
 
         Test that mean NDVI is calculated per LULC class correctly.
         """
-        from natcap.invest import urban_mental_health
+        from natcap.invest.urban_mental_health import urban_mental_health
 
         lulc_array = numpy.array(
             [[1, 2, 3], [1, 2, 3], [1, 2, 4], [2, 2, 4]])
