@@ -1,6 +1,6 @@
 {
   "name": "invest-workbench",
-  "version": "3.17.2",
+  "version": "3.18.0",
   "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
   "main": "build/main/main.js",
   "homepage": "./",
@@ -54,6 +54,7 @@
   "dependencies": {
     "@babel/runtime": "^7.13.10",
     "electron-context-menu": "^4.1.1",
+    "electron-dl": "^4.0.0",
     "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "i18next": "^22.4.9",

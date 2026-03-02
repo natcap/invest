@@ -235,4 +235,31 @@
     font-style: italic;
     overflow-wrap: break-word;
   }
+  @keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+  }
+  .datatable:not(.dataTable) {
+    /* Hide placeholder HTML table while awaiting JS-generated DataTable. */
+    /*
+      .datatable selects placeholder HTML table AND JS-generated table;
+      .dataTable is specific to the JS-generated table.
+    */
+    display: none;
+  }
+  .loading,
+  :has(> .datatable):not(:has(> .dataTable)) {
+    /* Display loading spinner while awaiting JS-generated elements. */
+    animation: spin 1s linear infinite;
+    border: 0.5rem solid var(--invest-green);
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    margin: auto;
+    height: 3.5rem;
+    width: 3.5rem;
+  }
 </style>

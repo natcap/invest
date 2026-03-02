@@ -9,6 +9,8 @@ ADD src /invest/src
 ADD pyproject.toml /invest/pyproject.toml
 ADD setup.py /invest/setup.py
 ADD requirements.txt /invest/requirements.txt
+ADD LICENSE.txt /invest/LICENSE.txt
+ADD NOTICE.txt /invest/NOTICE.txt
 ADD .git /invest/.git
 RUN cd /invest && python3 -m build
 
@@ -27,8 +29,7 @@ ARG DEBIAN_GDAL_VERSION="3.10"
 
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
-RUN micromamba install -y -n base --override-channels -c conda-forge python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} && \
-        micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml && \
+RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} && \
         micromamba clean --all --yes && \
         /opt/conda/bin/python -m pip install /tmp/*.whl && \
         /opt/conda/bin/python -m pip cache purge && \
