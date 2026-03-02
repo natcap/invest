@@ -100,7 +100,9 @@ export function setupInvestRunHandlers() {
       cmdArgs = [
         'run',
         `--prefix "${settingsStore.get(`plugins.${modelID}.env`)}"`,
-        'invest',
+        // calling invest with python avoids issues with unescaped
+        // spaces in the python path in the conda bin/invest script
+        'python -m natcap.invest',
         LOGLEVELMAP[loggingLevel],
         TGLOGLEVELMAP[taskgraphLoggingLevel],
         `--language "${language}"`,
