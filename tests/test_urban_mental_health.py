@@ -109,7 +109,7 @@ def make_synthetic_data_and_params(workspace_dir, model_option):
                                     (ORIGIN_X, ORIGIN_Y),
                                     (ORIGIN_X, ORIGIN_Y-250)])])
 
-    # make pop are different shape than ndvi to test if resampled correctly
+    # make pop a different shape than ndvi to test if resampled correctly
     pop_array = numpy.array(
         [[12, 22, 10], [20, 30, 80], [90, 14, 14],
          [16, 17, 30], [16, 17, 30]])

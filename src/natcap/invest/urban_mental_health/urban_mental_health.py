@@ -20,7 +20,6 @@ from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
-geopandas.options.io_engine = 'fiona'
 
 _model_description = gettext(
     """
@@ -623,9 +622,9 @@ def execute(args):
     aoi_sr.ImportFromWkt(aoi_projection)
 
     # Buffer AOI by search_radius
-    gdf = geopandas.read_file(args['aoi_path'])
+    gdf = geopandas.read_file(args['aoi_path'], engine="fiona")
     gdf["geometry"] = gdf.buffer(args['search_radius'])
-    gdf.to_file(file_registry['aoi_buffered'], driver='GPKG')
+    gdf.to_file(file_registry['aoi_buffered'], driver='GPKG', engine="fiona")
     aoi_buffered_bbox = pygeoprocessing.get_vector_info(
         file_registry['aoi_buffered'])['bounding_box']
 
