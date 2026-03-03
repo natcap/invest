@@ -10,6 +10,15 @@
 
   <h2 class="section-header">Results</h2>
   {{ accordion_section(
+    stream_outputs_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(stream_img_src, stream_outputs_heading), 100),
+      (caption(stream_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
     'Primary Outputs',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
@@ -19,7 +28,33 @@
   ) }}
 
   {{ accordion_section(
-    'Results aggregated by watershed',
+    'Annual Quickflow (QF)',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(qf_img_src, 'Quickflow values'), 100),
+      (caption(qf_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {% set qf_section_contents %}
+  <div class="content-grid">
+    <div class="content-grid-item" style="width: 100%">
+      {{ caption(qf_plots_caption) }}
+    </div>
+    {% for item in qf_plots_json_tuples %}
+    <div class="content-grid-item" style="width: 33%">
+      <div id={{ item[1] }}></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endset %}
+  {{ accordion_section(
+    'Quickflow by Month per Polygon',
+    qf_section_contents
+  ) }}
+
+  {{ accordion_section(
+    'Results Aggregated by Polygon',
     content_grid([
       (content_grid([
         ('<div id="qb_map"></div>', 100),
@@ -32,34 +67,36 @@
     ])
   ) }}
 
-  {#
-  <h2 class="section-header">Intermediate Outputs</h2>
   {{ accordion_section(
-    'Ranked exposure variables',
+    'Intermediate Outputs',
     content_grid([
-      ('<div id="rank_vars_figure"></div>', 100),
-      (caption(rank_vars_figure_caption, rank_vars_figure_source_list), 100)
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(intermediate_img_src, 'Intermediate Outputs'), 100),
+      (caption(intermediate_caption, definition_list=True), 100)
     ])
-  ) }}
+  )}}
 
   {{ accordion_section(
-    'Pre-ranked variables',
+    'Output Raster Stats',
     content_grid([
-      ('<div id="facetted_histograms_figure"></div>', 100),
-      (caption(facetted_histograms_caption, facetted_histograms_source_list), 100)
+      (stats_table_note, 100),
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
     ])
-  ) }}
-
-  {{ accordion_section(
-    'Wave Exposure',
-    content_grid([
-      ('<div id="wave_energy_map"></div>', 65),
-      (caption(wave_energy_map_caption, wave_energy_map_source_list), 35)
-    ])
-  ) }}
-  #}
+  )}}
 
   <h2 class="section-header">Inputs</h2>
+  {{ accordion_section(
+    'Raster Inputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (caption(inputs_caption, definition_list=True), 100)
+    ])
+  ) }}
+
   {{ accordion_section(
     'Arguments',
     args_table(args_dict),
@@ -85,7 +122,8 @@
   {% include 'vega-embed-js.html' %}
   {% set chart_spec_id_list = [
     (qb_map_json, 'qb_map'),
-    (vri_sum_map_json, 'vri_sum_map'),
+    (vri_sum_map_json, 'vri_sum_map')
   ] %}
   {{ embed_vega(chart_spec_id_list) }}
+  {{ embed_vega(qf_plots_json_tuples) }}
 {% endblock scripts %}
