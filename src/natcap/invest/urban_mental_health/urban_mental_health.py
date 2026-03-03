@@ -622,7 +622,7 @@ def execute(args):
     aoi_sr.ImportFromWkt(aoi_projection)
 
     # Buffer AOI by search_radius
-    gdf = geopandas.read_file(args['aoi_path'])
+    gdf = geopandas.read_file(args['aoi_path'], engine='fiona')
     gdf["geometry"] = gdf.buffer(args['search_radius'])
     gdf.to_file(file_registry['aoi_buffered'], driver='GPKG')
     aoi_buffered_bbox = pygeoprocessing.get_vector_info(
