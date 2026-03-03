@@ -170,6 +170,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="pour_points",
             path="pour_points.gpkg",
             about=gettext("Points where water flows off the defined area of the map."),
+            created_if="detect_pour_points",
             geometry_types={"POINT"},
             fields=[]
         ),

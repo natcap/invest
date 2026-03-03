@@ -4,12 +4,15 @@ import tempfile
 import unittest
 
 import geometamaker
-from natcap.invest import spec
+import numpy
+import pygeoprocessing
+from natcap.invest import spec, models
 from natcap.invest.unit_registry import u
 from osgeo import gdal
+from osgeo import osr
 from pydantic import ValidationError
 
-from .utils import fake_execute
+from .utils import assert_complete_execute, fake_execute
 
 
 gdal.UseExceptions()
@@ -321,6 +324,77 @@ class ResultsSuffixTests(unittest.TestCase):
     def test_suffix_string_no_entry(self):
         """Utils: test no suffix entry in args."""
         self.assertEqual(spec.SUFFIX.preprocess(None), '')
+
+    def test_suffix_included_in_all_models(self):
+        """Test that all core models include ResultsSuffixInput."""
+        missing_suffix = []
+        for module in models.pyname_to_module.values():
+            if not any([isinstance(i, spec.ResultsSuffixInput)
+                        for i in module.MODEL_SPEC.inputs]):
+                missing_suffix.append(module.MODEL_SPEC.model_id)
+        self.assertEqual(missing_suffix, [])
+
+
+class MissingResultsSuffixTests(unittest.TestCase):
+    """Test ModelSpec.execute for model without ResultsSuffixInput."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_spec_no_results_suffix(self):
+        """Test ModelSpec.execute succeeds without ResultsSuffixInput.
+
+        This test uses the carbon model, as it can be run with minimal
+          inputs and has a reporter
+        """
+        from natcap.invest import carbon
+
+        # The input at index 1 is the results suffix
+        results_suffix_input = carbon.MODEL_SPEC.inputs.pop(1)
+        assert isinstance(results_suffix_input, spec.ResultsSuffixInput)
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        # Create LULC raster and pools csv in workspace and add them to args.
+        args['lulc_bas_path'] = os.path.join(args['workspace_dir'],
+                                       'lulc_bas_path.tif')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        projection_wkt = srs.ExportToWkt()
+        # origin hand-picked for this epsg:
+        origin = (461261, 4923265)
+
+        array = numpy.ones((5, 5), dtype=numpy.int32)
+        pixel_size = (1, -1)
+
+        pygeoprocessing.numpy_array_to_raster(
+            array, -1, pixel_size, origin, projection_wkt,
+            args['lulc_bas_path'])
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        with open(args['carbon_pools_path'], 'w') as open_table:
+            open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
+            open_table.write('15,10,60,1,1,"lulc code 1"\n')
+            open_table.write('5,3,20,0,2,"lulc code 2"\n')
+
+        execute_kwargs = {
+            'generate_report': bool(carbon.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        carbon.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, carbon.MODEL_SPEC, **execute_kwargs)
 
 
 class InputTests(unittest.TestCase):
