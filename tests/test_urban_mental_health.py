@@ -202,7 +202,7 @@ class UMHTests(unittest.TestCase):
         expected_base_aligned = numpy.array( #this is copied from base_ndvi without top row
             [[.5, .6, .7],
              [.8, .9, .10],
-             [FLOAT32_NODATA, .12, FLOAT32_NODATA]])
+             [.11, .12, FLOAT32_NODATA]])
         actual_base_aligned = pygeoprocessing.raster_to_numpy_array(
             file_reg['ndvi_base_aligned'])
 
@@ -213,8 +213,8 @@ class UMHTests(unittest.TestCase):
         # calculated by hand)
         expected_base_convolve = numpy.array(
             [[0.633333, 0.675, 0.4666667],
-             [0.733333, 0.504, 0.5666667],
-             [FLOAT32_NODATA, 0.51, FLOAT32_NODATA]])
+             [0.5775, 0.504, 0.5666667],
+             [0.3433333, 0.3766667, FLOAT32_NODATA]])
         actual_base_convolve = pygeoprocessing.raster_to_numpy_array(
             file_reg['ndvi_base_buffer_mean'])
         numpy.testing.assert_allclose(actual_base_convolve,
@@ -222,8 +222,8 @@ class UMHTests(unittest.TestCase):
 
         expected_alt_convolve = numpy.array(
             [[0.466667, 0.36, 0.413333],
-             [0.413333, 0.33, 0.36],
-             [FLOAT32_NODATA, 0.155, FLOAT32_NODATA]])
+             [0.35, 0.33, 0.345],
+             [0.41, 0.1925, 0.203333]])
 
         actual_delta_ndvi = pygeoprocessing.raster_to_numpy_array(
             file_reg['delta_ndvi'])
@@ -452,9 +452,11 @@ class UMHTests(unittest.TestCase):
         # Quick check - population aligned bbox matches the ndvi bbox
         numpy.testing.assert_allclose(pop_bbox, delta_ndvi_bbox)
 
-        # Build AOI buffered bbox (vector-derived)
-        buffered_bbox = pygeoprocessing.get_vector_info(
-            file_reg['aoi_buffered'])['bounding_box']
+        # Build AOI buffered bbox
+        aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
+        aoi_bbox = numpy.array(aoi_info['bounding_box'], dtype=numpy.float64)
+        r = float(args['search_radius'])
+        buffered_bbox = (aoi_bbox + numpy.array([-r, -r, r, r])).tolist()
 
         # Snap buffered bbox outward to the processing grid.
         # Note y pixel size is typically negative. We use abs() for step
@@ -825,8 +827,8 @@ class UMHTests(unittest.TestCase):
         # Expected result calculated by hand
         expected_ndvi_alt_buffer_mean = numpy.array(
             [[.133333, .15, .15],
-             [0.133333, .175, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, .2, PGP_FLOAT32_NODATA]])
+             [0.125, .175, PGP_FLOAT32_NODATA],
+             [.13333333, .16666667, PGP_FLOAT32_NODATA]])
         actual_ndvi_alt_buffer_mean_path = os.path.join(
             self.workspace_dir, "intermediate",
             f"ndvi_alt_buffer_mean_{args['results_suffix']}.tif")
@@ -840,7 +842,7 @@ class UMHTests(unittest.TestCase):
         expected_delta_ndvi = numpy.array(
             [[-0.0333333, 0, -0.05],
              [0, 0, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+             [-0.01666669, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
 
         actual_delta_ndvi_path = os.path.join(
             self.workspace_dir, "intermediate",
@@ -867,12 +869,12 @@ class UMHTests(unittest.TestCase):
 
         # assert that model ran using NDVI raster for reclassification
         # (calculated by hand using base_ndvi (_not_ alt_ndvi) averages)
-        ndvi_lucode_1 = 0.7  # (.5 + .9  + nodata) / 2
+        ndvi_lucode_1 = 0.503333  # (.5 + .9 + .1133 + nodata) / 3
         ndvi_lucode_2 = 0.55  # (.6 + .7 + .8 + .12) / 4
         expected_ndvi_alt = numpy.array(
             [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_1],
              [ndvi_lucode_1, ndvi_lucode_2, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, ndvi_lucode_2, PGP_FLOAT32_NODATA]]
+             [ndvi_lucode_1, ndvi_lucode_2, PGP_FLOAT32_NODATA]]
         )
         actual_ndvi_alt = pygeoprocessing.raster_to_numpy_array(
             file_reg["ndvi_alt_aligned_masked"])
@@ -882,7 +884,7 @@ class UMHTests(unittest.TestCase):
         expected_ndvi_base = numpy.array(
             [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_2],
              [ndvi_lucode_2, ndvi_lucode_1, ndvi_lucode_2],
-             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+             [ndvi_lucode_1, PGP_FLOAT32_NODATA, ndvi_lucode_1]])
 
         actual_ndvi_base = pygeoprocessing.raster_to_numpy_array(
             file_reg["ndvi_base_aligned_masked"])
