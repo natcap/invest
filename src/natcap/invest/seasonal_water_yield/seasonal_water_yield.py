@@ -25,10 +25,26 @@ MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
 
+_model_description = gettext(
+    """
+    The Seasonal Water Yield (SWY) model estimates the amount of water produced
+    by a watershed, arriving in streams over the course of a year. The primary
+    outputs of the model are quickflow, local recharge, and baseflow. Quickflow
+    represents the amount of precipitation that runs off of the land directly,
+    during and soon after a rain event, and local recharge represents the amount
+    of rainfall that infiltrates into soil, minus what is evaporated or used by
+    vegetation. Baseflow is the amount of precipitation that enters streams more
+    gradually through sub-surface flow, including during the dry season. The model
+    is based on inputs of topography (DEM), soils, land cover and management,
+    rainfall, and vegetation water demand.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="seasonal_water_yield",
     model_title=gettext("Seasonal Water Yield"),
     userguide="seasonal_water_yield.html",
+    reporter="natcap.invest.seasonal_water_yield.reporter",
+    about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("swy",),
@@ -353,6 +369,18 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
+            id="l",
+            path="L.tif",
+            about=gettext(
+                "Map of local recharge. If a user-defined local recharge input"
+                " is provided, this is a copy of that layer, aligned and clipped"
+                " to match the other spatial inputs. Otherwise, this is the"
+                " local recharge as calculated by the model."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
             id="l_avail",
             path="L_avail.tif",
             about=gettext("Map of available local recharge"),
@@ -532,18 +560,6 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Map of monthly KC values"),
             data_type=float,
             units=u.none
-        ),
-        spec.SingleBandRasterOutput(
-            id="l",
-            path="L.tif",
-            about=gettext(
-                "Map of local recharge. If a user-defined local recharge input"
-                " is provided, this is a copy of that layer, aligned and clipped"
-                " to match the other spatial inputs. Otherwise, this is the"
-                " local recharge as calculated by the model."
-            ),
-            data_type=float,
-            units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
             id="cz_aligned",
