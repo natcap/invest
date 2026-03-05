@@ -1,3 +1,4 @@
+import csv
 import logging
 import os
 import time
@@ -33,31 +34,6 @@ def _label_to_month(row):
     return qf_label_month_map[row['MonthLabel']]
 
 
-def _make_qf_plots(input_vector_path, id_var):
-    df = geopandas.read_file(input_vector_path)
-    melted_df = df.melt(
-        id_vars=[id_var],
-        var_name="MonthLabel",
-        value_vars=[f'qf_{month_index+1}' for month_index in range(12)],
-        value_name="Quickflow")
-
-    melted_df['Month'] = melted_df.apply(_label_to_month, axis=1)
-
-    max_qf = round(melted_df.max()['Quickflow']) + 1
-    plots = []
-
-    for poly_id in set(melted_df[id_var]):
-        plt = altair.Chart(melted_df[melted_df[id_var] == poly_id]).mark_bar().encode(
-                altair.X("month(Month):T").title("Month"),
-                altair.Y("Quickflow").title("Quickflow (m^3/s)").scale(
-                    domain=(0, max_qf), clamp=True)
-        ).properties(title=f"Mean Quickflow for Polygon, FID {poly_id}")
-
-        plots.append(plt.to_json())
-
-    return plots
-
-
 def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
                           title):
     attr_map = altair.Chart(geodataframe).mark_geoshape(
@@ -78,81 +54,169 @@ def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
     ).configure_legend(**vector_utils.LEGEND_CONFIG)
 
     return attr_map.to_json()
-#    qb_map = altair.Chart(aggregated_results).mark_geoshape(
-#        clip=True,
-#        stroke="white",
-#        strokeWidth=0.5
-#    ).project(
-#        type='identity',
-#        reflectY=True,
-#        fit=extent_feature
-#    ).encode(
-#        color='qb',
-#        tooltip=[altair.Tooltip("qb", title="qb")]
-#    ).properties(
-#        width=MAP_WIDTH,
-#        height=MAP_WIDTH / xy_ratio,
-#        title='Mean local recharge value within the watershed'
-#    ).configure_legend(**vector_utils.LEGEND_CONFIG)
-#    qb_map_caption = [model_spec.get_output(
-#        'aggregate_vector').get_field('qb').about]
 
 
-def _aggregate_monthly_qf_cubic_meters(aoi_path, file_registry,
-                                       aggregate_vector_path):
-    if os.path.exists(aggregate_vector_path):
-        print(
-            '%s exists, deleting and writing new output',
-            aggregate_vector_path)
-        os.remove(aggregate_vector_path)
+def create_aoi_copy_with_fid(aoi_path, output_vector_path):
+    if os.path.exists(output_vector_path):
+        print(f'{output_vector_path} exists, deleting and writing new output')
+        os.remove(output_vector_path)
 
     original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
 
     driver = gdal.GetDriverByName('ESRI Shapefile')
-    driver.CreateCopy(aggregate_vector_path, original_aoi_vector)
+    driver.CreateCopy(output_vector_path, original_aoi_vector)
     gdal.Dataset.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
-    aggregate_vector = gdal.OpenEx(aggregate_vector_path, 1)
-    aggregate_layer = aggregate_vector.GetLayer()
 
-    path_field_tuples = [(file_registry['qf_[MONTH]'][str(month_index +1)],
-                         f"qf_{month_index+1}") for month_index in range(12)]
+    aoi_vector = gdal.OpenEx(output_vector_path, 1)
+    aoi_layer = aoi_vector.GetLayer()
 
-    raster_info = pygeoprocessing.get_raster_info(path_field_tuples[0][0])
-    pixel_area_m2 = numpy.prod([abs(x) for x in raster_info['pixel_size']])
-
-    for raster_path, aggregate_field_id in path_field_tuples:
-        aggregate_stats = pygeoprocessing.zonal_statistics(
-            (raster_path, 1), aggregate_vector_path)
-
-        aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
-        aggregate_field.SetWidth(24)
-        aggregate_field.SetPrecision(11)
-        aggregate_layer.CreateField(aggregate_field)
-
-        aggregate_layer.ResetReading()
-        for poly_index, poly_feat in enumerate(aggregate_layer):
-            qf_sum_meters = aggregate_stats[poly_index]['sum'] * 0.001
-            total_qf = qf_sum_meters * pixel_area_m2
-
-            poly_feat.SetField(aggregate_field_id, float(total_qf))
-            aggregate_layer.SetFeature(poly_feat)
-
-    fid_field = ogr.FieldDefn('geom_fid', ogr.OFTInteger)
-    aggregate_layer.CreateField(fid_field)
-    for feature in aggregate_layer:
+    fid_field = ogr.FieldDefn('fid', ogr.OFTInteger)
+    aoi_layer.CreateField(fid_field)
+    for feature in aoi_layer:
         feature_id = feature.GetFID()
-        feature.SetField('geom_fid', feature_id)
-        aggregate_layer.SetFeature(feature)
+        feature.SetField('fid', feature_id)
+        aoi_layer.SetFeature(feature)
 
-    aggregate_layer.SyncToDisk()
-    aggregate_layer = None
-    gdal.Dataset.__swig_destroy__(aggregate_vector)
-    aggregate_vector = None
+    aoi_layer.SyncToDisk()
+    aoi_layer = None
+    gdal.Dataset.__swig_destroy__(aoi_vector)
+    aoi_vector = None
+
+
+def create_monthly_stats_table(aoi_path, file_registry, output_table_path):
+    if os.path.exists(output_table_path):
+        print(f'{output_table_path} exists, deleting and writing new output')
+        os.remove(output_table_path)
+
+    seconds_per_month = {
+        1: 2678400,
+        2: 2440152,
+        3: 2678400,
+        4: 2592000,
+        5: 2678400,
+        6: 2592000,
+        7: 2678400,
+        8: 2678400,
+        9: 2592000,
+        10: 2678400,
+        11: 2592000,
+        12: 2678400}
+
+    annual_b_path = file_registry['b']
+    monthly_qf_path_list_tuples = [
+        (file_registry['qf_[MONTH]'][str(month_index +1)], month_index+1, "quickflow")
+        for month_index in range(12)]
+    monthly_precip_path_list_tuples = [
+        (file_registry['prcp_a[MONTH]'][str(month_index)], month_index+1, "precipitation")
+        for month_index in range(12)]
+
+    # Use the baseflow raster to get the pixel_size;
+    # all rasters should be aligned + the same size
+    raster_info = pygeoprocessing.get_raster_info(annual_b_path)
+    pixel_area_m2 = numpy.prod([abs(x) for x in raster_info['pixel_size']])
+    pixel_area_m2
+
+    zonal_stats_b = pygeoprocessing.zonal_statistics((annual_b_path, 1), aoi_path)
+    b_avg_per_feat_per_month = {k: v['sum'] * 0.001 * pixel_area_m2 / 12
+                                for k, v in zonal_stats_b.items()}
+
+    values_dict = {fid: {month + 1: {'baseflow': b_val / seconds_per_month[month+1]}
+                         for month in range(12)}
+                   for fid, b_val in b_avg_per_feat_per_month.items()}
+
+    for raster_path, month_index, value_name in (
+            monthly_qf_path_list_tuples + monthly_precip_path_list_tuples):
+        zonal_stats = pygeoprocessing.zonal_statistics((raster_path, 1), aoi_path)
+        avg_per_feat_per_month = {k: v['sum'] * 0.001 * pixel_area_m2
+                                  for k, v in zonal_stats.items()}
+
+        for fid, value in avg_per_feat_per_month.items():
+            values_dict[fid][month_index][value_name] = value / seconds_per_month[month_index]
+
+    with open(output_table_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['fid', 'month', 'quickflow', 'baseflow', 'precipitation'])
+        for fid, month_dicts in values_dict.items():
+            for month, val_dicts in month_dicts.items():
+                writer.writerow([fid,
+                                 month,
+                                 val_dicts['quickflow'],
+                                 val_dicts['baseflow'],
+                                 val_dicts['precipitation']])
+
+
+def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
+    map_df = geopandas.read_file(aoi_vector_path)
+    values_df = pandas.read_csv(aggregate_csv_path)
+    values_df.month = values_df.month.astype(str)
+
+    extent_feature, xy_ratio = vector_utils.get_geojson_bbox(map_df)
+
+    feat_select = altair.selection_point(fields=["fid"], name="feat_select", value=0)
+
+    attr_map = altair.Chart(map_df).mark_geoshape(
+        clip=True, stroke="white", strokeWidth=0.5
+        ).project(
+            type='identity',
+            reflectY=True,
+            fit=extent_feature
+    ).encode(
+        color=altair.condition(
+            feat_select,
+            altair.value("seagreen"),
+            altair.value("lightgray")
+        ),
+        tooltip=[altair.Tooltip("fid", title="fid")]
+    ).properties(
+        width=MAP_WIDTH,
+        height=MAP_WIDTH / xy_ratio,
+        title="AOI"
+    ).add_params(
+        feat_select
+    )
+
+    base_chart = altair.Chart(values_df)
+
+    bar_chart = base_chart.mark_bar().transform_fold(
+        ['baseflow', 'quickflow']
+    ).encode(
+        altair.X("month(month):T").title("Month"),
+        altair.Y("value:Q").title("Quickflow + Baseflow (m^3/s)"),
+        altair.Order(field='key', sort='ascending'),
+        color=altair.Color('key:N').scale(
+            domain=['quickflow', "baseflow"],
+            range=['#fdae6b', '#9ecae1']
+        ),
+        tooltip=[altair.Tooltip(val, type="quantitative", format='.5f')
+                 for val in ["quickflow", "baseflow"]]
+    )
+
+    precip_chart = base_chart.mark_line().encode(
+        altair.X("month(month):T").title("Month"),
+        altair.Y(
+            "precipitation",
+            axis=altair.Axis(orient="right")
+        ).title("Precipitation (m^3/s)"),
+        color=altair.value('#0500a3')
+    )
+
+    combined_chart = altair.layer(bar_chart, precip_chart).resolve_scale(
+        y='independent'
+    ).transform_filter(
+        feat_select
+    ).properties(
+        title=altair.Title(altair.expr(
+            f'"Mean Quickflow + Baseflow for Feature, FID " + {feat_select.name}.fid')
+        )
+    )
+
+    chart = attr_map | combined_chart
+    return chart.to_json()
 
 
 def report(file_registry, args_dict, model_spec, target_html_filepath):
-    """Generate an html summary of Coastal Vulnerability results.
+    """Generate an html summary of Seasonal Water Yield results.
 
     Args:
         file_registry (dict): The ``natcap.invest.FileRegistry.registry``
@@ -168,21 +232,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         None
     """
 
+    # qb and vri_sum plots from the output aggregate vector
     aggregated_results = geopandas.read_file(file_registry['aggregate_vector'])
     extent_feature, xy_ratio = vector_utils.get_geojson_bbox(aggregated_results)
-
-    aggregated_monthly_qf_path = os.path.join(args_dict['workspace_dir'],
-                                              'monthly_qf_mean_aggregate.shp')
-    _aggregate_monthly_qf_cubic_meters(args_dict['aoi_path'], file_registry,
-                                       aggregated_monthly_qf_path)
-    qf_plots_json = _make_qf_plots(aggregated_monthly_qf_path, 'geom_fid')
-    qf_plots_json_tuples = [(qf_json, f'qf_plot_{poly_id}') for poly_id, qf_json in
-                            enumerate(qf_plots_json)]
-    qf_plots_caption = gettext(
-        """
-
-        """
-    )
 
     qb_map_json = _create_aggregate_map(
         aggregated_results, extent_feature, xy_ratio, 'qb',
@@ -200,6 +252,22 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         gettext('The sum of ``Vri_[suffix].tif`` pixel values within the watershed.')]
 
     vector_map_source_list = [model_spec.get_output('aggregate_vector').path]
+
+    # Monthly quickflow + baseflow plots and map
+    aoi_copy_path = os.path.join(args_dict['workspace_dir'], 'aoi_copy.shp')
+    create_aoi_copy_with_fid(args_dict['aoi_path'], aoi_copy_path)
+    qf_b_csv_path = os.path.join(args_dict['workspace_dir'], 'monthly_average_qf_b.shp')
+    create_monthly_stats_table(aoi_copy_path, file_registry, qf_b_csv_path)
+
+    qf_b_charts_json = create_linked_monthly_plots(aoi_copy_path, qf_b_csv_path)
+    qf_b_charts_caption = gettext(
+        """
+        This chart displays the monthly combined average baseflow + quickflow for
+        each feature within the AOI. Select a feature on the AOI map to see the
+        values for that feature.
+        """
+    )
+    qf_b_charts_source_list = [qf_b_csv_path, aoi_copy_path]
 
     # Raster config lists
     stream_raster_config_list = [
@@ -249,15 +317,18 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             spec=model_spec.get_input('lulc_raster_path'))
     ]
 
-    local_recharge_config = RasterPlotConfig(
-        raster_path=file_registry['l_aligned'],
-        datatype=RasterDatatype.continuous,
-        spec=model_spec.get_output('l_aligned'))
-
-    if args['user_defined_local_recharge']:
-        input_raster_config_list.append(local_recharge_config)
+    if args_dict['user_defined_local_recharge']:
+        input_raster_config_list.append(
+            RasterPlotConfig(
+                raster_path=args_dict['l_path'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_input('l_path')))
     else:
-        output_raster_config_list.append(local_recharge_config)
+        output_raster_config_list.append(
+            RasterPlotConfig(
+                raster_path=file_registry['l'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('l')))
 
     # Create raster image sources and captions:
     stream_img_src = raster_utils.plot_and_base64_encode_rasters(
@@ -268,7 +339,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             'Stream Network Maps (Flow Algorithm: '
             f'{args_dict["flow_dir_algorithm"]}, '
             'Threshold Flow Accumulation value: '
-            f'{args_dict["thresholdf_flow_accumulation"]})')
+            f'{args_dict["threshold_flow_accumulation"]})')
 
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
             output_raster_config_list)
@@ -305,6 +376,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
+            stats_table_note=report_constants.STATS_TABLE_NOTE,
             stream_img_src=stream_img_src,
             stream_caption=stream_raster_caption,
             stream_outputs_heading=stream_outputs_heading,
@@ -317,8 +389,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             output_raster_stats_table=output_raster_stats_table,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_raster_caption,
-            qf_plots_json_tuples=qf_plots_json_tuples,
-            qf_plots_caption=qf_plots_caption,
+            qf_b_charts_json=qf_b_charts_json,
+            qf_b_charts_caption=qf_b_charts_caption,
+            qf_b_charts_source_list=qf_b_charts_source_list,
             qb_map_json=qb_map_json,
             qb_map_caption=qb_map_caption,
             vri_sum_map_json=vri_sum_map_json,

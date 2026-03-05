@@ -7,17 +7,9 @@
   {% from 'content-grid.html' import content_grid %}
   {% from 'metadata.html' import list_metadata %}
   {% from 'raster-plot-img.html' import raster_plot_img %}
+  {% from 'wide-table.html' import wide_table %}
 
   <h2 class="section-header">Results</h2>
-  {{ accordion_section(
-    stream_outputs_heading,
-    content_grid([
-      (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(stream_img_src, stream_outputs_heading), 100),
-      (caption(stream_caption, definition_list=True), 100)
-    ])
-  )}}
-
   {{ accordion_section(
     'Primary Outputs',
     content_grid([
@@ -36,6 +28,17 @@
     ])
   )}}
 
+  {{ accordion_section(
+    'Quickflow and Baseflow by Month',
+    content_grid([
+      (content_grid([
+        ('<div id="qf_b_charts"></div>', 100),
+        (caption(qf_b_charts_caption, qf_b_charts_source_list), 100)
+      ]), 100)
+    ])
+  ) }}
+
+  {#
   {% set qf_section_contents %}
   <div class="content-grid">
     <div class="content-grid-item" style="width: 100%">
@@ -52,9 +55,10 @@
     'Quickflow by Month per Polygon',
     qf_section_contents
   ) }}
+  #}
 
   {{ accordion_section(
-    'Results Aggregated by Polygon',
+    'Results Aggregated by AOI Feature',
     content_grid([
       (content_grid([
         ('<div id="qb_map"></div>', 100),
@@ -66,6 +70,15 @@
       ]), 50),
     ])
   ) }}
+
+  {{ accordion_section(
+    stream_outputs_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(stream_img_src, stream_outputs_heading), 100),
+      (caption(stream_caption, definition_list=True), 100)
+    ])
+  )}}
 
   {{ accordion_section(
     'Intermediate Outputs',
@@ -122,8 +135,8 @@
   {% include 'vega-embed-js.html' %}
   {% set chart_spec_id_list = [
     (qb_map_json, 'qb_map'),
-    (vri_sum_map_json, 'vri_sum_map')
+    (vri_sum_map_json, 'vri_sum_map'),
+    (qf_b_charts_json, 'qf_b_charts')
   ] %}
   {{ embed_vega(chart_spec_id_list) }}
-  {{ embed_vega(qf_plots_json_tuples) }}
 {% endblock scripts %}

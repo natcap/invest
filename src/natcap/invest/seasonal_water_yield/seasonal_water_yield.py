@@ -369,6 +369,18 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
+            id="l",
+            path="L.tif",
+            about=gettext(
+                "Map of local recharge. If a user-defined local recharge input"
+                " is provided, this is a copy of that layer, aligned and clipped"
+                " to match the other spatial inputs. Otherwise, this is the"
+                " local recharge as calculated by the model."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
             id="l_avail",
             path="L_avail.tif",
             about=gettext("Map of available local recharge"),
@@ -548,18 +560,6 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Map of monthly KC values"),
             data_type=float,
             units=u.none
-        ),
-        spec.SingleBandRasterOutput(
-            id="l",
-            path="L.tif",
-            about=gettext(
-                "Map of local recharge. If a user-defined local recharge input"
-                " is provided, this is a copy of that layer, aligned and clipped"
-                " to match the other spatial inputs. Otherwise, this is the"
-                " local recharge as calculated by the model."
-            ),
-            data_type=float,
-            units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
             id="cz_aligned",
