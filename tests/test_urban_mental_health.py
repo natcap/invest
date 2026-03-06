@@ -216,7 +216,7 @@ class UMHTests(unittest.TestCase):
              [FLOAT32_NODATA, 0.5775, 0.504, 0.5666667, FLOAT32_NODATA],
              [FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA]])
         actual_base_convolve = pygeoprocessing.raster_to_numpy_array(
-            file_reg['ndvi_base_buffer_mean'])
+            file_reg['ndvi_base_buffer_mean_clipped'])
         numpy.testing.assert_allclose(actual_base_convolve,
                                       expected_base_convolve, atol=1e-6)
 
@@ -228,8 +228,6 @@ class UMHTests(unittest.TestCase):
 
         actual_delta_ndvi = pygeoprocessing.raster_to_numpy_array(
             file_reg['delta_ndvi'])
-        print(pygeoprocessing.raster_to_numpy_array(
-            file_reg['ndvi_alt_buffer_mean']))
 
         expected_delta_ndvi = expected_alt_convolve - expected_base_convolve
         mask = (expected_base_convolve == FLOAT32_NODATA) | (
@@ -253,11 +251,10 @@ class UMHTests(unittest.TestCase):
         assert_complete_execute(
             args, urban_mental_health.MODEL_SPEC, **execute_kwargs)
 
-        expected_baseline_cases = numpy.array(
-            [[PGP_FLOAT32_NODATA, 120, 220, 100, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, 200, 300, 800, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, 900, 140, 140, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+        # Border of nodata because buffered AOI extent
+        expected_baseline_cases = numpy.full((4, 5), PGP_FLOAT32_NODATA)
+        expected_baseline_cases[1:3, 1:4] = numpy.array([[200, 300, 800],
+                                                         [900, 140, 140]])
         actual_baseline_cases_path = os.path.join(
             self.workspace_dir, "intermediate",
             f"baseline_cases_{args['results_suffix']}.tif")
@@ -266,11 +263,10 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_baseline_cases,
                                       expected_baseline_cases, atol=1e-6)
 
-        expected_preventable_cases = numpy.array([
-            [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
-            [PGP_FLOAT32_NODATA, -15.41531, -49.75519, -52.38134, PGP_FLOAT32_NODATA],
-            [PGP_FLOAT32_NODATA, -136.040285, -15.914164, -20.58118, PGP_FLOAT32_NODATA],
-            [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+        expected_preventable_cases = numpy.full((4, 5), PGP_FLOAT32_NODATA)
+        expected_preventable_cases[1:3, 1:4] = numpy.array(
+            [[-15.41531, -49.75519, -52.38134],
+             [-136.040285, -15.914164, -20.58118]])
         # ^ calculated using:
         # (1 - numpy.exp(
         #       numpy.log(0.94)*10*actual_delta_ndvi)))*actual_baseline_cases
@@ -814,21 +810,21 @@ class UMHTests(unittest.TestCase):
         assert_complete_execute(
             args, urban_mental_health.MODEL_SPEC, **execute_kwargs)
 
-        # LULC reclassified to NDVI based on attr table, then convolved
-        # Expected result calculated by hand
-        expected_ndvi_alt_buffer_mean = numpy.full((4, 5), PGP_FLOAT32_NODATA)
-        expected_ndvi_alt_buffer_mean[1:3, 1:4] = numpy.array(
+        # LULC reclassified to NDVI based on attr table, then convolved and
+        # clipped. Expected result calculated by hand
+        expected_ndvi_alt_clipped = numpy.full((4, 5), PGP_FLOAT32_NODATA)
+        expected_ndvi_alt_clipped[1:3, 1:4] = numpy.array(
             ((.15, .16, .166667),
              (0.125, .175, PGP_FLOAT32_NODATA)))
 
-        actual_ndvi_alt_buffer_mean_path = os.path.join(
+        actual_ndvi_alt_clipped_path = os.path.join(
             self.workspace_dir, "intermediate",
-            f"ndvi_alt_buffer_mean_{args['results_suffix']}.tif")
-        actual_ndvi_alt_buffer_mean = pygeoprocessing.raster_to_numpy_array(
-            actual_ndvi_alt_buffer_mean_path)
+            f"ndvi_alt_buffer_mean_clipped_{args['results_suffix']}.tif")
+        actual_ndvi_alt_clipped = pygeoprocessing.raster_to_numpy_array(
+            actual_ndvi_alt_clipped_path)
         numpy.testing.assert_allclose(
-            actual_ndvi_alt_buffer_mean,
-            expected_ndvi_alt_buffer_mean, atol=1e-6)
+            actual_ndvi_alt_clipped,
+            expected_ndvi_alt_clipped, atol=1e-6)
 
         # Expected delta NDVI calculated by hand
         expected_delta_ndvi = numpy.full((4, 5), PGP_FLOAT32_NODATA)
