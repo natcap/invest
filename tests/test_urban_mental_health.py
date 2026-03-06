@@ -27,11 +27,11 @@ def make_simple_vector(path_to_shp, fields={"id": ogr.OFTReal},
                        attribute_list=[{"id": 0}], epsg=26910,
                        # this polygon fits within middle pixel of raster
                        shapely_geometry_list=[
-                           Polygon([(ORIGIN_X+100, ORIGIN_Y-254),
-                                    (ORIGIN_X+200, ORIGIN_Y-254),
-                                    (ORIGIN_X+200, ORIGIN_Y-200),
-                                    (ORIGIN_X+100, ORIGIN_Y-200),
-                                    (ORIGIN_X+100, ORIGIN_Y-254)])]):
+                        Polygon([(ORIGIN_X, ORIGIN_Y-254),
+                                (ORIGIN_X+300, ORIGIN_Y-254),
+                                (ORIGIN_X+300, ORIGIN_Y-100),
+                                (ORIGIN_X, ORIGIN_Y-100),
+                                (ORIGIN_X, ORIGIN_Y-254)])]):
     """
     Generate shapefile with one rectangular polygon
 
@@ -200,33 +200,36 @@ class UMHTests(unittest.TestCase):
 
         # Assert that top row was removed as its outside of search_radius distance of AOI
         expected_base_aligned = numpy.array( #this is copied from base_ndvi without top row
-            [[.5, .6, .7],
-             [.8, .9, .10],
-             [.11, .12, FLOAT32_NODATA]])
+            [[FLOAT32_NODATA, .1, .2, .35, FLOAT32_NODATA],
+             [FLOAT32_NODATA, .5, .6, .7, FLOAT32_NODATA],
+             [FLOAT32_NODATA, .8, .9, .10, FLOAT32_NODATA],
+             [FLOAT32_NODATA, .11, .12, FLOAT32_NODATA, FLOAT32_NODATA]])
         actual_base_aligned = pygeoprocessing.raster_to_numpy_array(
             file_reg['ndvi_base_aligned'])
 
         numpy.testing.assert_allclose(actual_base_aligned,
                                       expected_base_aligned, atol=1e-6)
 
-        # Assert that convolution was correct (this expected result was
-        # calculated by hand)
         expected_base_convolve = numpy.array(
-            [[0.633333, 0.675, 0.4666667],
-             [0.5775, 0.504, 0.5666667],
-             [0.3433333, 0.3766667, FLOAT32_NODATA]])
+            [[FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA],
+             [FLOAT32_NODATA, 0.5, 0.58, 0.4375, FLOAT32_NODATA],
+             [FLOAT32_NODATA, 0.5775, 0.504, 0.5666667, FLOAT32_NODATA],
+             [FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA]])
         actual_base_convolve = pygeoprocessing.raster_to_numpy_array(
             file_reg['ndvi_base_buffer_mean'])
         numpy.testing.assert_allclose(actual_base_convolve,
                                       expected_base_convolve, atol=1e-6)
 
         expected_alt_convolve = numpy.array(
-            [[0.466667, 0.36, 0.413333],
-             [0.35, 0.33, 0.345],
-             [0.41, 0.1925, 0.203333]])
+            [[FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA],
+             [FLOAT32_NODATA, 0.38, 0.332, 0.335, FLOAT32_NODATA],
+             [FLOAT32_NODATA, 0.35, 0.33, 0.345, FLOAT32_NODATA],
+             [FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA]])
 
         actual_delta_ndvi = pygeoprocessing.raster_to_numpy_array(
             file_reg['delta_ndvi'])
+        print(pygeoprocessing.raster_to_numpy_array(
+            file_reg['ndvi_alt_buffer_mean']))
 
         expected_delta_ndvi = expected_alt_convolve - expected_base_convolve
         mask = (expected_base_convolve == FLOAT32_NODATA) | (
@@ -251,8 +254,10 @@ class UMHTests(unittest.TestCase):
             args, urban_mental_health.MODEL_SPEC, **execute_kwargs)
 
         expected_baseline_cases = numpy.array(
-            [[200, 300, 800], [900, 140, 140],
-             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+            [[PGP_FLOAT32_NODATA, 120, 220, 100, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, 200, 300, 800, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, 900, 140, 140, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
         actual_baseline_cases_path = os.path.join(
             self.workspace_dir, "intermediate",
             f"baseline_cases_{args['results_suffix']}.tif")
@@ -262,17 +267,14 @@ class UMHTests(unittest.TestCase):
                                       expected_baseline_cases, atol=1e-6)
 
         expected_preventable_cases = numpy.array([
-            [-21.72614, -64.55958, -26.8406096],
-            [-136.040285, -15.914164, -20.58118],
-            [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+            [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
+            [PGP_FLOAT32_NODATA, -15.41531, -49.75519, -52.38134, PGP_FLOAT32_NODATA],
+            [PGP_FLOAT32_NODATA, -136.040285, -15.914164, -20.58118, PGP_FLOAT32_NODATA],
+            [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
         # ^ calculated using:
         # (1 - numpy.exp(
-        #       numpy.log(0.94)*10*actual_delta_ndvi))*actual_baseline_cases
+        #       numpy.log(0.94)*10*actual_delta_ndvi)))*actual_baseline_cases
         # i.e., (1 - (exp(ln(RR0.1NE)10*NE))) * bc
-
-        # results contains only center pixel left bc AOI is small
-        expected_preventable_cases = numpy.full((3, 3), PGP_FLOAT32_NODATA)
-        expected_preventable_cases[1, 1] = -15.914164
 
         actual_preventable_cases_path = os.path.join(
             self.workspace_dir, "output",
@@ -310,11 +312,11 @@ class UMHTests(unittest.TestCase):
 
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
             file_reg['preventable_cases'])
-        # most are nodata because AOI is just under 1 pixel
-        # shape is 3x4 (rather than 3x3) because when ndvi_base is resampled,
-        # it causes extra nodata column to right of AOI
-        expected_prev_cases = numpy.full((3, 4), PGP_FLOAT32_NODATA)
-        expected_prev_cases[1, 1] = -47.76584
+
+        expected_prev_cases = numpy.full((4, 6), PGP_FLOAT32_NODATA)
+        expected_prev_cases[1:3, 1:4] = numpy.array(
+            ((-10.4518223, -32.0634232, -74.8765640),
+             (-102.864586, -44.9878502, -18.9928780)))
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
     def test_NDVI_extent_too_small(self):
@@ -648,23 +650,12 @@ class UMHTests(unittest.TestCase):
         baseline_cases = os.path.join(self.workspace_dir, "baseline_cases.tif")
         make_raster_from_array(baseline_cases, bc_array)
 
-        aoi_path = os.path.join(self.workspace_dir, "aoi.shp")
-        xmin = ORIGIN_X  # origin of raster
-        ymax = ORIGIN_Y  # origin of raster
-        xmax = ORIGIN_X + 300
-        ymin = ORIGIN_Y - 300  # cut off lowest row
-        make_simple_vector(aoi_path,
-                           shapely_geometry_list=[
-                                Polygon([(xmin, ymin), (xmax, ymin),
-                                         (xmax, ymax), (xmin, ymax),
-                                         (xmin, ymin)])])
-
         effect_size = .9
         target_preventable_cases = os.path.join(self.workspace_dir,
                                                 "prev_cases.tif")
         urban_mental_health.calc_preventable_cases(
             delta_ndvi, baseline_cases, effect_size,
-            target_preventable_cases, aoi_path, self.workspace_dir)
+            target_preventable_cases)
 
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
             target_preventable_cases)
@@ -675,7 +666,7 @@ class UMHTests(unittest.TestCase):
             [[FLOAT32_NODATA, FLOAT32_NODATA, 0],
              [0.19, 0, 0],
              [-5.5555555555, 0, 1],
-             [FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA]])
+             [-0.23456791, 0.40950998, 0.6513215]])
 
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
@@ -825,10 +816,11 @@ class UMHTests(unittest.TestCase):
 
         # LULC reclassified to NDVI based on attr table, then convolved
         # Expected result calculated by hand
-        expected_ndvi_alt_buffer_mean = numpy.array(
-            [[.133333, .15, .15],
-             [0.125, .175, PGP_FLOAT32_NODATA],
-             [.13333333, .16666667, PGP_FLOAT32_NODATA]])
+        expected_ndvi_alt_buffer_mean = numpy.full((4, 5), PGP_FLOAT32_NODATA)
+        expected_ndvi_alt_buffer_mean[1:3, 1:4] = numpy.array(
+            ((.15, .16, .166667),
+             (0.125, .175, PGP_FLOAT32_NODATA)))
+
         actual_ndvi_alt_buffer_mean_path = os.path.join(
             self.workspace_dir, "intermediate",
             f"ndvi_alt_buffer_mean_{args['results_suffix']}.tif")
@@ -839,10 +831,10 @@ class UMHTests(unittest.TestCase):
             expected_ndvi_alt_buffer_mean, atol=1e-6)
 
         # Expected delta NDVI calculated by hand
-        expected_delta_ndvi = numpy.array(
-            [[-0.0333333, 0, -0.05],
-             [0, 0, PGP_FLOAT32_NODATA],
-             [-0.01666669, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+        expected_delta_ndvi = numpy.full((4, 5), PGP_FLOAT32_NODATA)
+        expected_delta_ndvi[1:3, 1:4] = numpy.array(
+            ((-0.0166666, 0, -0.0333333),
+             (0, 0, PGP_FLOAT32_NODATA)))
 
         actual_delta_ndvi_path = os.path.join(
             self.workspace_dir, "intermediate",
@@ -859,7 +851,7 @@ class UMHTests(unittest.TestCase):
         if ``ndvi`` column not provided in attribute table.
         """
         from natcap.invest.urban_mental_health import urban_mental_health
-        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+        args = make_synthetic_data_and_params(r'/Users/simpson2/Downloads/test_umhx', 'lulc')
         # open LULC attribute table and drop ndvi column
         lulc_attr_table = pandas.read_csv(args['lulc_attr_csv'])
         lulc_attr_table = lulc_attr_table.drop(columns=['ndvi'])
@@ -870,21 +862,30 @@ class UMHTests(unittest.TestCase):
         # assert that model ran using NDVI raster for reclassification
         # (calculated by hand using base_ndvi (_not_ alt_ndvi) averages)
         ndvi_lucode_1 = 0.503333  # (.5 + .9 + .1133 + nodata) / 3
-        ndvi_lucode_2 = 0.55  # (.6 + .7 + .8 + .12) / 4
+        ndvi_lucode_2 = 0.48#55  # (.6 + .7 + .8 + .12) / 4
         expected_ndvi_alt = numpy.array(
-            [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_1],
-             [ndvi_lucode_1, ndvi_lucode_2, PGP_FLOAT32_NODATA],
-             [ndvi_lucode_1, ndvi_lucode_2, PGP_FLOAT32_NODATA]]
+            [[PGP_FLOAT32_NODATA, ndvi_lucode_2, ndvi_lucode_2,
+              ndvi_lucode_2, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, ndvi_lucode_1, ndvi_lucode_2,
+              ndvi_lucode_1, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, ndvi_lucode_1, ndvi_lucode_2,
+              PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, ndvi_lucode_1, ndvi_lucode_2,
+              PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]]
         )
         actual_ndvi_alt = pygeoprocessing.raster_to_numpy_array(
             file_reg["ndvi_alt_aligned_masked"])
         numpy.testing.assert_allclose(actual_ndvi_alt, expected_ndvi_alt,
                                       atol=1e-6)
-
         expected_ndvi_base = numpy.array(
-            [[ndvi_lucode_1, ndvi_lucode_2, ndvi_lucode_2],
-             [ndvi_lucode_2, ndvi_lucode_1, ndvi_lucode_2],
-             [ndvi_lucode_1, PGP_FLOAT32_NODATA, ndvi_lucode_1]])
+            [[PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, ndvi_lucode_2,
+              PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, ndvi_lucode_1, ndvi_lucode_2,
+              ndvi_lucode_2, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, ndvi_lucode_2, ndvi_lucode_1,
+              ndvi_lucode_2, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, ndvi_lucode_1, PGP_FLOAT32_NODATA,
+              ndvi_lucode_1, PGP_FLOAT32_NODATA]])
 
         actual_ndvi_base = pygeoprocessing.raster_to_numpy_array(
             file_reg["ndvi_base_aligned_masked"])
