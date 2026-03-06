@@ -4,7 +4,6 @@ import os
 import shutil
 import tempfile
 
-import geopandas
 import numpy
 import pandas
 import pygeoprocessing
@@ -486,9 +485,37 @@ MODEL_SPEC = spec.ModelSpec(
                 created_if="ndvi_base"
             ),
             spec.SingleBandRasterOutput(
+                id="ndvi_alt_buffer_mean_clipped",
+                path="intermediate/ndvi_alt_buffer_mean_clipped.tif",
+                about=gettext(
+                    "Alternate NDVI raster convolved with a mean "
+                    "circular kernel and clipped to AOI."),
+                data_type=float,
+                units=None,
+                created_if="ndvi_alt"
+            ),
+            spec.SingleBandRasterOutput(
+                id="ndvi_base_buffer_mean_clipped",
+                path="intermediate/ndvi_base_buffer_mean_clipped.tif",
+                about=gettext(
+                    "Baseline NDVI raster convolved with a mean "
+                    "circular kernel and clipped to AOI."),
+                data_type=float,
+                units=None,
+                created_if="ndvi_base"
+            ),
+            spec.SingleBandRasterOutput(
                 id="population_aligned",
                 path="intermediate/population_aligned.tif",
                 about=gettext("Aligned and resampled population raster."),
+                data_type=float,
+                units=u.people
+            ),
+            spec.SingleBandRasterOutput(
+                id="population_aligned_clipped",
+                path="intermediate/population_aligned_clipped.tif",
+                about=gettext(
+                    "Aligned and resampled population raster clipped to AOI."),
                 data_type=float,
                 units=u.people
             ),
@@ -649,10 +676,12 @@ def execute(args):
 
     # Resample population raster to match aligned inputs; this is used for
     # calculating population-weighted preventable cases and costs
-    # Pop doesn't technically need to extend across the _buffered_ aoi bbox,
-    # but preventable cases calc requires pop and ndvi/lulc rasters to be
-    # aligned (and these rasters are all aligned to the buffered aoi bbox and
-    # clipped to AOI via masking, which keeps the extent the same)
+    target_snapped_bbox = pygeoprocessing.get_raster_info(
+        output_align_list[align_index])['bounding_box']
+    # NOTE: Use target_snapped_bbox because it guarantees the population raster
+    # is generated on the exact same pixel grid as the already-aligned inputs,
+    # whereas aoi_buffered_bbox may not land on that grid and can produce
+    # extent shifts that are off by 1 pixel or dimension mismatches
     population_align_task = task_graph.add_task(
         func=utils.resample_population_raster,
         kwargs={
@@ -660,12 +689,22 @@ def execute(args):
             'target_population_raster_path': file_registry[
                 'population_aligned'],
             'target_pixel_size': pixel_size,
-            'target_bb': aoi_buffered_bbox,
+            'target_bb': target_snapped_bbox,
             'target_projection_wkt': aoi_projection,
             'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['population_aligned']],
         task_name='Resample population to same resolution as other inputs')
+
+    population_clip_task = task_graph.add_task(
+        func=pygeoprocessing.mask_raster,
+        args=(
+            (file_registry['population_aligned'], 1),
+            args['aoi_path'],
+            file_registry['population_aligned_clipped']),
+        target_path_list=[file_registry['population_aligned_clipped']],
+        dependent_task_list=[population_align_task],
+        task_name='Clip population to AOI')
 
     if args['scenario'] == 'lulc':
         LOGGER.info("Using LULC inputs")
@@ -753,28 +792,60 @@ def execute(args):
         task_name='create kernel raster')
 
     mean_buffered_base_ndvi_task = task_graph.add_task(
-        func=convolve_ndvi_with_kernel,
+        func=pygeoprocessing.convolve_2d,
         args=(
-            file_registry['ndvi_base_aligned_masked'],
-            file_registry['kernel'],
-            args["aoi_path"],
-            args['workspace_dir'],
+            (file_registry['ndvi_base_aligned_masked'], 1),
+            (file_registry['kernel'], 1),
             file_registry['ndvi_base_buffer_mean']),
+        kwargs={
+            'ignore_nodata_and_edges': True,
+            'mask_nodata': True,
+            'normalize_kernel': True,
+            'target_datatype': pygeoprocessing.get_raster_info(
+                file_registry['ndvi_base_aligned_masked'])["datatype"],
+            'target_nodata': pygeoprocessing.get_raster_info(
+                file_registry['ndvi_base_aligned_masked'])["nodata"][0]},
         dependent_task_list=[masked_base_ndvi_task, kernel_task],
         target_path_list=[file_registry['ndvi_base_buffer_mean']],
         task_name="calculate mean baseline NDVI within buffer")
 
     mean_buffered_alt_ndvi_task = task_graph.add_task(
-        func=convolve_ndvi_with_kernel,
+        func=pygeoprocessing.convolve_2d,
         args=(
-            file_registry['ndvi_alt_aligned_masked'],
-            file_registry['kernel'],
-            args["aoi_path"],
-            args['workspace_dir'],
+            (file_registry['ndvi_alt_aligned_masked'], 1),
+            (file_registry['kernel'], 1),
             file_registry['ndvi_alt_buffer_mean']),
+        kwargs={
+            'ignore_nodata_and_edges': True,
+            'mask_nodata': True,
+            'normalize_kernel': True,
+            'target_datatype': pygeoprocessing.get_raster_info(
+                file_registry['ndvi_alt_aligned_masked'])["datatype"],
+            'target_nodata': pygeoprocessing.get_raster_info(
+                file_registry['ndvi_alt_aligned_masked'])["nodata"][0]},
         dependent_task_list=[masked_alt_ndvi_task, kernel_task],
         target_path_list=[file_registry['ndvi_alt_buffer_mean']],
         task_name="calculate mean alternate NDVI within buffer")
+
+    clip_base_ndvi_task = task_graph.add_task(
+        func=pygeoprocessing.mask_raster,
+        args=(
+            (file_registry['ndvi_base_buffer_mean'], 1),
+            args['aoi_path'],
+            file_registry['ndvi_base_buffer_mean_clipped']),
+        target_path_list=[file_registry['ndvi_base_buffer_mean_clipped']],
+        dependent_task_list=[mean_buffered_base_ndvi_task],
+        task_name='clip mean baseline NDVI to AOI')
+
+    clip_alt_ndvi_task = task_graph.add_task(
+        func=pygeoprocessing.mask_raster,
+        args=(
+            (file_registry['ndvi_alt_buffer_mean'], 1),
+            args['aoi_path'],
+            file_registry['ndvi_alt_buffer_mean_clipped']),
+        target_path_list=[file_registry['ndvi_alt_buffer_mean_clipped']],
+        dependent_task_list=[mean_buffered_alt_ndvi_task],
+        task_name='clip mean alternate NDVI to AOI')
 
     # NOTE: this is the first step where the nodata value of the output
     # raster is set based on pygeoprocessing default for the raster's
@@ -782,24 +853,24 @@ def execute(args):
     delta_ndvi_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
         args=(lambda base_ndvi, alt_ndvi: alt_ndvi - base_ndvi,
-              [file_registry['ndvi_base_buffer_mean'],
-               file_registry['ndvi_alt_buffer_mean']],
+              [file_registry['ndvi_base_buffer_mean_clipped'],
+               file_registry['ndvi_alt_buffer_mean_clipped']],
                file_registry['delta_ndvi']),
         target_path_list=[file_registry['delta_ndvi']],
-        dependent_task_list=[mean_buffered_base_ndvi_task,
-                             mean_buffered_alt_ndvi_task],
+        dependent_task_list=[clip_base_ndvi_task,
+                             clip_alt_ndvi_task],
         task_name="calculate delta ndvi using baseline and alt ndvi"  # change in nature exposure
     )
 
     baseline_cases_task = task_graph.add_task(
         func=calc_baseline_cases,
-        args=(file_registry['population_aligned'],
+        args=(file_registry['population_aligned_clipped'],
               args['baseline_prevalence_vector'],
               file_registry['baseline_prevalence_raster'],
               file_registry['baseline_cases']),
         target_path_list=[file_registry['baseline_prevalence_raster'],
                           file_registry['baseline_cases']],
-        dependent_task_list=[population_align_task],
+        dependent_task_list=[population_clip_task],
         task_name="calculate baseline cases"
     )
 
