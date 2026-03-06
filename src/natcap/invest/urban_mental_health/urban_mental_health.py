@@ -647,6 +647,12 @@ def execute(args):
         target_path_list=output_align_list,
         task_name='align input rasters')
 
+    # Resample population raster to match aligned inputs; this is used for
+    # calculating population-weighted preventable cases and costs
+    # Pop doesn't technically need to extend across the _buffered_ aoi bbox,
+    # but preventable cases calc requires pop and ndvi/lulc rasters to be
+    # aligned (and these rasters are all aligned to the buffered aoi bbox and
+    # clipped to AOI via masking, which keeps the extent the same)
     population_align_task = task_graph.add_task(
         func=utils.resample_population_raster,
         kwargs={
@@ -747,37 +753,25 @@ def execute(args):
         task_name='create kernel raster')
 
     mean_buffered_base_ndvi_task = task_graph.add_task(
-        func=pygeoprocessing.convolve_2d,
+        func=convolve_ndvi_with_kernel,
         args=(
-            (file_registry['ndvi_base_aligned_masked'], 1),
-            (file_registry['kernel'], 1),
+            file_registry['ndvi_base_aligned_masked'],
+            file_registry['kernel'],
+            args["aoi_path"],
+            args['workspace_dir'],
             file_registry['ndvi_base_buffer_mean']),
-        kwargs={
-            'ignore_nodata_and_edges': True,
-            'mask_nodata': True,
-            'normalize_kernel': True,
-            'target_datatype': pygeoprocessing.get_raster_info(
-                file_registry['ndvi_base_aligned_masked'])["datatype"],
-            'target_nodata': pygeoprocessing.get_raster_info(
-                file_registry['ndvi_base_aligned_masked'])["nodata"][0]},
         dependent_task_list=[masked_base_ndvi_task, kernel_task],
         target_path_list=[file_registry['ndvi_base_buffer_mean']],
         task_name="calculate mean baseline NDVI within buffer")
 
     mean_buffered_alt_ndvi_task = task_graph.add_task(
-        func=pygeoprocessing.convolve_2d,
+        func=convolve_ndvi_with_kernel,
         args=(
-            (file_registry['ndvi_alt_aligned_masked'], 1),
-            (file_registry['kernel'], 1),
+            file_registry['ndvi_alt_aligned_masked'],
+            file_registry['kernel'],
+            args["aoi_path"],
+            args['workspace_dir'],
             file_registry['ndvi_alt_buffer_mean']),
-        kwargs={
-            'ignore_nodata_and_edges': True,
-            'mask_nodata': True,
-            'normalize_kernel': True,
-            'target_datatype': pygeoprocessing.get_raster_info(
-                file_registry['ndvi_alt_aligned_masked'])["datatype"],
-            'target_nodata': pygeoprocessing.get_raster_info(
-                file_registry['ndvi_alt_aligned_masked'])["nodata"][0]},
         dependent_task_list=[masked_alt_ndvi_task, kernel_task],
         target_path_list=[file_registry['ndvi_alt_buffer_mean']],
         task_name="calculate mean alternate NDVI within buffer")
@@ -814,9 +808,7 @@ def execute(args):
         args=(file_registry['delta_ndvi'],
               file_registry['baseline_cases'],
               args['effect_size'],
-              file_registry['preventable_cases'],
-              args["aoi_path"],
-              args['workspace_dir']),
+              file_registry['preventable_cases']),
         target_path_list=[file_registry['preventable_cases']],
         dependent_task_list=[delta_ndvi_task, baseline_cases_task],
         task_name="calculate preventable cases"
@@ -909,6 +901,44 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
             f"input. The issue is with the following coordinates: {errors}. "
             f"For reference, the buffered AOI bounding box is: {aoi_bbox}, "
             f"and the raster bbox is: {raster_bbox}")
+
+
+def convolve_ndvi_with_kernel(input_ndvi, kernel, aoi, work_dir,
+                              target_raster):
+    """Convolve input NDVI raster with kernel and clip to AOI.
+
+    Args:
+        input_ndvi (str): path to input NDVI raster
+        kernel (str): path to kernel raster
+        aoi (str): path to AOI vector to clip output raster to
+        work_dir (str): path to workspace directory for temporary files
+        target_raster (str): path to output convolved and clipped raster
+
+    Returns:
+        None
+
+    """
+
+    target_dtype = pygeoprocessing.get_raster_info(
+                input_ndvi)["datatype"]
+    target_nodata = pygeoprocessing.get_raster_info(
+                input_ndvi)["nodata"][0]
+
+    # make temporary directory to save unclipped file
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='unclipped')
+    intermediate_raster = os.path.join(temp_dir,
+                                       'ndvi_base_buffer_mean_unclipped.tif')
+
+    pygeoprocessing.convolve_2d(
+        signal_path_band=(input_ndvi, 1), kernel_path_band=(kernel, 1),
+        target_path=intermediate_raster, ignore_nodata_and_edges=True,
+        mask_nodata=True, normalize_kernel=True, target_datatype=target_dtype,
+        target_nodata=target_nodata)
+
+    pygeoprocessing.mask_raster(
+        (intermediate_raster, 1), aoi, target_raster)
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
@@ -1157,8 +1187,8 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
 
 
 def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
-                           target_preventable_cases, aoi, work_dir):
-    """Calculate preventable cases and clip to AOI
+                           target_preventable_cases):
+    """Calculate preventable cases
 
     PC = PF * BC
     PF = 1 - RR
@@ -1184,8 +1214,6 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
             as a risk ratio, representing the relationship between nature
             exposure and mental health outcomes.
         target_preventable_cases (str): path to output preventable cases raster
-        aoi (str): path to area of interest
-        work_dir (str): path to create a temp folder for saving files.
 
     Returns:
         None.
@@ -1204,9 +1232,6 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
         result[valid_mask] *= baseline_cases[valid_mask]  # yields preventable cases
         return result
 
-    # make temporary directory to save unclipped file
-    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='unclipped')
-
     ndvi_nodata = pygeoprocessing.get_raster_info(delta_ndvi)["nodata"][0]
     bc_info = pygeoprocessing.get_raster_info(baseline_cases)
     bc_nodata = bc_info["nodata"][0]
@@ -1218,16 +1243,10 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
                                         (ndvi_nodata, "raw"),
                                         (bc_nodata, "raw")]
 
-    intermediate_raster = os.path.join(temp_dir, 'prev_cases_unclipped.tif')
     # Output extent will match population raster if its smaller than NDVI
     pygeoprocessing.raster_calculator(
         base_raster_path_band_const_list, _preventable_cases_op,
-        intermediate_raster, target_dtype, nodata_target=bc_nodata)
-
-    pygeoprocessing.mask_raster(
-        (intermediate_raster, 1), aoi, target_preventable_cases)
-
-    shutil.rmtree(temp_dir, ignore_errors=True)
+        target_preventable_cases, target_dtype, nodata_target=bc_nodata)
 
 
 def calc_preventable_cost(preventable_cases, health_cost_rate,
