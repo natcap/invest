@@ -987,7 +987,6 @@ def convolve_ndvi_with_kernel(input_ndvi, kernel, aoi, work_dir,
 
     Returns:
         None
-
     """
 
     target_dtype = pygeoprocessing.get_raster_info(

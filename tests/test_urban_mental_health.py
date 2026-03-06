@@ -847,7 +847,7 @@ class UMHTests(unittest.TestCase):
         if ``ndvi`` column not provided in attribute table.
         """
         from natcap.invest.urban_mental_health import urban_mental_health
-        args = make_synthetic_data_and_params(r'/Users/simpson2/Downloads/test_umhx', 'lulc')
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
         # open LULC attribute table and drop ndvi column
         lulc_attr_table = pandas.read_csv(args['lulc_attr_csv'])
         lulc_attr_table = lulc_attr_table.drop(columns=['ndvi'])
