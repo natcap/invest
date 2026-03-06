@@ -11,19 +11,11 @@
 
   <h2 class="section-header">Results</h2>
   {{ accordion_section(
-    'Primary Outputs',
+    'Annual and Monthly Quickflow (QF)',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
-      (caption(outputs_caption, definition_list=True), 100)
-    ])
-  ) }}
-
-  {{ accordion_section(
-    'Annual Quickflow (QF)',
-    content_grid([
-      (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(qf_img_src, 'Quickflow values'), 100),
+      (raster_plot_img(annual_qf_img_src, 'Annual Quickflow values'), 100),
+      (raster_plot_img(monthly_qf_img_src, 'Monthly Quickflow values'), 100),
       (caption(qf_caption, definition_list=True), 100)
     ])
   )}}
@@ -38,24 +30,14 @@
     ])
   ) }}
 
-  {#
-  {% set qf_section_contents %}
-  <div class="content-grid">
-    <div class="content-grid-item" style="width: 100%">
-      {{ caption(qf_plots_caption) }}
-    </div>
-    {% for item in qf_plots_json_tuples %}
-    <div class="content-grid-item" style="width: 33%">
-      <div id={{ item[1] }}></div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endset %}
   {{ accordion_section(
-    'Quickflow by Month per Polygon',
-    qf_section_contents
+    'Other Raster Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (caption(outputs_caption, definition_list=True), 100)
+    ])
   ) }}
-  #}
 
   {{ accordion_section(
     'Results Aggregated by AOI Feature',
@@ -81,15 +63,6 @@
   )}}
 
   {{ accordion_section(
-    'Intermediate Outputs',
-    content_grid([
-      (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(intermediate_img_src, 'Intermediate Outputs'), 100),
-      (caption(intermediate_caption, definition_list=True), 100)
-    ])
-  )}}
-
-  {{ accordion_section(
     'Output Raster Stats',
     content_grid([
       (stats_table_note, 100),
@@ -102,6 +75,11 @@
 
   <h2 class="section-header">Inputs</h2>
   {{ accordion_section(
+    'Arguments',
+    args_table(args_dict),
+  )}}
+
+  {{ accordion_section(
     'Raster Inputs',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
@@ -111,8 +89,14 @@
   ) }}
 
   {{ accordion_section(
-    'Arguments',
-    args_table(args_dict),
+    'Input Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
   )}}
 
   <h2 class="section-header">Metadata</h2>

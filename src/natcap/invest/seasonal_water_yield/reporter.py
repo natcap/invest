@@ -58,7 +58,7 @@ def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
 
 def create_aoi_copy_with_fid(aoi_path, output_vector_path):
     if os.path.exists(output_vector_path):
-        print(f'{output_vector_path} exists, deleting and writing new output')
+        LOGGER.info(f'{output_vector_path} exists, deleting and writing new output')
         os.remove(output_vector_path)
 
     original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
@@ -71,11 +71,11 @@ def create_aoi_copy_with_fid(aoi_path, output_vector_path):
     aoi_vector = gdal.OpenEx(output_vector_path, 1)
     aoi_layer = aoi_vector.GetLayer()
 
-    fid_field = ogr.FieldDefn('fid', ogr.OFTInteger)
+    fid_field = ogr.FieldDefn('geom_fid', ogr.OFTInteger)
     aoi_layer.CreateField(fid_field)
     for feature in aoi_layer:
         feature_id = feature.GetFID()
-        feature.SetField('fid', feature_id)
+        feature.SetField('geom_fid', feature_id)
         aoi_layer.SetFeature(feature)
 
     aoi_layer.SyncToDisk()
@@ -86,7 +86,7 @@ def create_aoi_copy_with_fid(aoi_path, output_vector_path):
 
 def create_monthly_stats_table(aoi_path, file_registry, output_table_path):
     if os.path.exists(output_table_path):
-        print(f'{output_table_path} exists, deleting and writing new output')
+        LOGGER.info(f'{output_table_path} exists, deleting and writing new output')
         os.remove(output_table_path)
 
     seconds_per_month = {
@@ -136,7 +136,7 @@ def create_monthly_stats_table(aoi_path, file_registry, output_table_path):
 
     with open(output_table_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['fid', 'month', 'quickflow', 'baseflow', 'precipitation'])
+        writer.writerow(['geom_fid', 'month', 'quickflow', 'baseflow', 'precipitation'])
         for fid, month_dicts in values_dict.items():
             for month, val_dicts in month_dicts.items():
                 writer.writerow([fid,
@@ -153,7 +153,7 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
 
     extent_feature, xy_ratio = vector_utils.get_geojson_bbox(map_df)
 
-    feat_select = altair.selection_point(fields=["fid"], name="feat_select", value=0)
+    feat_select = altair.selection_point(fields=["geom_fid"], name="feat_select", value=0)
 
     attr_map = altair.Chart(map_df).mark_geoshape(
         clip=True, stroke="white", strokeWidth=0.5
@@ -167,7 +167,7 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
             altair.value("seagreen"),
             altair.value("lightgray")
         ),
-        tooltip=[altair.Tooltip("fid", title="fid")]
+        tooltip=[altair.Tooltip("geom_fid", title="geom_fid")]
     ).properties(
         width=MAP_WIDTH,
         height=MAP_WIDTH / xy_ratio,
@@ -207,7 +207,7 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
         feat_select
     ).properties(
         title=altair.Title(altair.expr(
-            f'"Mean Quickflow + Baseflow for Feature, FID " + {feat_select.name}.fid')
+            f'"Mean Quickflow + Baseflow for Feature, FID " + {feat_select.name}.geom_fid')
         )
     )
 
@@ -238,7 +238,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     qb_map_json = _create_aggregate_map(
         aggregated_results, extent_feature, xy_ratio, 'qb',
-        gettext('Mean local recharge value within the watershed'))
+        gettext("Mean local recharge value within the watershed "
+                f"({model_spec.get_output('aggregate_vector').get_field('qb').units})"))
     qb_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('qb').about,
         gettext('Values are in millimeters, but should be interpreted as '
@@ -246,7 +247,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     vri_sum_map_json = _create_aggregate_map(
         aggregated_results, extent_feature, xy_ratio, 'vri_sum',
-        gettext('Total recharge contribution of the watershed'))
+        gettext("Total recharge contribution of the watershed "
+                f"({model_spec.get_output('aggregate_vector').get_field('vri_sum').units})"))
     vri_sum_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('vri_sum').about,
         gettext('The sum of ``Vri_[suffix].tif`` pixel values within the watershed.')]
@@ -277,7 +279,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             spec=model_spec.get_output('pit_filled_dem')),
         RasterPlotConfig(
             raster_path=file_registry['stream'],
-            datatype=RasterDatatype.continuous,
+            datatype=RasterDatatype.binary_high_contrast,
             spec=model_spec.get_output('stream'))]
 
     output_raster_config_list = [
@@ -292,19 +294,30 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         RasterPlotConfig(
             raster_path=file_registry['aet'],
             datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('aet'))]
-
-    qf_raster_config_list = [
-        RasterPlotConfig(
-            raster_path=file_registry['qf'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('qf'))]
-
-    intermediate_raster_config_list = [
+            spec=model_spec.get_output('aet')),
         RasterPlotConfig(
             raster_path=file_registry['cn'],
             datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('cn'))]
+
+    annual_qf_raster_config = RasterPlotConfig(
+            raster_path=file_registry['qf'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('qf'),
+            title=gettext(
+                f"Annual Quickflow ({os.path.basename(file_registry['qf'])})"
+            ))
+
+    monthly_qf_raster_config_list = [
+        RasterPlotConfig(
+            raster_path=file_registry['qf_[MONTH]'][str(month_index + 1)],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('qf_[MONTH]'),
+            title=gettext(
+                f"Quickflow for month {month_index + 1} "
+                f"({os.path.basename(file_registry['qf_[MONTH]'][str(month_index + 1)])})"
+            )
+        ) for month_index in range(12)]
 
     input_raster_config_list = [
         RasterPlotConfig(
@@ -324,6 +337,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_input('l_path')))
     else:
+        input_raster_config_list.append(
+            RasterPlotConfig(
+                raster_path=args_dict['soil_group_path'],
+                datatype=RasterDatatype.nominal,
+                spec=model_spec.get_input('soil_group_path')))
         output_raster_config_list.append(
             RasterPlotConfig(
                 raster_path=file_registry['l'],
@@ -346,18 +364,29 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     output_raster_caption = raster_utils.caption_raster_list(
             output_raster_config_list)
 
-    qf_img_src = raster_utils.plot_and_base64_encode_rasters(
-            qf_raster_config_list)
-    qf_raster_caption = raster_utils.caption_raster_list(
-            qf_raster_config_list)
-
-    intermediate_img_src = raster_utils.plot_and_base64_encode_rasters(
-            intermediate_raster_config_list)
-    intermediate_raster_caption = raster_utils.caption_raster_list(
-            intermediate_raster_config_list)
+    annual_qf_img_src = raster_utils.plot_and_base64_encode_rasters(
+            [annual_qf_raster_config])
+    monthly_qf_plots = raster_utils.plot_raster_facets(
+            [raster_config.raster_path for raster_config
+             in monthly_qf_raster_config_list],
+            'continuous',
+            title_list=[raster_config.title for raster_config
+                        in monthly_qf_raster_config_list])
+    monthly_qf_img_src = raster_utils.base64_encode(monthly_qf_plots)
+    monthly_qf_displayname = os.path.basename(
+            monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
+    qf_raster_caption = [
+        (f'{annual_qf_raster_config.title}:'
+         f'{annual_qf_raster_config.spec.about}'),
+        (f'{monthly_qf_displayname}:'
+         f'{monthly_qf_raster_config_list[0].spec.about}')
+    ]
 
     output_raster_stats_table = raster_utils.raster_workspace_summary(
             file_registry).to_html(na_rep='')
+
+    input_raster_stats_table = raster_utils.raster_inputs_summary(
+            args_dict, model_spec, check_csv_for_rasters=True).to_html(na_rep='')
 
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
             input_raster_config_list)
@@ -382,11 +411,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             stream_outputs_heading=stream_outputs_heading,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
-            qf_img_src=qf_img_src,
+            annual_qf_img_src=annual_qf_img_src,
+            monthly_qf_img_src=monthly_qf_img_src,
             qf_caption=qf_raster_caption,
-            intermediate_img_src=intermediate_img_src,
-            intermediate_caption=intermediate_raster_caption,
             output_raster_stats_table=output_raster_stats_table,
+            input_raster_stats_table=input_raster_stats_table,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_raster_caption,
             qf_b_charts_json=qf_b_charts_json,
