@@ -694,6 +694,7 @@ def execute(args):
             'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['population_aligned']],
+        deopendent_task_list=[align_task],
         task_name='Resample population to same resolution as other inputs')
 
     population_clip_task = task_graph.add_task(
@@ -972,43 +973,6 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
             f"input. The issue is with the following coordinates: {errors}. "
             f"For reference, the buffered AOI bounding box is: {aoi_bbox}, "
             f"and the raster bbox is: {raster_bbox}")
-
-
-def convolve_ndvi_with_kernel(input_ndvi, kernel, aoi, work_dir,
-                              target_raster):
-    """Convolve input NDVI raster with kernel and clip to AOI.
-
-    Args:
-        input_ndvi (str): path to input NDVI raster
-        kernel (str): path to kernel raster
-        aoi (str): path to AOI vector to clip output raster to
-        work_dir (str): path to workspace directory for temporary files
-        target_raster (str): path to output convolved and clipped raster
-
-    Returns:
-        None
-    """
-
-    target_dtype = pygeoprocessing.get_raster_info(
-                input_ndvi)["datatype"]
-    target_nodata = pygeoprocessing.get_raster_info(
-                input_ndvi)["nodata"][0]
-
-    # make temporary directory to save unclipped file
-    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='unclipped')
-    intermediate_raster = os.path.join(temp_dir,
-                                       'ndvi_base_buffer_mean_unclipped.tif')
-
-    pygeoprocessing.convolve_2d(
-        signal_path_band=(input_ndvi, 1), kernel_path_band=(kernel, 1),
-        target_path=intermediate_raster, ignore_nodata_and_edges=True,
-        mask_nodata=True, normalize_kernel=True, target_datatype=target_dtype,
-        target_nodata=target_nodata)
-
-    pygeoprocessing.mask_raster(
-        (intermediate_raster, 1), aoi, target_raster)
-
-    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
