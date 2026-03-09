@@ -694,7 +694,7 @@ def execute(args):
             'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['population_aligned']],
-        deopendent_task_list=[align_task],
+        dependent_task_list=[align_task],
         task_name='Resample population to same resolution as other inputs')
 
     population_clip_task = task_graph.add_task(
