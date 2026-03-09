@@ -607,11 +607,11 @@ def execute(args):
 
     # get target pixel size for outputs
     if args['scenario'] == 'ndvi':
-        pixel_size = pygeoprocessing.get_raster_info(
-            args['ndvi_base'])['pixel_size']
+        pixel_size = _get_raster_pixel_size_in_meters(args['ndvi_base'],
+                                                      args['aoi_path'])
     else:
-        pixel_size = pygeoprocessing.get_raster_info(
-            args['lulc_base'])['pixel_size']
+        pixel_size = _get_raster_pixel_size_in_meters(args['lulc_base'],
+                                                      args['aoi_path'])
 
     pixel_radius = int(round(args['search_radius']/pixel_size[0]))
     LOGGER.info(f"Search radius {args['search_radius']} results in "
@@ -924,6 +924,59 @@ def execute(args):
     return file_registry.registry
 
 
+def _get_raster_pixel_size_in_meters(raster_path, vector_path):
+    """Get raster pixel size in meters; if not projected in m, use vector CRS.
+
+    Use gdal to auto calculate the target pixel size in meters if transforming
+    the raster to the CRS of the input vector AOI. This is necessary because
+    we do not want to force users to initially project their input rasters
+    in meters, however align_and_resize requires a target pixel size.
+
+    Args:
+        raster_path (str): Path to baseline LULC or baseline NDVI raster,
+            which is projected by may not be projected in meters.
+        vector_path (str): Path to AOI vector in a projected CRS with
+            meter units.
+
+    Returns:
+        tuple[float, float]: (pixel_width_m, pixel_height_m)
+        pixel_size[float]: target pixel size in meters (to use when
+            aligning and resizing raster stack).
+    """
+    def _raster_projected_in_m(raster_info):
+        projection_wkt = raster_info["projection_wkt"]
+        if projection_wkt:
+            srs = osr.SpatialReference()
+            srs.ImportFromWkt(projection_wkt)
+
+            if srs.IsProjected():
+                linear_units = srs.GetLinearUnits()
+                return numpy.isclose(linear_units, 1.0,
+                                     rtol=0, atol=1e-8)
+        return False
+
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    if _raster_projected_in_m(raster_info):
+        LOGGER.info("Baseline raster is projected in meters; will use native "
+                    f"pixel size {raster_info['pixel_size']} as target "
+                    "in align_and_resize")
+        return raster_info["pixel_size"]
+    else:
+        vector_info = pygeoprocessing.get_vector_info(vector_path)
+        vector_wkt = vector_info["projection_wkt"]
+
+        src_ds = gdal.Open(raster_path)
+        transformer = gdal.Transformer(src_ds, None, [f'DST_SRS={vector_wkt}'])
+        target_warp = gdal.SuggestedWarpOutput(src_ds, transformer)
+        pixel_width = target_warp.geotransform[1]
+        pixel_height = target_warp.geotransform[5]
+        LOGGER.info("Baseline raster is not projected in meters; will use "
+                    f"transformed pixel size {raster_info['pixel_size']} as "
+                    "target in align_and_resize")
+
+        return (pixel_width, pixel_height)
+
+
 def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
     """Check if raster bounds are >= bounds of AOI + search_radius.
 
@@ -989,8 +1042,7 @@ def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
             binary mask or None
 
     Returns:
-        None
-
+        None.
     """
 
     ndvi_info = pygeoprocessing.get_raster_info(input_ndvi)
@@ -1044,8 +1096,7 @@ def build_lulc_ndvi_table(lulc_df, target_output_csv,
         base_ndvi_path (str): path to baseline NDVI raster
 
     Returns:
-        None
-
+        None.
     """
     codes = list(lulc_df['lucode'])
     excludes = list(lulc_df['exclude'])
@@ -1081,8 +1132,7 @@ def _calculate_mean_ndvi_by_lulc_class(lulc_path, ndvi_path, lulc_dict):
             ``exclude`` values
 
     Returns:
-        Dict containing the mean NDVI values for each LULC class
-
+        Dict containing the mean NDVI values for each LULC class.
     """
 
     lulc_info = pygeoprocessing.get_raster_info(lulc_path)
@@ -1156,9 +1206,9 @@ def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
         mean_ndvi_by_lulc_csv (path): path to csv mapping lucodes to mean ndvi
         target_path (str): path to output raster with NDVI values mapped
             onto LULC classes
-    Returns:
-        None
 
+    Returns:
+        None.
     """
     source_nodata = pygeoprocessing.get_raster_info(lulc)["nodata"][0]
     target_datatype = gdal.GDT_Float32
@@ -1200,7 +1250,6 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
 
     Returns:
         None.
-
     """
     def _multiply_op(prevalence, pop):
         """Multiply baseline prevalence raster by population raster"""
@@ -1251,7 +1300,6 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
 
     Returns:
         None.
-
     """
     def _preventable_cases_op(delta_ndvi, baseline_cases, effect_size_val,
                               ndvi_nodata, bc_nodata):
@@ -1293,8 +1341,7 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
         target_preventable_cost (str): path to output preventable cost raster
 
     Returns:
-        None
-
+        None.
     """
     def _preventable_cost_op(preventable_cases, cost, nodata):
         valid_mask = ~pygeoprocessing.array_equals_nodata(
@@ -1332,8 +1379,7 @@ def zonal_stats_preventable_cases_cost(
             raster, which gets aggregated by AOI polygon(s).
 
     Returns:
-        None
-
+        None.
     """
 
     # write zonal stats to new vector

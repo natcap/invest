@@ -924,3 +924,60 @@ class UMHTests(unittest.TestCase):
         for key in expected_mean_ndvi:
             numpy.testing.assert_allclose(
                 actual_mean_ndvi[key], expected_mean_ndvi[key], atol=1e-6)
+
+    def test_get_raster_pixel_size_in_meters_if_raster_prj_in_m(self):
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        raster_array = numpy.array(
+            [[1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]])
+        raster_path = os.path.join(self.workspace_dir, "meter_raster.tif")
+        make_raster_from_array(raster_path, raster_array)
+
+        vector_path = os.path.join(self.workspace_dir, "aoi.shp")
+        make_simple_vector(vector_path)
+
+        actual_pixel_size = urban_mental_health._get_raster_pixel_size_in_meters(
+            raster_path, vector_path)
+
+        self.assertEqual(actual_pixel_size, (100, -100))
+
+    def test_get_raster_pixel_size_in_meters_if_raster_prj_in_ft(self):
+        """Test helper transforms pixel size when raster is not projected in m."""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
+        vector_path = os.path.join(self.workspace_dir, "aoi.shp")
+
+        # AOI stays in the default test CRS: EPSG 26910 (meters)
+        make_simple_vector(vector_path)
+
+        raster_array = numpy.array(
+            [[1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]])
+
+        # Create raster in a projected CRS with US survey feet so that
+        # _raster_projected_in_m returns False and the helper uses
+        # gdal.SuggestedWarpOutput in the vector CRS.
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
+        projection_wkt = srs.ExportToWkt()
+        pixel_size = (10, -10) #ft
+
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array.astype(numpy.float32),
+            FLOAT32_NODATA,
+            pixel_size,
+            (6019339.53, 2499628.03),
+            projection_wkt,
+            raster_path)
+
+        actual_pixel_size = urban_mental_health._get_raster_pixel_size_in_meters(
+            raster_path, vector_path)
+
+        # expected pixel size calculated by gdal.Warping the raster to the
+        # vector CRS (EPSG 26910) and then getting pixel size
+        numpy.testing.assert_allclose(actual_pixel_size, (3.05404, -3.05404),
+                                      atol=1e-5)
