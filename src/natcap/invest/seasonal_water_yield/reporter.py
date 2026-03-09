@@ -182,22 +182,23 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
         ['baseflow', 'quickflow']
     ).encode(
         altair.X("month(month):T").title("Month"),
-        altair.Y("value:Q").title("Quickflow + Baseflow (m^3/s)"),
+        altair.Y("sum(value):Q").title("Quickflow + Baseflow (m3/s)"),
         altair.Order(field='key', sort='ascending'),
         color=altair.Color('key:N').scale(
             domain=['quickflow', "baseflow"],
             range=['#fdae6b', '#9ecae1']
         ),
-        tooltip=[altair.Tooltip(val, type="quantitative", format='.5f')
-                 for val in ["quickflow", "baseflow"]]
+        tooltip=[altair.Tooltip(val, aggregate="sum", type="quantitative",
+                                format='.5f', title=val)
+                 for val in ["quickflow", "baseflow", "precipitation"]]
     )
 
     precip_chart = base_chart.mark_line().encode(
         altair.X("month(month):T").title("Month"),
         altair.Y(
-            "precipitation",
+            "sum(precipitation)",
             axis=altair.Axis(orient="right")
-        ).title("Precipitation (m^3/s)"),
+        ).title("Precipitation (m3/s)"),
         color=altair.value('#0500a3')
     )
 
@@ -266,7 +267,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         """
         This chart displays the monthly combined average baseflow + quickflow for
         each feature within the AOI. Select a feature on the AOI map to see the
-        values for that feature.
+        values for that feature. Selecting multiple features will display the sum
+        of their values.
         """
     )
     qf_b_charts_source_list = [qf_b_csv_path, aoi_copy_path]
