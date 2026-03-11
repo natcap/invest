@@ -22,7 +22,7 @@ No changes are immediately needed when we add, remove, or edit strings that are 
 When we are ready to get a new batch of translations, here is the process. These instructions assume you have defined the two-letter locale code in an environment variable `$LL`.
 
 
-1. Run the following from the root invest directory, replacing `<LANG>` with the language code:
+1. Run the following from the root invest directory, replacing `$LL` with the language code:
 ```
 pybabel extract \
    --no-wrap \
@@ -30,7 +30,7 @@ pybabel extract \
    --version $(python -m setuptools_scm) \
    --msgid-bugs-address natcap-software@lists.stanford.edu \
    --copyright-holder "Natural Capital Alliance" \
-   --output src/natcap/invest/internationalization/messages.pot \
+   --mapping src/natcap/invest/internationalization/babel_config.ini \   --output src/natcap/invest/internationalization/messages.pot \
    src/
 
 # update message catalog from template
@@ -39,7 +39,7 @@ pybabel update \
    --input-file src/natcap/invest/internationalization/messages.pot \
    --output-file src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po
 ```
-This looks through the source code for strings wrapped in the `gettext(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
+This looks through the source code for strings wrapped in the `gettext(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specified language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
 
 2. Check that the changes look correct, then commit:
 ```

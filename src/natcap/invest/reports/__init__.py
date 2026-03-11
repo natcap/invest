@@ -7,11 +7,17 @@ import jinja2
 import matplotlib
 import pandas
 
+from natcap.invest import gettext
+
 jinja_env = jinja2.Environment(
     loader=jinja2.PackageLoader('natcap.invest.reports', 'templates'),
     autoescape=jinja2.select_autoescape(),
-    undefined=jinja2.StrictUndefined
+    undefined=jinja2.StrictUndefined,
+    extensions=['jinja2.ext.i18n'],
 )
+
+jinja_env.install_gettext_callables(
+    gettext=gettext, ngettext=None, newstyle=True)
 
 MATPLOTLIB_PARAMS = {
     'backend': 'agg',
