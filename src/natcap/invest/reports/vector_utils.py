@@ -43,15 +43,3 @@ def get_geojson_bbox(geodataframe):
         "properties": {}
     }
     return extent_feature, xy_ratio
-
-
-def chart_landmass(geodataframe, clip=False, extent_feature=None):
-    landmass = altair.Chart(geodataframe).mark_geoshape(
-        clip=clip,
-        fill='lightgrey'
-    ).project(
-        type='identity',
-        reflectY=True,  # Canvas and SVG treats positive y as down
-        fit=extent_feature
-    )
-    return landmass
