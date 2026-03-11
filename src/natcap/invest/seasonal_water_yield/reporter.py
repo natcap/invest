@@ -56,34 +56,6 @@ def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
     return attr_map.to_json()
 
 
-def create_aoi_copy_with_fid(aoi_path, output_vector_path):
-    if os.path.exists(output_vector_path):
-        LOGGER.info(f'{output_vector_path} exists, deleting and writing new output')
-        os.remove(output_vector_path)
-
-    original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
-
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    driver.CreateCopy(output_vector_path, original_aoi_vector)
-    gdal.Dataset.__swig_destroy__(original_aoi_vector)
-    original_aoi_vector = None
-
-    aoi_vector = gdal.OpenEx(output_vector_path, 1)
-    aoi_layer = aoi_vector.GetLayer()
-
-    fid_field = ogr.FieldDefn('geom_fid', ogr.OFTInteger)
-    aoi_layer.CreateField(fid_field)
-    for feature in aoi_layer:
-        feature_id = feature.GetFID()
-        feature.SetField('geom_fid', feature_id)
-        aoi_layer.SetFeature(feature)
-
-    aoi_layer.SyncToDisk()
-    aoi_layer = None
-    gdal.Dataset.__swig_destroy__(aoi_vector)
-    aoi_vector = None
-
-
 def create_monthly_stats_table(aoi_path, file_registry, output_table_path):
     if os.path.exists(output_table_path):
         LOGGER.info(f'{output_table_path} exists, deleting and writing new output')
@@ -167,7 +139,7 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
             altair.value("seagreen"),
             altair.value("lightgray")
         ),
-        tooltip=[altair.Tooltip("geom_fid", title="geom_fid")]
+        tooltip=[altair.Tooltip("geom_fid", title="FID")]
     ).properties(
         width=MAP_WIDTH,
         height=MAP_WIDTH / xy_ratio,
@@ -181,12 +153,12 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
     bar_chart = base_chart.mark_bar().transform_fold(
         ['baseflow', 'quickflow']
     ).encode(
-        altair.X("month(month):T").title("Month"),
+        altair.X("month(month):O").title("Month"),
         altair.Y("sum(value):Q").title("Quickflow + Baseflow (m3/s)"),
         altair.Order(field='key', sort='ascending'),
         color=altair.Color('key:N').scale(
-            domain=['quickflow', "baseflow"],
-            range=['#fdae6b', '#9ecae1']
+            domain=['quickflow', "baseflow", "precipitation"],
+            range=['#fdae6b', '#9ecae1', "#0500a3"]
         ),
         tooltip=[altair.Tooltip(val, aggregate="sum", type="quantitative",
                                 format='.5f', title=val)
@@ -194,7 +166,7 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
     )
 
     precip_chart = base_chart.mark_line().encode(
-        altair.X("month(month):T").title("Month"),
+            altair.X("month(month):O").title("Month"),
         altair.Y(
             "sum(precipitation)",
             axis=altair.Axis(orient="right")
@@ -257,12 +229,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     vector_map_source_list = [model_spec.get_output('aggregate_vector').path]
 
     # Monthly quickflow + baseflow plots and map
-    aoi_copy_path = os.path.join(args_dict['workspace_dir'], 'aoi_copy.shp')
-    create_aoi_copy_with_fid(args_dict['aoi_path'], aoi_copy_path)
-    qf_b_csv_path = os.path.join(args_dict['workspace_dir'], 'monthly_average_qf_b.shp')
-    create_monthly_stats_table(aoi_copy_path, file_registry, qf_b_csv_path)
+    qf_b_csv_path = os.path.join(args_dict['workspace_dir'], 'monthly_average_qf_b.csv')
+    create_monthly_stats_table(file_registry['aggregate_vector'],
+                               file_registry, qf_b_csv_path)
 
-    qf_b_charts_json = create_linked_monthly_plots(aoi_copy_path, qf_b_csv_path)
+    qf_b_charts_json = create_linked_monthly_plots(file_registry['aggregate_vector'],
+                                                   qf_b_csv_path)
     qf_b_charts_caption = gettext(
         """
         This chart displays the monthly combined average baseflow + quickflow for
@@ -271,7 +243,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         of their values.
         """
     )
-    qf_b_charts_source_list = [qf_b_csv_path, aoi_copy_path]
+    qf_b_charts_source_list = [qf_b_csv_path, file_registry['aggregate_vector']]
 
     # Raster config lists
     stream_raster_config_list = [

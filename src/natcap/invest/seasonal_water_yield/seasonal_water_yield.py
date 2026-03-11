@@ -1456,6 +1456,13 @@ def _aggregate_recharge(
             poly_feat.SetField(aggregate_field_id, float(value))
             aggregate_layer.SetFeature(poly_feat)
 
+    fid_field = ogr.FieldDefn('geom_fid', ogr.OFTInteger)
+    aggregate_layer.CreateField(fid_field)
+    for feature in aggregate_layer:
+        feature_id = feature.GetFID()
+        feature.SetField('geom_fid', feature_id)
+        aggregate_layer.SetFeature(feature)
+
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
