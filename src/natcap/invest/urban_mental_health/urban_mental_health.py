@@ -4,18 +4,20 @@ import os
 import shutil
 import tempfile
 
+import matplotlib.pyplot as plt
 import numpy
 import pandas
+from pygam import LinearGAM, s # Are we ok to add pygam as new invest dependency? Alternatively, could us scipy.UnivariateSpline
 import pygeoprocessing
 import pygeoprocessing.kernels
 from osgeo import gdal
 from osgeo import ogr, osr
 
-from . import gettext
-from . import spec
-from . import utils
-from . import validation
-from .unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
@@ -148,6 +150,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "compare against the baseline tree cover to estimate "
                 "potential health benefits."
             ),
+            expression="value > 0 and value <=100",
             required="scenario=='tcc_ndvi'",
             allowed="scenario=='tcc_ndvi'"
         ),
@@ -157,7 +160,8 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "Map of the percentage of pixel area covered by trees. "
                 "This raster should extend beyond the AOI by at "
-                "least the search radius distance."
+                "least the search radius distance. The values should range "
+                "from 0 - 100."
             ),
             data_type=float,
             units=u.percent,
@@ -366,6 +370,15 @@ MODEL_SPEC = spec.ModelSpec(
                 units=None
             ),
             spec.SingleBandRasterOutput(
+                id="delta_ndvi_negatives_masked",
+                path="intermediate/delta_ndvi_negatives_masked.tif",
+                about=gettext(
+                    "Difference between baseline and alternate NDVI raster,"
+                    "with negative values masked out."),
+                data_type=float,
+                units=None
+            ),
+            spec.SingleBandRasterOutput(
                 id="kernel",
                 path="intermediate/kernel.tif",
                 about=gettext(
@@ -374,6 +387,14 @@ MODEL_SPEC = spec.ModelSpec(
                     "average NDVI within search_radius of each pixel."),
                 data_type=int,
                 units=None
+            ),
+            spec.SingleBandRasterOutput(
+                id="tree_cover_raster_aligned",
+                path="intermediate/tree_cover_raster_aligned.tif",
+                about=gettext("Aligned and resampled tree canopy cover raster."),
+                data_type=float,
+                units=None,
+                created_if="tree_cover_raster"
             ),
             spec.SingleBandRasterOutput(
                 id="lulc_base_aligned",
@@ -450,11 +471,11 @@ MODEL_SPEC = spec.ModelSpec(
                 id="ndvi_alt_aligned_masked",
                 path="intermediate/ndvi_alt_aligned_masked.tif",
                 about=gettext(
-                    "Preprocessed alternate NDVI raster. If option 2 (LULC), "
-                    "this raster is created by masking, aligning, and "
+                    "Preprocessed alternate NDVI raster. If using LULC "
+                    "inputs, this raster is created by masking, aligning, and "
                     "resampling the alternate LULC and mapping it to mean "
                     "NDVI (with excluded lucodes set to NODATA)."
-                    "If option 3 (NDVI), this is simply the masked aligned "
+                    "If using NDVI inputs, this is simply the masked aligned "
                     "and resampled alternate NDVI raster."),
                 data_type=float,
                 units=None,
@@ -472,11 +493,11 @@ MODEL_SPEC = spec.ModelSpec(
                 id="ndvi_base_aligned_masked",
                 path="intermediate/ndvi_base_aligned_masked.tif",
                 about=gettext(
-                    "Preprocessed baseline NDVI raster. If option 2 (LULC), "
+                    "Preprocessed baseline NDVI raster. If using LULC inputs, "
                     "this raster is created by masking, aligning, and "
                     "resampling the baseline LULC and mapping it to mean "
                     "NDVI (with excluded lucodes set to NODATA)."
-                    "If option 3 (NDVI), this is simply the masked aligned "
+                    "If using NDVI inputs, this is simply the masked aligned "
                     "and resampled baseline NDVI raster."),
                 data_type=float,
                 units=None,
@@ -503,11 +524,29 @@ MODEL_SPEC = spec.ModelSpec(
                 created_if="ndvi_base"
             ),
             spec.SingleBandRasterOutput(
+                id="tree_cover_buffer_mean",
+                path="intermediate/tree_cover_buffer_mean.tif",
+                about=gettext(
+                    "Tree Cover raster convolved with a mean circular "
+                    "kernel of radius search_radius."),
+                data_type=float,
+                units=None,
+                created_if="tree_cover_raster"
+            ),
+            spec.SingleBandRasterOutput(
                 id="population_aligned",
                 path="intermediate/population_aligned.tif",
                 about=gettext("Aligned and resampled population raster."),
                 data_type=float,
                 units=u.people
+            ),
+            spec.FileOutput(
+                id="target_ndvi_csv",
+                path="intermediate/target_ndvi_value.csv",
+                about=gettext(
+                    "Target NDVI value translated from target TCC value"
+                ),
+                created_if="tree_cover_raster"
             ),
             spec.TASKGRAPH_CACHE
         ]
@@ -642,7 +681,8 @@ def execute(args):
     aoi_buffered_bbox = list(aoi_buffered_bbox)
 
     raster_to_method_dict = {'ndvi_base': 'cubic', 'ndvi_alt': 'cubic',
-                             'lulc_base': 'near', 'lulc_alt': 'near'}
+                             'lulc_base': 'near', 'lulc_alt': 'near',
+                             'tree_cover_raster': 'bilinear'}
     input_align_list = []
     output_align_list = []
     resample_method_list = []
@@ -672,13 +712,24 @@ def execute(args):
         target_path_list=output_align_list,
         task_name='align input rasters')
 
-    buffer_base_dependencies = []
-    buffer_alt_dependencies = []
-    if args['scenario'] == 'tcc_ndvi':
-        raise NotImplementedError
+    population_align_task = task_graph.add_task(
+        func=utils.resample_population_raster,
+        kwargs={
+            'source_population_raster_path': args['population_raster'],
+            'target_population_raster_path': file_registry[
+                'population_aligned'],
+            'target_pixel_size': pixel_size,
+            'target_bb': pygeoprocessing.get_raster_info(
+                output_align_list[0])['bounding_box'],
+            'target_projection_wkt': aoi_projection,
+            'working_dir': args['workspace_dir'],
+        },
+        target_path_list=[file_registry['population_aligned']],
+        dependent_task_list=[align_task],
+        task_name='Resample population to same resolution as other inputs')
 
-    elif args['scenario'] == 'lulc':
-        LOGGER.info("Using scenario option 2: LULC")
+    if args['scenario'] == 'lulc':
+        LOGGER.info("Using LULC inputs")
 
         create_lulc_ndvi_csv_task = task_graph.add_task(
             func=build_lulc_ndvi_table,
@@ -693,7 +744,7 @@ def execute(args):
         )
         # Reclassify base lulc to ndvi; the output of this task
         # is used as the base ndvi raster in subsequent tasks
-        reclassify_base_lulc_task = task_graph.add_task(
+        masked_base_ndvi_task = task_graph.add_task(
             func=reclassify_lulc_raster,
             args=(file_registry['lulc_base_aligned'],
                   file_registry['lulc_to_ndvi_csv'],
@@ -702,9 +753,8 @@ def execute(args):
             dependent_task_list=[create_lulc_ndvi_csv_task],
             task_name="reclassify base lulc to ndvi and mask"
         )
-        buffer_base_dependencies.append(reclassify_base_lulc_task)
 
-        reclassify_alt_lulc_task = task_graph.add_task(
+        masked_alt_ndvi_task = task_graph.add_task(
             func=reclassify_lulc_raster,
             args=(file_registry['lulc_alt_aligned'],
                   file_registry['lulc_to_ndvi_csv'],
@@ -713,11 +763,8 @@ def execute(args):
             dependent_task_list=[create_lulc_ndvi_csv_task],
             task_name="reclassify alt lulc to ndvi and mask"
         )
-        buffer_alt_dependencies.append(reclassify_alt_lulc_task)
 
-    elif args['scenario'] == 'ndvi':
-        LOGGER.info("Using scenario option 3: NDVI")
-
+    else:  # if scenario is ndvi or tcc_ndvi
         base_mask_outputs = [file_registry['ndvi_base_aligned_masked']]
         alt_mask_outputs = [file_registry['ndvi_alt_aligned_masked']]
         mask_alt_tag = 'alt'
@@ -729,7 +776,7 @@ def execute(args):
                 # When masking ndvi_alt, use lulc_alt if provided; else use lulc_base
                 mask_alt_tag = 'base'
 
-        mask_base_ndvi_task = task_graph.add_task(
+        masked_base_ndvi_task = task_graph.add_task(
             func=mask_ndvi,
             args=(file_registry['ndvi_base_aligned'],
                   file_registry['ndvi_base_aligned_masked']),
@@ -742,22 +789,23 @@ def execute(args):
             dependent_task_list=[align_task],
             task_name="Mask baseline NDVI"
         )
-        buffer_base_dependencies.append(mask_base_ndvi_task)
-
-        mask_alt_ndvi_task = task_graph.add_task(
-            func=mask_ndvi,
-            args=(file_registry['ndvi_alt_aligned'],
-                  file_registry['ndvi_alt_aligned_masked']),
-            kwargs={  # use LULC to mask if provided
-                'input_lulc': file_registry[f'lulc_{mask_alt_tag}_aligned'],
-                'lulc_df': lulc_df,
-                'target_lulc_mask': file_registry['lulc_alt_mask']
-                },
-            target_path_list=alt_mask_outputs,
-            dependent_task_list=[align_task],
-            task_name="Mask alternate NDVI"
-        )
-        buffer_alt_dependencies.append(mask_alt_ndvi_task)
+        if args['scenario'] == 'ndvi':
+            LOGGER.info("Using NDVI inputs directly")
+            # if scenario=tcc, skip explicit masking of alt ndvi as alt ndvi is
+            # directly generated from masked, buffer mean baseline ndvi and tcc
+            masked_alt_ndvi_task = task_graph.add_task(
+                func=mask_ndvi,
+                args=(file_registry['ndvi_alt_aligned'],
+                      file_registry['ndvi_alt_aligned_masked']),
+                kwargs={  # use LULC to mask if provided
+                    'input_lulc': file_registry[f'lulc_{mask_alt_tag}_aligned'],
+                    'lulc_df': lulc_df,
+                    'target_lulc_mask': file_registry['lulc_alt_mask']
+                    },
+                target_path_list=alt_mask_outputs,
+                dependent_task_list=[align_task],
+                task_name="Mask alternate NDVI"
+            )
 
     kernel_task = task_graph.add_task(
         func=pygeoprocessing.kernels.dichotomous_kernel,
@@ -768,7 +816,7 @@ def execute(args):
         target_path_list=[file_registry['kernel']],
         task_name='create kernel raster')
 
-    mean_buffer_base_ndvi_task = task_graph.add_task(
+    mean_buffered_base_ndvi_task = task_graph.add_task(
         func=pygeoprocessing.convolve_2d,
         args=(
             (file_registry['ndvi_base_aligned_masked'], 1),
@@ -782,61 +830,118 @@ def execute(args):
                 file_registry['ndvi_base_aligned_masked'])["datatype"],
             'target_nodata': pygeoprocessing.get_raster_info(
                 file_registry['ndvi_base_aligned_masked'])["nodata"][0]},
-        dependent_task_list=buffer_base_dependencies + [kernel_task],
+        dependent_task_list=[masked_base_ndvi_task, kernel_task],
         target_path_list=[file_registry['ndvi_base_buffer_mean']],
         task_name="calculate mean baseline NDVI within buffer")
 
-    mean_buffer_alt_ndvi_task = task_graph.add_task(
-        func=pygeoprocessing.convolve_2d,
-        args=(
-            (file_registry['ndvi_alt_aligned_masked'], 1),
-            (file_registry['kernel'], 1),
-            file_registry['ndvi_alt_buffer_mean']),
-        kwargs={
-            'ignore_nodata_and_edges': True,
-            'mask_nodata': True,
-            'normalize_kernel': True,
-            'target_datatype': pygeoprocessing.get_raster_info(
-                file_registry['ndvi_alt_aligned_masked'])["datatype"],
-            'target_nodata': pygeoprocessing.get_raster_info(
-                file_registry['ndvi_alt_aligned_masked'])["nodata"][0]},
-        dependent_task_list=buffer_alt_dependencies + [kernel_task],
-        target_path_list=[file_registry['ndvi_alt_buffer_mean']],
-        task_name="calculate mean alternate NDVI within buffer")
+    if args['scenario'] == 'tcc_ndvi':
+        LOGGER.info("Using Tree Canopy Cover and NDVI inputs")
+        mean_buffered_tcc_task = task_graph.add_task(
+            func=pygeoprocessing.convolve_2d,
+            args=(
+                (file_registry['tree_cover_raster_aligned'], 1),
+                (file_registry['kernel'], 1),
+                file_registry['tree_cover_buffer_mean']),
+            kwargs={
+                'ignore_nodata_and_edges': True,
+                'mask_nodata': True,
+                'normalize_kernel': True,
+                'target_datatype': pygeoprocessing.get_raster_info(
+                    file_registry['tree_cover_raster_aligned'])["datatype"],
+                'target_nodata': pygeoprocessing.get_raster_info(
+                    file_registry['tree_cover_raster_aligned'])["nodata"][0]},
+            dependent_task_list=[align_task, kernel_task],
+            target_path_list=[file_registry['tree_cover_buffer_mean']],
+            task_name="calculate mean tree cover within buffer")
 
-    # NOTE: this is the first step where the nodata value of the output
-    # raster is set based on pygeoprocessing default for the raster's
-    # datatype (rather than using the raster's native nodata)
-    delta_ndvi_task = task_graph.add_task(
-        func=pygeoprocessing.raster_map,
-        args=(lambda base_ndvi, alt_ndvi: alt_ndvi - base_ndvi,
-              [file_registry['ndvi_base_buffer_mean'],
-               file_registry['ndvi_alt_buffer_mean']],
-               file_registry['delta_ndvi']),
-        target_path_list=[file_registry['delta_ndvi']],
-        dependent_task_list=[mean_buffer_base_ndvi_task,
-                             mean_buffer_alt_ndvi_task],
-        task_name="calculate delta ndvi"  # change in nature exposure
-    )
+        # mean_buffered_alt_ndvi_task = task_graph.add_task(
+        #     func=_apply_tc_target_to_alt_ndvi,
+        #     args=(file_registry['ndvi_base_buffer_mean'],
+        #           file_registry['population_aligned'],
+        #           file_registry['tree_cover_buffer_mean'],
+        #           args['tree_cover_target'],
+        #           file_registry['ndvi_alt_buffer_mean'],
+        #           file_registry['result_fig_tc_ndvi_plot']),
+        #     target_path_list=[file_registry['ndvi_alt_buffer_mean']],
+        #     dependent_task_list=[population_align_task,
+        #                          mean_buffered_base_ndvi_task,
+        #                          mean_buffered_tcc_task],
+        #     task_name="generate alternate (mean buffered) NDVI based on tree cover target"
+        # )
+        get_target_ndvi_task = task_graph.add_task(
+            func=_translate_tc_target_to_ndvi_target,
+            args=(file_registry['ndvi_base_buffer_mean'],
+                  file_registry['population_aligned'],
+                  file_registry['tree_cover_buffer_mean'],
+                  args['tree_cover_target'],
+                  file_registry['target_ndvi_csv']),
+            target_path_list=[file_registry['target_ndvi_csv']],
+            dependent_task_list=[population_align_task,
+                                 mean_buffered_base_ndvi_task,
+                                 mean_buffered_tcc_task],
+            task_name="calculate delta NDVI based on tree cover target"
+        )
+        delta_ndvi_task = task_graph.add_task(
+            func=pygeoprocessing.raster_map,
+            args=(lambda base_ndvi, ndvi_tgt: ndvi_tgt - base_ndvi,
+                  [file_registry['ndvi_base_buffer_mean'],
+                   pandas.read_csv(file_registry['target_ndvi_csv'], header=None).values[0][0]],
+                   file_registry['delta_ndvi']),
+            target_path_list=[file_registry['delta_ndvi']],
+            dependent_task_list=[mean_buffered_base_ndvi_task,
+                                 get_target_ndvi_task],
+            task_name="calculate delta ndvi using ndvi target and baseline ndvi"  # change in nature exposure
+        )
 
-    # Use this bbox as target when aligning pop raster because extents
-    # should match when using raster calculator to calc preventable cases
-    delta_ndvi_bbox = pygeoprocessing.get_raster_info(
-            file_registry['delta_ndvi'])['bounding_box']
+        mask_negative_delta_ndvi_task = task_graph.add_task(
+            func=mask_ndvi,
+            args=(file_registry['delta_ndvi'],
+                  file_registry['delta_ndvi_negatives_masked'],
+                  None, None, None),
+            target_path_list=[file_registry['delta_ndvi_negatives_masked']],
+            dependent_task_list=[delta_ndvi_task],
+            task_name="mask negative delta NDVI values"
+        )
+        # baseline cases task depends on either (1) population align task
+        # (if ndvi or lulc) or (2) mask_negative_delta_ndvi_task (if tcc)
+        delta_ndvi_dependency = mask_negative_delta_ndvi_task
+        prev_cases_dependency_list = [mask_negative_delta_ndvi_task]
 
-    population_align_task = task_graph.add_task(
-        func=utils.resample_population_raster,
-        kwargs={
-            'source_population_raster_path': args['population_raster'],
-            'target_population_raster_path': file_registry[
-                'population_aligned'],
-            'target_pixel_size': pixel_size,
-            'target_bb': delta_ndvi_bbox,
-            'target_projection_wkt': aoi_projection,
-            'working_dir': args['workspace_dir'],
-        },
-        target_path_list=[file_registry['population_aligned']],
-        task_name='Resample population to NDVI resolution')
+    else:
+        mean_buffered_alt_ndvi_task = task_graph.add_task(
+            func=pygeoprocessing.convolve_2d,
+            args=(
+                (file_registry['ndvi_alt_aligned_masked'], 1),
+                (file_registry['kernel'], 1),
+                file_registry['ndvi_alt_buffer_mean']),
+            kwargs={
+                'ignore_nodata_and_edges': True,
+                'mask_nodata': True,
+                'normalize_kernel': True,
+                'target_datatype': pygeoprocessing.get_raster_info(
+                    file_registry['ndvi_alt_aligned_masked'])["datatype"],
+                'target_nodata': pygeoprocessing.get_raster_info(
+                    file_registry['ndvi_alt_aligned_masked'])["nodata"][0]},
+            dependent_task_list=[masked_alt_ndvi_task, kernel_task],
+            target_path_list=[file_registry['ndvi_alt_buffer_mean']],
+            task_name="calculate mean alternate NDVI within buffer")
+
+        # NOTE: this is the first step where the nodata value of the output
+        # raster is set based on pygeoprocessing default for the raster's
+        # datatype (rather than using the raster's native nodata)
+        delta_ndvi_task = task_graph.add_task(
+            func=pygeoprocessing.raster_map,
+            args=(lambda base_ndvi, alt_ndvi: alt_ndvi - base_ndvi,
+                  [file_registry['ndvi_base_buffer_mean'],
+                   file_registry['ndvi_alt_buffer_mean']],
+                   file_registry['delta_ndvi']),
+            target_path_list=[file_registry['delta_ndvi']],
+            dependent_task_list=[mean_buffered_base_ndvi_task,
+                                 mean_buffered_alt_ndvi_task],
+            task_name="calculate delta ndvi using baseline and alt ndvi"  # change in nature exposure
+        )
+        delta_ndvi_dependency = delta_ndvi_task
+        prev_cases_dependency_list = [delta_ndvi_task]
 
     baseline_cases_task = task_graph.add_task(
         func=calc_baseline_cases,
@@ -845,20 +950,23 @@ def execute(args):
               file_registry['baseline_prevalence_raster'],
               file_registry['baseline_cases']),
         target_path_list=[file_registry['baseline_cases']],
-        dependent_task_list=[population_align_task],
+        dependent_task_list=[delta_ndvi_dependency, population_align_task],
         task_name="calculate baseline cases"
     )
 
+    # determine which delta NDVI raster to use
+    delta_ndvi = file_registry['delta_ndvi_negatives_masked'] if \
+        args['scenario'] == 'tcc_ndvi' else file_registry['delta_ndvi']
     preventable_cases_task = task_graph.add_task(
         func=calc_preventable_cases,
-        args=(file_registry['delta_ndvi'],
+        args=(delta_ndvi,
               file_registry['baseline_cases'],
               args['effect_size'],
               file_registry['preventable_cases'],
               args["aoi_path"],
               args['workspace_dir']),
         target_path_list=[file_registry['preventable_cases']],
-        dependent_task_list=[delta_ndvi_task, baseline_cases_task],
+        dependent_task_list=prev_cases_dependency_list + [baseline_cases_task],
         task_name="calculate preventable cases"
     )
 
@@ -954,6 +1062,9 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
 def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
               lulc_df, target_lulc_mask):
     """Mask NDVI using either threshold of NDVI<0 or LULC exclude codes
+
+    Can also be used to mask negative numbers from delta NDVI raster
+    if using scenario=tcc_ndvi.
 
     Args:
         input_ndvi (str): path to NDVI raster
@@ -1154,6 +1265,117 @@ def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
                                       'table_name': 'LULC attribute'})
 
     return None
+
+
+def _translate_tc_target_to_ndvi_target(
+        base_ndvi_path, tree_cover_path, population_path,
+        tc_target, target_output_csv_path, nbins, nsplines):
+    """Fit a pop-weighted TC->NDVI curve using binning to get target NDVI
+
+    Translate user-defined tree cover target to target NDVI using a
+    population-weighted fitted curve of TC vs. pop-weighted NDVI.
+    The curve is fitted by:
+        (1) binning TC values and calculating the population-weighted mean NDVI
+         for each bin, then (2) applying a GAM smoother to the binned means.
+
+    The target NDVI value is saved to CSV.
+
+    Assumptions:
+      - Tree cover values are in range [0, 100]
+      - Population is nonnegative; only pop>0 contributes
+
+    Args:
+        base_ndvi_path (str): path to baseline NDVI raster
+        tree_cover_path (str): path to tree cover raster
+        population_path (str): path to population raster
+        tc_target (float): user-defined tree cover target in range [0, 100]
+        target_output_csv_path (str): path to output csv to save target
+            NDVI value
+        nbins (int): number of TC bins to use when fitting curve
+        nsplines (int): number of splines to use in GAM smoothing
+
+    Returns:
+        None
+
+    """
+    ndvi_info = pygeoprocessing.get_raster_info(base_ndvi_path)
+    tc_info = pygeoprocessing.get_raster_info(tree_cover_path)
+    pop_info = pygeoprocessing.get_raster_info(population_path)
+
+    ndvi_nodata = ndvi_info["nodata"][0]
+    tc_nodata = tc_info["nodata"][0]
+    pop_nodata = pop_info["nodata"][0]
+
+    edges = numpy.linspace(0.0, 100, nbins + 1)
+    centers = (edges[:-1] + edges[1:]) / 2.0
+
+    ndvi_pop_sum = numpy.zeros(nbins, dtype=numpy.float64)
+    pop_sum = numpy.zeros(nbins, dtype=numpy.float64)
+
+    tc_blocks = pygeoprocessing.iterblocks((tree_cover_path, 1))
+    ndvi_blocks = pygeoprocessing.iterblocks((base_ndvi_path, 1))
+    pop_blocks = pygeoprocessing.iterblocks((population_path, 1))
+
+    # Is there any chance these blocks don't align?
+    for (_, tc), (_, ndvi), (_, pop) in zip(tc_blocks, ndvi_blocks, pop_blocks):
+        valid_mask = (~pygeoprocessing.array_equals_nodata(tc, tc_nodata) &
+                      ~pygeoprocessing.array_equals_nodata(ndvi, ndvi_nodata) &
+                      ~pygeoprocessing.array_equals_nodata(pop, pop_nodata) &
+                      (pop > 0))
+
+        if not numpy.any(valid_mask):
+            continue
+
+        tc_vals = tc[valid_mask].astype(numpy.float64)
+        ndvi_vals = ndvi[valid_mask].astype(numpy.float64)
+        pop_vals = pop[valid_mask].astype(numpy.float64)
+
+        # ``digitize`` returns the indices of the bins to which each value in
+        # an input array belongs. E.g. if tc_vals are 5, 15, 45, 55, 97, 2
+        # and nbins=5 so edges are 0, 20, 40, 60, 80, 100, then
+        # idx would be 0, 0, 2, 2, 4, 0
+        idx = numpy.digitize(tc_vals, edges) - 1
+        idx = numpy.clip(idx, 0, nbins - 1)
+
+        # .add.at performs an unbuffered in-place addition to elements of
+        # ndvi_pop_sum array specified by indices, with values from another
+        # array (here: ndvi_vals * pop_vals)
+        # .add.at is used here to handle repeated indices correctly
+        # e.g., "add to ndvi_pop_sum at indices idx the values ndvi_vals * pop_vals"
+        numpy.add.at(ndvi_pop_sum, idx, ndvi_vals * pop_vals)
+        numpy.add.at(pop_sum, idx, pop_vals)
+
+    # Create an array filled with NaNs to hold the final curve
+    curve = numpy.full(nbins, numpy.nan, dtype=numpy.float64)
+    has_pop = pop_sum > 0
+    # Fill curve array with pop-weighted mean NDVI where pop>0
+    # Pixels where pop=0 remain NaN for now; will be filled by interpolation
+    # Bascially, for each "bin", take ndvi_i*pop_i for each pixel i in that
+    # bin, sum them up and divide by sum of pop_i for pixels in that bin
+    curve[has_pop] = ndvi_pop_sum[has_pop] / pop_sum[has_pop]
+
+    good = numpy.isfinite(curve)
+    if numpy.count_nonzero(good) < 2:
+        raise ValueError(
+            "Not enough data to fit TC-->NDVI curve. "
+            "Check nodata/masking and that population overlaps valid pixels."
+        )
+
+    # Fill empty bins by interpolation across available bins
+    # curve_interp = numpy.interp(centers, centers[good], curve[good])
+
+    # GAM smoothing on binned means
+    x = centers[has_pop].reshape(-1, 1)
+    y = curve[has_pop]
+    w = pop_sum[has_pop]
+
+    gam = LinearGAM(s(0, n_splines=nsplines))
+    gam.fit(x, y, weights=w)
+
+    ndvi_target = gam.predict([[tc_target]])
+    LOGGER.info(f"Target NDVI Value: {ndvi_target}")
+    df = pandas.DataFrame([ndvi_target[0]])
+    df.to_csv(target_output_csv_path, header=False, index=False)
 
 
 def calc_baseline_cases(population_raster, base_prevalence_vector,
