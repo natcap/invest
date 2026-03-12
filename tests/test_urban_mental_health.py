@@ -981,3 +981,104 @@ class UMHTests(unittest.TestCase):
         # vector CRS (EPSG 26910) and then getting pixel size
         numpy.testing.assert_allclose(actual_pixel_size, (3.05404, -3.05404),
                                       atol=1e-5)
+
+    def test_ndvi_raster_with_no_nodata_value_set(self):
+        """Test UMH if NDVI raster has no nodata value set"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+
+        # create NDVI base with no nodata value set
+        ndvi_base_array = numpy.array(
+            [[.1, .2, .35], [.5, .6, .7],
+             [.8, .9, .10], [.11, -.12, -9999]])
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        pygeoprocessing.numpy_array_to_raster(
+            ndvi_base_array.astype(numpy.float64), target_nodata=None,
+            pixel_size=(100, -100), origin=(ORIGIN_X, ORIGIN_Y),
+            projection_wkt=srs.ExportToWkt(),
+            target_path=args['ndvi_base'])
+
+        file_reg = urban_mental_health.execute(args)
+
+        actual_buffer_mean = pygeoprocessing.raster_to_numpy_array(
+            file_reg['ndvi_base_buffer_mean'])
+
+        raster_info = pygeoprocessing.get_raster_info(
+            file_reg['ndvi_base_buffer_mean'])
+        pgp_chosen_nodata = pygeoprocessing.choose_nodata(
+            raster_info['datatype'])
+        numpy.testing.assert_allclose(actual_buffer_mean[3, 2:4],
+                                      [pgp_chosen_nodata, pgp_chosen_nodata])
+
+        # spot check
+        self.assertAlmostEqual(actual_buffer_mean[2, 2], .6)
+
+    def test_lulc_raster_with_no_nodata_value_set(self):
+        """Test UMH if base_LULC has no nodata value set but is large enough"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+
+        # create NDVI base with no nodata value set
+        lulc_base_array = numpy.ones((9, 9))
+        lulc_base_array[2, 4] = 3
+        # set one pixel (that will be retained when aligned) to an 'excluded'
+        # lulc code that maps to nodata
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        pygeoprocessing.numpy_array_to_raster(
+            lulc_base_array.astype(numpy.float64), target_nodata=None,
+            pixel_size=(100, -100), origin=(ORIGIN_X-500, ORIGIN_Y),
+            projection_wkt=srs.ExportToWkt(),
+            target_path=args['lulc_base'])
+
+        execute_kwargs = {
+            'generate_report': bool(urban_mental_health.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        urban_mental_health.MODEL_SPEC.execute(args, **execute_kwargs)
+
+        assert_complete_execute(
+            args, urban_mental_health.MODEL_SPEC, **execute_kwargs)
+
+        # check reclassified (masked) base lulc raster
+        actual_masked_lulc_path = os.path.join(
+            self.workspace_dir, "intermediate",
+            f'ndvi_base_aligned_masked_{args["results_suffix"]}.tif')
+        actual_masked_lulc = pygeoprocessing.raster_to_numpy_array(
+            actual_masked_lulc_path)
+        # ndvi_base_aligned_masked is output of reclassify_lulc_raster if scenario=lulc
+
+        numpy.testing.assert_allclose(actual_masked_lulc[2, 0],
+                                      [urban_mental_health.FLOAT32_NODATA])
+
+        # spot check
+        self.assertAlmostEqual(actual_masked_lulc[0, 0], .1)
+
+    def test_error_if_lulc_raster_too_small_and_no_nodata_value_set(self):
+        """Test custom error msg if LULC has no NoData and is too small"""
+
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+
+        # create NDVI base with no nodata value set
+        lulc_base_array = numpy.ones((3, 3))
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        pygeoprocessing.numpy_array_to_raster(
+            lulc_base_array.astype(numpy.float64), target_nodata=None,
+            pixel_size=(100, -100), origin=(ORIGIN_X, ORIGIN_Y),
+            projection_wkt=srs.ExportToWkt(),
+            target_path=args['lulc_base'])
+
+        with self.assertRaises(ValueError) as context:
+            urban_mental_health.execute(args)
+        self.assertTrue(
+            "having a set NoData value, which can cause problems if the " in
+            str(context.exception))

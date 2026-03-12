@@ -714,8 +714,8 @@ def execute(args):
             func=build_lulc_ndvi_table,
             args=(lulc_df,
                   file_registry['lulc_to_ndvi_csv'],
-                  file_registry['lulc_base_aligned'],  # Note: won't get used if `ndvi` column in `lulc_attr_csv`
-                  file_registry['ndvi_base_aligned']
+                  file_registry['lulc_base_aligned'],
+                  file_registry['ndvi_base_aligned'] # Note: won't get used if `ndvi` column in `lulc_attr_csv`
                   ),
             target_path_list=[file_registry['lulc_to_ndvi_csv']],
             dependent_task_list=[align_task],
@@ -971,7 +971,7 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
         pixel_width = target_warp.geotransform[1]
         pixel_height = target_warp.geotransform[5]
         LOGGER.info("Baseline raster is not projected in meters; will use "
-                    f"transformed pixel size {raster_info['pixel_size']} as "
+                    f"transformed pixel size {pixel_width, pixel_height} as "
                     "target in align_and_resize")
 
         return (pixel_width, pixel_height)
@@ -1046,8 +1046,13 @@ def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
     """
 
     ndvi_info = pygeoprocessing.get_raster_info(input_ndvi)
-    ndvi_nodata = ndvi_info["nodata"][0]
     ndvi_dtype = ndvi_info["datatype"]
+    ndvi_nodata = ndvi_info["nodata"][0]
+
+    if ndvi_nodata is None:
+        ndvi_nodata = pygeoprocessing.choose_nodata(ndvi_dtype)
+        LOGGER.info("Since no NoData value was set for the input NDVI "
+                    f"raster, {ndvi_nodata} was chosen.")
 
     def _mask_with_lulc(ndvi, ndvi_nodata, lulc_mask):
         """Mask NDVI using places where LULC's exclude code = 1"""
@@ -1220,12 +1225,30 @@ def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
     mean_ndvi_by_lulc_dict = lulc_df['ndvi'].to_dict()
     if source_nodata is not None:
         mean_ndvi_by_lulc_dict[source_nodata] = target_nodata
+    else:
+        LOGGER.warning("The input LULC raster has no NoData value. This can "
+                       "cause problems if the extent of the buffered AOI "
+                       "exceeds that of the LULC raster")
 
-    utils.reclassify_raster(
-        (lulc, 1), mean_ndvi_by_lulc_dict, target_path, target_datatype,
-        target_nodata, error_details={'raster_name': lulc,
-                                      'column_name': 'lucode',
-                                      'table_name': 'LULC attribute'})
+    try:
+        utils.reclassify_raster(
+            (lulc, 1), mean_ndvi_by_lulc_dict, target_path, target_datatype,
+            target_nodata, error_details={'raster_name': lulc,
+                                          'column_name': 'lucode',
+                                          'table_name': 'LULC attribute'})
+    except ValueError as e:
+        if any(f"table are: [{val}]" in str(e) for val in ['0', '0.', '0.0']):
+            raise ValueError(
+                f"Error reclassifying LULC raster {lulc} to NDVI values: {e} "
+                "This error may be caused by the input LULC raster not "
+                "having a set NoData value, which can cause problems if the "
+                "extent of the buffered AOI exceeds that of the LULC raster. "
+                "To fix this, you can increase the coverage of your LULC "
+                "raster (preferred) or you can set a NoData value for your "
+                "LULC raster. This error can also simply be caused by missing "
+                "LULC classes in the attibute table.")
+        else:
+            raise e
 
     return None
 
