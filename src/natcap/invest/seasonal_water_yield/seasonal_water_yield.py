@@ -1,4 +1,5 @@
 """InVEST Seasonal Water Yield Model."""
+import csv
 import fractions
 import logging
 import os
@@ -453,6 +454,61 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.millimeter
                 )
             ]
+        ),
+        spec.CSVOutput(
+            id="monthly_qf_table",
+            path="monthly_quickflow_baseflow.csv",
+            about=gettext(
+                "Table of average monthly baseflow, quickflow, and precipitation"
+                " values for each watershed (or feature) within the AOI."
+            ),
+            columns=[
+                spec.IntegerOutput(
+                    id="geom_id",
+                    about=gettext(
+                        "The Feature ID for the watershed. This will correspond to"
+                        " the FIDs in the Aggregate Results shapefile."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="month",
+                    about=gettext(
+                        "Values are the numbers 1-12 corresponding to each month,"
+                        " January (1) through December (12)."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="quickflow",
+                    about=gettext(
+                        "The average quickflow value for the month in the watershed,"
+                        " expressed in cubic meters per second."
+                    ),
+                    units=u.meter ** 3 / u.second
+                ),
+                spec.NumberOutput(
+                    id="baseflow",
+                    about=gettext(
+                        "The average baseflow value for the month in the watershed,"
+                        " expressed in cubic meters per second. Since baseflow is"
+                        " calculated on an annual scale, the values for each watershed"
+                        " have been distributed evenly across the year (annual average"
+                        " divided by 12)."
+                    ),
+                    units=u.meter ** 3 / u.second
+                ),
+                spec.NumberOutput(
+                    id="precipitation",
+                    about=gettext(
+                        "The average precipitation value for the month in the watershed,"
+                        " expressed in cubic meters per second. Values are based on"
+                        " the aligned input monthly precipitation rasters."
+                    ),
+                    units=u.meter ** 3 / u.second
+                )
+            ],
+            index_col="geom_id"
         ),
         spec.SingleBandRasterOutput(
             id="aet",
@@ -1043,6 +1099,20 @@ def execute(args):
         dependent_task_list=b_sum_dependent_task_list + [l_sum_task],
         task_name='calculate B_sum')
 
+    monthly_csv_task = task_graph.add_task(
+        func=_generate_monthly_qf_b_p_csv,
+        args=(
+            file_registry['aggregate_vector'],
+            file_registry['b'],
+            [file_registry['qf_[MONTH]', month] for month in range(1, 13)],
+            [file_registry['prcp_a[MONTH]', month] for month in range(12)],
+            file_registry['monthly_qf_table']
+        ),
+        target_path_list=[file_registry['monthly_qf_table']],
+        dependent_task_list=[
+            aggregate_recharge_task, align_task, b_sum_task] + quick_flow_task_list,
+        task_name='create monthly qf csv')
+
     task_graph.close()
     task_graph.join()
 
@@ -1456,17 +1526,109 @@ def _aggregate_recharge(
             poly_feat.SetField(aggregate_field_id, float(value))
             aggregate_layer.SetFeature(poly_feat)
 
-    fid_field = ogr.FieldDefn('geom_fid', ogr.OFTInteger)
+    fid_field = ogr.FieldDefn('geom_id', ogr.OFTInteger)
     aggregate_layer.CreateField(fid_field)
     for feature in aggregate_layer:
         feature_id = feature.GetFID()
-        feature.SetField('geom_fid', feature_id)
+        feature.SetField('geom_id', feature_id)
         aggregate_layer.SetFeature(feature)
 
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
+
+
+def _generate_monthly_qf_b_p_csv(
+        aoi_path, annual_baseflow_path, monthly_quickflow_path_list,
+        monthly_precip_path_list, target_csv_path):
+    """Generate a CSV of average monthly Qf, B, and P values for the watersheds/AOI.
+
+    Args:
+        aoi_path (string): path to shapefile that will be used to
+            aggregate rasters
+        annual_baseflow_path (string): path to the annual baseflow raster
+        monthly_quickflow_path_list (list): list of paths to monthly quickflow
+            rasters
+        monthly_precip_path_list (list): list of paths to aligned monthly
+            precipitation rasters
+        target_csv_path (string): path to the output CSV. If this file exists
+            on disk prior to the call, it is overwritten with the result of
+            this call.
+
+    Returns:
+        None
+    """
+    if os.path.exists(target_csv_path):
+        LOGGER.warning(f'{target_csv_path} exists, deleting and writing new output')
+        os.remove(target_csv_path)
+
+    seconds_per_month = {
+        1: 2678400,
+        2: 2440152,
+        3: 2678400,
+        4: 2592000,
+        5: 2678400,
+        6: 2592000,
+        7: 2678400,
+        8: 2678400,
+        9: 2592000,
+        10: 2678400,
+        11: 2592000,
+        12: 2678400}
+
+    # Use the baseflow raster to get the pixel_size; all rasters should be aligned
+    raster_info = pygeoprocessing.get_raster_info(annual_baseflow_path)
+    pixel_area_m2 = numpy.prod([abs(x) for x in raster_info['pixel_size']])
+
+    # The baseflow raster is annual, so there will only be 1
+    raster_path_tuples = [(annual_baseflow_path, 0, "baseflow")]
+    raster_path_tuples.extend([
+            (qf_path, month, "quickflow") for qf_path, month
+            in zip(monthly_quickflow_path_list, range(1, 13))])
+    raster_path_tuples.extend([
+            (precip_path, month, "precipitation") for precip_path, month
+            in zip(monthly_precip_path_list, range(1, 13))])
+
+    raster_stats = pygeoprocessing.zonal_statistics(
+            [(path_tuple[0], 1) for path_tuple in raster_path_tuples],
+            aoi_path)
+
+    stats_by_field = {
+        "baseflow": {},
+        "quickflow": {},
+        "precipitation": {}
+    }
+    for (_, month, field), stats in zip(raster_path_tuples, raster_stats):
+        stats_by_field[field][month] = stats
+
+    # Baseflow is computed annually; distribute evenly over the year
+    b_avg_per_feat_per_month = {k: v['sum'] * 0.001 * pixel_area_m2 / 12
+                                for k, v in stats_by_field['baseflow'][0].items()}
+
+    values_dict = {fid: {month: {'baseflow': b_val / seconds_per_month[month]}
+                         for month in range(1, 13)}
+                   for fid, b_val in b_avg_per_feat_per_month.items()}
+
+    for value_name in ['quickflow', 'precipitation']:
+        for month in range(1, 13):
+            avg_per_feat_per_month = {
+                    k: v['sum'] * 0.001 * pixel_area_m2
+                    for k, v in stats_by_field[value_name][month].items()}
+            for fid, value in avg_per_feat_per_month.items():
+                value_per_second = value / seconds_per_month[month]
+                values_dict[fid][month][value_name] = value_per_second
+
+    with open(target_csv_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['geom_id', 'month', 'quickflow', 'baseflow', 'precipitation'])
+        for fid, month_dicts in values_dict.items():
+            for month, val_dicts in month_dicts.items():
+                writer.writerow([fid,
+                                 month,
+                                 val_dicts['quickflow'],
+                                 val_dicts['baseflow'],
+                                 val_dicts['precipitation']])
 
 
 @validation.invest_validator

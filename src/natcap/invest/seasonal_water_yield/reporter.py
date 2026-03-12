@@ -56,68 +56,6 @@ def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
     return attr_map.to_json()
 
 
-def create_monthly_stats_table(aoi_path, file_registry, output_table_path):
-    if os.path.exists(output_table_path):
-        LOGGER.info(f'{output_table_path} exists, deleting and writing new output')
-        os.remove(output_table_path)
-
-    seconds_per_month = {
-        1: 2678400,
-        2: 2440152,
-        3: 2678400,
-        4: 2592000,
-        5: 2678400,
-        6: 2592000,
-        7: 2678400,
-        8: 2678400,
-        9: 2592000,
-        10: 2678400,
-        11: 2592000,
-        12: 2678400}
-
-    annual_b_path = file_registry['b']
-    monthly_qf_path_list_tuples = [
-        (file_registry['qf_[MONTH]'][str(month_index +1)], month_index+1, "quickflow")
-        for month_index in range(12)]
-    monthly_precip_path_list_tuples = [
-        (file_registry['prcp_a[MONTH]'][str(month_index)], month_index+1, "precipitation")
-        for month_index in range(12)]
-
-    # Use the baseflow raster to get the pixel_size;
-    # all rasters should be aligned + the same size
-    raster_info = pygeoprocessing.get_raster_info(annual_b_path)
-    pixel_area_m2 = numpy.prod([abs(x) for x in raster_info['pixel_size']])
-    pixel_area_m2
-
-    zonal_stats_b = pygeoprocessing.zonal_statistics((annual_b_path, 1), aoi_path)
-    b_avg_per_feat_per_month = {k: v['sum'] * 0.001 * pixel_area_m2 / 12
-                                for k, v in zonal_stats_b.items()}
-
-    values_dict = {fid: {month + 1: {'baseflow': b_val / seconds_per_month[month+1]}
-                         for month in range(12)}
-                   for fid, b_val in b_avg_per_feat_per_month.items()}
-
-    for raster_path, month_index, value_name in (
-            monthly_qf_path_list_tuples + monthly_precip_path_list_tuples):
-        zonal_stats = pygeoprocessing.zonal_statistics((raster_path, 1), aoi_path)
-        avg_per_feat_per_month = {k: v['sum'] * 0.001 * pixel_area_m2
-                                  for k, v in zonal_stats.items()}
-
-        for fid, value in avg_per_feat_per_month.items():
-            values_dict[fid][month_index][value_name] = value / seconds_per_month[month_index]
-
-    with open(output_table_path, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['geom_fid', 'month', 'quickflow', 'baseflow', 'precipitation'])
-        for fid, month_dicts in values_dict.items():
-            for month, val_dicts in month_dicts.items():
-                writer.writerow([fid,
-                                 month,
-                                 val_dicts['quickflow'],
-                                 val_dicts['baseflow'],
-                                 val_dicts['precipitation']])
-
-
 def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
     map_df = geopandas.read_file(aoi_vector_path)
     values_df = pandas.read_csv(aggregate_csv_path)
@@ -125,7 +63,7 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
 
     extent_feature, xy_ratio = vector_utils.get_geojson_bbox(map_df)
 
-    feat_select = altair.selection_point(fields=["geom_fid"], name="feat_select", value=0)
+    feat_select = altair.selection_point(fields=["geom_id"], name="feat_select", value=0)
 
     attr_map = altair.Chart(map_df).mark_geoshape(
         clip=True, stroke="white", strokeWidth=0.5
@@ -139,7 +77,7 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
             altair.value("seagreen"),
             altair.value("lightgray")
         ),
-        tooltip=[altair.Tooltip("geom_fid", title="FID")]
+        tooltip=[altair.Tooltip("geom_id", title="FID")]
     ).properties(
         width=MAP_WIDTH,
         height=MAP_WIDTH / xy_ratio,
@@ -180,7 +118,7 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
         feat_select
     ).properties(
         title=altair.Title(altair.expr(
-            f'"Mean Quickflow + Baseflow for Feature, FID " + {feat_select.name}.geom_fid')
+            f'"Mean Quickflow + Baseflow for Feature, FID " + {feat_select.name}.geom_id')
         )
     )
 
@@ -229,12 +167,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     vector_map_source_list = [model_spec.get_output('aggregate_vector').path]
 
     # Monthly quickflow + baseflow plots and map
-    qf_b_csv_path = os.path.join(args_dict['workspace_dir'], 'monthly_average_qf_b.csv')
-    create_monthly_stats_table(file_registry['aggregate_vector'],
-                               file_registry, qf_b_csv_path)
-
     qf_b_charts_json = create_linked_monthly_plots(file_registry['aggregate_vector'],
-                                                   qf_b_csv_path)
+                                                   file_registry['monthly_qf_table'])
     qf_b_charts_caption = gettext(
         """
         This chart displays the monthly combined average baseflow + quickflow for
@@ -243,7 +177,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         of their values.
         """
     )
-    qf_b_charts_source_list = [qf_b_csv_path, file_registry['aggregate_vector']]
+    qf_b_charts_source_list = [file_registry['monthly_qf_table'],
+                               file_registry['aggregate_vector']]
 
     # Raster config lists
     stream_raster_config_list = [
