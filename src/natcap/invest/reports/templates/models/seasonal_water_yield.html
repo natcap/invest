@@ -10,28 +10,32 @@
   {% from 'wide-table.html' import wide_table %}
 
   <h2 class="section-header">Results</h2>
-  {{ accordion_section(
-    'Annual and Monthly Quickflow (QF)',
-    content_grid([
-      (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(annual_qf_img_src, 'Annual Quickflow values'), 100),
-      (raster_plot_img(monthly_qf_img_src, 'Monthly Quickflow values'), 100),
-      (caption(qf_caption, definition_list=True), 100)
-    ])
-  )}}
+  {% if qf_rasters %}
+    {{ accordion_section(
+      'Annual and Monthly Quickflow (QF)',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(qf_rasters['annual_qf_img_src'], 'Annual Quickflow values'), 100),
+        (raster_plot_img(qf_rasters['monthly_qf_img_src'], 'Monthly Quickflow values'), 100),
+        (caption(qf_rasters['qf_caption'], definition_list=True), 100)
+      ])
+    )}}
+  {% endif %}
+
+  {% if qf_b_charts %}
+    {{ accordion_section(
+      'Average Quickflow and Baseflow by Month',
+      content_grid([
+        (content_grid([
+          ('<div id="qf_b_charts"></div>', 100),
+          (caption(qf_b_charts['caption'], qf_b_charts['sources']), 100)
+        ]), 100)
+      ])
+    ) }}
+  {% endif %}
 
   {{ accordion_section(
-    'Average Quickflow and Baseflow by Month',
-    content_grid([
-      (content_grid([
-        ('<div id="qf_b_charts"></div>', 100),
-        (caption(qf_b_charts_caption, qf_b_charts_source_list), 100)
-      ]), 100)
-    ])
-  ) }}
-
-  {{ accordion_section(
-    'Other Raster Outputs',
+    outputs_title,
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
       (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
@@ -120,7 +124,9 @@
   {% set chart_spec_id_list = [
     (qb_map_json, 'qb_map'),
     (vri_sum_map_json, 'vri_sum_map'),
-    (qf_b_charts_json, 'qf_b_charts')
   ] %}
   {{ embed_vega(chart_spec_id_list) }}
+  {% if qf_b_charts %}
+    {{ embed_vega([(qf_b_charts['json'], 'qf_b_charts')]) }}
+  {% endif %}
 {% endblock scripts %}

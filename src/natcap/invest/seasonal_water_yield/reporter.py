@@ -166,19 +166,30 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     vector_map_source_list = [model_spec.get_output('aggregate_vector').path]
 
-    # Monthly quickflow + baseflow plots and map
-    qf_b_charts_json = create_linked_monthly_plots(file_registry['aggregate_vector'],
-                                                   file_registry['monthly_qf_table'])
-    qf_b_charts_caption = gettext(
-        """
-        This chart displays the monthly combined average baseflow + quickflow for
-        each feature within the AOI. Select a feature on the AOI map to see the
-        values for that feature. Selecting multiple features will display the sum
-        of their values.
-        """
-    )
-    qf_b_charts_source_list = [file_registry['monthly_qf_table'],
-                               file_registry['aggregate_vector']]
+    if args_dict['user_defined_local_recharge']:
+        # Quickflow isn't calculated if `user_defined_local_recharge`
+        # so we cannot construct monthly average qf + b charts
+        qf_b_charts = None
+    else:
+        # Monthly quickflow + baseflow plots and map
+        qf_b_charts_json = create_linked_monthly_plots(
+                file_registry['aggregate_vector'],
+                file_registry['monthly_qf_table'])
+        qf_b_charts_caption = gettext(
+            """
+            This chart displays the monthly combined average baseflow + quickflow for
+            each feature within the AOI. Select a feature on the AOI map to see the
+            values for that feature. Selecting multiple features will display the sum
+            of their values.
+            """
+        )
+        qf_b_charts_source_list = [file_registry['monthly_qf_table'],
+                                   file_registry['aggregate_vector']]
+        qf_b_charts = {
+            'json': qf_b_charts_json,
+            'caption': qf_b_charts_caption,
+            'sources': qf_b_charts_source_list
+        }
 
     # Raster config lists
     stream_raster_config_list = [
@@ -195,38 +206,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         RasterPlotConfig(
             raster_path=file_registry['b'],
             datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('b')),
-        RasterPlotConfig(
-            raster_path=file_registry['annual_precip'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('annual_precip')),
-        RasterPlotConfig(
-            raster_path=file_registry['aet'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('aet')),
-        RasterPlotConfig(
-            raster_path=file_registry['cn'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('cn'))]
-
-    annual_qf_raster_config = RasterPlotConfig(
-            raster_path=file_registry['qf'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('qf'),
-            title=gettext(
-                f"Annual Quickflow ({os.path.basename(file_registry['qf'])})"
-            ))
-
-    monthly_qf_raster_config_list = [
-        RasterPlotConfig(
-            raster_path=file_registry['qf_[MONTH]'][str(month_index + 1)],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('qf_[MONTH]'),
-            title=gettext(
-                f"Quickflow for month {month_index + 1} "
-                f"({os.path.basename(file_registry['qf_[MONTH]'][str(month_index + 1)])})"
-            )
-        ) for month_index in range(12)]
+            spec=model_spec.get_output('b'))
+    ]
 
     input_raster_config_list = [
         RasterPlotConfig(
@@ -245,17 +226,77 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 raster_path=args_dict['l_path'],
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_input('l_path')))
+        qf_rasters = None
+        raster_outputs_title = 'Annual Baseflow'
+
     else:
+        output_raster_config_list.extend([
+            RasterPlotConfig(
+                raster_path=file_registry['annual_precip'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('annual_precip')),
+            RasterPlotConfig(
+                raster_path=file_registry['aet'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('aet')),
+            RasterPlotConfig(
+                raster_path=file_registry['cn'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('cn')),
+            RasterPlotConfig(
+                raster_path=file_registry['l'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('l'))])
+        raster_outputs_title = 'Additional Raster Outputs'
+
         input_raster_config_list.append(
             RasterPlotConfig(
                 raster_path=args_dict['soil_group_path'],
                 datatype=RasterDatatype.nominal,
                 spec=model_spec.get_input('soil_group_path')))
-        output_raster_config_list.append(
-            RasterPlotConfig(
-                raster_path=file_registry['l'],
+
+        # Quickflow outputs are only created if not `user_defined_local_recharge`
+        annual_qf_raster_config = RasterPlotConfig(
+                raster_path=file_registry['qf'],
                 datatype=RasterDatatype.continuous,
-                spec=model_spec.get_output('l')))
+                spec=model_spec.get_output('qf'),
+                title=gettext(
+                    f"Annual Quickflow ({os.path.basename(file_registry['qf'])})"
+                ))
+
+        monthly_qf_raster_config_list = [
+            RasterPlotConfig(
+                raster_path=file_registry['qf_[MONTH]'][str(month)],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('qf_[MONTH]'),
+                title=gettext(
+                    f"Quickflow for month {month} "
+                    f"({os.path.basename(file_registry['qf_[MONTH]'][str(month)])})"
+                )
+            ) for month in range(1, 13)]
+
+        annual_qf_img_src = raster_utils.plot_and_base64_encode_rasters(
+                [annual_qf_raster_config])
+        monthly_qf_plots = raster_utils.plot_raster_facets(
+                [raster_config.raster_path for raster_config
+                 in monthly_qf_raster_config_list],
+                'continuous',
+                title_list=[raster_config.title for raster_config
+                            in monthly_qf_raster_config_list])
+        monthly_qf_img_src = raster_utils.base64_encode(monthly_qf_plots)
+        monthly_qf_displayname = os.path.basename(
+                monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
+        qf_raster_caption = [
+            (f'{annual_qf_raster_config.title}:'
+             f'{annual_qf_raster_config.spec.about}'),
+            (f'{monthly_qf_displayname}:'
+             f'{monthly_qf_raster_config_list[0].spec.about}')
+        ]
+
+        qf_rasters = {
+            'annual_qf_img_src': annual_qf_img_src,
+            'monthly_qf_img_src': monthly_qf_img_src,
+            'qf_caption': qf_raster_caption}
 
     # Create raster image sources and captions:
     stream_img_src = raster_utils.plot_and_base64_encode_rasters(
@@ -272,24 +313,6 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             output_raster_config_list)
     output_raster_caption = raster_utils.caption_raster_list(
             output_raster_config_list)
-
-    annual_qf_img_src = raster_utils.plot_and_base64_encode_rasters(
-            [annual_qf_raster_config])
-    monthly_qf_plots = raster_utils.plot_raster_facets(
-            [raster_config.raster_path for raster_config
-             in monthly_qf_raster_config_list],
-            'continuous',
-            title_list=[raster_config.title for raster_config
-                        in monthly_qf_raster_config_list])
-    monthly_qf_img_src = raster_utils.base64_encode(monthly_qf_plots)
-    monthly_qf_displayname = os.path.basename(
-            monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
-    qf_raster_caption = [
-        (f'{annual_qf_raster_config.title}:'
-         f'{annual_qf_raster_config.spec.about}'),
-        (f'{monthly_qf_displayname}:'
-         f'{monthly_qf_raster_config_list[0].spec.about}')
-    ]
 
     output_raster_stats_table = raster_utils.raster_workspace_summary(
             file_registry).to_html(na_rep='')
@@ -318,18 +341,15 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             stream_img_src=stream_img_src,
             stream_caption=stream_raster_caption,
             stream_outputs_heading=stream_outputs_heading,
+            outputs_title=raster_outputs_title,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
-            annual_qf_img_src=annual_qf_img_src,
-            monthly_qf_img_src=monthly_qf_img_src,
-            qf_caption=qf_raster_caption,
+            qf_rasters=qf_rasters,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_raster_caption,
-            qf_b_charts_json=qf_b_charts_json,
-            qf_b_charts_caption=qf_b_charts_caption,
-            qf_b_charts_source_list=qf_b_charts_source_list,
+            qf_b_charts=qf_b_charts,
             qb_map_json=qb_map_json,
             qb_map_caption=qb_map_caption,
             vri_sum_map_json=vri_sum_map_json,

@@ -367,7 +367,8 @@ MODEL_SPEC = spec.ModelSpec(
             path="CN.tif",
             about=gettext("Map of curve number values."),
             data_type=float,
-            units=u.none
+            units=u.none,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="l",
@@ -396,7 +397,8 @@ MODEL_SPEC = spec.ModelSpec(
                 " available for evapotranspiration by this pixel."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="l_sum",
@@ -414,7 +416,8 @@ MODEL_SPEC = spec.ModelSpec(
             path="QF.tif",
             about=gettext("Map of quickflow"),
             data_type=float,
-            units=u.millimeter / u.year
+            units=u.millimeter / u.year,
+            created_if="not user_defined_local_recharge"
         ),
         spec.STREAM,
         spec.SingleBandRasterOutput(
@@ -422,7 +425,8 @@ MODEL_SPEC = spec.ModelSpec(
             path="P.tif",
             about=gettext("The total precipitation across all months on this pixel."),
             data_type=float,
-            units=u.millimeter / u.year
+            units=u.millimeter / u.year,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="vri",
@@ -508,14 +512,16 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.meter ** 3 / u.second
                 )
             ],
-            index_col="geom_id"
+            index_col="geom_id",
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="aet",
             path="intermediate_outputs/aet.tif",
             about=gettext("Map of actual evapotranspiration"),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="flow_dir",
@@ -534,14 +540,16 @@ MODEL_SPEC = spec.ModelSpec(
                 "Maps of monthly quickflow (1 = January… 12 = December)"
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="si",
             path="intermediate_outputs/Si.tif",
             about=gettext("Map of the S_i factor derived from CN"),
             data_type=float,
-            units=u.inch
+            units=u.inch,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="lulc_aligned",
@@ -578,7 +586,8 @@ MODEL_SPEC = spec.ModelSpec(
                 " other spatial inputs"
             ),
             data_type=int,
-            units=None
+            units=None,
+            created_if="not user_defined_local_recharge"
         ),
         spec.FLOW_ACCUMULATION.model_copy(update=dict(
             id="flow_accum",
@@ -591,14 +600,16 @@ MODEL_SPEC = spec.ModelSpec(
                 " other spatial inputs"
             ),
             data_type=float,
-            units=u.millimeter / u.year
+            units=u.millimeter / u.year,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="n_events[MONTH]",
             path="intermediate_outputs/n_events[MONTH].tif",
             about=gettext("Map of monthly rain events"),
             data_type=int,
-            units=None
+            units=None,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="et0_a[MONTH]",
@@ -608,14 +619,16 @@ MODEL_SPEC = spec.ModelSpec(
                 " spatial inputs"
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="kc_[MONTH]",
             path="intermediate_outputs/kc_[MONTH].tif",
             about=gettext("Map of monthly KC values"),
             data_type=float,
-            units=u.none
+            units=u.none,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="cz_aligned",
@@ -1099,19 +1112,20 @@ def execute(args):
         dependent_task_list=b_sum_dependent_task_list + [l_sum_task],
         task_name='calculate B_sum')
 
-    monthly_csv_task = task_graph.add_task(
-        func=_generate_monthly_qf_b_p_csv,
-        args=(
-            file_registry['aggregate_vector'],
-            file_registry['b'],
-            [file_registry['qf_[MONTH]', month] for month in range(1, 13)],
-            [file_registry['prcp_a[MONTH]', month] for month in range(12)],
-            file_registry['monthly_qf_table']
-        ),
-        target_path_list=[file_registry['monthly_qf_table']],
-        dependent_task_list=[
-            aggregate_recharge_task, align_task, b_sum_task] + quick_flow_task_list,
-        task_name='create monthly qf csv')
+    if not args['user_defined_local_recharge']:
+        monthly_csv_task = task_graph.add_task(
+            func=_generate_monthly_qf_b_p_csv,
+            args=(
+                file_registry['aggregate_vector'],
+                file_registry['b'],
+                [file_registry['qf_[MONTH]', month] for month in range(1, 13)],
+                [file_registry['prcp_a[MONTH]', month] for month in range(12)],
+                file_registry['monthly_qf_table']
+            ),
+            target_path_list=[file_registry['monthly_qf_table']],
+            dependent_task_list=[
+                aggregate_recharge_task, align_task, b_sum_task] + quick_flow_task_list,
+            task_name='create monthly qf csv')
 
     task_graph.close()
     task_graph.join()
