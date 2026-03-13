@@ -22,7 +22,8 @@ from osgeo import gdal
 from pydantic.dataclasses import dataclass
 
 from natcap.invest import gettext
-from natcap.invest.spec import ModelSpec, Input, Output
+from natcap.invest.spec import ModelSpec, Input, Output, \
+    CSVInput, SingleBandRasterInput
 
 LOGGER = logging.getLogger(__name__)
 
@@ -647,19 +648,46 @@ def raster_workspace_summary(file_registry):
     return pandas.DataFrame(raster_summary).T
 
 
-def raster_inputs_summary(args_dict):
+def raster_inputs_summary(args_dict, model_spec=None, check_csv_for_rasters=False):
     """Create a table of stats for all rasters in an args_dict."""
     raster_summary = {}
-    for v in args_dict.values():
-        if isinstance(v, str) and os.path.isfile(v):
-            resource = geometamaker.describe(v, compute_stats=True)
-            if isinstance(resource, geometamaker.models.RasterResource):
-                filename = os.path.basename(resource.path)
-                band = resource.get_band_description(1)
-                raster_summary[filename] = _build_stats_table_row(
-                    resource, band)
-                # Remove 'Units' column if all units are blank
-                if not any(raster_summary[filename][UNITS_COL_NAME]):
-                    del raster_summary[filename][UNITS_COL_NAME]
+
+    paths_to_check = [v for v in args_dict.values()
+                      if isinstance(v, str) and os.path.isfile(v)]
+
+    if model_spec and check_csv_for_rasters:
+        paths_to_check.extend(_parse_csv_paths_from_spec(args_dict, model_spec))
+
+    for v in paths_to_check:
+        resource = geometamaker.describe(v, compute_stats=True)
+        if isinstance(resource, geometamaker.models.RasterResource):
+            filename = os.path.basename(resource.path)
+            band = resource.get_band_description(1)
+            raster_summary[filename] = _build_stats_table_row(
+                resource, band)
+            # Remove 'Units' column if all units are blank
+            if not any(raster_summary[filename][UNITS_COL_NAME]):
+                del raster_summary[filename][UNITS_COL_NAME]
 
     return pandas.DataFrame(raster_summary).T
+
+
+def _parse_csv_paths_from_spec(args_dict, spec):
+    table_map_inputs = []
+    for input_ in spec.inputs:
+        if isinstance(input_, CSVInput):
+            table_map_inputs.extend([
+                (input_.id, col.id) for col in spec.get_input(input_.id).columns
+                if isinstance(col, SingleBandRasterInput)])
+
+    paths_to_check = []
+    for input_id, col_name in table_map_inputs:
+        if args_dict.get(input_id):
+            df = CSVInput.get_validated_dataframe(
+                    spec.get_input(input_id),
+                    csv_path=args_dict.get(input_id))
+            paths_to_check.extend([
+                v for v in df[col_name]
+                if isinstance(v, str) and os.path.isfile(v)])
+
+    return paths_to_check
