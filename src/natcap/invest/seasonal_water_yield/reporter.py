@@ -9,6 +9,7 @@ import numpy
 import pandas
 import pygeoprocessing
 from osgeo import gdal
+from osgeo import gdal_array
 from osgeo import ogr
 
 from natcap.invest import __version__
@@ -24,6 +25,8 @@ LOGGER = logging.getLogger(__name__)
 TEMPLATE = jinja_env.get_template('models/seasonal_water_yield.html')
 
 MAP_WIDTH = 450 # pixels
+TARGET_NODATA = -1
+TARGET_DTYPE = gdal.GDT_Float32
 
 qf_label_month_map = {
     f"qf_{month_index+1}": str(month_index+1) for month_index in range(12)
@@ -56,7 +59,7 @@ def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
     return attr_map.to_json()
 
 
-def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
+def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
     map_df = geopandas.read_file(aoi_vector_path)
     values_df = pandas.read_csv(aggregate_csv_path)
     values_df.month = values_df.month.astype(str)
@@ -126,6 +129,42 @@ def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
     return chart.to_json()
 
 
+def _mask_raster_list(source_raster_path_list, mask_stream_raster_path,
+                      target_masked_vrt_path_list):
+    """Using a raster of 1s and 0s, determine which pixels remain in output.
+
+    Args:
+        source_raster_path_list (list): List of paths to source rasters containing
+            pixel values to mask by the binary raster provided as a mask.
+        mask_stream_raster_path (str): The path to a stream network raster of
+            1s and 0s indicating whether a pixel should (0) or should not (1)
+            be copied to the target raster.
+        target_masked_vrt_path_list (list): List of paths to VRTs where the target
+            rasters should be written.
+
+    Returns:
+        None
+    """
+    source_raster_info = pygeoprocessing.get_raster_info(source_raster_path_list[0])
+    source_nodata = source_raster_info['nodata'][0]
+    target_numpy_dtype = gdal_array.GDALTypeCodeToNumericTypeCode(TARGET_DTYPE)
+
+    def _mask_op(mask, raster):
+        result = numpy.full(mask.shape, TARGET_NODATA,
+                            dtype=target_numpy_dtype)
+        valid_pixels = (
+            ~pygeoprocessing.array_equals_nodata(raster, source_nodata) &
+            (mask == 0))
+        result[valid_pixels] = raster[valid_pixels]
+        return result
+
+    for source_raster_path, target_vrt_path in zip(
+            source_raster_path_list, target_masked_vrt_path_list):
+        pygeoprocessing.raster_calculator(
+            [(mask_stream_raster_path, 1), (source_raster_path, 1)], _mask_op,
+            target_vrt_path, TARGET_DTYPE, TARGET_NODATA)
+
+
 def report(file_registry, args_dict, model_spec, target_html_filepath):
     """Generate an html summary of Seasonal Water Yield results.
 
@@ -172,7 +211,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         qf_b_charts = None
     else:
         # Monthly quickflow + baseflow plots and map
-        qf_b_charts_json = create_linked_monthly_plots(
+        qf_b_charts_json = _create_linked_monthly_plots(
                 file_registry['aggregate_vector'],
                 file_registry['monthly_qf_table'])
         qf_b_charts_caption = gettext(
@@ -183,8 +222,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             of their values.
             """
         )
-        qf_b_charts_source_list = [file_registry['monthly_qf_table'],
-                                   file_registry['aggregate_vector']]
+        qf_b_charts_source_list = [
+            model_spec.get_output('monthly_qf_table').path,
+            model_spec.get_output('aggregate_vector').path]
         qf_b_charts = {
             'json': qf_b_charts_json,
             'caption': qf_b_charts_caption,
@@ -256,8 +296,21 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 spec=model_spec.get_input('soil_group_path')))
 
         # Quickflow outputs are only created if not `user_defined_local_recharge`
+        masked_annual_qf_path = os.path.join(
+                args_dict['workspace_dir'], 'intermediate_outputs',
+                'annual_qf_masked' + (args_dict.get('results_suffix') or '') + '.vrt')
+        masked_monthly_qf_paths = [os.path.join(
+                args_dict['workspace_dir'], 'intermediate_outputs',
+                f'qf_{month}_masked' + (args_dict.get('results_suffix') or '') + '.vrt')
+                for month in range(1, 13)]
+        _mask_raster_list(
+                [file_registry['qf']] + [file_registry['qf_[MONTH]'][str(month)]
+                                         for month in range(1, 13)],
+                file_registry['stream'],
+                [masked_annual_qf_path] + masked_monthly_qf_paths)
+
         annual_qf_raster_config = RasterPlotConfig(
-                raster_path=file_registry['qf'],
+                raster_path=masked_annual_qf_path,
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('qf'),
                 title=gettext(
@@ -266,14 +319,14 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
         monthly_qf_raster_config_list = [
             RasterPlotConfig(
-                raster_path=file_registry['qf_[MONTH]'][str(month)],
+                raster_path=masked_qf_path,
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('qf_[MONTH]'),
                 title=gettext(
                     f"Quickflow for month {month} "
                     f"({os.path.basename(file_registry['qf_[MONTH]'][str(month)])})"
                 )
-            ) for month in range(1, 13)]
+            ) for month, masked_qf_path in zip(range(1, 13), masked_monthly_qf_paths)]
 
         annual_qf_img_src = raster_utils.plot_and_base64_encode_rasters(
                 [annual_qf_raster_config])
@@ -286,16 +339,29 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         monthly_qf_img_src = raster_utils.base64_encode(monthly_qf_plots)
         monthly_qf_displayname = os.path.basename(
                 monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
+        monthly_qf_base_raster_name = os.path.basename(
+                file_registry['qf_[MONTH]']['1']).replace('1', '[MONTH]')
+        stream_path = os.path.basename(file_registry['stream'])
+        qf_caption_note = gettext(
+                f"The stream network in `{stream_path}`"
+                " has been used as a mask to help improve contrast for the"
+                " quickflow values of non-stream pixels."),
         qf_raster_caption = [
-            (f'{annual_qf_raster_config.title}:'
-             f'{annual_qf_raster_config.spec.about}'),
+            (f'{os.path.basename(annual_qf_raster_config.raster_path)}:'
+             f'{annual_qf_raster_config.spec.about}. This VRT is derived from'
+             f' `{os.path.basename(file_registry['qf'])}`, masked by `{stream_path}`.'
+             f' (Units: {annual_qf_raster_config.spec.units})'),
             (f'{monthly_qf_displayname}:'
-             f'{monthly_qf_raster_config_list[0].spec.about}')
+             f'{monthly_qf_raster_config_list[0].spec.about}. This VRT is derived from'
+             f' the monthly quickflow rasters, `{monthly_qf_base_raster_name}`,'
+             f' masked by `{stream_path}`.'
+             f' (Units: {monthly_qf_raster_config_list[0].spec.units})')
         ]
 
         qf_rasters = {
             'annual_qf_img_src': annual_qf_img_src,
             'monthly_qf_img_src': monthly_qf_img_src,
+            'qf_caption_note': qf_caption_note,
             'qf_caption': qf_raster_caption}
 
     # Create raster image sources and captions:
