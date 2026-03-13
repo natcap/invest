@@ -349,7 +349,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         qf_raster_caption = [
             (f'{os.path.basename(annual_qf_raster_config.raster_path)}:'
              f'{annual_qf_raster_config.spec.about}. This VRT is derived from'
-             f' `{os.path.basename(file_registry['qf'])}`, masked by `{stream_path}`.'
+             f' `{os.path.basename(file_registry["qf"])}`, masked by `{stream_path}`.'
              f' (Units: {annual_qf_raster_config.spec.units})'),
             (f'{monthly_qf_displayname}:'
              f'{monthly_qf_raster_config_list[0].spec.about}. This VRT is derived from'
