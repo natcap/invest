@@ -12,12 +12,11 @@
   <h2 class="section-header">Results</h2>
   {% if qf_rasters %}
     {{ accordion_section(
-      'Annual and Monthly Quickflow (QF), masked by stream network',
+      'Annual and Monthly Quickflow (QF)',
       content_grid([
         (caption(raster_group_caption, pre_caption=True), 100),
         (raster_plot_img(qf_rasters['annual_qf_img_src'], 'Annual Quickflow values'), 100),
         (raster_plot_img(qf_rasters['monthly_qf_img_src'], 'Monthly Quickflow values'), 100),
-        (caption(qf_rasters['qf_caption_note']), 100),
         (caption(qf_rasters['qf_caption'], definition_list=True), 100)
       ])
     )}}
