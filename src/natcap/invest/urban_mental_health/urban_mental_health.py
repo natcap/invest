@@ -960,9 +960,9 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
         tgt_pixel_size = numpy.mean([abs(raster_info["pixel_size"][0]),
                                      abs(raster_info["pixel_size"][1])])
         LOGGER.info("Baseline raster is projected in meters; will use pixel "
-                    f"size {tgt_pixel_size} as target in align_and_resize,"
+                    f"size {tgt_pixel_size} as target in align_and_resize, "
                     "which is the native resolution of the raster (transformed"
-                    "to have square pixels if it doesn't already)")
+                    "to have square pixels if it doesn't already).")
         return (tgt_pixel_size, -tgt_pixel_size)
     else:
         vector_info = pygeoprocessing.get_vector_info(vector_path)
