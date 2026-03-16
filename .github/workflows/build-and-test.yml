@@ -532,12 +532,12 @@ jobs:
           DEST=gs://releases.naturalcapitalproject.org/invest-reports/latest
           gsutil -m rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
 
-      - name: Tar the workspace to preserve permissions (macOS)
-        if: failure() && matrix.os == 'macos-15-intel'
+      - name: Tar the workspace to preserve permissions
+        if: failure()
         run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
 
       - name: Upload workspace on failure
-        if: ${{ failure() }}
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: InVEST-failed-${{ runner.os }}-workspace
