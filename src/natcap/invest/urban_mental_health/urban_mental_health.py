@@ -925,26 +925,26 @@ def execute(args):
 
 
 def _get_raster_pixel_size_in_meters(raster_path, vector_path):
-    """Get raster pixel size in meters; if not projected in m, use vector CRS.
+    """Get square pixel size in meters; if not projected in m, use vector CRS.
 
     Use gdal to auto calculate the target pixel size in meters if transforming
     the raster to the CRS of the input vector AOI. This is necessary because
     we do not want to force users to initially project their input rasters
     in meters, however align_and_resize requires a target pixel size.
+    The pixels will be square with the same value for width and height.
 
     Args:
         raster_path (str): Path to baseline LULC or baseline NDVI raster,
-            which is projected by may not be projected in meters.
+            which may or may not be projected in meters.
         vector_path (str): Path to AOI vector in a projected CRS with
-            meter units.
+            units in meters.
 
     Returns:
-        tuple[float, float]: (pixel_width_m, pixel_height_m)
-        pixel_size[float]: target pixel size in meters (to use when
-            aligning and resizing raster stack).
+        tuple[float, float]: (pixel_width_m, pixel_height_m), which will be
+            used as the target pixel size in meters when aligning and resizing
+            raster stack.
     """
-    def _raster_projected_in_m(raster_info):
-        projection_wkt = raster_info["projection_wkt"]
+    def _raster_projected_in_m(projection_wkt):
         if projection_wkt:
             srs = osr.SpatialReference()
             srs.ImportFromWkt(projection_wkt)
@@ -956,11 +956,14 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
         return False
 
     raster_info = pygeoprocessing.get_raster_info(raster_path)
-    if _raster_projected_in_m(raster_info):
-        LOGGER.info("Baseline raster is projected in meters; will use native "
-                    f"pixel size {raster_info['pixel_size']} as target "
-                    "in align_and_resize")
-        return raster_info["pixel_size"]
+    if _raster_projected_in_m(raster_info['projection_wkt']):
+        tgt_pixel_size = numpy.mean([abs(raster_info["pixel_size"][0]),
+                                     abs(raster_info["pixel_size"][1])])
+        LOGGER.info("Baseline raster is projected in meters; will use pixel "
+                    f"size {tgt_pixel_size} as target in align_and_resize,"
+                    "which is the native resolution of the raster (transformed"
+                    "to have square pixels if it doesn't already)")
+        return (tgt_pixel_size, -tgt_pixel_size)
     else:
         vector_info = pygeoprocessing.get_vector_info(vector_path)
         vector_wkt = vector_info["projection_wkt"]
@@ -973,8 +976,10 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
         LOGGER.info("Baseline raster is not projected in meters; will use "
                     f"transformed pixel size {pixel_width, pixel_height} as "
                     "target in align_and_resize")
+        src_ds = None
 
-        return (pixel_width, pixel_height)
+        tgt_pixel_size = numpy.mean([abs(pixel_width), abs(pixel_height)])
+        return (tgt_pixel_size, -tgt_pixel_size)
 
 
 def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
@@ -1226,9 +1231,9 @@ def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
     if source_nodata is not None:
         mean_ndvi_by_lulc_dict[source_nodata] = target_nodata
     else:
-        LOGGER.warning("The input LULC raster has no NoData value. This can "
-                       "cause problems if the extent of the buffered AOI "
-                       "exceeds that of the LULC raster")
+        LOGGER.warning("The input LULC raster has no NoData value set. This "
+                       "can cause problems if the extent of the buffered AOI "
+                       "exceeds that of the LULC raster.")
 
     try:
         utils.reclassify_raster(
