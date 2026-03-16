@@ -1,3 +1,4 @@
+import calendar
 import csv
 import logging
 import os
@@ -14,8 +15,13 @@ from osgeo import ogr
 from natcap.invest import __version__
 from natcap.invest import gettext
 import natcap.invest.spec
-from natcap.invest.reports import jinja_env, raster_utils, report_constants, vector_utils
-from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
+from natcap.invest.reports import jinja_env
+from natcap.invest.reports import raster_utils
+from natcap.invest.reports import report_constants
+from natcap.invest.reports import vector_utils
+from natcap.invest.reports.raster_utils import RasterDatatype
+from natcap.invest.reports.raster_utils import RasterPlotConfig
+from natcap.invest.reports.raster_utils import RasterTransform
 from natcap.invest.unit_registry import u
 
 
@@ -56,7 +62,7 @@ def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
     return attr_map.to_json()
 
 
-def create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
+def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
     map_df = geopandas.read_file(aoi_vector_path)
     values_df = pandas.read_csv(aggregate_csv_path)
     values_df.month = values_df.month.astype(str)
@@ -172,7 +178,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         qf_b_charts = None
     else:
         # Monthly quickflow + baseflow plots and map
-        qf_b_charts_json = create_linked_monthly_plots(
+        qf_b_charts_json = _create_linked_monthly_plots(
                 file_registry['aggregate_vector'],
                 file_registry['monthly_qf_table'])
         qf_b_charts_caption = gettext(
@@ -183,8 +189,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             of their values.
             """
         )
-        qf_b_charts_source_list = [file_registry['monthly_qf_table'],
-                                   file_registry['aggregate_vector']]
+        qf_b_charts_source_list = [
+            model_spec.get_output('monthly_qf_table').path,
+            model_spec.get_output('aggregate_vector').path]
         qf_b_charts = {
             'json': qf_b_charts_json,
             'caption': qf_b_charts_caption,
@@ -260,19 +267,18 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 raster_path=file_registry['qf'],
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('qf'),
-                title=gettext(
-                    f"Annual Quickflow ({os.path.basename(file_registry['qf'])})"
-                ))
+                title=gettext("Annual Quickflow"),
+                transform=RasterTransform.log,
+                custom_colormap='GnBu')
 
         monthly_qf_raster_config_list = [
             RasterPlotConfig(
                 raster_path=file_registry['qf_[MONTH]'][str(month)],
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('qf_[MONTH]'),
-                title=gettext(
-                    f"Quickflow for month {month} "
-                    f"({os.path.basename(file_registry['qf_[MONTH]'][str(month)])})"
-                )
+                title=gettext(f"{calendar.month_name[month]}"),
+                transform=RasterTransform.log,
+                custom_colormap='GnBu'
             ) for month in range(1, 13)]
 
         annual_qf_img_src = raster_utils.plot_and_base64_encode_rasters(
@@ -281,8 +287,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 [raster_config.raster_path for raster_config
                  in monthly_qf_raster_config_list],
                 'continuous',
+                transform=RasterTransform.log,
                 title_list=[raster_config.title for raster_config
-                            in monthly_qf_raster_config_list])
+                            in monthly_qf_raster_config_list],
+                small_plots=True,
+                custom_colormap='GnBu')
         monthly_qf_img_src = raster_utils.base64_encode(monthly_qf_plots)
         monthly_qf_displayname = os.path.basename(
                 monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
