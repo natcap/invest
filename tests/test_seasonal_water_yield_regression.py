@@ -14,9 +14,6 @@ from osgeo import osr
 from .utils import assert_complete_execute
 
 gdal.UseExceptions()
-REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'seasonal_water_yield')
 
 
 def make_simple_shp(base_shp_path, origin):
@@ -508,10 +505,12 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
     def setUp(self):
         """Create temporary workspace."""
         self.workspace_dir = tempfile.mkdtemp()
+#        self.workspace_dir = "/Users/megannissel/dev/debugging/swy_reports/"
 
     def tearDown(self):
         """Remove temporary workspace."""
         shutil.rmtree(self.workspace_dir)
+#        pass
 
     @staticmethod
     def generate_base_args(workspace_dir):
@@ -601,7 +600,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         execute_kwargs = {
             'generate_report': bool(seasonal_water_yield.MODEL_SPEC.reporter),
-            'save_file_registry': True
+            'save_file_registry': True,
+            'check_outputs': True
         }
         seasonal_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
@@ -615,6 +615,23 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
+
+        # check the values in the avg monthly quickflow baseflow precip csv
+        actual_result_df = pandas.read_csv(
+            os.path.join(args['workspace_dir'], 'monthly_quickflow_baseflow.csv'))
+        expected_qf = [
+            2.116894e-5, 2.541212e-5, 2.514573e-5, 2.805605e-5, 2.916745e-5, 3.223471e-5,
+            3.323317e-5, 3.528216e-5, 3.858638e-5, 3.941151e-5, 4.287460e-5, 4.358156e-5]
+        expected_b = [
+            2.276286e-5, 2.498535e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5, 2.352162e-5,
+            2.276286e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5]
+        expected_p = [
+            4.106930e-5, 4.917726e-5, 4.853644e-5, 5.401235e-5, 5.600358e-5, 6.172840e-5,
+            6.347073e-5, 6.720430e-5, 7.330247e-5, 7.467145e-5, 8.101852e-5, 8.213859e-5]
+        for expected_val, col_name in [(expected_qf, 'quickflow'),
+                (expected_b, 'baseflow'), (expected_p, 'precipitation')]:
+            numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
+                                          rtol=1e-6)
 
     def test_base_regression_d8(self):
         """SWY base regression test on sample data in D8 mode.
@@ -667,6 +684,23 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                     (field, f'expected: {expected_value}', f'actual: {val}'))
         if mismatch_list:
             raise RuntimeError(f'results not expected: {mismatch_list}')
+
+        # check the values in the avg monthly quickflow baseflow precip csv
+        actual_result_df = pandas.read_csv(
+            os.path.join(args['workspace_dir'], 'monthly_quickflow_baseflow.csv'))
+        expected_qf = [
+            2.083911e-5, 2.501863e-5, 2.475883e-5, 2.762715e-5, 2.872444e-5, 3.174831e-5,
+            3.273498e-5, 3.475670e-5, 3.801546e-5, 3.883215e-5, 4.224839e-5, 4.294909e-5]
+        expected_b = [
+            2.313658e-5, 2.539555e-5, 2.313658e-5, 2.390779e-5, 2.313658e-5, 2.390779e-5,
+            2.313658e-5, 2.313658e-5, 2.390779e-5, 2.313658e-5, 2.390779e-5, 2.313658e-5]
+        expected_p = [
+            4.106930e-5, 4.917726e-5, 4.853644e-5, 5.401235e-5, 5.600358e-5, 6.172840e-5,
+            6.347073e-5, 6.720430e-5, 7.330247e-5, 7.467145e-5, 8.101852e-5, 8.213859e-5]
+        for expected_val, col_name in [(expected_qf, 'quickflow'),
+                (expected_b, 'baseflow'), (expected_p, 'precipitation')]:
+            numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
+                                          rtol=1e-6)
 
     def test_base_regression_nodata_inf(self):
         """SWY base regression test on sample data with really small nodata.
@@ -746,6 +780,23 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
+        # check the values in the avg monthly quickflow baseflow precip csv
+        actual_result_df = pandas.read_csv(
+            os.path.join(args['workspace_dir'], 'monthly_quickflow_baseflow.csv'))
+        expected_qf = [
+            2.102520e-5, 2.524000e-5, 2.497585e-5, 2.786701e-5, 2.897143e-5, 3.201866e-5,
+            3.301102e-5, 3.504694e-5, 3.832983e-5, 3.915016e-5, 4.259103e-5, 4.329407e-5]
+        expected_b = [
+            2.242553e-5, 2.461508e-5, 2.242553e-5, 2.317305e-5, 2.242553e-5, 2.317305e-5,
+            2.242553e-5, 2.242553e-5, 2.317305e-5, 2.242553e-5, 2.317305e-5, 2.242553e-5]
+        expected_p = [
+            4.065860e-5, 4.868549e-5, 4.805108e-5, 5.347222e-5, 5.544355e-5, 6.111111e-5,
+            6.283602e-5, 6.653226e-5, 7.256944e-5, 7.392473e-5, 8.020833e-5, 8.131720e-5]
+        for expected_val, col_name in [(expected_qf, 'quickflow'),
+                (expected_b, 'baseflow'), (expected_p, 'precipitation')]:
+            numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
+                                          rtol=1e-6)
+
     def test_bad_biophysical_table(self):
         """SWY bad biophysical table with non-numerical values."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
@@ -798,6 +849,23 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
+
+        # check the values in the avg monthly quickflow baseflow precip csv
+        actual_result_df = pandas.read_csv(
+            os.path.join(args['workspace_dir'], 'monthly_quickflow_baseflow.csv'))
+        expected_qf = [
+            2.116894e-5, 2.541212e-5, 2.514573e-5, 2.805605e-5, 2.916745e-5, 3.223471e-5,
+            3.323317e-5, 3.528216e-5, 3.858638e-5, 3.941151e-5, 4.287460e-5, 4.358156e-5]
+        expected_b = [
+            2.276286e-5, 2.498535e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5, 2.352162e-5,
+            2.276286e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5]
+        expected_p = [
+            4.106930e-5, 4.917726e-5, 4.853644e-5, 5.401235e-5, 5.600358e-5, 6.172840e-5,
+            6.347073e-5, 6.720430e-5, 7.330247e-5, 7.467145e-5, 8.101852e-5, 8.213859e-5]
+        for expected_val, col_name in [(expected_qf, 'quickflow'),
+                (expected_b, 'baseflow'), (expected_p, 'precipitation')]:
+            numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
+                                          rtol=1e-6)
 
     def test_climate_zones_missing_cz_id(self):
         """SWY climate zone regression test fails on bad cz table data.
@@ -932,7 +1000,14 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_recharge_raster(recharge_ras_path)
         args['l_path'] = recharge_ras_path
 
-        seasonal_water_yield.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(seasonal_water_yield.MODEL_SPEC.reporter),
+            'save_file_registry': True,
+            'check_outputs': True
+        }
+        seasonal_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, seasonal_water_yield.MODEL_SPEC, **execute_kwargs)
 
         # generate aggregated results csv table for assertion
         agg_results_csv_path = os.path.join(args['workspace_dir'],
