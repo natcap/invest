@@ -185,8 +185,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             """
             This chart displays the monthly combined average baseflow + quickflow for
             each feature within the AOI. Select a feature on the AOI map to see the
-            values for that feature. Selecting multiple features will display the sum
-            of their values.
+            values for that feature. Shift+Click to select multiple features; the chart
+            will display the sum of their values.
             """
         )
         qf_b_charts_source_list = [
@@ -234,7 +234,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_input('l_path')))
         qf_rasters = None
-        raster_outputs_title = 'Annual Baseflow'
+        raster_outputs_heading = 'Annual Baseflow'
 
     else:
         output_raster_config_list.extend([
@@ -254,7 +254,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 raster_path=file_registry['l'],
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('l'))])
-        raster_outputs_title = 'Additional Raster Outputs'
+        raster_outputs_heading = 'Additional Raster Outputs'
 
         input_raster_config_list.append(
             RasterPlotConfig(
@@ -291,7 +291,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 title_list=[raster_config.title for raster_config
                             in monthly_qf_raster_config_list],
                 small_plots=True,
-                custom_colormap='GnBu')
+                custom_colormap='GnBu',
+                supertitle=gettext("Monthly Quickflow"))
         monthly_qf_img_src = raster_utils.base64_encode(monthly_qf_plots)
         monthly_qf_displayname = os.path.basename(
                 monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
@@ -350,7 +351,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             stream_img_src=stream_img_src,
             stream_caption=stream_raster_caption,
             stream_outputs_heading=stream_outputs_heading,
-            outputs_title=raster_outputs_title,
+            outputs_heading=raster_outputs_heading,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
             qf_rasters=qf_rasters,

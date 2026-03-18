@@ -508,7 +508,7 @@ def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
 
 
 def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
-                       small_plots=False, custom_colormap=None):
+                       small_plots=False, custom_colormap=None, supertitle=None):
     """Plot a list of rasters that will all share a fixed colorscale.
 
     When all the rasters have the same shape and represent the same variable,
@@ -529,6 +529,8 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
             making the plots smaller so more can be viewed side-by-side.
         custom_colormap (str): Optional name of a matplotlib colormap to use
             in place of the default derived from the raster datatype.
+        supertitle (str): Optional title to use for the entire group of
+            raster facets.
 
     """
     raster_info = pygeoprocessing.get_raster_info(tif_list[0])
@@ -592,6 +594,9 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
         units = _get_raster_units(tif_list[0])
         legend_label = f"{UNITS_TEXT}: {units}" if units else None
         fig.colorbar(mappable, ax=axes.ravel().tolist(), label=legend_label)
+
+    if supertitle:
+        fig.suptitle(f"{supertitle}", fontsize=TITLE_FONT_SIZE)
 
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
