@@ -349,7 +349,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " (which is not evapotranspired before it reaches the stream)."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="b_sum",
@@ -360,7 +360,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " stream."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="cn",
@@ -380,14 +380,14 @@ MODEL_SPEC = spec.ModelSpec(
                 " local recharge as calculated by the model."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="l_avail",
             path="L_avail.tif",
             about=gettext("Map of available local recharge"),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="l_sum_avail",
@@ -397,7 +397,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " available for evapotranspiration by this pixel."
             ),
             data_type=float,
-            units=u.millimeter,
+            units=u.millimeter / u.year,
             created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
@@ -409,7 +409,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " evapotranspiration to downslope pixels."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="qf",
@@ -436,7 +436,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " the total recharge."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.VectorOutput(
             id="aggregate_vector",
@@ -447,7 +447,7 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberOutput(
                     id="qb",
                     about=gettext("Mean local recharge value within the watershed"),
-                    units=u.millimeter
+                    units=u.millimeter / u.year
                 ),
                 spec.NumberOutput(
                     id="vri_sum",
@@ -455,7 +455,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "Total recharge contribution, (positive or negative) within the"
                         " watershed."
                     ),
-                    units=u.millimeter
+                    units=u.millimeter / u.year
                 )
             ]
         ),
@@ -520,7 +520,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/aet.tif",
             about=gettext("Map of actual evapotranspiration"),
             data_type=float,
-            units=u.millimeter,
+            units=u.millimeter / u.year,
             created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
@@ -531,7 +531,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " the option selected."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="qf_[MONTH]",
@@ -540,7 +540,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Maps of monthly quickflow (1 = January… 12 = December)"
             ),
             data_type=float,
-            units=u.millimeter,
+            units=u.millimeter / u.month,
             created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
@@ -559,7 +559,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " spatial inputs"
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="dem_aligned",
@@ -586,7 +586,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " other spatial inputs"
             ),
             data_type=int,
-            units=None,
+            units=u.none,
             created_if="not user_defined_local_recharge"
         ),
         spec.FLOW_ACCUMULATION.model_copy(update=dict(
@@ -608,7 +608,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/n_events[MONTH].tif",
             about=gettext("Map of monthly rain events"),
             data_type=int,
-            units=None,
+            units=u.none,
             created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
@@ -619,7 +619,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " spatial inputs"
             ),
             data_type=float,
-            units=u.millimeter,
+            units=u.millimeter / u.month,
             created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
@@ -639,7 +639,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             created_if="user_defined_climate_zones",
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.TASKGRAPH_CACHE
     ]
