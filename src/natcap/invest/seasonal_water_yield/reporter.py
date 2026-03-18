@@ -328,7 +328,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             file_registry).to_html(na_rep='')
 
     input_raster_stats_table = raster_utils.raster_inputs_summary(
-            args_dict, model_spec, check_csv_for_rasters=True).to_html(na_rep='')
+            args_dict, model_spec).to_html(na_rep='')
 
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
             input_raster_config_list)

@@ -674,15 +674,14 @@ def raster_workspace_summary(file_registry):
     return pandas.DataFrame(raster_summary).T
 
 
-def raster_inputs_summary(args_dict, model_spec=None, check_csv_for_rasters=False):
+def raster_inputs_summary(args_dict, model_spec):
     """Create a table of stats for all rasters in an args_dict."""
     raster_summary = {}
 
     paths_to_check = [v for v in args_dict.values()
                       if isinstance(v, str) and os.path.isfile(v)]
 
-    if model_spec and check_csv_for_rasters:
-        paths_to_check.extend(_parse_csv_paths_from_spec(args_dict, model_spec))
+    paths_to_check.extend(_parse_csv_paths_from_spec(args_dict, model_spec))
 
     for v in paths_to_check:
         resource = geometamaker.describe(v, compute_stats=True)
