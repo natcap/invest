@@ -633,17 +633,13 @@ def _build_stats_table_row(resource, band):
 
 
 def _get_raster_metadata(filepath):
-    if isinstance(filepath, collections.abc.Mapping):
-        for path in filepath.values():
-            return _get_raster_metadata(path)
-    else:
-        try:
-            resource = geometamaker_load(f'{filepath}.yml')
-        except (FileNotFoundError, ValueError) as err:
-            LOGGER.debug(err)
-            return None
-        if isinstance(resource, geometamaker.models.RasterResource):
-            return resource
+    try:
+        resource = geometamaker_load(f'{filepath}.yml')
+    except (FileNotFoundError, ValueError) as err:
+        LOGGER.debug(err)
+        return None
+    if isinstance(resource, geometamaker.models.RasterResource):
+        return resource
 
 
 def _get_raster_units(filepath):
@@ -654,13 +650,21 @@ def _get_raster_units(filepath):
 def raster_workspace_summary(file_registry):
     """Create a table of stats for all rasters in a file_registry."""
     raster_summary = {}
-    for path in file_registry.values():
+
+    def _summarize_output(path):
         resource = _get_raster_metadata(path)
         band = resource.get_band_description(1) if resource else None
         if band:
             filename = os.path.basename(resource.path)
             raster_summary[filename] = _build_stats_table_row(
                 resource, band)
+
+    for item in file_registry.values():
+        if isinstance(item, collections.abc.Mapping):
+            for path in item.values():
+                _summarize_output(path)
+        else:
+            _summarize_output(item)
 
     return pandas.DataFrame(raster_summary).T
 

@@ -542,5 +542,5 @@ class RasterWorkspaceSummaryTests(unittest.TestCase):
             file_registry, args_dict)
         dataframe = raster_utils.raster_workspace_summary(file_registry)
 
-        # There are 2 rasters in the sample output spec
-        self.assertEqual(dataframe.shape, (2, 7))
+        # There are 3 rasters in the sample output spec
+        self.assertEqual(dataframe.shape, (3, 7))
