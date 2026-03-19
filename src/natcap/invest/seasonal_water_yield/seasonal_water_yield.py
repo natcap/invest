@@ -452,11 +452,19 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberOutput(
                     id="vri_sum",
                     about=gettext(
-                        "Total recharge contribution, (positive or negative) within the"
+                        "Total recharge contribution (positive or negative) within the"
                         " watershed."
                     ),
                     units=u.millimeter / u.year
+                ),
+                spec.IntegerOutput(
+                    id="geom_id",
+                    about=gettext(
+                        "A unique ID for the watershed."
+                    ),
+                    units=u.none
                 )
+
             ]
         ),
         spec.CSVOutput(
@@ -470,8 +478,8 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.IntegerOutput(
                     id="geom_id",
                     about=gettext(
-                        "The Feature ID for the watershed. This will correspond to"
-                        " the FIDs in the Aggregate Results shapefile."
+                        "A unique ID for the watershed. This will correspond to"
+                        " the 'geom_id' column in the Aggregate Results shapefile."
                     ),
                     units=u.none
                 ),
@@ -1514,7 +1522,6 @@ def _aggregate_recharge(
     for raster_path, aggregate_field_id, op_type in [
             (l_path, 'qb', 'mean'), (vri_path, 'vri_sum', 'sum')]:
 
-        # aggregate carbon stocks by the new ID field
         aggregate_stats = pygeoprocessing.zonal_statistics(
             (raster_path, 1), aggregate_vector_path)
 
