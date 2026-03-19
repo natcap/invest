@@ -6,6 +6,7 @@ import textwrap
 import os
 from io import BytesIO
 from enum import Enum
+from typing import Union, Optional
 
 import distinctipy
 import geometamaker
@@ -158,8 +159,8 @@ class RasterPlotConfig:
     """For highly skewed data, a transformation can help reveal variation."""
     title: str | None = None
     """An optional plot title. If ``None``, the filename is used."""
-    custom_colormap: str | None = None
-    """The name of a custom matplotlib colormap."""
+    colormap: Optional[Union[str, object]] = None
+    """The string name of a registered matplotlib colormap or a colormap object."""
 
     def __post_init__(self):
         if self.title is None:
@@ -396,7 +397,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         colorbar_kwargs = {}
         imshow_kwargs['norm'] = transform
         imshow_kwargs['interpolation'] = 'none'
-        cmap = config.custom_colormap if config.custom_colormap else COLORMAPS[dtype]
+        cmap = plt.get_cmap(config.colormap if config.colormap else COLORMAPS[dtype])
         if dtype == 'divergent':
             if transform == 'log':
                 transform = matplotlib.colors.SymLogNorm(linthresh=0.03)
@@ -508,7 +509,7 @@ def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
 
 
 def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
-                       small_plots=False, custom_colormap=None, supertitle=None):
+                       small_plots=False, colormap=None, supertitle=None):
     """Plot a list of rasters that will all share a fixed colorscale.
 
     When all the rasters have the same shape and represent the same variable,
@@ -527,8 +528,9 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
         small_plots (bool): Defaults to False. If True, the typical number of
             columns calculated for plotting facets will be increased by 1,
             making the plots smaller so more can be viewed side-by-side.
-        custom_colormap (str): Optional name of a matplotlib colormap to use
-            in place of the default derived from the raster datatype.
+        colormap (str): Optional string name of a registered matplotlib
+            colormap or a colormap object to use in place of the default
+            derived from the raster datatype.
         supertitle (str): Optional title to use for the entire group of
             raster facets.
 
@@ -539,7 +541,6 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
     xy_ratio = _get_aspect_ratio(bbox)
     fig, axes = _figure_subplots(xy_ratio, n_plots, small_plots=small_plots)
 
-    cmap_str = custom_colormap if custom_colormap else COLORMAPS[datatype]
     if transform is None:
         transform = 'linear'
     if title_list is None:
@@ -563,7 +564,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
     # instead of storing all arrays in memory
     vmin = numpy.nanmin(ndarray)
     vmax = numpy.nanmax(ndarray)
-    cmap = plt.get_cmap(cmap_str)
+    cmap = plt.get_cmap(colormap if colormap else COLORMAPS[datatype])
     if datatype == 'divergent':
         if transform == 'log':
             normalizer = matplotlib.colors.SymLogNorm(linthresh=0.03, vmin=vmin, vmax=vmax)
@@ -581,22 +582,13 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
         # all rasters are identical size; `resampled` will be the same for all
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
         ax.set_title(**_get_title_kwargs(title, resampled, title_line_width))
-        if not small_plots:
-            units = _get_raster_units(raster_path)
-            if units:
-                (ylim_kwargs,
-                 text_kwargs) = _get_units_text_kwargs(units, len(arr))
-                ax.set_ylim(**ylim_kwargs)
-                ax.text(**text_kwargs)
-            fig.colorbar(mappable, ax=ax)
 
-    if small_plots:
-        units = _get_raster_units(tif_list[0])
-        legend_label = f"{UNITS_TEXT}: {units}" if units else None
-        fig.colorbar(mappable, ax=axes.ravel().tolist(), label=legend_label)
+    units = _get_raster_units(tif_list[0])
+    legend_label = f"{UNITS_TEXT}: {units}" if units else None
+    fig.colorbar(mappable, ax=axes.ravel().tolist(), label=legend_label)
 
     if supertitle:
-        fig.suptitle(f"{supertitle}", fontsize=TITLE_FONT_SIZE)
+        fig.suptitle(supertitle, fontsize=TITLE_FONT_SIZE)
 
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
@@ -702,7 +694,7 @@ def _parse_csv_paths_from_spec(args_dict, spec):
     for input_ in spec.inputs:
         if isinstance(input_, CSVInput):
             table_map_inputs.extend([
-                (input_.id, col.id) for col in spec.get_input(input_.id).columns
+                (input_.id, col.id) for col in input_.columns
                 if isinstance(col, SingleBandRasterInput)])
 
     paths_to_check = []
