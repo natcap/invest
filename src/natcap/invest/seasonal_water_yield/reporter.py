@@ -32,7 +32,7 @@ TEMPLATE = jinja_env.get_template('models/seasonal_water_yield.html')
 MAP_WIDTH = 450 # pixels
 
 qf_label_month_map = {
-    f"qf_{month_index+1}": str(month_index+1) for month_index in range(12)
+    f"qf_{month_index}": str(month_index) for month_index in range(1, 13)
 }
 
 
@@ -40,16 +40,14 @@ def _label_to_month(row):
     return qf_label_month_map[row['MonthLabel']]
 
 
-def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
+def _create_aggregate_map(geodataframe, xy_ratio, attribute,
                           title):
     attr_map = altair.Chart(geodataframe).mark_geoshape(
-        clip=True,
         stroke="white",
         strokeWidth=0.5
     ).project(
         type='identity',
-        reflectY=True,
-        fit=extent_feature
+        reflectY=True
     ).encode(
         color=attribute,
         tooltip=[altair.Tooltip(attribute, title=attribute)]
@@ -62,31 +60,29 @@ def _create_aggregate_map(geodataframe, extent_feature, xy_ratio, attribute,
     return attr_map.to_json()
 
 
-def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
+def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     map_df = geopandas.read_file(aoi_vector_path)
     values_df = pandas.read_csv(aggregate_csv_path)
     values_df.month = values_df.month.astype(str)
 
-    extent_feature, xy_ratio = vector_utils.get_geojson_bbox(map_df)
-
     feat_select = altair.selection_point(fields=["geom_id"], name="feat_select", value=0)
 
     attr_map = altair.Chart(map_df).mark_geoshape(
-        clip=True, stroke="white", strokeWidth=0.5
-        ).project(
-            type='identity',
-            reflectY=True,
-            fit=extent_feature
+        stroke="white",
+        strokeWidth=0.5
+    ).project(
+        type='identity',
+        reflectY=True
     ).encode(
         color=altair.condition(
             feat_select,
             altair.value("seagreen"),
             altair.value("lightgray")
         ),
-        tooltip=[altair.Tooltip("geom_id", title="FID")]
+        tooltip=[altair.Tooltip("geom_id", title="Feature")]
     ).properties(
-        width=MAP_WIDTH,
-        height=MAP_WIDTH / xy_ratio,
+        width=MAP_WIDTH*1.25,
+        height=MAP_WIDTH*1.25 / xy_ratio,
         title="AOI"
     ).add_params(
         feat_select
@@ -124,11 +120,23 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path):
         feat_select
     ).properties(
         title=altair.Title(altair.expr(
-            f'"Mean Quickflow + Baseflow for Feature, FID " + {feat_select.name}.geom_id')
+            f'"Mean Quickflow + Baseflow for Feature " + {feat_select.name}.geom_id')
         )
     )
 
-    chart = attr_map | combined_chart
+    legend_config = vector_utils.LEGEND_CONFIG
+    legend_config['orient'] = 'right'
+
+    chart = altair.hconcat(
+        attr_map, combined_chart,
+        spacing=30
+    ).configure_legend(
+        **legend_config
+    ).configure_axis(
+        **vector_utils.AXIS_CONFIG
+    ).configure_view(
+        discreteWidth=300
+    )
     return chart.to_json()
 
 
@@ -151,10 +159,10 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     # qb and vri_sum plots from the output aggregate vector
     aggregated_results = geopandas.read_file(file_registry['aggregate_vector'])
-    extent_feature, xy_ratio = vector_utils.get_geojson_bbox(aggregated_results)
+    _, xy_ratio = vector_utils.get_geojson_bbox(aggregated_results)
 
     qb_map_json = _create_aggregate_map(
-        aggregated_results, extent_feature, xy_ratio, 'qb',
+        aggregated_results, xy_ratio, 'qb',
         gettext("Mean local recharge value within the watershed "
                 f"({model_spec.get_output('aggregate_vector').get_field('qb').units})"))
     qb_map_caption = [
@@ -163,7 +171,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 'relative values, not absolute values.')]
 
     vri_sum_map_json = _create_aggregate_map(
-        aggregated_results, extent_feature, xy_ratio, 'vri_sum',
+        aggregated_results, xy_ratio, 'vri_sum',
         gettext("Total recharge contribution of the watershed "
                 f"({model_spec.get_output('aggregate_vector').get_field('vri_sum').units})"))
     vri_sum_map_caption = [
@@ -180,13 +188,15 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         # Monthly quickflow + baseflow plots and map
         qf_b_charts_json = _create_linked_monthly_plots(
                 file_registry['aggregate_vector'],
-                file_registry['monthly_qf_table'])
+                file_registry['monthly_qf_table'],
+                xy_ratio)
         qf_b_charts_caption = gettext(
             """
             This chart displays the monthly combined average baseflow + quickflow for
-            each feature within the AOI. Select a feature on the AOI map to see the
-            values for that feature. Shift+Click to select multiple features; the chart
-            will display the sum of their values.
+            each feature within the AOI, as well as the monthly average precipitation.
+            Select a feature on the AOI map to see the values for that feature.
+            Shift+Click to select multiple features; the chart will display the sum of
+            their values.
             """
         )
         qf_b_charts_source_list = [
@@ -231,7 +241,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         input_raster_config_list.append(
             RasterPlotConfig(
                 raster_path=args_dict['l_path'],
-                datatype=RasterDatatype.continuous,
+                datatype=RasterDatatype.divergent,
                 spec=model_spec.get_input('l_path')))
         qf_rasters = None
         raster_outputs_heading = 'Annual Baseflow'
@@ -252,7 +262,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 spec=model_spec.get_output('cn')),
             RasterPlotConfig(
                 raster_path=file_registry['l'],
-                datatype=RasterDatatype.continuous,
+                datatype=RasterDatatype.divergent,
                 spec=model_spec.get_output('l'))])
         raster_outputs_heading = 'Additional Raster Outputs'
 
@@ -269,7 +279,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 spec=model_spec.get_output('qf'),
                 title=gettext("Annual Quickflow"),
                 transform=RasterTransform.log,
-                custom_colormap='GnBu')
+                colormap='GnBu')
 
         monthly_qf_raster_config_list = [
             RasterPlotConfig(
@@ -278,7 +288,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 spec=model_spec.get_output('qf_[MONTH]'),
                 title=gettext(f"{calendar.month_name[month]}"),
                 transform=RasterTransform.log,
-                custom_colormap='GnBu'
+                colormap='GnBu'
             ) for month in range(1, 13)]
 
         annual_qf_img_src = raster_utils.plot_and_base64_encode_rasters(
@@ -291,16 +301,17 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 title_list=[raster_config.title for raster_config
                             in monthly_qf_raster_config_list],
                 small_plots=True,
-                custom_colormap='GnBu',
+                colormap='GnBu',
                 supertitle=gettext("Monthly Quickflow"))
+        annual_qf_displayname = os.path.basename(
+                annual_qf_raster_config.raster_path)
         monthly_qf_img_src = raster_utils.base64_encode(monthly_qf_plots)
         monthly_qf_displayname = os.path.basename(
                 monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
         qf_raster_caption = [
-            (f'{annual_qf_raster_config.title}:'
-             f'{annual_qf_raster_config.spec.about}'),
-            (f'{monthly_qf_displayname}:'
-             f'{monthly_qf_raster_config_list[0].spec.about}')
+                gettext(f'Map of Annual Quickflow: {annual_qf_displayname}'),
+                gettext(f'Maps of Monthly Quickflow: {monthly_qf_displayname}'
+                        ' (1 = January… 12 = December)')
         ]
 
         qf_rasters = {

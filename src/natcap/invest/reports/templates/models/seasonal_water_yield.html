@@ -26,10 +26,8 @@
     {{ accordion_section(
       'Average Quickflow and Baseflow by Month',
       content_grid([
-        (content_grid([
-          ('<div id="qf_b_charts"></div>', 100),
-          (caption(qf_b_charts['caption'], qf_b_charts['sources']), 100)
-        ]), 100)
+        ('<div id="qf_b_charts"></div>', 100),
+        (caption(qf_b_charts['caption'], qf_b_charts['sources']), 100)
       ])
     ) }}
   {% endif %}
