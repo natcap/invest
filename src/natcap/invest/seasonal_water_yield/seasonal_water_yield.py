@@ -22,6 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 TARGET_NODATA = -1
 N_MONTHS = 12
+MONTH_RANGE = range(1, N_MONTHS+1)
 MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
@@ -754,7 +755,7 @@ def execute(args):
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
         alpha_month_map = dict(
-            (month_index+1, alpha_m) for month_index in range(N_MONTHS))
+            (month_index, alpha_m) for month_index in MONTH_RANGE)
 
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
@@ -763,23 +764,22 @@ def execute(args):
         args['dem_raster_path'])['pixel_size']
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
-    LOGGER.debug("aoi_path: %s", args['aoi_path'])
-    LOGGER.debug("aggregate_vector_path: %s",
-                 os.path.normpath(file_registry['aggregate_vector']))
+    LOGGER.debug(f"aoi_path: {args['aoi_path']}")
+    LOGGER.debug("aggregate_vector_path: "
+                 f"{os.path.normpath(file_registry['aggregate_vector'])}")
     if (os.path.normpath(args['aoi_path']) ==
             os.path.normpath(file_registry['aggregate_vector'])):
         raise ValueError(
             "The input AOI is the same as the output aggregate vector, "
             "please choose a different workspace or move the AOI file "
-            "out of the current workspace %s" %
-            file_registry['aggregate_vector'])
+            f"out of the current workspace {file_registry['aggregate_vector']}")
 
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
     output_align_list = [
         file_registry['lulc_aligned'], file_registry['dem_aligned']]
     if not args['user_defined_local_recharge']:
-        month_indexes = [m+1 for m in range(N_MONTHS)]
+        month_indexes = [m for m in MONTH_RANGE]
 
         precip_df = MODEL_SPEC.get_input(
             'precip_raster_table').get_validated_dataframe(
@@ -804,9 +804,9 @@ def execute(args):
             precip_path_list + [args['soil_group_path']] + et0_path_list +
             input_align_list)
         output_align_list = (
-            [file_registry['prcp_a[MONTH]', month] for month in range(12)] +
+            [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE] +
             [file_registry['soil_group_aligned']] +
-            [file_registry['et0_a[MONTH]', month] for month in range(12)] +
+            [file_registry['et0_a[MONTH]', month] for month in MONTH_RANGE] +
             output_align_list)
 
     align_index = len(input_align_list) - 1  # this aligns with the DEM
@@ -918,7 +918,7 @@ def execute(args):
         reclass_error_details = {
             'raster_name': 'Climate Zone', 'column_name': 'cz_id',
             'table_name': 'Climate Zone'}
-        for month_id in range(N_MONTHS):
+        for month_id in MONTH_RANGE:
             if args['user_defined_climate_zones']:
                 cz_rain_events_df = MODEL_SPEC.get_input(
                     'climate_zone_table_path').get_validated_dataframe(
@@ -936,7 +936,7 @@ def execute(args):
                     target_path_list=[
                         file_registry['n_events[MONTH]', month_id]],
                     dependent_task_list=[align_task],
-                    task_name='n_events for month %d' % month_id)
+                    task_name=f'n_events for month {month_id}')
                 reclassify_n_events_task_list.append(n_events_task)
             else:
                 n_events_task = task_graph.add_task(
@@ -946,12 +946,12 @@ def execute(args):
                         file_registry['n_events[MONTH]', month_id],
                         gdal.GDT_Float32, [TARGET_NODATA]),
                     kwargs={'fill_value_list': (
-                        rain_events_df['events'][month_id+1],)},
+                        rain_events_df['events'][month_id],)},
                     target_path_list=[
                         file_registry['n_events[MONTH]', month_id]],
                     dependent_task_list=[align_task],
                     task_name=(
-                        'n_events as a constant raster month %d' % month_id))
+                        f'n_events as a constant raster month {month_id}'))
                 reclassify_n_events_task_list.append(n_events_task)
 
         curve_number_task = task_graph.add_task(
@@ -975,8 +975,8 @@ def execute(args):
             task_name='calculate Si raster')
 
         quick_flow_task_list = []
-        for month_index in range(N_MONTHS):
-            LOGGER.info('calculate quick flow for month %d', month_index+1)
+        for month_index in MONTH_RANGE:
+            LOGGER.info(f'calculate quick flow for month {month_index}')
             monthly_quick_flow_task = task_graph.add_task(
                 func=_calculate_monthly_quick_flow,
                 args=(
@@ -984,21 +984,20 @@ def execute(args):
                     file_registry['n_events[MONTH]', month_index],
                     file_registry['stream'],
                     file_registry['si'],
-                    file_registry['qf_[MONTH]', month_index + 1]),
+                    file_registry['qf_[MONTH]', month_index]),
                 target_path_list=[
-                    file_registry['qf_[MONTH]', month_index + 1]],
+                    file_registry['qf_[MONTH]', month_index]],
                 dependent_task_list=[
-                    align_task, reclassify_n_events_task_list[month_index],
+                    align_task, reclassify_n_events_task_list[month_index-1],
                     si_task, stream_threshold_task],
-                task_name='calculate quick flow for month %d' % (
-                    month_index+1))
+                task_name=f'calculate quick flow for month {month_index}')
             quick_flow_task_list.append(monthly_quick_flow_task)
 
         qf_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=qfi_sum_op,
-                rasters=[file_registry['qf_[MONTH]', month] for month in range(1, 13)],
+                rasters=[file_registry['qf_[MONTH]', month] for month in MONTH_RANGE],
                 target_path=file_registry['qf']),
             target_path_list=[file_registry['qf']],
             dependent_task_list=quick_flow_task_list,
@@ -1009,8 +1008,8 @@ def execute(args):
         reclass_error_details = {
             'raster_name': 'LULC', 'column_name': 'lucode',
             'table_name': 'Biophysical'}
-        for month_index in range(N_MONTHS):
-            kc_lookup = biophysical_df['kc_%d' % (month_index+1)].to_dict()
+        for month_index in MONTH_RANGE:
+            kc_lookup = biophysical_df[f'kc_{month_index}'].to_dict()
             kc_task = task_graph.add_task(
                 func=utils.reclassify_raster,
                 args=(
@@ -1019,7 +1018,7 @@ def execute(args):
                     gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
                 target_path_list=[file_registry['kc_[MONTH]', month_index]],
                 dependent_task_list=[align_task],
-                task_name='classify kc month %d' % month_index)
+                task_name=f'classify kc month {month_index}')
             kc_task_list.append(kc_task)
 
         # call through to a cython function that does the necessary routing
@@ -1027,11 +1026,11 @@ def execute(args):
         calculate_local_recharge_task = task_graph.add_task(
             func=seasonal_water_yield_core.calculate_local_recharge,
             args=(
-                [file_registry['prcp_a[MONTH]', month] for month in range(12)],
-                [file_registry['et0_a[MONTH]', month] for month in range(12)],
-                [file_registry['qf_[MONTH]', month] for month in range(1, 13)],
+                [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE],
+                [file_registry['et0_a[MONTH]', month] for month in MONTH_RANGE],
+                [file_registry['qf_[MONTH]', month] for month in MONTH_RANGE],
                 file_registry['flow_dir'],
-                [file_registry['kc_[MONTH]', month] for month in range(12)],
+                [file_registry['kc_[MONTH]', month] for month in MONTH_RANGE],
                 alpha_month_map,
                 beta_i, gamma, file_registry['stream'],
                 file_registry['l'],
@@ -1126,8 +1125,8 @@ def execute(args):
             args=(
                 file_registry['aggregate_vector'],
                 file_registry['b'],
-                [file_registry['qf_[MONTH]', month] for month in range(1, 13)],
-                [file_registry['prcp_a[MONTH]', month] for month in range(12)],
+                [file_registry['qf_[MONTH]', month] for month in MONTH_RANGE],
+                [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE],
                 file_registry['monthly_qf_table']
             ),
             target_path_list=[file_registry['monthly_qf_table']],
@@ -1506,8 +1505,7 @@ def _aggregate_recharge(
     """
     if os.path.exists(aggregate_vector_path):
         LOGGER.warning(
-            '%s exists, deleting and writing new output',
-            aggregate_vector_path)
+            f'{aggregate_vector_path} exists, deleting and writing new output')
         os.remove(aggregate_vector_path)
 
     original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
@@ -1606,10 +1604,10 @@ def _generate_monthly_qf_b_p_csv(
     raster_path_tuples = [(annual_baseflow_path, 0, "baseflow")]
     raster_path_tuples.extend([
             (qf_path, month, "quickflow") for qf_path, month
-            in zip(monthly_quickflow_path_list, range(1, 13))])
+            in zip(monthly_quickflow_path_list, MONTH_RANGE)])
     raster_path_tuples.extend([
             (precip_path, month, "precipitation") for precip_path, month
-            in zip(monthly_precip_path_list, range(1, 13))])
+            in zip(monthly_precip_path_list, MONTH_RANGE)])
 
     raster_stats = pygeoprocessing.zonal_statistics(
             [(path_tuple[0], 1) for path_tuple in raster_path_tuples],
@@ -1628,11 +1626,11 @@ def _generate_monthly_qf_b_p_csv(
                                 for k, v in stats_by_field['baseflow'][0].items()}
 
     values_dict = {fid: {month: {'baseflow': b_val / seconds_per_month[month]}
-                         for month in range(1, 13)}
+                         for month in MONTH_RANGE}
                    for fid, b_val in b_avg_per_feat_per_month.items()}
 
     for value_name in ['quickflow', 'precipitation']:
-        for month in range(1, 13):
+        for month in MONTH_RANGE:
             avg_per_feat_per_month = {
                     k: v['sum'] * 0.001 * pixel_area_m2
                     for k, v in stats_by_field[value_name][month].items()}

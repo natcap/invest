@@ -1337,10 +1337,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         target_aet_path = os.path.join(self.workspace_dir,
                                        'target_aet_path.tif')
 
+        month_range = range(1, 13)
         seasonal_water_yield_core.calculate_local_recharge(
-            [precip_path for i in range(12)], [et0_path for i in range(12)],
-            [quickflow_path for i in range(12)], flow_dir_path,
-            [kc_path for i in range(12)], alpha_month_map, beta,
+            [precip_path for i in month_range], [et0_path for i in month_range],
+            [quickflow_path for i in month_range], flow_dir_path,
+            [kc_path for i in month_range], alpha_month_map, beta,
             gamma, stream_path, target_li_path, target_li_avail_path,
             target_l_sum_avail_path, target_aet_path,
             os.path.join(self.workspace_dir, 'target_precip_path.tif'),
