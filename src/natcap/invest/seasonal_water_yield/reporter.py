@@ -9,6 +9,7 @@ import geopandas
 import numpy
 import pandas
 import pygeoprocessing
+from matplotlib.colors import LinearSegmentedColormap
 from osgeo import gdal
 from osgeo import ogr
 
@@ -30,6 +31,14 @@ LOGGER = logging.getLogger(__name__)
 TEMPLATE = jinja_env.get_template('models/seasonal_water_yield.html')
 
 MAP_WIDTH = 450 # pixels
+
+# Custom matplotlib colormap that matches the Altair color scheme
+# used for the qb and vri_sum maps
+brownbluegreen = LinearSegmentedColormap.from_list(
+    'brownbluegreen', (
+        (0.000, (0.627, 0.396, 0.102)),
+        (0.500, (0.933, 0.945, 0.918)),
+        (1.000, (0.094, 0.443, 0.447))))
 
 qf_label_month_map = {
     f"qf_{month_index}": str(month_index) for month_index in range(1, 13)
@@ -245,7 +254,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             RasterPlotConfig(
                 raster_path=args_dict['l_path'],
                 datatype=RasterDatatype.divergent,
-                spec=model_spec.get_input('l_path')))
+                spec=model_spec.get_input('l_path'),
+                colormap=brownbluegreen))
         qf_rasters = None
         raster_outputs_heading = 'Annual Baseflow'
 
@@ -266,7 +276,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             RasterPlotConfig(
                 raster_path=file_registry['l'],
                 datatype=RasterDatatype.divergent,
-                spec=model_spec.get_output('l'))])
+                spec=model_spec.get_output('l'),
+                colormap=brownbluegreen)])
         raster_outputs_heading = 'Additional Raster Outputs'
 
         input_raster_config_list.append(
