@@ -49,7 +49,10 @@ def _create_aggregate_map(geodataframe, xy_ratio, attribute,
         type='identity',
         reflectY=True
     ).encode(
-        color=attribute,
+        color=altair.Color(
+            attribute,
+            scale=altair.Scale(domainMid=0, scheme="brownbluegreen")
+        ),
         tooltip=[altair.Tooltip(attribute, title=attribute)]
     ).properties(
         width=MAP_WIDTH,
@@ -124,7 +127,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
         )
     )
 
-    legend_config = vector_utils.LEGEND_CONFIG
+    legend_config = vector_utils.LEGEND_CONFIG.copy()
     legend_config['orient'] = 'right'
 
     chart = altair.hconcat(

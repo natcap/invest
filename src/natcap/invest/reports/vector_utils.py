@@ -21,12 +21,13 @@ def get_geojson_bbox(geodataframe):
 
     Args:
         geodataframe (geopandas.GeoDataFrame):
+
     Returns:
         tuple: A 2-tuple containing:
             - extent_feature (dict): A GeoJSON feature representing the bounding
-            box of the input GeoDataFrame.
+              box of the input GeoDataFrame.
             - xy_ratio (float): The aspect ratio of the bounding box
-            (width/height).
+              (width/height).
 
     """
     xmin, ymin, xmax, ymax = geodataframe.total_bounds

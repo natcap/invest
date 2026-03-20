@@ -6,7 +6,6 @@ import textwrap
 import os
 from io import BytesIO
 from enum import Enum
-from typing import Union, Optional
 
 import distinctipy
 import geometamaker
@@ -14,12 +13,13 @@ import numpy
 import pygeoprocessing
 import matplotlib
 import matplotlib.colors
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import Colormap, ListedColormap
 import matplotlib.patches
 import matplotlib.pyplot as plt
 import pandas
 import yaml
 from osgeo import gdal
+from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
 from natcap.invest import gettext
@@ -145,7 +145,7 @@ class RasterTransform(str, Enum):
     log = 'log'
 
 
-@dataclass
+@dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class RasterPlotConfig:
     """A definition for how to plot a raster."""
 
@@ -159,13 +159,16 @@ class RasterPlotConfig:
     """For highly skewed data, a transformation can help reveal variation."""
     title: str | None = None
     """An optional plot title. If ``None``, the filename is used."""
-    colormap: Optional[Union[str, object]] = None
+    colormap: str | Colormap | None = None
     """The string name of a registered matplotlib colormap or a colormap object."""
 
     def __post_init__(self):
         if self.title is None:
             self.title = os.path.basename(self.raster_path)
         self.caption = f'{self.title}:{self.spec.about}'
+
+        self.colormap = plt.get_cmap(self.colormap if self.colormap
+                                     else COLORMAPS[self.datatype])
 
 
 def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
@@ -318,6 +321,8 @@ def _get_title_kwargs(title: str, resampled: bool, line_width: int, facets=False
     label = textwrap.fill(label, width=line_width)
     padding = 1.5
     if not facets:
+        # Faceted plots don't need extra padding for title because their units
+        # label appears with the legend instead of under the title
         padding *= SUBTITLE_FONT_SIZE
     return {
         'fontfamily': 'monospace',
@@ -400,7 +405,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         colorbar_kwargs = {}
         imshow_kwargs['norm'] = transform
         imshow_kwargs['interpolation'] = 'none'
-        cmap = plt.get_cmap(config.colormap if config.colormap else COLORMAPS[dtype])
+        cmap = config.colormap
         if dtype == 'divergent':
             if transform == 'log':
                 transform = matplotlib.colors.SymLogNorm(linthresh=0.03)
