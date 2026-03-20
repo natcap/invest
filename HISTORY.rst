@@ -66,6 +66,14 @@
   Unreleased Changes
   ------------------
 
+General
+=======
+* Refactored ``make deploy`` into artifact-specific targets (``deploy_dist``,
+  ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
+  these targets to fail on missing artifacts instead of silently ignoring
+  errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
+
+
 3.18.0 (2026-02-25)
 -------------------
 
