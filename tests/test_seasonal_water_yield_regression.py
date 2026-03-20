@@ -972,10 +972,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
-    def test_climate_zones(self):
-        """SWY user recharge regression test on sample data.
+    def test_user_climate_zones(self):
+        """SWY user climate zones test on sample data.
 
-        Executes SWY in user defined local recharge mode and checks that the
+        Executes SWY in user defined climate zones mode and checks that the
         output files are generated and that the aggregate shapefile fields
         are the same as the regression case.
         """
