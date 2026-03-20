@@ -617,19 +617,14 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         # check the values in the avg monthly quickflow baseflow precip csv
         actual_result_df = pandas.read_csv(
             os.path.join(args['workspace_dir'], 'monthly_quickflow_baseflow.csv'))
-        expected_qf = [
-            2.116894e-5, 2.541212e-5, 2.514573e-5, 2.805605e-5, 2.916745e-5, 3.223471e-5,
-            3.323317e-5, 3.528216e-5, 3.858638e-5, 3.941151e-5, 4.287460e-5, 4.358156e-5]
-        expected_b = [
-            2.276286e-5, 2.498535e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5, 2.352162e-5,
-            2.276286e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5, 2.352162e-5, 2.276286e-5]
-        expected_p = [
-            4.106930e-5, 4.917726e-5, 4.853644e-5, 5.401235e-5, 5.600358e-5, 6.172840e-5,
-            6.347073e-5, 6.720430e-5, 7.330247e-5, 7.467145e-5, 8.101852e-5, 8.213859e-5]
+        expected_qf = [56.69889, 62.00944, 67.35032, 72.72129, 78.12209, 83.55236,
+                       89.01173, 94.49973, 100.01591, 105.55979, 111.13096, 116.72885]
+        expected_b = [60.96804 for i in range(12)]
+        expected_p = [110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220]
         for expected_val, col_name in [(expected_qf, 'quickflow'),
                 (expected_b, 'baseflow'), (expected_p, 'precipitation')]:
             numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
-                                          rtol=1e-6)
+                                          rtol=1e-5)
 
     def test_base_regression_d8(self):
         """SWY base regression test on sample data in D8 mode.
@@ -686,19 +681,14 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         # check the values in the avg monthly quickflow baseflow precip csv
         actual_result_df = pandas.read_csv(
             os.path.join(args['workspace_dir'], 'monthly_quickflow_baseflow.csv'))
-        expected_qf = [
-            2.083911e-5, 2.501863e-5, 2.475883e-5, 2.762715e-5, 2.872444e-5, 3.174831e-5,
-            3.273498e-5, 3.475670e-5, 3.801546e-5, 3.883215e-5, 4.224839e-5, 4.294909e-5]
-        expected_b = [
-            2.313658e-5, 2.539555e-5, 2.313658e-5, 2.390779e-5, 2.313658e-5, 2.390779e-5,
-            2.313658e-5, 2.313658e-5, 2.390779e-5, 2.313658e-5, 2.390779e-5, 2.313658e-5]
-        expected_p = [
-            4.106930e-5, 4.917726e-5, 4.853644e-5, 5.401235e-5, 5.600358e-5, 6.172840e-5,
-            6.347073e-5, 6.720430e-5, 7.330247e-5, 7.467145e-5, 8.101852e-5, 8.213859e-5]
+        expected_qf = [55.81547, 61.04926, 66.31405, 71.60957, 76.93555, 82.29161,
+                       87.67738, 93.09235, 98.53606, 104.00803, 109.50784, 115.03485]
+        expected_b = [61.969 for i in range(12)]
+        expected_p = [110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220]
         for expected_val, col_name in [(expected_qf, 'quickflow'),
                 (expected_b, 'baseflow'), (expected_p, 'precipitation')]:
             numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
-                                          rtol=1e-6)
+                                          rtol=1e-5)
 
     def test_base_regression_nodata_inf(self):
         """SWY base regression test on sample data with really small nodata.

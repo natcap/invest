@@ -496,29 +496,29 @@ MODEL_SPEC = spec.ModelSpec(
                     id="quickflow",
                     about=gettext(
                         "The average quickflow value for the month in the watershed,"
-                        " expressed in cubic meters per second."
+                        " expressed in cubic meters."
                     ),
-                    units=u.meter ** 3 / u.second
+                    units=u.meter ** 3 / u.month
                 ),
                 spec.NumberOutput(
                     id="baseflow",
                     about=gettext(
                         "The average baseflow value for the month in the watershed,"
-                        " expressed in cubic meters per second. Since baseflow is"
-                        " calculated on an annual scale, the values for each watershed"
-                        " have been distributed evenly across the year (annual average"
-                        " divided by 12)."
+                        " expressed in cubic meters. Since baseflow is calculated on"
+                        " an annual scale, the values for each watershed have been"
+                        " distributed evenly across the year (annual average divided"
+                        " by 12)."
                     ),
-                    units=u.meter ** 3 / u.second
+                    units=u.meter ** 3 / u.month
                 ),
                 spec.NumberOutput(
                     id="precipitation",
                     about=gettext(
                         "The average precipitation value for the month in the watershed,"
-                        " expressed in cubic meters per second. Values are based on"
-                        " the aligned input monthly precipitation rasters."
+                        " expressed in cubic meters. Values are based on the aligned"
+                        " input monthly precipitation rasters."
                     ),
-                    units=u.meter ** 3 / u.second
+                    units=u.meter ** 3 / u.month
                 )
             ],
             index_col="geom_id",
@@ -1582,20 +1582,6 @@ def _generate_monthly_qf_b_p_csv(
         LOGGER.warning(f'{target_csv_path} exists, deleting and writing new output')
         os.remove(target_csv_path)
 
-    seconds_per_month = {
-        1: 2678400,
-        2: 2440152,
-        3: 2678400,
-        4: 2592000,
-        5: 2678400,
-        6: 2592000,
-        7: 2678400,
-        8: 2678400,
-        9: 2592000,
-        10: 2678400,
-        11: 2592000,
-        12: 2678400}
-
     # Use the baseflow raster to get the pixel_size; all rasters should be aligned
     raster_info = pygeoprocessing.get_raster_info(annual_baseflow_path)
     pixel_area_m2 = numpy.prod([abs(x) for x in raster_info['pixel_size']])
@@ -1625,7 +1611,7 @@ def _generate_monthly_qf_b_p_csv(
     b_avg_per_feat_per_month = {k: v['sum'] * 0.001 * pixel_area_m2 / 12
                                 for k, v in stats_by_field['baseflow'][0].items()}
 
-    values_dict = {fid: {month: {'baseflow': b_val / seconds_per_month[month]}
+    values_dict = {fid: {month: {'baseflow': b_val}
                          for month in MONTH_RANGE}
                    for fid, b_val in b_avg_per_feat_per_month.items()}
 
@@ -1635,8 +1621,7 @@ def _generate_monthly_qf_b_p_csv(
                     k: v['sum'] * 0.001 * pixel_area_m2
                     for k, v in stats_by_field[value_name][month].items()}
             for fid, value in avg_per_feat_per_month.items():
-                value_per_second = value / seconds_per_month[month]
-                values_dict[fid][month][value_name] = value_per_second
+                values_dict[fid][month][value_name] = value
 
     with open(target_csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
