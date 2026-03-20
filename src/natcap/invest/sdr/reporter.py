@@ -1,5 +1,4 @@
 from natcap.invest.reports import sdr_ndr_report_generator
-from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
 from natcap.invest.reports.raster_utils import RasterDatatype
 from natcap.invest.reports.raster_utils import RasterTransform
@@ -83,7 +82,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         raster_path=file_registry['stream'],
         datatype=RasterDatatype.binary_high_contrast,
         spec=model_spec.get_output('stream'))
-    stream_config.caption += report_constants.STREAM_CAPTION_APPENDIX
+    stream_config.caption += report_constants.stream_caption_appendix()
     intermediate_raster_plot_configs = [
         masked_dem_config, what_drains_config, stream_config]
 
