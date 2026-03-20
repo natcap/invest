@@ -43,6 +43,11 @@ LOCALE_NAME_MAP = {
 LOCALE_CODE = 'en'
 
 
+def get_locale():
+    """Get the current locale code."""
+    return LOCALE_CODE
+
+
 def set_locale(locale_code):
     """Set the `gettext` attribute of natcap.invest.
 
