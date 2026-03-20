@@ -16,7 +16,7 @@
   {% from 'raster-plot-img.html' import raster_plot_img %}
   {% from 'wide-table.html' import wide_table %}
 
-  <h2 class="section-header">Results</h2>
+  <h2 class="section-header">{% trans %}Results{% endtrans %}</h2>
 
   {% if ws_vector_totals_table is defined and ws_vector_totals_table != None %}
     {% set watershed_results = content_grid([
@@ -37,15 +37,15 @@
   {% endif %}
 
   {{ accordion_section(
-    'Results by Watershed',
+    gettext('Results by Watershed'),
     watershed_results
   )}}
 
   {{ accordion_section(
-    'Primary Outputs',
+    gettext('Primary Outputs'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (raster_plot_img(outputs_img_src, gettext('Primary Outputs')), 100),
       (caption(outputs_caption, definition_list=True), 100)
     ])
   )}}
@@ -60,7 +60,7 @@
   )}}
 
   {{ accordion_section(
-    'Output Raster Stats',
+    gettext('Output Raster Stats'),
     content_grid([
       (stats_table_note, 100),
       (wide_table(
@@ -70,24 +70,24 @@
     ])
   )}}
 
-  <h2 class="section-header">Inputs</h2>
+  <h2 class="section-header">{% trans %}Inputs{% endtrans %}</h2>
 
   {{ accordion_section(
-    'Arguments',
+    gettext('Arguments'),
     args_table(args_dict)
   )}}
 
   {{ accordion_section(
-    'Raster Inputs',
+    gettext('Raster Inputs'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (raster_plot_img(inputs_img_src, gettext('Raster Inputs')), 100),
       (caption(inputs_caption, definition_list=True), 100)
     ])
   )}}
 
   {{ accordion_section(
-    'Input Raster Stats',
+    gettext('Input Raster Stats'),
     content_grid([
       (stats_table_note, 100),
       (wide_table(
@@ -97,11 +97,11 @@
     ])
   )}}
 
-  <h2 class="section-header">Metadata</h2>
+  <h2 class="section-header">{% trans %}Metadata{% endtrans %}</h2>
 
   {{
     accordion_section(
-      'Output Filenames and Descriptions',
+      gettext('Output Filenames and Descriptions'),
       list_metadata(model_spec_outputs),
       expanded=False
     )
