@@ -94,7 +94,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
         ['baseflow', 'quickflow']
     ).encode(
         altair.X("month(month):O").title("Month"),
-        altair.Y("sum(value):Q").title("Quickflow + Baseflow (m3/s)"),
+        altair.Y("sum(value):Q").title("Quickflow + Baseflow (m3/month)"),
         altair.Order(field='key', sort='ascending'),
         color=altair.Color('key:N').scale(
             domain=['quickflow', "baseflow", "precipitation"],
@@ -110,7 +110,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
         altair.Y(
             "sum(precipitation)",
             axis=altair.Axis(orient="right")
-        ).title("Precipitation (m3/s)"),
+        ).title("Precipitation (m3/month)"),
         color=altair.value('#0500a3')
     )
 
