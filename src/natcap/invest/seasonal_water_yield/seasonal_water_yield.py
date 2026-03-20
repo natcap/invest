@@ -1,4 +1,5 @@
 """InVEST Seasonal Water Yield Model."""
+import csv
 import fractions
 import logging
 import os
@@ -21,14 +22,31 @@ LOGGER = logging.getLogger(__name__)
 
 TARGET_NODATA = -1
 N_MONTHS = 12
-MONTH_ID_TO_LABEL = [
-    'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
-    'nov', 'dec']
+MONTH_RANGE = range(1, N_MONTHS+1)
+MONTH_ID_TO_LABEL = {
+    1: 'jan', 2: 'feb', 3: 'mar', 4: 'apr', 5: 'may', 6: 'jun',
+    7: 'jul', 8: 'aug', 9: 'sep', 10: 'oct',  11: 'nov', 12: 'dec'}
+
+_model_description = gettext(
+    """
+    The Seasonal Water Yield (SWY) model estimates the amount of water produced
+    by a watershed, arriving in streams over the course of a year. The primary
+    outputs of the model are quickflow, local recharge, and baseflow. Quickflow
+    represents the amount of precipitation that runs off of the land directly,
+    during and soon after a rain event, and local recharge represents the amount
+    of rainfall that infiltrates into soil, minus what is evaporated or used by
+    vegetation. Baseflow is the amount of precipitation that enters streams more
+    gradually through sub-surface flow, including during the dry season. The model
+    is based on inputs of topography (DEM), soils, land cover and management,
+    rainfall, and vegetation water demand.
+    """)
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="seasonal_water_yield",
     model_title=gettext("Seasonal Water Yield"),
     userguide="seasonal_water_yield.html",
+    reporter="natcap.invest.seasonal_water_yield.reporter",
+    about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("swy",),
@@ -332,7 +350,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " (which is not evapotranspired before it reaches the stream)."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="b_sum",
@@ -343,21 +361,34 @@ MODEL_SPEC = spec.ModelSpec(
                 " stream."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="cn",
             path="CN.tif",
             about=gettext("Map of curve number values."),
             data_type=float,
-            units=u.none
+            units=u.none,
+            created_if="not user_defined_local_recharge"
+        ),
+        spec.SingleBandRasterOutput(
+            id="l",
+            path="L.tif",
+            about=gettext(
+                "Map of local recharge. If a user-defined local recharge input"
+                " is provided, this is a copy of that layer, aligned and clipped"
+                " to match the other spatial inputs. Otherwise, this is the"
+                " local recharge as calculated by the model."
+            ),
+            data_type=float,
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="l_avail",
             path="L_avail.tif",
             about=gettext("Map of available local recharge"),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="l_sum_avail",
@@ -367,7 +398,8 @@ MODEL_SPEC = spec.ModelSpec(
                 " available for evapotranspiration by this pixel."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="l_sum",
@@ -378,14 +410,15 @@ MODEL_SPEC = spec.ModelSpec(
                 " evapotranspiration to downslope pixels."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
             id="qf",
             path="QF.tif",
             about=gettext("Map of quickflow"),
             data_type=float,
-            units=u.millimeter / u.year
+            units=u.millimeter / u.year,
+            created_if="not user_defined_local_recharge"
         ),
         spec.STREAM,
         spec.SingleBandRasterOutput(
@@ -393,7 +426,8 @@ MODEL_SPEC = spec.ModelSpec(
             path="P.tif",
             about=gettext("The total precipitation across all months on this pixel."),
             data_type=float,
-            units=u.millimeter / u.year
+            units=u.millimeter / u.year,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="vri",
@@ -403,7 +437,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " the total recharge."
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year
         ),
         spec.VectorOutput(
             id="aggregate_vector",
@@ -414,24 +448,89 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberOutput(
                     id="qb",
                     about=gettext("Mean local recharge value within the watershed"),
-                    units=u.millimeter
+                    units=u.millimeter / u.year
                 ),
                 spec.NumberOutput(
                     id="vri_sum",
                     about=gettext(
-                        "Total recharge contribution, (positive or negative) within the"
+                        "Total recharge contribution (positive or negative) within the"
                         " watershed."
                     ),
-                    units=u.millimeter
+                    units=u.millimeter / u.year
+                ),
+                spec.IntegerOutput(
+                    id="geom_id",
+                    about=gettext(
+                        "A unique ID for the watershed."
+                    ),
+                    units=u.none
                 )
+
             ]
+        ),
+        spec.CSVOutput(
+            id="monthly_qf_table",
+            path="monthly_quickflow_baseflow.csv",
+            about=gettext(
+                "Table of average monthly baseflow, quickflow, and precipitation"
+                " values for each watershed (or feature) within the AOI."
+            ),
+            columns=[
+                spec.IntegerOutput(
+                    id="geom_id",
+                    about=gettext(
+                        "A unique ID for the watershed. This will correspond to"
+                        " the 'geom_id' column in the Aggregate Results shapefile."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="month",
+                    about=gettext(
+                        "Values are the numbers 1-12 corresponding to each month,"
+                        " January (1) through December (12)."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="quickflow",
+                    about=gettext(
+                        "The average quickflow value for the month in the watershed,"
+                        " expressed in cubic meters."
+                    ),
+                    units=u.meter ** 3 / u.month
+                ),
+                spec.NumberOutput(
+                    id="baseflow",
+                    about=gettext(
+                        "The average baseflow value for the month in the watershed,"
+                        " expressed in cubic meters. Since baseflow is calculated on"
+                        " an annual scale, the values for each watershed have been"
+                        " distributed evenly across the year (annual average divided"
+                        " by 12)."
+                    ),
+                    units=u.meter ** 3 / u.month
+                ),
+                spec.NumberOutput(
+                    id="precipitation",
+                    about=gettext(
+                        "The average precipitation value for the month in the watershed,"
+                        " expressed in cubic meters. Values are based on the aligned"
+                        " input monthly precipitation rasters."
+                    ),
+                    units=u.meter ** 3 / u.month
+                )
+            ],
+            index_col="geom_id",
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="aet",
             path="intermediate_outputs/aet.tif",
             about=gettext("Map of actual evapotranspiration"),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.year,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="flow_dir",
@@ -441,7 +540,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " the option selected."
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="qf_[MONTH]",
@@ -450,14 +549,16 @@ MODEL_SPEC = spec.ModelSpec(
                 "Maps of monthly quickflow (1 = January… 12 = December)"
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.month,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="si",
             path="intermediate_outputs/Si.tif",
             about=gettext("Map of the S_i factor derived from CN"),
             data_type=float,
-            units=u.inch
+            units=u.inch,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="lulc_aligned",
@@ -467,7 +568,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " spatial inputs"
             ),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="dem_aligned",
@@ -494,7 +595,8 @@ MODEL_SPEC = spec.ModelSpec(
                 " other spatial inputs"
             ),
             data_type=int,
-            units=None
+            units=u.none,
+            created_if="not user_defined_local_recharge"
         ),
         spec.FLOW_ACCUMULATION.model_copy(update=dict(
             id="flow_accum",
@@ -507,14 +609,16 @@ MODEL_SPEC = spec.ModelSpec(
                 " other spatial inputs"
             ),
             data_type=float,
-            units=u.millimeter / u.year
+            units=u.millimeter / u.year,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="n_events[MONTH]",
             path="intermediate_outputs/n_events[MONTH].tif",
             about=gettext("Map of monthly rain events"),
             data_type=int,
-            units=None
+            units=u.none,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="et0_a[MONTH]",
@@ -524,26 +628,16 @@ MODEL_SPEC = spec.ModelSpec(
                 " spatial inputs"
             ),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter / u.month,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="kc_[MONTH]",
             path="intermediate_outputs/kc_[MONTH].tif",
             about=gettext("Map of monthly KC values"),
             data_type=float,
-            units=u.none
-        ),
-        spec.SingleBandRasterOutput(
-            id="l",
-            path="L.tif",
-            about=gettext(
-                "Map of local recharge. If a user-defined local recharge input"
-                " is provided, this is a copy of that layer, aligned and clipped"
-                " to match the other spatial inputs. Otherwise, this is the"
-                " local recharge as calculated by the model."
-            ),
-            data_type=float,
-            units=u.millimeter
+            units=u.none,
+            created_if="not user_defined_local_recharge"
         ),
         spec.SingleBandRasterOutput(
             id="cz_aligned",
@@ -554,7 +648,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             created_if="user_defined_climate_zones",
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.TASKGRAPH_CACHE
     ]
@@ -661,7 +755,7 @@ def execute(args):
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
         alpha_month_map = dict(
-            (month_index+1, alpha_m) for month_index in range(N_MONTHS))
+            (month_index, alpha_m) for month_index in MONTH_RANGE)
 
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
@@ -670,23 +764,22 @@ def execute(args):
         args['dem_raster_path'])['pixel_size']
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
-    LOGGER.debug("aoi_path: %s", args['aoi_path'])
-    LOGGER.debug("aggregate_vector_path: %s",
-                 os.path.normpath(file_registry['aggregate_vector']))
+    LOGGER.debug(f"aoi_path: {args['aoi_path']}")
+    LOGGER.debug("aggregate_vector_path: "
+                 f"{os.path.normpath(file_registry['aggregate_vector'])}")
     if (os.path.normpath(args['aoi_path']) ==
             os.path.normpath(file_registry['aggregate_vector'])):
         raise ValueError(
             "The input AOI is the same as the output aggregate vector, "
             "please choose a different workspace or move the AOI file "
-            "out of the current workspace %s" %
-            file_registry['aggregate_vector'])
+            f"out of the current workspace {file_registry['aggregate_vector']}")
 
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
     output_align_list = [
         file_registry['lulc_aligned'], file_registry['dem_aligned']]
     if not args['user_defined_local_recharge']:
-        month_indexes = [m+1 for m in range(N_MONTHS)]
+        month_indexes = [m for m in MONTH_RANGE]
 
         precip_df = MODEL_SPEC.get_input(
             'precip_raster_table').get_validated_dataframe(
@@ -711,9 +804,9 @@ def execute(args):
             precip_path_list + [args['soil_group_path']] + et0_path_list +
             input_align_list)
         output_align_list = (
-            [file_registry['prcp_a[MONTH]', month] for month in range(12)] +
+            [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE] +
             [file_registry['soil_group_aligned']] +
-            [file_registry['et0_a[MONTH]', month] for month in range(12)] +
+            [file_registry['et0_a[MONTH]', month] for month in MONTH_RANGE] +
             output_align_list)
 
     align_index = len(input_align_list) - 1  # this aligns with the DEM
@@ -825,7 +918,7 @@ def execute(args):
         reclass_error_details = {
             'raster_name': 'Climate Zone', 'column_name': 'cz_id',
             'table_name': 'Climate Zone'}
-        for month_id in range(N_MONTHS):
+        for month_id in MONTH_RANGE:
             if args['user_defined_climate_zones']:
                 cz_rain_events_df = MODEL_SPEC.get_input(
                     'climate_zone_table_path').get_validated_dataframe(
@@ -843,7 +936,7 @@ def execute(args):
                     target_path_list=[
                         file_registry['n_events[MONTH]', month_id]],
                     dependent_task_list=[align_task],
-                    task_name='n_events for month %d' % month_id)
+                    task_name=f'n_events for month {month_id}')
                 reclassify_n_events_task_list.append(n_events_task)
             else:
                 n_events_task = task_graph.add_task(
@@ -853,12 +946,12 @@ def execute(args):
                         file_registry['n_events[MONTH]', month_id],
                         gdal.GDT_Float32, [TARGET_NODATA]),
                     kwargs={'fill_value_list': (
-                        rain_events_df['events'][month_id+1],)},
+                        rain_events_df['events'][month_id],)},
                     target_path_list=[
                         file_registry['n_events[MONTH]', month_id]],
                     dependent_task_list=[align_task],
                     task_name=(
-                        'n_events as a constant raster month %d' % month_id))
+                        f'n_events as a constant raster month {month_id}'))
                 reclassify_n_events_task_list.append(n_events_task)
 
         curve_number_task = task_graph.add_task(
@@ -882,8 +975,8 @@ def execute(args):
             task_name='calculate Si raster')
 
         quick_flow_task_list = []
-        for month_index in range(N_MONTHS):
-            LOGGER.info('calculate quick flow for month %d', month_index+1)
+        for month_index in MONTH_RANGE:
+            LOGGER.info(f'calculate quick flow for month {month_index}')
             monthly_quick_flow_task = task_graph.add_task(
                 func=_calculate_monthly_quick_flow,
                 args=(
@@ -891,21 +984,20 @@ def execute(args):
                     file_registry['n_events[MONTH]', month_index],
                     file_registry['stream'],
                     file_registry['si'],
-                    file_registry['qf_[MONTH]', month_index + 1]),
+                    file_registry['qf_[MONTH]', month_index]),
                 target_path_list=[
-                    file_registry['qf_[MONTH]', month_index + 1]],
+                    file_registry['qf_[MONTH]', month_index]],
                 dependent_task_list=[
-                    align_task, reclassify_n_events_task_list[month_index],
+                    align_task, reclassify_n_events_task_list[month_index-1],
                     si_task, stream_threshold_task],
-                task_name='calculate quick flow for month %d' % (
-                    month_index+1))
+                task_name=f'calculate quick flow for month {month_index}')
             quick_flow_task_list.append(monthly_quick_flow_task)
 
         qf_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=qfi_sum_op,
-                rasters=[file_registry['qf_[MONTH]', month] for month in range(1, 13)],
+                rasters=[file_registry['qf_[MONTH]', month] for month in MONTH_RANGE],
                 target_path=file_registry['qf']),
             target_path_list=[file_registry['qf']],
             dependent_task_list=quick_flow_task_list,
@@ -916,8 +1008,8 @@ def execute(args):
         reclass_error_details = {
             'raster_name': 'LULC', 'column_name': 'lucode',
             'table_name': 'Biophysical'}
-        for month_index in range(N_MONTHS):
-            kc_lookup = biophysical_df['kc_%d' % (month_index+1)].to_dict()
+        for month_index in MONTH_RANGE:
+            kc_lookup = biophysical_df[f'kc_{month_index}'].to_dict()
             kc_task = task_graph.add_task(
                 func=utils.reclassify_raster,
                 args=(
@@ -926,7 +1018,7 @@ def execute(args):
                     gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
                 target_path_list=[file_registry['kc_[MONTH]', month_index]],
                 dependent_task_list=[align_task],
-                task_name='classify kc month %d' % month_index)
+                task_name=f'classify kc month {month_index}')
             kc_task_list.append(kc_task)
 
         # call through to a cython function that does the necessary routing
@@ -934,11 +1026,11 @@ def execute(args):
         calculate_local_recharge_task = task_graph.add_task(
             func=seasonal_water_yield_core.calculate_local_recharge,
             args=(
-                [file_registry['prcp_a[MONTH]', month] for month in range(12)],
-                [file_registry['et0_a[MONTH]', month] for month in range(12)],
-                [file_registry['qf_[MONTH]', month] for month in range(1, 13)],
+                [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE],
+                [file_registry['et0_a[MONTH]', month] for month in MONTH_RANGE],
+                [file_registry['qf_[MONTH]', month] for month in MONTH_RANGE],
                 file_registry['flow_dir'],
-                [file_registry['kc_[MONTH]', month] for month in range(12)],
+                [file_registry['kc_[MONTH]', month] for month in MONTH_RANGE],
                 alpha_month_map,
                 beta_i, gamma, file_registry['stream'],
                 file_registry['l'],
@@ -1026,6 +1118,21 @@ def execute(args):
             file_registry['b_sum'], file_registry['b']],
         dependent_task_list=b_sum_dependent_task_list + [l_sum_task],
         task_name='calculate B_sum')
+
+    if not args['user_defined_local_recharge']:
+        monthly_csv_task = task_graph.add_task(
+            func=_generate_monthly_qf_b_p_csv,
+            args=(
+                file_registry['aggregate_vector'],
+                file_registry['b'],
+                [file_registry['qf_[MONTH]', month] for month in MONTH_RANGE],
+                [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE],
+                file_registry['monthly_qf_table']
+            ),
+            target_path_list=[file_registry['monthly_qf_table']],
+            dependent_task_list=[
+                aggregate_recharge_task, align_task, b_sum_task] + quick_flow_task_list,
+            task_name='create monthly qf csv')
 
     task_graph.close()
     task_graph.join()
@@ -1398,8 +1505,7 @@ def _aggregate_recharge(
     """
     if os.path.exists(aggregate_vector_path):
         LOGGER.warning(
-            '%s exists, deleting and writing new output',
-            aggregate_vector_path)
+            f'{aggregate_vector_path} exists, deleting and writing new output')
         os.remove(aggregate_vector_path)
 
     original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
@@ -1414,7 +1520,6 @@ def _aggregate_recharge(
     for raster_path, aggregate_field_id, op_type in [
             (l_path, 'qb', 'mean'), (vri_path, 'vri_sum', 'sum')]:
 
-        # aggregate carbon stocks by the new ID field
         aggregate_stats = pygeoprocessing.zonal_statistics(
             (raster_path, 1), aggregate_vector_path)
 
@@ -1440,10 +1545,94 @@ def _aggregate_recharge(
             poly_feat.SetField(aggregate_field_id, float(value))
             aggregate_layer.SetFeature(poly_feat)
 
+    fid_field = ogr.FieldDefn('geom_id', ogr.OFTInteger)
+    aggregate_layer.CreateField(fid_field)
+    for feature in aggregate_layer:
+        feature_id = feature.GetFID()
+        feature.SetField('geom_id', feature_id)
+        aggregate_layer.SetFeature(feature)
+
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
+
+
+def _generate_monthly_qf_b_p_csv(
+        aoi_path, annual_baseflow_path, monthly_quickflow_path_list,
+        monthly_precip_path_list, target_csv_path):
+    """Generate a CSV of average monthly Qf, B, and P values for the watersheds/AOI.
+
+    Args:
+        aoi_path (string): path to shapefile that will be used to
+            aggregate rasters
+        annual_baseflow_path (string): path to the annual baseflow raster
+        monthly_quickflow_path_list (list): list of paths to monthly quickflow
+            rasters
+        monthly_precip_path_list (list): list of paths to aligned monthly
+            precipitation rasters
+        target_csv_path (string): path to the output CSV. If this file exists
+            on disk prior to the call, it is overwritten with the result of
+            this call.
+
+    Returns:
+        None
+    """
+    if os.path.exists(target_csv_path):
+        LOGGER.warning(f'{target_csv_path} exists, deleting and writing new output')
+        os.remove(target_csv_path)
+
+    # Use the baseflow raster to get the pixel_size; all rasters should be aligned
+    raster_info = pygeoprocessing.get_raster_info(annual_baseflow_path)
+    pixel_area_m2 = numpy.prod([abs(x) for x in raster_info['pixel_size']])
+
+    # The baseflow raster is annual, so there will only be 1
+    raster_path_tuples = [(annual_baseflow_path, 0, "baseflow")]
+    raster_path_tuples.extend([
+            (qf_path, month, "quickflow") for qf_path, month
+            in zip(monthly_quickflow_path_list, MONTH_RANGE)])
+    raster_path_tuples.extend([
+            (precip_path, month, "precipitation") for precip_path, month
+            in zip(monthly_precip_path_list, MONTH_RANGE)])
+
+    raster_stats = pygeoprocessing.zonal_statistics(
+            [(path_tuple[0], 1) for path_tuple in raster_path_tuples],
+            aoi_path)
+
+    stats_by_field = {
+        "baseflow": {},
+        "quickflow": {},
+        "precipitation": {}
+    }
+    for (_, month, field), stats in zip(raster_path_tuples, raster_stats):
+        stats_by_field[field][month] = stats
+
+    # Baseflow is computed annually; distribute evenly over the year
+    b_avg_per_feat_per_month = {k: v['sum'] * 0.001 * pixel_area_m2 / 12
+                                for k, v in stats_by_field['baseflow'][0].items()}
+
+    values_dict = {fid: {month: {'baseflow': b_val}
+                         for month in MONTH_RANGE}
+                   for fid, b_val in b_avg_per_feat_per_month.items()}
+
+    for value_name in ['quickflow', 'precipitation']:
+        for month in MONTH_RANGE:
+            avg_per_feat_per_month = {
+                    k: v['sum'] * 0.001 * pixel_area_m2
+                    for k, v in stats_by_field[value_name][month].items()}
+            for fid, value in avg_per_feat_per_month.items():
+                values_dict[fid][month][value_name] = value
+
+    with open(target_csv_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['geom_id', 'month', 'quickflow', 'baseflow', 'precipitation'])
+        for fid, month_dicts in values_dict.items():
+            for month, val_dicts in month_dicts.items():
+                writer.writerow([fid,
+                                 month,
+                                 val_dicts['quickflow'],
+                                 val_dicts['baseflow'],
+                                 val_dicts['precipitation']])
 
 
 @validation.invest_validator
