@@ -972,6 +972,49 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
+    def test_climate_zones(self):
+        """SWY user recharge regression test on sample data.
+
+        Executes SWY in user defined local recharge mode and checks that the
+        output files are generated and that the aggregate shapefile fields
+        are the same as the regression case.
+        """
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        workspace_dir = os.path.join(self.workspace_dir, 'workspace')
+        os.mkdir(workspace_dir)
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            workspace_dir)
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+
+        cz_csv_path = os.path.join(self.workspace_dir, 'cz.csv')
+        make_climate_zone_csv(cz_csv_path)
+        cz_ras_path = os.path.join(args['workspace_dir'], 'dem.tif')
+        make_gradient_raster(cz_ras_path)
+        args['climate_zone_raster_path'] = cz_ras_path
+        args['climate_zone_table_path'] = cz_csv_path
+        args['user_defined_climate_zones'] = True
+
+        execute_kwargs = {
+            'generate_report': bool(seasonal_water_yield.MODEL_SPEC.reporter),
+            'save_file_registry': True,
+            'check_outputs': True
+        }
+        seasonal_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, seasonal_water_yield.MODEL_SPEC, **execute_kwargs)
+
+        # generate aggregated results csv table for assertion
+        agg_results_csv_path = os.path.join(args['workspace_dir'],
+                                            'agg_results_cz.csv')
+        make_agg_results_csv(agg_results_csv_path, climate_zones=True)
+
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
+            agg_results_csv_path)
+
     @staticmethod
     def _assert_regression_results_equal(
             result_vector_path, agg_results_path):
