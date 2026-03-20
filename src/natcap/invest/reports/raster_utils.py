@@ -313,16 +313,19 @@ def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
         return 31  # 3-column layout
 
 
-def _get_title_kwargs(title: str, resampled: bool, line_width: int):
+def _get_title_kwargs(title: str, resampled: bool, line_width: int, facets=False):
     label = f"{title}{' (resampled)' if resampled else ''}"
     label = textwrap.fill(label, width=line_width)
+    padding = 1.5
+    if not facets:
+        padding *= SUBTITLE_FONT_SIZE
     return {
         'fontfamily': 'monospace',
         'fontsize': TITLE_FONT_SIZE,
         'fontweight': 700,
         'label': label,
         'loc': 'left',
-        'pad': 1.5 * SUBTITLE_FONT_SIZE,
+        'pad': padding,
         'verticalalignment': 'bottom',
     }
 
@@ -581,7 +584,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
         # all rasters are identical size; `resampled` will be the same for all
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
-        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width))
+        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width, facets=True))
 
     units = _get_raster_units(tif_list[0])
     legend_label = f"{UNITS_TEXT}: {units}" if units else None
