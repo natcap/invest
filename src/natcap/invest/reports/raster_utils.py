@@ -651,20 +651,20 @@ def raster_workspace_summary(file_registry):
     """Create a table of stats for all rasters in a file_registry."""
     raster_summary = {}
 
-    def _summarize_output(path):
-        resource = _get_raster_metadata(path)
-        band = resource.get_band_description(1) if resource else None
-        if band:
-            filename = os.path.basename(resource.path)
-            raster_summary[filename] = _build_stats_table_row(
-                resource, band)
-
-    for item in file_registry.values():
+    def _summarize_output(item):
         if isinstance(item, collections.abc.Mapping):
             for path in item.values():
                 _summarize_output(path)
         else:
-            _summarize_output(item)
+            resource = _get_raster_metadata(item)
+            band = resource.get_band_description(1) if resource else None
+            if band:
+                filename = os.path.basename(resource.path)
+                raster_summary[filename] = _build_stats_table_row(
+                    resource, band)
+
+    for item in file_registry.values():
+        _summarize_output(item)
 
     return pandas.DataFrame(raster_summary).T
 
