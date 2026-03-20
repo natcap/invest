@@ -8,7 +8,6 @@ import importlib
 import json
 import logging
 import multiprocessing
-import os
 import pprint
 import sys
 import textwrap
@@ -16,10 +15,7 @@ import warnings
 
 import natcap.invest
 from natcap.invest import datastack
-from natcap.invest import set_locale
-from natcap.invest import spec
 from natcap.invest import ui_server
-from natcap.invest import utils
 from natcap.invest import models
 from pygeoprocessing.utils import GDALUseExceptions
 
@@ -463,8 +459,13 @@ def main(user_args=None):
 
             target_model = models.model_id_to_pyname[args.model]
             model_module = importlib.import_module(name=target_model)
-            LOGGER.info('Imported target %s from %s',
-                        model_module.__name__, model_module)
+
+            LOGGER.info(
+                f'Imported target {model_module.__name__} from {model_module}')
+
+            # Reload model module to ensure text defined in model spec is
+            # localized before it is passed to the report.
+            importlib.reload(model_module)
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
