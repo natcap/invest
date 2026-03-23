@@ -30,7 +30,8 @@ pybabel extract \
    --version $(python -m setuptools_scm) \
    --msgid-bugs-address natcap-software@lists.stanford.edu \
    --copyright-holder "Natural Capital Alliance" \
-   --mapping src/natcap/invest/internationalization/babel_config.ini \   --output src/natcap/invest/internationalization/messages.pot \
+   --mapping src/natcap/invest/internationalization/babel_config.ini \
+   --output src/natcap/invest/internationalization/messages.pot \
    src/
 
 # update message catalog from template

@@ -31,9 +31,11 @@ from natcap.invest import utils
 from . import gettext
 from .unit_registry import u
 from . import validation_messages
+import natcap.invest.reports
 
 
 LOGGER = logging.getLogger(__name__)
+
 
 # accessing a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
@@ -2274,13 +2276,13 @@ class ModelSpec(BaseModel):
 
             if generate_report:
                 LOGGER.info('Generating report for results')
-                reporter_module = importlib.import_module(self.reporter)
                 target_html_filepath = os.path.join(
                     preprocessed_args['workspace_dir'],
                     (f'{self.model_id}_report'
                      f'{preprocessed_args.get("results_suffix", "")}.html'))
 
                 with natcap.invest.reports.configure_libraries():
+                    reporter_module = importlib.import_module(self.reporter)
                     reporter_module.report(
                         registry, preprocessed_args, self, target_html_filepath)
 
