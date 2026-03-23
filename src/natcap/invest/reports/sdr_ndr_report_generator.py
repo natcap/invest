@@ -58,8 +58,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
         intermediate_raster_plot_configs)
     intermediates_caption = raster_utils.caption_raster_list(
         intermediate_raster_plot_configs)
+    # Note that passing an f-string to gettext will not work;
+    # we must explicitly use .format() to populate variable values.
     intermediate_outputs_heading = gettext(
-        f'Stream Network Maps (flow algorithm: {args_dict["flow_dir_algorithm"]})')
+        'Stream Network Maps (flow algorithm: {flow_dir_algorithm})'
+        ).format(flow_dir_algorithm=args_dict["flow_dir_algorithm"].upper())
 
     (ws_vector_table, ws_vector_totals_table) = (
         sdr_ndr_utils.generate_results_table_from_vector(
