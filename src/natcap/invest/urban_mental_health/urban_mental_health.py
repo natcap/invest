@@ -34,7 +34,7 @@ MODEL_SPEC = spec.ModelSpec(
     model_id="urban_mental_health",
     model_title=gettext("Urban Mental Health"),
     userguide="",  # TODO - add this model to UG
-    reporter="", # TODO - add "natcap.invest.urban_mental_health.reporter",
+    reporter="natcap.invest.urban_mental_health.reporter",
     about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
@@ -178,12 +178,13 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("baseline land use/land cover"),
             about=gettext(
                 "Map of land use/land cover codes under current or baseline "
-                "conditions. If scenario is not 'lulc', this is used only for "
-                "water masking. If an LULC attribute table is used, "
-                "all values in this raster must have corresponding entries. "
-                "This raster should extend beyond the AOI by at least the "
-                "search radius distance."
-            ),
+                "conditions. This raster should extend beyond the AOI by at "
+                "least the search radius distance. If an LULC attribute table "
+                "is provided, all values in this raster must have "
+                "corresponding entries. When using the NDVI scenario, this "
+                "raster may be used to mask out excluded land cover types "
+                "(such as water) based on an accompanying LULC attribute "
+                "table."),
             data_type=int,
             units=None,
             required="scenario=='lulc' or lulc_attr_csv",
@@ -328,14 +329,26 @@ MODEL_SPEC = spec.ModelSpec(
             spec.SingleBandRasterOutput(
                 id="baseline_cases",
                 path="intermediate/baseline_cases.tif",
-                about=gettext("Baseline cases raster."),
+                about=gettext(
+                    "Baseline number of cases of the mental health outcome "
+                    "per pixel, calculated as the rasterized baseline "
+                    "prevalence rate multiplied by the population in each "
+                    "pixel. This raster represents the expected number of "
+                    "cases under baseline conditions and is used to estimate"
+                    "preventable cases under the alternate/counterfactual "
+                    "scenario."),
                 data_type=float,
                 units=u.count
             ),
             spec.SingleBandRasterOutput(
                 id="baseline_prevalence_raster",
                 path="intermediate/baseline_prevalence.tif",
-                about=gettext("Baseline prevalence raster."),
+                about=gettext(
+                    "Rasterized baseline prevalence (or incidence) rate of "
+                    "the mental health outcome. Pixel values are taken from "
+                    "the `risk_rate` field of the baseline prevalence vector, "
+                    "so each pixel within a polygon is assigned that "
+                    "polygon's baseline rate."),
                 data_type=float,
                 units=None
             ),
@@ -343,7 +356,7 @@ MODEL_SPEC = spec.ModelSpec(
                 id="delta_ndvi",
                 path="intermediate/delta_ndvi.tif",
                 about=gettext(
-                    "Difference between baseline and alternate NDVI raster."),
+                    "Difference between alternate and baseline NDVI raster."),
                 data_type=float,
                 units=None
             ),
@@ -435,7 +448,7 @@ MODEL_SPEC = spec.ModelSpec(
                     "Preprocessed alternate NDVI raster. If using LULC "
                     "inputs, this raster is created by masking, aligning, and "
                     "resampling the alternate LULC and mapping it to mean "
-                    "NDVI (with excluded lucodes set to NODATA)."
+                    "NDVI (with excluded lucodes set to NODATA). "
                     "If using NDVI inputs, this is simply the masked aligned "
                     "and resampled alternate NDVI raster."),
                 data_type=float,
@@ -457,7 +470,7 @@ MODEL_SPEC = spec.ModelSpec(
                     "Preprocessed baseline NDVI raster. If using LULC inputs, "
                     "this raster is created by masking, aligning, and "
                     "resampling the baseline LULC and mapping it to mean "
-                    "NDVI (with excluded lucodes set to NODATA)."
+                    "NDVI (with excluded lucodes set to NODATA). "
                     "If using NDVI inputs, this is simply the masked aligned "
                     "and resampled baseline NDVI raster."),
                 data_type=float,
