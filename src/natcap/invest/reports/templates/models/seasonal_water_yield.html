@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  {{ super() }}
+  {% from 'args-table.html' import args_table %}
+  {% from 'caption.html' import caption %}
+  {% from 'content-grid.html' import content_grid %}
+  {% from 'metadata.html' import list_metadata %}
+  {% from 'raster-plot-img.html' import raster_plot_img %}
+  {% from 'wide-table.html' import wide_table %}
+
+  <h2 class="section-header">Results</h2>
+  {% if qf_rasters %}
+    {{ accordion_section(
+      'Annual and Monthly Quickflow (QF)',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(qf_rasters['annual_qf_img_src'], 'Annual Quickflow values'), 100),
+        (raster_plot_img(qf_rasters['monthly_qf_img_src'], 'Monthly Quickflow values'), 100),
+        (caption(qf_rasters['qf_caption'], definition_list=True), 100)
+      ])
+    )}}
+  {% endif %}
+
+  {% if qf_b_charts %}
+    {{ accordion_section(
+      'Average Quickflow and Baseflow by Month',
+      content_grid([
+        ('<div id="qf_b_charts"></div>', 100),
+        (caption(qf_b_charts['caption'], qf_b_charts['sources']), 100)
+      ])
+    ) }}
+  {% endif %}
+
+  {{ accordion_section(
+    outputs_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (caption(outputs_caption, definition_list=True), 100)
+    ])
+  ) }}
+
+  {{ accordion_section(
+    'Results Aggregated by AOI Feature',
+    content_grid([
+      (content_grid([
+        ('<div id="qb_map"></div>', 100),
+        (caption(qb_map_caption, aggregate_map_source_list), 100)
+      ]), 50),
+      (content_grid([
+        ('<div id="vri_sum_map"></div>', 100),
+        (caption(vri_sum_map_caption, aggregate_map_source_list), 100)
+      ]), 50),
+    ])
+  ) }}
+
+  {{ accordion_section(
+    stream_outputs_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(stream_img_src, stream_outputs_heading), 100),
+      (caption(stream_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Output Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Inputs</h2>
+  {{ accordion_section(
+    'Arguments',
+    args_table(args_dict),
+  )}}
+
+  {{ accordion_section(
+    'Raster Inputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (caption(inputs_caption, definition_list=True), 100)
+    ])
+  ) }}
+
+  {{ accordion_section(
+    'Input Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Metadata</h2>
+  {{
+    accordion_section(
+      'Output Filenames and Descriptions',
+      list_metadata(model_spec_outputs),
+      expanded=False
+    )
+  }}
+
+{% endblock content %}
+
+{% from 'vegalite-plot.html' import embed_vega %}
+{% block scripts %}
+  {{ super() }}
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.20.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  {% include 'vega-embed-js.html' %}
+  {% set chart_spec_id_list = [
+    (qb_map_json, 'qb_map'),
+    (vri_sum_map_json, 'vri_sum_map'),
+  ] %}
+  {{ embed_vega(chart_spec_id_list) }}
+  {% if qf_b_charts %}
+    {{ embed_vega([(qf_b_charts['json'], 'qf_b_charts')]) }}
+  {% endif %}
+{% endblock scripts %}
