@@ -32,14 +32,6 @@ TEMPLATE = jinja_env.get_template('models/seasonal_water_yield.html')
 
 MAP_WIDTH = 450 # pixels
 
-qf_label_month_map = {
-    f"qf_{month_index}": str(month_index) for month_index in range(1, 13)
-}
-
-
-def _label_to_month(row):
-    return qf_label_month_map[row['MonthLabel']]
-
 
 def _create_aggregate_map(geodataframe, xy_ratio, attribute,
                           title):
@@ -97,7 +89,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     bar_chart = base_chart.mark_bar().transform_fold(
         ['baseflow', 'quickflow']
     ).encode(
-        altair.X("month(month):O").title("Month"),
+        altair.X("month", sort=[i for i in range(1, 13)]).title("Month"),
         altair.Y("sum(value):Q").title("Quickflow + Baseflow (m3/month)"),
         altair.Order(field='key', sort='ascending'),
         color=altair.Color('key:N').scale(
@@ -110,7 +102,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     )
 
     precip_chart = base_chart.mark_line().encode(
-            altair.X("month(month):O").title("Month"),
+            altair.X("month", sort=[i for i in range(1, 13)]).title("Month"),
         altair.Y(
             "sum(precipitation)",
             axis=altair.Axis(orient="right")
@@ -285,16 +277,16 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 spec=model_spec.get_output('qf'),
                 title=gettext("Annual Quickflow"),
                 transform=RasterTransform.log,
-                colormap='GnBu')
+                colormap='Blues')
 
         monthly_qf_raster_config_list = [
             RasterPlotConfig(
                 raster_path=file_registry['qf_[MONTH]'][str(month)],
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('qf_[MONTH]'),
-                title=gettext(f"{calendar.month_name[month]}"),
+                title=gettext(f"Month #{month}"),
                 transform=RasterTransform.log,
-                colormap='GnBu'
+                colormap='Blues'
             ) for month in range(1, 13)]
 
         annual_qf_img_src = raster_utils.plot_and_base64_encode_rasters(
@@ -307,7 +299,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 title_list=[raster_config.title for raster_config
                             in monthly_qf_raster_config_list],
                 small_plots=True,
-                colormap='GnBu',
+                colormap='Blues',
                 supertitle=gettext("Monthly Quickflow"))
         annual_qf_displayname = os.path.basename(
                 annual_qf_raster_config.raster_path)

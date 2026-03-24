@@ -378,7 +378,9 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of local recharge. If a user-defined local recharge input"
                 " is provided, this is a copy of that layer, aligned and clipped"
                 " to match the other spatial inputs. Otherwise, this is the"
-                " local recharge as calculated by the model."
+                " local recharge as calculated by the model. Local recharge can"
+                " be negative if a pixel does not receive enough of its own water"
+                " to satisfy its vegetation requirements."
             ),
             data_type=float,
             units=u.millimeter / u.year
