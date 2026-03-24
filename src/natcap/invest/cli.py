@@ -463,9 +463,11 @@ def main(user_args=None):
             LOGGER.info(
                 f'Imported target {model_module.__name__} from {model_module}')
 
-            # Reload model module to ensure text defined in model spec is
-            # localized before it is passed to the report.
-            importlib.reload(model_module)
+            generate_report = bool(model_module.MODEL_SPEC.reporter)
+            if generate_report:
+                # Reload model module to ensure text defined in model spec is
+                # localized before it is passed to the report.
+                importlib.reload(model_module)
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
@@ -480,7 +482,7 @@ def main(user_args=None):
                 generate_metadata=True,
                 save_file_registry=True,
                 check_outputs=False,
-                generate_report=bool(model_module.MODEL_SPEC.reporter))
+                generate_report=generate_report)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)
