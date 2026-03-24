@@ -19,8 +19,12 @@
 #
 # See https://wiki.debian.org/systemd/Services for background info about systemd services.
 
+[Install]
+WantedBy=multi-user.target
+
 [Unit]
 Description=NatCap Code Signing for EXE and DMG Binaries
+After=network.target
 
 
 [Service]

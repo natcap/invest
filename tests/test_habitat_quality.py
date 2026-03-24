@@ -13,6 +13,8 @@ from osgeo import ogr
 from osgeo import osr
 from shapely.geometry import Polygon
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 
 
@@ -241,7 +243,13 @@ class HabitatQualityTests(unittest.TestCase):
                 '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
-        habitat_quality.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(habitat_quality.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        habitat_quality.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, habitat_quality.MODEL_SPEC, **execute_kwargs)
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {

@@ -472,12 +472,14 @@ def main(user_args=None):
             # Exceptions will already be logged to the logfile but will ALSO be
             # written to stdout if this exception is uncaught.  This is by
             # design.
+
             model_module.MODEL_SPEC.execute(
                 parsed_datastack.args,
                 create_logfile=True,
                 generate_metadata=True,
                 save_file_registry=True,
-                check_outputs=False)
+                check_outputs=False,
+                generate_report=bool(model_module.MODEL_SPEC.reporter))
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)
@@ -489,6 +491,7 @@ def main(user_args=None):
                 target_filepath = f'{args.model}_execute.py'
             export_to_python(target_filepath, args.model)
             parser.exit()
+
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

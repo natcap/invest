@@ -1,0 +1,14 @@
+<script>
+  document.querySelectorAll('.accordion-button').forEach(accordionButton => {
+    accordionButton.addEventListener('click', () => {
+      const parentAccordion = accordionButton.parentElement.parentElement;
+      if (parentAccordion.classList.contains('open')) {
+        parentAccordion.classList.remove('open');
+        accordionButton.setAttribute('aria-expanded', 'false');
+      } else {
+        parentAccordion.classList.add('open');
+        accordionButton.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+</script>

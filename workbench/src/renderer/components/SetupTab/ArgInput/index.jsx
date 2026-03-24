@@ -159,6 +159,7 @@ function parseArgType(argtype) {
 export default function ArgInput(props) {
   const uniqueId = useId();
   const inputRef = useRef();
+  const { t } = useTranslation();
 
   const {
     argkey,
@@ -273,6 +274,14 @@ export default function ArgInput(props) {
         {opt.display_name ? opt.display_name : opt.key}
       </option>
     ));
+    if (argSpec.include_placeholder) {
+      const placeholderOpt = (
+        <option value="placeholderOpt" key="placeholderOpt">
+          {t('Select an option...')}
+        </option>
+      );
+      options.splice(0, 0, placeholderOpt);
+    }
     form = (
       <Form.Control
         id={inputId}
@@ -283,6 +292,7 @@ export default function ArgInput(props) {
         onFocus={handleFocus}
         disabled={!enabled}
         isValid={enabled && isValid}
+        isInvalid={enabled && validationMessage}
         custom
       >
         {options}

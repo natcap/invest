@@ -25,25 +25,24 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
+                  GITHUB_EVENT: ${{ github.event_name }}
               run: |
                   # NOTE ABOUT DEPENDENCIES: gettext-base is required for
                   # envsubst. Both deps appear to be installed on the ubuntu
                   # runner as of 2025-11-07.
                   set -x
 
-                  if [[ "${{ github.event_name }}" == "pull_request" ]]
+                  if [[ "${GITHUB_EVENT}" == "pull_request" ]]
                   then
                       PR_NUM="${{ github.event.pull_request.number }}"
-                      PR_USERNAME="${{ github.event.pull_request.user.login }}"
-                      echo "Latest PR on main ($PR_NUM) was authored by $PR_USERNAME."
                       export PR_MSG="due to #$PR_NUM."
                   else
                       # event_name is presumed to have been a push.
-                      # A push could include a bunch of commits, so just get
-                      # the login name of the user that pushed
-                      PR_USERNAME="${{ github.event.push.pusher.username }}"
                       export PR_MSG='due to a push to `main`.'
                   fi
+                  export PR_USERNAMES=$(python scripts/who-authored-the-pr.py ${{ github.sha }})
+                  export COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+                  export GH_EVENT="${GITHUB_EVENT}"
 
                   # Using grep with pattern ^release filters out any autorelease branches.
                   # If no release branches are found, exit github actions.
@@ -91,15 +90,15 @@ jobs:
                         cat .github/auto-main-into-release-pr-body.md | envsubst > $PR_BODY_FILE
                         cat $PR_BODY_FILE  # for debugging
 
-                        # This PR will be assigned to $PR_USERNAME, which should be
+                        # This PR will be assigned to $PR_USERNAMES, which should be
                         # the person who merged the PR that caused this commit to be
                         # created. Others could of course be assigned later.
                         FAILED=0
                         gh pr create \
                             --head ${AUTOPR_BRANCH} \
                             --base ${RELEASE_BRANCH} \
-                            --reviewer "${PR_USERNAME}" \
-                            --assignee "${PR_USERNAME}" \
+                            --reviewer "${PR_USERNAMES}" \
+                            --assignee "${PR_USERNAMES}" \
                             --label "auto" \
                             --title "${PR_TITLE}" \
                             --body-file $PR_BODY_FILE || FAILED=1

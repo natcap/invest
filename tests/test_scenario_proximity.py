@@ -7,6 +7,8 @@ import os
 import pandas
 from osgeo import gdal
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 TEST_DATA_DIR = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -52,7 +54,13 @@ class ScenarioProximityTests(unittest.TestCase):
         args['convert_farthest_from_edge'] = True
         args['convert_nearest_to_edge'] = True
 
-        scenario_gen_proximity.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(scenario_gen_proximity.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        scenario_gen_proximity.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, scenario_gen_proximity.MODEL_SPEC, **execute_kwargs)
         ScenarioProximityTests._test_same_files(
             os.path.join(
                 TEST_DATA_DIR, 'expected_file_list_regression.txt'),

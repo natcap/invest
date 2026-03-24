@@ -30,6 +30,8 @@ import shapely
 import warnings
 
 from natcap.invest import utils
+from .utils import assert_complete_execute
+
 
 gdal.UseExceptions()
 Pyro5.config.SERIALIZER = 'marshal'  # allow null bytes in strings
@@ -318,7 +320,7 @@ class UnitTestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        aoi_path = os.path.join('aoi.geojson')
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         # This polygon matches the test data shapefile we used formerly.
         geomstring = """
             POLYGON ((-5.54101768507434 56.1006500736864,
@@ -733,7 +735,13 @@ class TestRecClientServer(unittest.TestCase):
             'hostname': self.hostname,
             'port': self.port,
         }
-        recmodel_client.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(recmodel_client.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        recmodel_client.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, recmodel_client.MODEL_SPEC, **execute_kwargs)
 
         out_regression_vector_path = os.path.join(
             args['workspace_dir'], f'regression_data_{suffix}.gpkg')
@@ -1109,7 +1117,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
             attribute_list=attribute_list,
             ogr_geom_type=ogr.wkbPoint)
         predictor_list = ['roads', 'parks']
-        server_version_path = 'server_version.pickle'
+        server_version_path = os.path.join(self.workspace_dir, 'server_version.pickle')
         with open(server_version_path, 'ab') as f:
             pickle.dump('version: foo', f)
         target_coefficient_json_path = os.path.join(self.workspace_dir, 'estimates.json')

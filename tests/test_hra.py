@@ -19,6 +19,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 ORIGIN = (1180000.0, 690000.0)
 _SRS = osr.SpatialReference()
@@ -1298,7 +1300,13 @@ class HRAModelTests(unittest.TestCase):
         validation_warnings = hra.validate(unarchived_args)
         self.assertEqual(validation_warnings, [])
 
-        hra.execute(unarchived_args)
+        execute_kwargs = {
+            'generate_report': bool(hra.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        hra.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, hra.MODEL_SPEC, **execute_kwargs)
 
         # Ecosystem risk is the sum of all risk values, so a good indicator of
         # whether the model has changed.

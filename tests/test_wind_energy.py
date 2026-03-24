@@ -14,8 +14,9 @@ from shapely.geometry import Point
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-
 import pygeoprocessing
+
+from .utils import assert_complete_execute
 
 gdal.UseExceptions()
 SAMPLE_DATA = os.path.join(
@@ -527,7 +528,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['wind_price'] = 0.187
         args['rate_change'] = '0.2'  # pass str to test casting
 
-        wind_energy.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(wind_energy.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        wind_energy.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, wind_energy.MODEL_SPEC, **execute_kwargs)
 
         # Make sure the output files were created.
         vector_path = 'wind_energy_points.shp'

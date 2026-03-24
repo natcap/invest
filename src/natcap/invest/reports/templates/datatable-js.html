@@ -1,0 +1,49 @@
+<script
+  src="https://code.jquery.com/jquery-3.7.1.min.js"
+  integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+  crossorigin="anonymous">
+</script>
+<script
+  src="https://cdn.datatables.net/2.3.3/js/dataTables.min.js"
+  type="text/javascript">
+</script>
+<script
+  src="https://cdn.datatables.net/buttons/3.2.4/js/dataTables.buttons.min.js"
+  type="text/javascript">
+</script>
+<script
+  src="https://cdn.datatables.net/buttons/3.2.4/js/buttons.colVis.min.js"
+  type="text/javascript">
+</script>
+<script type="text/javascript">
+  document.querySelectorAll('.datatable').forEach(table => {
+    const enablePaginationAndSearch = table.classList.contains('paginate');
+    let options = {};
+    if (enablePaginationAndSearch) {
+      options = {
+        paging: true,
+        layout: {
+          topStart: {
+            buttons: ['colvis']
+          },
+          topEnd: 'search',
+          bottomStart: 'info',
+          bottomEnd: null,
+          bottom2Start: 'pageLength',
+          bottom2End: 'paging',
+        },
+      };
+    } else {
+      options = {
+        paging: false,
+        layout: {
+          topStart: {
+            buttons: ['colvis']
+          },
+          topEnd: null,
+        },
+      };
+    }
+    new DataTable(table, options);
+  });
+</script>

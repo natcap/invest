@@ -26,10 +26,23 @@ from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
+_model_description = gettext(
+    """
+    The InVEST Sediment Delivery Ratio (SDR) model quantifies and maps overland 
+    sediment generation and delivery to the stream. It works at the spatial 
+    resolution of the input digital elevation model (DEM). For each pixel, the 
+    model computes the amount of annual soil loss from that pixel, then 
+    computes the sediment delivery ratio (SDR), which is the proportion of 
+    soil loss actually reaching the stream. Sediment retention services are 
+    expressed as avoided erosion and avoided export.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="sdr",
     model_title=gettext("Sediment Delivery Ratio"),
     userguide="sdr.html",
+    reporter="natcap.invest.sdr.reporter",
+    about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
@@ -423,15 +436,6 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="weighted_avg_aspect",
-            path="intermediate_outputs/weighted_avg_aspect.tif",
-            about=gettext(
-                "Average aspect weighted by flow direction."
-            ),
-            data_type=float,
-            units=u.none
-        ),
-        spec.SingleBandRasterOutput(
             id="what_drains_to_stream",
             path="intermediate_outputs/what_drains_to_stream.tif",
             about=gettext(
@@ -470,6 +474,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Copy of the input drainage map, clipped to the extent of the"
                 " other raster inputs and aligned to the DEM."
             ),
+            created_if="drainage_path",
             data_type=int,
             units=u.none
         ),
@@ -532,6 +537,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "A copy of the aligned drainage map, masked using the mask"
                 " raster."
             ),
+            created_if="drainage_path",
             data_type=int,
             units=u.none
         ),
@@ -1498,7 +1504,11 @@ def _calculate_sdr(
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             sdr_max / (1+numpy.exp((ic_0-ic_factor[valid_mask])/k_factor)))
-        result[stream == 1] = 0.0
+        # set SDR to 1 on streams, representing 100% sediment delivery, no
+        # retention. otherwise SDR would be undefined in streams, but then the
+        # nodata would propagate upslope.
+        # https://github.com/natcap/invest/issues/2379
+        result[stream == 1] = 1
         return result
 
     pygeoprocessing.raster_calculator(

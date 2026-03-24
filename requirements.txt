@@ -26,7 +26,13 @@ babel
 flask
 flask_cors
 requests
-geometamaker>=0.2.0
+geometamaker>=0.2.1
 pydantic
 certifi
 docutils
+altair
+fiona
+geopandas
+jinja2
+matplotlib
+distinctipy
