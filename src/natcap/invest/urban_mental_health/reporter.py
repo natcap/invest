@@ -3,7 +3,9 @@ import time
 
 import altair
 import geopandas
+import numpy
 import pandas
+import pygeoprocessing
 
 from natcap.invest import __version__
 from natcap.invest import gettext
@@ -19,6 +21,41 @@ LOGGER = logging.getLogger(__name__)
 TEMPLATE = jinja_env.get_template('models/urban_mental_health.html')
 
 MAP_WIDTH = 450  # pixels
+
+
+def infer_continuous_or_divergent(raster_path: str) -> str:
+    """Infer if raster should have a 'continuous' or 'divergent' color ramp.
+
+    Rules:
+        - If min value < 0 --> 'divergent'
+        - Else --> 'continuous'
+
+    Args:
+        raster_path (str): Path to raster.
+
+    Returns:
+        str: 'continuous' or 'divergent'
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    nodata = raster_info['nodata'][0]
+
+    arr = pygeoprocessing.raster_to_numpy_array(raster_path)
+
+    if nodata is not None:
+        valid_mask = ~numpy.isclose(arr, nodata, equal_nan=True)
+        valid_values = arr[valid_mask]
+    else:
+        valid_values = arr[~numpy.isnan(arr)]
+
+    if valid_values.size == 0:
+        LOGGER.warning(f"No valid pixels found in {raster_path}, defaulting to continuous")
+        return RasterDatatype.continuous
+
+    min_val = round(numpy.nanmin(valid_values), 4)
+    LOGGER.info(f"actual min: {numpy.nanmin(valid_values)}")
+    LOGGER.info("calculated min val: %s for %s", min_val, raster_path)
+
+    return RasterDatatype.divergent if min_val < 0 else RasterDatatype.continuous
 
 
 def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
@@ -77,12 +114,12 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
     intermediate_raster_config_lists = [[
         RasterPlotConfig(
             raster_path=file_registry['ndvi_base_buffer_mean_clipped'],
-            datatype=RasterDatatype.divergent,
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('ndvi_base_buffer_mean_clipped')
         ),
         RasterPlotConfig(
             raster_path=file_registry['ndvi_alt_buffer_mean_clipped'],
-            datatype=RasterDatatype.divergent,
+            datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('ndvi_alt_buffer_mean_clipped')
         ),
         RasterPlotConfig(
@@ -161,7 +198,7 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
     output_raster_config_list = [
         RasterPlotConfig(
             raster_path=file_registry['preventable_cases'],
-            datatype=RasterDatatype.divergent, #TODO - should this be continuous?
+            datatype=infer_continuous_or_divergent(file_registry['preventable_cases']), #RasterDatatype.divergent, #TODO - should this be continuous?
             spec=model_spec.get_output('preventable_cases'),
             transform=RasterTransform.log
         )
@@ -170,7 +207,7 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
         output_raster_config_list.append(
             RasterPlotConfig(
                 raster_path=file_registry['preventable_cost'],
-                datatype=RasterDatatype.divergent,
+                datatype=infer_continuous_or_divergent(file_registry['preventable_cost']),
                 spec=model_spec.get_output('preventable_cost'),
                 transform=RasterTransform.log
             )
@@ -227,6 +264,13 @@ def _create_aggregate_map(
         title):
     """Create a choropleth map for a given attribute and return Vega JSON."""
 
+    # if the attribute has any negative values, use a divergent color
+    # scale; otherwise, use a continuous color scale
+    if (geodataframe[attribute] < 0).any():
+        scale = altair.Scale(scheme='purpleorange', reverse=True)
+    else:
+        scale = altair.Scale(scheme='purples')
+
     chart = altair.Chart(geodataframe).mark_geoshape(
         clip=True,
         stroke="white",
@@ -238,7 +282,7 @@ def _create_aggregate_map(
     ).encode(
         color=altair.Color(
             f'{attribute}:Q',
-            scale=altair.Scale(scheme='purpleorange', reverse=True),
+            scale=scale,
             legend=altair.Legend(title=attribute)
         ),
         tooltip=[
