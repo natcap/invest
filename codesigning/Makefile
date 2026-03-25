@@ -1,3 +1,5 @@
+ENV := env
+CWD := $(shell pwd)
 .PHONY: deploy-cloudfunction deploy-worker
 
 deploy-cloudfunction:
@@ -14,8 +16,12 @@ deploy-cloudfunction:
 		--source gcp-cloudfunc/
 
 # NOTE: This must be executed from a computer that has SSH access to ncp-inkwell.
-deploy-worker:
-	cd signing-worker && ansible-playbook \
+deploy-worker: env
+	cd signing-worker && $(CWD)/$(ENV)/bin/ansible-playbook \
 		--ask-become-pass \
-		--inventory-file inventory.ini \
+		--inventory inventory.ini \
 		playbook.yml
+
+env:
+	python -m venv $(ENV)
+	$(CWD)/$(ENV)/bin/python -m pip install -r requirements.txt
