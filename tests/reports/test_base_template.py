@@ -45,7 +45,6 @@ class BaseTemplateTests(unittest.TestCase):
 
         for arg in ['report_script', 'invest_version',
                     'report_filepath', 'timestamp']:
-            # self.assertIn(render_args[arg], soup.footer.string)
             self.assertIsNotNone(
                 soup.footer.find(string=re.compile(render_args[arg])))
 
