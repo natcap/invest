@@ -461,11 +461,6 @@ jobs:
           yarn run build
           yarn run dist
 
-      - name: Test electron app with puppeteer
-        continue-on-error: true  # test is flaky on GHA
-        working-directory: workbench
-        run: npx cross-env CI=true yarn run test-electron-app
-
       # gsutil (part of make deploy) never seems to support the latest python version.
       - name: Set up python for gsutil
         uses: actions/setup-python@v6
@@ -502,13 +497,6 @@ jobs:
           name: InVEST-user-guide
           path: dist/InVEST_*_userguide.zip
 
-      - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ${{ runner.os }}_puppeteer_log.zip'
-          path: ${{ matrix.puppeteer-log }}
-
       - name: Run invest-autotest with binaries
         id: invest-autotest
         if : |
@@ -531,6 +519,17 @@ jobs:
         run: |
           DEST=gs://releases.naturalcapitalproject.org/invest-reports/latest
           gsutil -m rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
+
+      - name: Test electron app with puppeteer
+        working-directory: workbench
+        run: npx cross-env CI=true yarn run test-electron-app
+
+      - name: Upload workbench logging from puppeteer
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ runner.os }}_puppeteer_log.zip'
+          path: ${{ matrix.puppeteer-log }}
 
       - name: Tar the workspace to preserve permissions
         if: failure()
