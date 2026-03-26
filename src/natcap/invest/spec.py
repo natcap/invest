@@ -2355,7 +2355,8 @@ LULC_TABLE_COLUMN = IntegerInput(
     about=gettext(
         "LULC codes from the LULC raster. Each code must be a unique"
         " integer."
-    )
+    ),
+    keywords=[keywords.LULC]
 )
 AOI = VectorInput(
     id="aoi_path",
@@ -2367,13 +2368,15 @@ AOI = VectorInput(
     fields=[]
 )
 LULC = SingleBandRasterInput(
-    id="lulc_bas_path",
-    name=gettext("baseline LULC"),
+    id="lulc_path",
+    name=gettext("land use/land cover"),
     about=gettext(
-        "A map of LULC for the baseline scenario, which must occur prior to the"
-        " alternate scenario. All values in this raster must have corresponding"
-        " entries in the Carbon Pools table."
+        "Map of land use/land cover codes. Each land use/land cover"
+        " type must be assigned a unique integer code. All values in"
+        " this raster must have corresponding entries in the"
+        " Biophysical Table."
     ),
+    keywords=[keywords.LULC],
     data_type=int,
     units=None
 )

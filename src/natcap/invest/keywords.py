@@ -1,0 +1,62 @@
+from pydantic import BaseModel
+
+
+class GCMDKeyword(BaseModel):
+    value: str
+    uuid: str
+    full_path: str
+    vocabulary: str = 'Global Change Master Directory (GCMD) Keywords'
+
+
+class InvestKeyword(BaseModel):
+    value: str
+    vocabulary: str = 'InVEST Keywords'
+
+
+BIOPHYSICAL_TABLE = InvestKeyword(value='BIOPHYSICAL TABLE')
+
+CROP_COEFFICIENT = InvestKeyword(value='CROP COEFFICIENT')
+
+REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(value='REFERENCE_EVAPOTRANSPIRATION')
+
+EVAPOTRANSPIRATION = GCMDKeyword(
+    value='EVAPOTRANSPIRATION',
+    uuid='26fc4850-7ba9-44d8-a156-5c623e17b72f',
+    full_path='EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC WATER VAPOR > WATER VAPOR PROCESSES > EVAPOTRANSPIRATION')
+
+HYDROELECTRIC_ENERGY = GCMDKeyword(
+    value='HYDROELECTRIC ENERGY PRODUCTION/USE',
+    uuid='7eba0eef-3a30-4282-a162-1f483370ddc4',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > ECONOMIC RESOURCES > ENERGY PRODUCTION/USE > HYDROELECTRIC ENERGY PRODUCTION/USE')
+
+LULC = GCMDKeyword(
+    value='LAND USE/LAND COVER',
+    uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER')
+
+LULC_CLASSES = GCMDKeyword(
+    value='LAND USE/LAND COVER CLASSES',
+    uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES')   
+
+PAWC = InvestKeyword(value='PLANT AVAILABLE WATER CONTENT')
+
+PRECIPITATION = GCMDKeyword(
+    value='PRECIPITATION',
+    uuid='1532e590-a62d-46e3-8d03-2351bc48166a',
+    full_path='EARTH SCIENCE > ATMOSPHERE > PRECIPITATION')
+
+SOIL_ROOTING_DEPTH = GCMDKeyword(
+    value='SOIL ROOTING DEPTH',
+    uuid='1b475201-a032-4a66-a3aa-a35605affaee',
+    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL ROOTING DEPTH')
+
+WATERSHED_BOUNDARIES = GCMDKeyword(
+    value='WATERSHED BOUNDARIES',
+    uuid='b98123fc-6a87-4396-8e1a-ae7406e76ff6',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > WATERSHED CHARACTERISTICS > WATERSHED BOUNDARIES')
+
+WATER_BUDGET = GCMDKeyword(
+    value='WATER BUDGET',
+    uuid='f8702aed-a0ae-46f0-89eb-abde858bc6ac',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > WATER BUDGET')
