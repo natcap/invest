@@ -7,7 +7,7 @@ const { ipcRenderer } = window.Workbench.electron;
 const { logger } = window.Workbench;
 
 /**
- * Create a JSON string with invest argument keys and values.
+ * Create a JS object containing only invest argument keys and values.
  * @param {object} args - object keyed by invest argument keys and
  *   with each item including a `value` property, among others.
  * @returns {object} - invest argument key: value pairs as expected
