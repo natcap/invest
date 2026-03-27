@@ -9,7 +9,10 @@ import numpy
 from osgeo import gdal
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
+
 
 class RouteDEMTests(unittest.TestCase):
     """Tests for RouteDEM with Pygeoprocessing 1.x routing API."""
@@ -174,7 +177,12 @@ class RouteDEMTests(unittest.TestCase):
         }
 
         RouteDEMTests._make_dem(args['dem_path'])
-        routedem.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(routedem.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        routedem.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(args, routedem.MODEL_SPEC, **execute_kwargs)
 
         for expected_file in (
                 'downslope_distance_foo.tif',

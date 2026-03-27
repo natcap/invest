@@ -12,6 +12,9 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
@@ -60,7 +63,7 @@ class NDRTests(unittest.TestCase):
         output raster, in the buggy version, would have pixel values of -inf
         where they should have been nodata.
 
-        https://community.naturalcapitalproject.org/t/ndr-null-values-in-watershed-results/914
+        https://community.naturalcapitalalliance.org/t/ndr-null-values-in-watershed-results/914
         """
         from natcap.invest.ndr import ndr
 
@@ -207,7 +210,13 @@ class NDRTests(unittest.TestCase):
                 os.path.join(self.workspace_dir, 'watershed_results_ndr.gpkg'),
                 'wb') as f:
             f.write(b'')
-        ndr.execute(args)
+
+        execute_kwargs = {
+            'generate_report': bool(ndr.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        ndr.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(args, ndr.MODEL_SPEC, **execute_kwargs)
 
         result_vector = ogr.Open(os.path.join(
             args['workspace_dir'], 'watershed_results_ndr.gpkg'))
@@ -300,12 +309,12 @@ class NDRTests(unittest.TestCase):
         # results
         for field, expected_value in [
                 ('p_surface_load', 41.826904),
-                ('p_surface_export', 5.100640),
+                ('p_surface_export', 5.279964),
                 ('n_surface_load', 2977.551914),
-                ('n_surface_export', 350.592891),
+                ('n_surface_export', 318.641924),
                 ('n_subsurface_load', 28.558048),
                 ('n_subsurface_export', 12.609187),
-                ('n_total_export', 360.803969)]:
+                ('n_total_export', 330.571134)]:
             val = result_feature.GetField(field)
             if not numpy.isclose(val, expected_value):
                 mismatch_list.append(
@@ -603,17 +612,14 @@ class NDRTests(unittest.TestCase):
         """Test ``_calculate_load`` raises ValueError on bad load_type's."""
         from natcap.invest.ndr import ndr
 
-        lulc_path = os.path.join(self.workspace_dir, "lulc-load-type.tif")
-        target_load_path = os.path.join(self.workspace_dir, "load_raster.tif")
+        args = NDRTests.generate_base_args(self.workspace_dir)
 
-        # Calculate load
-        lucode_to_params = {
-            1: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'measured-runoff'},
-            2: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'cheese'},
-            3: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'},
-            4: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'}}
+        biophysical_path = os.path.join(self.workspace_dir, 'bad_table.csv')
+        biophysical_df = pandas.read_csv(args['biophysical_table_path'])
+        biophysical_df.at[2, 'load_type_n'] = 'cheese'
+        biophysical_df.to_csv(biophysical_path)
+        args['biophysical_table_path'] = biophysical_path
 
         with self.assertRaises(ValueError) as cm:
-            ndr._calculate_load(lulc_path, lucode_to_params, 'n', target_load_path)
-        actual_message = str(cm.exception)
-        self.assertTrue('found value of: "cheese"' in actual_message)
+            ndr.execute(args)
+        self.assertIn('Error in column "load_type_n", value "cheese"', str(cm.exception))

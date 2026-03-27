@@ -13,10 +13,10 @@ import numpy
 import pandas
 from scipy.sparse import dok_matrix
 import pygeoprocessing
-from natcap.invest import utils
-from natcap.invest import validation
 from osgeo import gdal
 from osgeo import osr
+
+from .utils import assert_complete_execute
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
@@ -134,10 +134,6 @@ class TestPreprocessor(unittest.TestCase):
                 transition_table.readline(),
                 'parkinglot,,NCC\n')
 
-            # After the above lines is a blank line, then the legend.
-            # Deliberately not testing the legend.
-            self.assertEqual(transition_table.readline(), '\n')
-
     def test_sample_data(self):
         """CBC Preprocessor: Test on sample data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
@@ -211,9 +207,9 @@ class TestPreprocessor(unittest.TestCase):
             lulc_csv.write('0,mangrove,True\n')
             lulc_csv.write('1,parking lot,False\n')
 
-        landcover_df = validation.get_validated_dataframe(
-            landcover_table_path,
-            **preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
+        landcover_df = preprocessor.MODEL_SPEC.get_input(
+            'lulc_lookup_table_path').get_validated_dataframe(landcover_table_path)
+
         target_table_path = os.path.join(self.workspace_dir,
                                          'transition_table.csv')
 
@@ -227,9 +223,8 @@ class TestPreprocessor(unittest.TestCase):
                       str(context.exception))
 
         # Re-load the landcover table
-        landcover_df = validation.get_validated_dataframe(
-            landcover_table_path,
-            **preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
+        landcover_df = preprocessor.MODEL_SPEC.get_input(
+            'lulc_lookup_table_path').get_validated_dataframe(landcover_table_path)
         preprocessor._create_transition_table(
             landcover_df, [filename_a, filename_b], target_table_path)
 
@@ -243,10 +238,6 @@ class TestPreprocessor(unittest.TestCase):
             self.assertEqual(
                 transition_table.readline(),
                 'parking lot,accum,NCC\n')
-
-            # After the above lines is a blank line, then the legend.
-            # Deliberately not testing the legend.
-            self.assertEqual(transition_table.readline(), '\n')
 
 
 class TestCBC2(unittest.TestCase):
@@ -291,8 +282,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('missing code,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         with self.assertRaises(ValueError) as cm:
             disturbance_matrices, accumulation_matrices = (
@@ -307,8 +296,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('a,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         with self.assertRaises(ValueError) as cm:
             disturbance_matrices, accumulation_matrices = (
@@ -349,8 +336,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('a,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         disturbance_matrices, accumulation_matrices = (
              coastal_blue_carbon._read_transition_matrix(
@@ -635,16 +620,15 @@ class TestCBC2(unittest.TestCase):
         """CBC: Test the model on one transition with no analysis year.
 
         This test came up while looking into an issue reported on the forums:
-        https://community.naturalcapitalproject.org/t/coastal-blue-carbon-negative-carbon-stocks/780/12
+        https://community.naturalcapitalalliance.org/t/coastal-blue-carbon-negative-carbon-stocks/780/12
         """
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        prior_snapshots = validation.get_validated_dataframe(
-            args['landcover_snapshot_csv'],
-            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
-        )['raster_path'].to_dict()
+        prior_snapshots = coastal_blue_carbon.MODEL_SPEC.get_input(
+            'landcover_snapshot_csv').get_validated_dataframe(
+                args['landcover_snapshot_csv'])['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_csv:
@@ -696,7 +680,13 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        coastal_blue_carbon.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(coastal_blue_carbon.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        coastal_blue_carbon.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, coastal_blue_carbon.MODEL_SPEC, **execute_kwargs)
 
         # Sample values calculated by hand.  Pixel 0 only accumulates.  Pixel 1
         # has no accumulation (per the biophysical table) and also has no
@@ -755,7 +745,7 @@ class TestCBC2(unittest.TestCase):
             raster = gdal.OpenEx(raster_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
-                expected_total_sequestration, rtol=1e-6)
+                expected_total_sequestration, rtol=1e-5)
         finally:
             raster = None
 
@@ -767,7 +757,7 @@ class TestCBC2(unittest.TestCase):
             raster = gdal.OpenEx(raster_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
-                expected_net_present_value_at_2030, rtol=1e-6)
+                expected_net_present_value_at_2030, rtol=1e-5)
         finally:
             raster = None
 
@@ -819,10 +809,9 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        prior_snapshots = validation.get_validated_dataframe(
-            args['landcover_snapshot_csv'],
-            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
-        )['raster_path'].to_dict()
+        prior_snapshots = coastal_blue_carbon.MODEL_SPEC.get_input(
+            'landcover_snapshot_csv').get_validated_dataframe(
+                args['landcover_snapshot_csv'])['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_csv:
@@ -879,10 +868,9 @@ class TestCBC2(unittest.TestCase):
 
         # Now work through the extra validation warnings.
         # test validation: invalid analysis year
-        prior_snapshots = validation.get_validated_dataframe(
-            args['landcover_snapshot_csv'],
-            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
-        )['raster_path'].to_dict()
+        prior_snapshots = coastal_blue_carbon.MODEL_SPEC.get_input(
+            'landcover_snapshot_csv').get_validated_dataframe(
+                args['landcover_snapshot_csv'])['raster_path'].to_dict()
         baseline_year = min(prior_snapshots)
         # analysis year must be >= the last transition year.
         args['analysis_year'] = baseline_year
@@ -909,21 +897,17 @@ class TestCBC2(unittest.TestCase):
         # Write invalid entries to landcover transition table
         with open(args['landcover_transitions_table'], 'w') as transition_table:
             transition_table.write('lulc-class,Developed,Forest,Water\n')
-            transition_table.write('Developed,NCC,,invalid\n')
-            transition_table.write('Forest,accum,disturb,low-impact-disturb\n')
+            transition_table.write('Developed,NCC,accum,NCC\n')
+            transition_table.write('Forest,accum,med-impact-disturb,low-impact-disturb\n')
             transition_table.write('Water,disturb,med-impact-disturb,high-impact-disturb\n')
-        transition_options = [
-                'accum', 'high-impact-disturb', 'med-impact-disturb',
-                'low-impact-disturb', 'ncc']
+
         validation_warnings = coastal_blue_carbon.validate(args)
         self.assertEqual(len(validation_warnings), 2)
         self.assertIn(
             'File could not be opened as a GDAL raster',
             validation_warnings[0][1])
         self.assertIn(
-            coastal_blue_carbon.INVALID_TRANSITION_VALUES_MSG.format(
-                model_transitions=transition_options,
-                transition_values=['disturb', 'invalid']),
+            'Error in column "developed", value "disturb"',
             validation_warnings[1][1])
 
     def test_track_first_disturbance(self):

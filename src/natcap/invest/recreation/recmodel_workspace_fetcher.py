@@ -8,7 +8,6 @@ import Pyro5
 import Pyro5.api
 
 from natcap.invest.recreation import recmodel_client
-from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 
@@ -34,7 +33,7 @@ def execute(args):
         None
     """
     output_dir = args['workspace_dir']
-    utils.make_directories([output_dir])
+    os.makedirs(output_dir, exist_ok=True)
 
     # in case the user defines a hostname
     if 'hostname' in args:

@@ -12,6 +12,7 @@ import investUsageLogger from './investUsageLogger';
 import markupMessage from './investLogMarkup';
 import writeInvestParameters from './writeInvestParameters';
 import { settingsStore } from './settingsStore';
+import { createPluginServerProcess } from './createPythonFlaskProcess';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -30,7 +31,17 @@ const TGLOGLEVELMAP = {
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 
-export function setupInvestRunHandlers(investExe) {
+export function setupLaunchPluginServerHandler() {
+  ipcMain.handle(
+    ipcMainChannels.LAUNCH_PLUGIN_SERVER,
+    async (event, pluginID) => {
+      const pid = await createPluginServerProcess(pluginID);
+      return pid;
+    }
+  );
+}
+
+export function setupInvestRunHandlers() {
   const runningJobs = {};
 
   ipcMain.on(ipcMainChannels.INVEST_KILL, (event, jobID) => {
@@ -46,16 +57,22 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, tabID
+    event, modelID, args, tabID
   ) => {
-    let investRun;
     let investStarted = false;
-    let investStdErr = '';
+    const investStdErr = '';
     const usageLogger = investUsageLogger();
     const loggingLevel = settingsStore.get('loggingLevel');
     const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
     const language = settingsStore.get('language');
     const nWorkers = settingsStore.get('nWorkers');
+    let resultsSuffix = args?.results_suffix || '';
+    if (resultsSuffix && !resultsSuffix.startsWith('_')) {
+      resultsSuffix = `_${resultsSuffix}`;
+    }
+    const reportFilepath = path.join(
+      args.workspace_dir, `${modelID}_report${resultsSuffix}.html`
+    );
 
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -67,35 +84,57 @@ export function setupInvestRunHandlers(investExe) {
     const datastackPath = path.join(tempDatastackDir, 'datastack.json');
     const payload = {
       filepath: datastackPath,
-      moduleName: pyModuleName,
+      model_id: modelID,
       relativePaths: false,
       args: JSON.stringify({
         ...args,
         n_workers: nWorkers,
       }),
     };
-    await writeInvestParameters(payload);
-
-    const cmdArgs = [
-      LOGLEVELMAP[loggingLevel],
-      TGLOGLEVELMAP[taskgraphLoggingLevel],
-      `--language "${language}"`,
-      'run',
-      modelRunName,
-      '--headless',
-      `-d "${datastackPath}"`,
-    ];
-    logger.debug(`set to run ${cmdArgs}`);
-    if (process.platform !== 'win32') {
-      investRun = spawn(investExe, cmdArgs, {
-        shell: true, // without shell, IOError when datastack.py loads json
-        detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
-      });
-    } else { // windows
-      investRun = spawn(investExe, cmdArgs, {
-        shell: true,
-      });
+    let cmd;
+    let cmdArgs;
+    let port;
+    const plugins = settingsStore.get('plugins');
+    if (plugins && Object.keys(plugins).includes(modelID)) {
+      cmd = settingsStore.get('micromamba');
+      cmdArgs = [
+        'run',
+        `--prefix "${settingsStore.get(`plugins.${modelID}.env`)}"`,
+        // calling invest with python avoids issues with unescaped
+        // spaces in the python path in the conda bin/invest script
+        'python -m natcap.invest',
+        LOGLEVELMAP[loggingLevel],
+        TGLOGLEVELMAP[taskgraphLoggingLevel],
+        `--language "${language}"`,
+        'run',
+        settingsStore.get(`plugins.${modelID}.modelID`),
+        `-d "${datastackPath}"`,
+      ];
+      port = settingsStore.get(`plugins.${modelID}.port`);
+    } else {
+      cmd = settingsStore.get('investExe');
+      cmdArgs = [
+        LOGLEVELMAP[loggingLevel],
+        TGLOGLEVELMAP[taskgraphLoggingLevel],
+        `--language "${language}"`,
+        'run',
+        modelID,
+        `-d "${datastackPath}"`];
+      port = settingsStore.get('core.port');
     }
+    // Ensure we use the same invest to write the datastack
+    // as will get used to read it when the model runs.
+    await writeInvestParameters(payload, port);
+
+    logger.debug(`about to run model with command: ${cmd} ${cmdArgs}`);
+
+    // without shell, IOError when datastack.py loads json
+    const spawnOptions = { shell: true };
+    if (process.platform !== 'win32') {
+      // counter-intuitive, but w/ true: invest terminates when this shell terminates
+      spawnOptions.detached = true;
+    }
+    const investRun = spawn(cmd, cmdArgs, spawnOptions);
 
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
@@ -114,7 +153,7 @@ export function setupInvestRunHandlers(investExe) {
           );
           event.reply(`invest-logging-${tabID}`, path.resolve(investLogfile));
           if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
-            usageLogger.start(pyModuleName, args);
+            usageLogger.start(modelID, args, port);
           }
         }
       }
@@ -122,7 +161,7 @@ export function setupInvestRunHandlers(investExe) {
       // only be one logger message at a time.
       event.reply(
         `invest-stdout-${tabID}`,
-        [strData, markupMessage(strData, pyModuleName)]
+        [strData, markupMessage(strData)]
       );
     };
     investRun.stdout.on('data', stdOutCallback);
@@ -132,14 +171,20 @@ export function setupInvestRunHandlers(investExe) {
     };
     investRun.stderr.on('data', stdErrCallback);
 
-    investRun.on('close', (code) => {
+    investRun.on('close', () => {
       logger.debug('invest subprocess stdio streams closed');
     });
 
     investRun.on('exit', (code, signal) => {
       delete runningJobs[tabID];
+      // not all models will create an html report
+      let htmlfile = '';
+      if (fs.existsSync(reportFilepath)) {
+        htmlfile = reportFilepath;
+      }
       event.reply(`invest-exit-${tabID}`, {
         code: code,
+        htmlfile: htmlfile,
       });
       logger.debug(`invest exited with code: ${code} and signal: ${signal}`);
       fs.unlink(datastackPath, (err) => {
@@ -149,14 +194,15 @@ export function setupInvestRunHandlers(investExe) {
         });
       });
       if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
-        usageLogger.exit(investStdErr);
+        usageLogger.exit(investStdErr, port);
       }
     });
   });
 }
 
 export function setupInvestLogReaderHandler() {
-  ipcMain.on(ipcMainChannels.INVEST_READ_LOG,
+  ipcMain.on(
+    ipcMainChannels.INVEST_READ_LOG,
     (event, logfile, channel) => {
       const fileStream = fs.createReadStream(logfile);
       fileStream.on('error', (err) => {
@@ -170,5 +216,6 @@ export function setupInvestLogReaderHandler() {
       fileStream.on('data', (data) => {
         event.reply(`invest-stdout-${channel}`, [`${data}`, '']);
       });
-    });
+    }
+  );
 }

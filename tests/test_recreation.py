@@ -27,10 +27,11 @@ import pandas
 import pygeoprocessing
 import Pyro5
 import shapely
-import taskgraph
 import warnings
 
 from natcap.invest import utils
+from .utils import assert_complete_execute
+
 
 gdal.UseExceptions()
 Pyro5.config.SERIALIZER = 'marshal'  # allow null bytes in strings
@@ -156,7 +157,7 @@ class TestBufferedNumpyDiskMap(unittest.TestCase):
     def test_buffered_multiprocess_operation(self):
         """Recreation test buffered file manager parallel flushes."""
         from natcap.invest.recreation import buffered_numpy_disk_map
-        
+
         array1 = numpy.array([1, 2, 3, 4])
         array2 = numpy.array([-4, -1, -2, 4])
         arraysize = array1.size * buffered_numpy_disk_map.BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE.itemsize
@@ -319,7 +320,7 @@ class UnitTestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        aoi_path = os.path.join('aoi.geojson')
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         # This polygon matches the test data shapefile we used formerly.
         geomstring = """
             POLYGON ((-5.54101768507434 56.1006500736864,
@@ -714,7 +715,6 @@ class TestRecClientServer(unittest.TestCase):
     def test_all_metrics_local_server(self):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
-        from natcap.invest import validation
 
         suffix = 'foo'
         args = {
@@ -735,14 +735,20 @@ class TestRecClientServer(unittest.TestCase):
             'hostname': self.hostname,
             'port': self.port,
         }
-        recmodel_client.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(recmodel_client.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        recmodel_client.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, recmodel_client.MODEL_SPEC, **execute_kwargs)
 
         out_regression_vector_path = os.path.join(
             args['workspace_dir'], f'regression_data_{suffix}.gpkg')
 
-        predictor_df = validation.get_validated_dataframe(
-            os.path.join(SAMPLE_DATA, 'predictors_all.csv'),
-            **recmodel_client.MODEL_SPEC['args']['predictor_table_path'])
+        predictor_df = recmodel_client.MODEL_SPEC.get_input(
+            'predictor_table_path').get_validated_dataframe(
+            os.path.join(SAMPLE_DATA, 'predictors_all.csv'))
         field_list = list(predictor_df.index) + ['pr_TUD', 'pr_PUD', 'avg_pr_UD']
 
         # For convenience, assert the sums of the columns instead of all
@@ -754,8 +760,6 @@ class TestRecClientServer(unittest.TestCase):
             'bonefish_a': 4630187907.293639,
             'bathy': 47.16540460441528,
             'roads': 5072.707571235277,
-            'bonefish_p': 792.0711806443292,
-            'bathy_sum': 348.04177433624864,
             'pr_TUD': 1.0,
             'pr_PUD': 1.0,
             'avg_pr_UD': 1.0
@@ -774,9 +778,7 @@ class TestRecClientServer(unittest.TestCase):
             'bonefish_a': 4630187907.293639,
             'bathy': 47.16540460441528,
             'roads': 5072.707571235277,
-            'bonefish_p': 792.0711806443292,
-            'bathy_sum': 348.04177433624864,
-            'pr_UD_EST': 0.996366808597374
+            'pr_UD_EST': 0.9963663467364707
         }
         for key in expected_scenario_sums:
             numpy.testing.assert_almost_equal(
@@ -1115,7 +1117,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
             attribute_list=attribute_list,
             ogr_geom_type=ogr.wkbPoint)
         predictor_list = ['roads', 'parks']
-        server_version_path = 'server_version.pickle'
+        server_version_path = os.path.join(self.workspace_dir, 'server_version.pickle')
         with open(server_version_path, 'ab') as f:
             pickle.dump('version: foo', f)
         target_coefficient_json_path = os.path.join(self.workspace_dir, 'estimates.json')
@@ -1429,7 +1431,7 @@ class RecreationValidationTests(unittest.TestCase):
     def test_bad_predictor_table_header(self):
         """Recreation Validate: assert messages for bad table headers."""
         from natcap.invest.recreation import recmodel_client
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as file:
@@ -1438,7 +1440,7 @@ class RecreationValidationTests(unittest.TestCase):
 
         expected_message = [(
             ['predictor_table_path'],
-            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+            validation_messages.MATCHED_NO_HEADERS.format(
                 header='column', header_name='id'))]
         validation_warnings = recmodel_client.validate({
             'compute_regression': True,
@@ -1460,10 +1462,10 @@ class RecreationValidationTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
         expected_messages = [
             (['predictor_table_path'],
-             validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+             validation_messages.MATCHED_NO_HEADERS.format(
                 header='column', header_name='id')),
             (['scenario_predictor_table_path'],
-             validation.MESSAGES['MATCHED_NO_HEADERS'] .format(
+             validation_messages.MATCHED_NO_HEADERS .format(
                 header='column', header_name='id'))]
         self.assertEqual(len(validation_warnings), 2)
         for message in expected_messages:
@@ -1491,7 +1493,7 @@ class RecreationValidationTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
         msgs = recmodel_client.validate(args)
-        self.assertIn('The table contains invalid type value(s)', msgs[0][1])
+        self.assertIn('Error in column "type", value "raster?mean"', msgs[0][1])
 
 
 class RecreationProductionServerHealth(unittest.TestCase):

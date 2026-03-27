@@ -11,6 +11,8 @@ import pandas
 import pygeoprocessing
 from osgeo import gdal, ogr, osr
 
+from .utils import assert_complete_execute
+
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'annual_water_yield')
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
@@ -97,7 +99,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             annual_water_yield.execute(args)
-        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+        self.assertIn('Null value(s) found in column "lulc_veg"', str(cm.exception))
 
         table_df = pandas.read_csv(args['biophysical_table_path'])
         table_df['LULC_veg'] = ['-1']*len(table_df.index)
@@ -106,7 +108,9 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             annual_water_yield.execute(args)
-        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+        self.assertEqual(
+            'Error in column "lulc_veg", value "-1": Value does not meet condition value in {0, 1}',
+            str(cm.exception))
 
     def test_missing_lulc_value(self):
         """Hydro: catching missing LULC value in Biophysical table."""
@@ -168,7 +172,13 @@ class AnnualWaterYieldTests(unittest.TestCase):
         args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
         args['results_suffix'] = 'test'
-        annual_water_yield.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(annual_water_yield.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        annual_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, annual_water_yield.MODEL_SPEC, **execute_kwargs)
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
         for raster_path in raster_results:
@@ -281,7 +291,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
     def test_validation(self):
         """Hydro: test failure cases on the validation function."""
         from natcap.invest import annual_water_yield
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
@@ -311,7 +321,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
             args_missing_key)
         self.assertEqual(
             validation_warnings,
-            [(['eto_path'], validation.MESSAGES['MISSING_KEY'])])
+            [(['eto_path'], validation_messages.MISSING_KEY)])
 
         # ensure that a missing landcover code in the biophysical table will
         # raise an exception that's helpful
@@ -416,7 +426,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_fractp_op(self):
         """Test `fractp_op`"""
-        from natcap.invest.annual_water_yield import fractp_op
+        from natcap.invest.annual_water_yield.annual_water_yield import fractp_op
 
         # generate fake data
         kc = numpy.array([[1, .1, .1], [.6, .6, .1]])
@@ -444,7 +454,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
     def test_compute_watershed_valuation(self):
         """Test `compute_watershed_valuation`, `compute_rsupply_volume`
         and `compute_water_yield_volume`"""
-        from natcap.invest import annual_water_yield
+        from natcap.invest.annual_water_yield import annual_water_yield
 
         def _create_watershed_results_vector(path_to_shp):
             """Generate a fake watershed results vector file."""

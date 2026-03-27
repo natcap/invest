@@ -159,11 +159,13 @@ function parseArgType(argtype) {
 export default function ArgInput(props) {
   const uniqueId = useId();
   const inputRef = useRef();
+  const { t } = useTranslation();
 
   const {
     argkey,
     argSpec,
     userguide,
+    isCoreModel,
     enabled,
     updateArgValues,
     handleFocus,
@@ -217,6 +219,17 @@ export default function ArgInput(props) {
       />
     );
   }
+  // show validation message for boolean (switch) types regardless of touched
+  // because touching them necessarily changes their state.
+  else if (validationMessage && argSpec.type === 'boolean') {
+    feedback = (
+      <Feedback
+        argkey={argkey}
+        argtype={argSpec.type}
+        message={validationMessage}
+      />
+    );
+  }
 
   let fileSelector = <React.Fragment />;
   if (['csv', 'vector', 'raster', 'directory', 'file'].includes(argSpec.type)) {
@@ -249,11 +262,26 @@ export default function ArgInput(props) {
         name={argkey}
         checked={value}
         onChange={() => updateArgValues(argkey, !value)}
+        isValid={enabled && isValid}
+        isInvalid={enabled && validationMessage}
         disabled={!enabled}
         bsCustomPrefix="form-switch"
       />
     );
   } else if (argSpec.type === 'option_string') {
+    const options = dropdownOptions.map((opt) => (
+      <option value={opt.key} key={opt.key}>
+        {opt.display_name ? opt.display_name : opt.key}
+      </option>
+    ));
+    if (argSpec.include_placeholder) {
+      const placeholderOpt = (
+        <option value="placeholderOpt" key="placeholderOpt">
+          {t('Select an option...')}
+        </option>
+      );
+      options.splice(0, 0, placeholderOpt);
+    }
     form = (
       <Form.Control
         id={inputId}
@@ -264,17 +292,10 @@ export default function ArgInput(props) {
         onFocus={handleFocus}
         disabled={!enabled}
         isValid={enabled && isValid}
+        isInvalid={enabled && validationMessage}
         custom
       >
-        {
-          Array.isArray(dropdownOptions) ?
-          dropdownOptions.map(
-            (opt) => <option value={opt} key={opt}>{opt}</option>
-          ) :
-          Object.entries(dropdownOptions).map(
-            ([opt, info]) => <option value={opt} key={opt}>{info.display_name}</option>
-          )
-        }
+        {options}
       </Form.Control>
     );
   } else {
@@ -322,7 +343,12 @@ export default function ArgInput(props) {
       <Col>
         <InputGroup>
           <div className="d-flex flex-nowrap w-100">
-            <AboutModal arg={argSpec} userguide={userguide} argkey={argkey} />
+            <AboutModal
+              arg={argSpec}
+              userguide={userguide}
+              isCoreModel={isCoreModel}
+              argkey={argkey}
+            />
             {form}
           </div>
           {feedback}
@@ -341,8 +367,10 @@ ArgInput.propTypes = {
     units: PropTypes.string, // for numbers only
   }).isRequired,
   userguide: PropTypes.string.isRequired,
+  isCoreModel: PropTypes.bool.isRequired,
   value: PropTypes.oneOfType(
-    [PropTypes.string, PropTypes.bool, PropTypes.number]),
+    [PropTypes.string, PropTypes.bool, PropTypes.number]
+  ),
   touched: PropTypes.bool,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
@@ -350,7 +378,10 @@ ArgInput.propTypes = {
   handleFocus: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
   enabled: PropTypes.bool.isRequired,
-  dropdownOptions: PropTypes.oneOfType([PropTypes.arrayOf(PropTypes.string), PropTypes.object]),
+  dropdownOptions: PropTypes.arrayOf(PropTypes.shape({
+    key: PropTypes.string.isRequired,
+    display_name: PropTypes.string,
+  })),
   inputDropHandler: PropTypes.func.isRequired,
   scrollEventCount: PropTypes.number,
 };
@@ -380,13 +411,16 @@ function AboutModal(props) {
   const handleAboutClose = () => setAboutShow(false);
   const handleAboutOpen = () => setAboutShow(true);
 
-  const { userguide, arg, argkey } = props;
+  const { userguide, arg, argkey, isCoreModel } = props;
   const { t, i18n } = useTranslation();
 
-  // create link to users guide entry for this arg
+  // create link to users guide entry for this arg IFF this is a core model
   // anchor name is the arg name, with underscores replaced with hyphens
-  const userguideURL = `
-    ${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${userguide}#${argkey.replace(/_/g, '-')}`;
+  const userguideURL = (
+    isCoreModel
+    ? `${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${userguide}#${argkey.replace(/_/g, '-')}`
+    : null
+  );
   return (
     <React.Fragment>
       <Button
@@ -404,15 +438,19 @@ function AboutModal(props) {
         <Modal.Body>
           {arg.about}
           <br />
-          <a
-            href={userguideURL}
-            title={userguideURL}
-            aria-label="open user guide section for this input in web browser"
-            onClick={handleClickUsersGuideLink}
-          >
-            {t("User's guide entry")}
-            <MdOpenInNew className="mr-1" />
-          </a>
+          {
+            isCoreModel
+            &&
+            <a
+              href={userguideURL}
+              title={userguideURL}
+              aria-label={t("User's guide entry (opens in new window)")}
+              onClick={handleClickUsersGuideLink}
+            >
+              {t("User's guide entry")}
+              <MdOpenInNew className="mr-1" />
+            </a>
+          }
         </Modal.Body>
       </Modal>
     </React.Fragment>
@@ -425,5 +463,6 @@ AboutModal.propTypes = {
     about: PropTypes.string,
   }).isRequired,
   userguide: PropTypes.string.isRequired,
+  isCoreModel: PropTypes.bool.isRequired,
   argkey: PropTypes.string.isRequired,
 };

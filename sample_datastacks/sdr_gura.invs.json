@@ -1,0 +1,20 @@
+{
+    "args": {
+        "biophysical_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/SDR/biophysical_table_Gura.csv",
+        "dem_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/SDR.zip/SDR/DEM_gura.tif",
+        "drainage_path": "",
+        "erodibility_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/SDR.zip/SDR/erodibility_gura.tif",
+        "erosivity_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/SDR.zip/SDR/erosivity_gura.tif",
+        "ic_0_param": "0.5",
+        "k_param": "2",
+        "lulc_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/SDR.zip/SDR/land_use_gura.tif",
+        "results_suffix": "gura",
+        "sdr_max": "0.8",
+        "l_max": "122",
+        "threshold_flow_accumulation": "1000",
+        "watersheds_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/SDR.zip/SDR/watershed_gura.shp",
+        "flow_dir_algorithm": "MFD"
+    },
+    "invest_version": "3.7.0",
+    "model_name": "natcap.invest.sdr.sdr"
+}

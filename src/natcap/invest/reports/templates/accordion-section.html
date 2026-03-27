@@ -1,0 +1,33 @@
+<!--
+  Import this macro `with context` to allow it to access `globals`.
+
+  Args:
+
+  section_heading (str): text to appear on the button
+  content (str): valid html to appear in the panel
+  expanded (bool): if True, the accordion will start out open.
+                 if False, it will start out closed.
+-->
+{% macro accordion_section(section_heading, content, expanded=True) -%}
+  {% set accordion_panel_id = ['accordion-panel-', globals.accordion_panel_num]|join %}
+  {% set globals.accordion_panel_num = globals.accordion_panel_num + 1 %}
+  <section
+    class="accordion-section {{ 'open' if expanded else '' }}"
+  >
+    <h3 class="accordion-header">
+      <button
+        class="accordion-button"
+        aria-expanded="{{ 'true' if expanded else 'false' }}"
+        aria-controls="{{ accordion_panel_id }}"
+      >
+        {{ section_heading }}
+      </button>
+    </h3>
+    <div
+      class="accordion-content"
+      id="{{ accordion_panel_id }}"
+    >
+      {{ content }}
+    </div>
+  </section>
+{%- endmacro %}

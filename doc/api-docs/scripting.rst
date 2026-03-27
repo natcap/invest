@@ -169,6 +169,13 @@ Elements to note:
   executes the nutrient model end-to-end.  If the user wishes to make batch
   calls to InVEST, this line will likely be placed inside a loop.
 
+* *The file registry dictionary*: As of version 3.17.0, the ``execute``
+  function of each invest model returns a dictionary summarizing all output
+  files produced by the model. It maps output IDs (found in the model's
+  ``MODEL_SPEC``) to the absolute paths where those outputs were created. This
+  may be used to access model results programmatically for subsequent data
+  processing.
+
 ====================================================
 Example: Threshold Flow Accumulation Parameter Study
 ====================================================
@@ -306,4 +313,4 @@ See the `GNU gettext manual <https://www.gnu.org/software/gettext/manual/gettext
 Summary
 =======
 
-The InVEST scripting framework was designed to assist InVEST users in automating batch runs or adding custom functionality to the existing InVEST software suite.  Support questions can be directed to the NatCap support forums at `http://community.naturalcapitalproject.org. <http://community.naturalcapitalproject.org.>`_
+The InVEST scripting framework was designed to assist InVEST users in automating batch runs or adding custom functionality to the existing InVEST software suite.  Support questions can be directed to the NatCap support forums at `http://community.naturalcapitalalliance.org. <http://community.naturalcapitalalliance.org.>`_

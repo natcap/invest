@@ -11,7 +11,6 @@ import sqlite3
 import numpy
 
 from ._utils import _numpy_dumps, _numpy_loads
-from .. import utils
 
 
 LOGGER = logging.getLogger(
@@ -21,8 +20,14 @@ LOGGER = logging.getLogger(
 def _npy_append(filepath, array):
     """Append to a numpy array on disk without reading the entire array."""
     with open(filepath, 'rb+') as file:
+        # Check the numpy file format version
+        # We are not using structured arrays, so it's safe to assume version 1.
+        # It seems that calling read_magic is necessary before reading the
+        # array header (probably moving the file pointer to the correct place)
+        # https://github.com/numpy/numpy/issues/29159
         version = numpy.lib.format.read_magic(file)
-        header_tuple = numpy.lib.format._read_array_header(file, version)
+        assert version == (1, 0)
+        header_tuple = numpy.lib.format.read_array_header_1_0(file)
         header_dict = {
             'shape': header_tuple[0],
             'fortran_order': header_tuple[1],
@@ -34,7 +39,7 @@ def _npy_append(filepath, array):
         file.seek(0, 2)  # go to end to append data
         file.write(array)
         file.seek(0, 0)  # go to start to re-write header
-        numpy.lib.format._write_array_header(file, header_dict, version)
+        numpy.lib.format.write_array_header_1_0(file, header_dict)
 
 
 class BufferedNumpyDiskMap(object):
@@ -66,7 +71,7 @@ class BufferedNumpyDiskMap(object):
         self.n_workers = n_workers
         self.manager_filename = manager_filename
         self.manager_directory = os.path.dirname(manager_filename)
-        utils.make_directories([self.manager_directory])
+        os.makedirs(self.manager_directory, exist_ok=True)
         db_connection = sqlite3.connect(
             manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()

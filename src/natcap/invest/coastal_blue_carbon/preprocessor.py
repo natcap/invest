@@ -1,148 +1,261 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
 import logging
-import os
 import time
 
 import pygeoprocessing
-import taskgraph
 from osgeo import gdal
 
-from .. import gettext
-from .. import spec_utils
-from .. import utils
-from .. import validation
-from ..model_metadata import MODEL_METADATA
-from ..unit_registry import u
-from . import coastal_blue_carbon
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
+from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 
-BIOPHYSICAL_COLUMNS_SPEC = coastal_blue_carbon.MODEL_SPEC[
-    'args']['biophysical_table_path']['columns']
-
-MODEL_SPEC = {
-    "model_id": "coastal_blue_carbon_preprocessor",
-    "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
-    "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
-    "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
-    "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "lulc_lookup_table_path": {
-            "name": gettext("LULC lookup table"),
-            "type": "csv",
-            "about": gettext(
-                "A table mapping LULC codes from the snapshot rasters to the "
-                "corresponding LULC class names, and whether or not the "
-                "class is a coastal blue carbon habitat."),
-            "index_col": "lucode",
-            "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code. Every value in the "
-                        "snapshot LULC maps must have a corresponding entry "
-                        "in this column.")},
-                "lulc-class": {
-                    "type": "freestyle_string",
-                    "about": gettext("Name of the LULC class.")},
-                "is_coastal_blue_carbon_habitat": {
-                    "type": "boolean",
-                    "about": gettext(
-                        "Enter TRUE if this LULC class is a coastal blue "
-                        "carbon habitat, FALSE if not.")}
-            }
-        },
-        "landcover_snapshot_csv": {
-            "type": "csv",
-            "index_col": "snapshot_year",
-            "columns": {
-                "snapshot_year": {
-                    "type": "integer",
-                    "about": gettext("Year to snapshot.")},
-                "raster_path": {
-                    "type": "raster",
-                    "bands": {1: {"type": "integer"}},
-                    "about": gettext(
-                        "Map of LULC in the snapshot year. "
-                        "All values in this raster must have corresponding "
-                        "entries in the LULC Lookup table.")
-                }
-            },
-            "about": gettext(
-                "A table mapping snapshot years to corresponding LULC maps "
-                "for each year."),
-            "name": gettext("LULC snapshots table")
-        }
-    },
-    "outputs": {
-        "transitions.csv": {
-            "about": (
-                "LULC transition matrix. The first column represents the "
-                "source LULC class, and the first row represents the "
-                "destination LULC classes. Cells are populated with "
-                "transition states, or left empty if no such transition occurs."),
-            "index_col": "lulc-class",
-            "columns": {
-                "lulc-class": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "LULC class names matching those in the biophysical "
-                        "table.")},
-                "[LULC]": {
-                    "type": "option_string",
-                    "options": {
-                        "accum": {
-                            "description": gettext("a state of carbon accumulation")
-                        },
-                        "disturb": {
-                            "description": gettext(
-                                "Carbon disturbance occurred. Replace this "
-                                "with one of ‘low-impact-disturb’, "
-                                "‘med-impact-disturb’, or ‘high-impact-disturb’ "
-                                "to indicate the degree of disturbance.")},
-                        "NCC": {
-                            "description": gettext("no change in carbon")
-                        }
-                    }
-                }
-            }
-        },
-        "carbon_pool_transient_template.csv": {
-            "about": (
-                "Table mapping each LULC type to impact and accumulation "
-                "information. This is a template that you will fill out to "
-                "create the biophysical table input to the main model."),
-            "index_col": "lucode",
-            "columns": {
-                **BIOPHYSICAL_COLUMNS_SPEC,
-                # remove "expression" property which doesn't go in output spec
-                "biomass-half-life": dict(
-                    set(BIOPHYSICAL_COLUMNS_SPEC["biomass-half-life"].items()) -
-                    {("expression", "value > 0")}
+MODEL_SPEC = spec.ModelSpec(
+    model_id="coastal_blue_carbon_preprocessor",
+    model_title=gettext("Coastal Blue Carbon Preprocessor"),
+    userguide="coastal_blue_carbon.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=("cbc_pre",),
+    module_name=__name__,
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["lulc_lookup_table_path", "landcover_snapshot_csv"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.CSVInput(
+            id="lulc_lookup_table_path",
+            name=gettext("LULC lookup table"),
+            about=gettext(
+                "A table mapping LULC codes from the snapshot rasters to the"
+                " corresponding LULC class names, and whether or not the class is a"
+                " coastal blue carbon habitat."
+            ),
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext(
+                        "LULC code. Every value in the snapshot LULC maps must have a"
+                        " corresponding entry in this column."
+                    )
                 ),
-                "soil-half-life": dict(
-                    set(BIOPHYSICAL_COLUMNS_SPEC["soil-half-life"].items()) -
-                    {("expression", "value > 0")}
+                spec.StringInput(
+                    id="lulc-class", about=gettext("Name of the LULC class."), regexp=None
+                ),
+                spec.BooleanInput(
+                    id="is_coastal_blue_carbon_habitat",
+                    about=gettext(
+                        "Enter TRUE if this LULC class is a coastal blue carbon habitat,"
+                        " FALSE if not."
+                    )
                 )
-            }
-        },
-        "aligned_lulc_[YEAR].tif": {
-            "about": (
-                "Copy of LULC map for the given year, aligned and resampled "
-                "to match all the other LULC maps."),
-            "bands": {1: {"type": "integer"}}
-        },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
-    }
-}
-
-
-ALIGNED_LULC_RASTER_TEMPLATE = 'aligned_lulc_{year}{suffix}.tif'
-TRANSITION_TABLE = 'carbon_pool_transition_template{suffix}.csv'
-BIOPHYSICAL_TABLE = 'carbon_biophysical_table_template{suffix}.csv'
+            ],
+            index_col="lucode"
+        ),
+        spec.CSVInput(
+            id="landcover_snapshot_csv",
+            name=gettext("LULC snapshots table"),
+            about=gettext(
+                "A table mapping snapshot years to corresponding LULC maps for each year."
+            ),
+            columns=[
+                spec.IntegerInput(id="snapshot_year", about=gettext("Year to snapshot.")),
+                spec.SingleBandRasterInput(
+                    id="raster_path",
+                    about=gettext(
+                        "Map of LULC in the snapshot year. All values in this raster must"
+                        " have corresponding entries in the LULC Lookup table."
+                    ),
+                    data_type=int,
+                    units=None,
+                    projected=None
+                )
+            ],
+            index_col="snapshot_year"
+        )
+    ],
+    outputs=[
+        spec.CSVOutput(
+            id="carbon_biophysical_table_template",
+            path="outputs_preprocessor/carbon_biophysical_table_template.csv",
+            about=gettext(
+                "LULC transition matrix. The first column represents the source LULC"
+                " class, and the first row represents the destination LULC classes. Cells"
+                " are populated with transition states, or left empty if no such"
+                " transition occurs."
+            ),
+            columns=[
+                spec.StringOutput(
+                    id="lulc-class",
+                    about=gettext(
+                        "LULC class names matching those in the biophysical table."
+                    )
+                ),
+                spec.OptionStringOutput(
+                    id="[LULC]",
+                    about=None,
+                    options=[
+                        spec.Option(key="accum", about="a state of carbon accumulation"),
+                        spec.Option(
+                            key="disturb",
+                            about=(
+                                "Carbon disturbance occurred. Replace this with one of"
+                                " ‘low-impact-disturb’, ‘med-impact-disturb’, or"
+                                " ‘high-impact-disturb’ to indicate the degree of"
+                                " disturbance."
+                            )
+                        ),
+                        spec.Option(key="NCC", about="no change in carbon"),
+                    ]
+                )
+            ],
+            index_col="lulc-class"
+        ),
+        spec.CSVOutput(
+            id="carbon_pool_transition_template",
+            path="outputs_preprocessor/carbon_pool_transition_template.csv",
+            about=gettext(
+                "Table mapping each LULC type to impact and accumulation information."
+                " This is a template that you will fill out to create the biophysical"
+                " table input to the main model."
+            ),
+            columns=[
+                spec.IntegerOutput(
+                    id="lucode",
+                    about=gettext(
+                        "The LULC code that represents this LULC class in the LULC"
+                        " snapshot rasters."
+                    )
+                ),
+                spec.StringOutput(
+                    id="lulc-class",
+                    about=gettext(
+                        "Name of the LULC class. This label must be unique among the all"
+                        " the LULC classes."
+                    )
+                ),
+                spec.NumberOutput(
+                    id="biomass-initial",
+                    about=gettext(
+                        "The initial carbon stocks in the biomass pool for this LULC"
+                        " class."
+                    ),
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.NumberOutput(
+                    id="soil-initial",
+                    about=gettext(
+                        "The initial carbon stocks in the soil pool for this LULC class."
+                    ),
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.NumberOutput(
+                    id="litter-initial",
+                    about=gettext(
+                        "The initial carbon stocks in the litter pool for this LULC"
+                        " class."
+                    ),
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.NumberOutput(
+                    id="biomass-half-life",
+                    about=gettext("The half-life of carbon in the biomass pool."),
+                    units=u.year
+                ),
+                spec.RatioOutput(
+                    id="biomass-low-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the biomass pool that is disturbed"
+                        " when a cell transitions away from this  LULC class in a"
+                        " low-impact disturbance."
+                    )
+                ),
+                spec.RatioOutput(
+                    id="biomass-med-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the biomass pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " medium-impact disturbance."
+                    )
+                ),
+                spec.RatioOutput(
+                    id="biomass-high-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the biomass pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " high-impact disturbance."
+                    )
+                ),
+                spec.NumberOutput(
+                    id="biomass-yearly-accumulation",
+                    about=gettext(
+                        "Annual rate of CO2E accumulation in the biomass pool."
+                    ),
+                    units=u.megametric_ton / u.hectare / u.year
+                ),
+                spec.NumberOutput(
+                    id="soil-half-life",
+                    about=gettext("The half-life of carbon in the soil pool."),
+                    units=u.year
+                ),
+                spec.RatioOutput(
+                    id="soil-low-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the soil pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " low-impact disturbance."
+                    )
+                ),
+                spec.RatioOutput(
+                    id="soil-med-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the soil pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " medium-impact disturbance."
+                    )
+                ),
+                spec.RatioOutput(
+                    id="soil-high-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the soil pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " high-impact disturbance."
+                    )
+                ),
+                spec.NumberOutput(
+                    id="soil-yearly-accumulation",
+                    about=gettext("Annual rate of CO2E accumulation in the soil pool."),
+                    units=u.megametric_ton / u.hectare / u.year
+                ),
+                spec.NumberOutput(
+                    id="litter-yearly-accumulation",
+                    about=gettext("Annual rate of CO2E accumulation in the litter pool."),
+                    units=u.megametric_ton / u.hectare / u.year
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_lulc_[YEAR]",
+            path="outputs_preprocessor/aligned_lulc_[YEAR].tif",
+            about=gettext(
+                "Copy of LULC map for the given year, aligned and resampled to match all"
+                " the other LULC maps."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.TASKGRAPH_CACHE
+    ]
+)
 
 
 def execute(args):
@@ -164,27 +277,13 @@ def execute(args):
             any order, but must be unique.
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
-    utils.make_directories([output_dir])
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        n_workers, reporting_interval=5.0)
-
-    snapshots_dict = validation.get_validated_dataframe(
-        args['landcover_snapshot_csv'],
-        **MODEL_SPEC['args']['landcover_snapshot_csv']
-    )['raster_path'].to_dict()
+    snapshots_dict = MODEL_SPEC.get_input(
+        'landcover_snapshot_csv').get_validated_dataframe(
+            args['landcover_snapshot_csv'])['raster_path'].to_dict()
 
     # Align the raster stack for analyzing the various transitions.
     min_pixel_size = float('inf')
@@ -193,9 +292,7 @@ def execute(args):
     for snapshot_year, raster_path in sorted(
             snapshots_dict.items(), key=lambda x: x[0]):
         source_snapshot_paths.append(raster_path)
-        aligned_snapshot_paths.append(os.path.join(
-            output_dir, ALIGNED_LULC_RASTER_TEMPLATE.format(
-                year=snapshot_year, suffix=suffix)))
+        aligned_snapshot_paths.append(file_registry['aligned_lulc_[YEAR]', snapshot_year])
         min_pixel_size = min(
             utils.mean_pixel_size_and_area(
                 pygeoprocessing.get_raster_info(raster_path)['pixel_size'])[0],
@@ -214,31 +311,28 @@ def execute(args):
         target_path_list=aligned_snapshot_paths,
         task_name='Align input landcover rasters')
 
-    landcover_df = validation.get_validated_dataframe(
-        args['lulc_lookup_table_path'],
-        **MODEL_SPEC['args']['lulc_lookup_table_path'])
+    landcover_df = MODEL_SPEC.get_input(
+        'lulc_lookup_table_path').get_validated_dataframe(
+            args['lulc_lookup_table_path'])
 
-    target_transition_table = os.path.join(
-        output_dir, TRANSITION_TABLE.format(suffix=suffix))
     _ = task_graph.add_task(
         func=_create_transition_table,
         args=(landcover_df,
               aligned_snapshot_paths,
-              target_transition_table),
-        target_path_list=[target_transition_table],
+              file_registry['carbon_pool_transition_template']),
+        target_path_list=[file_registry['carbon_pool_transition_template']],
         dependent_task_list=[alignment_task],
         task_name='Determine transitions and write transition table')
 
-    target_biophysical_table_path = os.path.join(
-        output_dir, BIOPHYSICAL_TABLE.format(suffix=suffix))
     _ = task_graph.add_task(
         func=_create_biophysical_table,
-        args=(landcover_df, target_biophysical_table_path),
-        target_path_list=[target_biophysical_table_path],
+        args=(landcover_df, file_registry['carbon_biophysical_table_template']),
+        target_path_list=[file_registry['carbon_biophysical_table_template']],
         task_name='Write biophysical table template')
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def _create_transition_table(landcover_df, lulc_snapshot_list,
@@ -357,15 +451,6 @@ def _create_transition_table(landcover_df, lulc_snapshot_list,
                 row.append(column_value)
             csv_file.write(','.join(row) + '\n')
 
-        # Append legend
-        csv_file.write("\n,legend")
-        csv_file.write(
-            "\n,empty cells indicate that no transitions occur of that type")
-        csv_file.write("\n,disturb (disturbance): change to low- med- or "
-                       "high-impact-disturb")
-        csv_file.write("\n,accum (accumulation)")
-        csv_file.write("\n,NCC (no-carbon-change)")
-
 
 def _create_biophysical_table(landcover_df, target_biophysical_table_path):
     """Write the biophysical table template to disk.
@@ -385,8 +470,8 @@ def _create_biophysical_table(landcover_df, target_biophysical_table_path):
         ``None``
     """
     target_column_names = [
-        colname.lower() for colname in coastal_blue_carbon.MODEL_SPEC['args'][
-            'biophysical_table_path']['columns']]
+        spec.id.lower() for spec in
+        coastal_blue_carbon.MODEL_SPEC.get_input('biophysical_table_path').columns]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")
@@ -420,4 +505,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    return validation.validate(args, MODEL_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC)

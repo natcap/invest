@@ -1,0 +1,23 @@
+{
+    "args": {
+        "aoi_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CoastalVulnerability.zip/CoastalVulnerability/aoi_grandbahama_utm.shp",
+        "bathymetry_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CoastalVulnerability.zip/CoastalVulnerability/bathymetry.tif",
+        "dem_averaging_radius": "900",
+        "dem_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CoastalVulnerability.zip/CoastalVulnerability/dem_srtm_grandbahama.tif",
+        "geomorphology_fill_value": "4",
+        "geomorphology_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CoastalVulnerability.zip/CoastalVulnerability/geomorphology_grandbahama.shp",
+        "habitat_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/vsi-data/CoastalVulnerability/GrandBahama_Habitats/Natural_Habitats_remote.csv",
+        "landmass_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CoastalVulnerability.zip/CoastalVulnerability/landmass_polygon.shp",
+        "max_fetch_distance": "30000",
+        "model_resolution": "1000",
+        "population_radius": "500",
+        "population_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CoastalVulnerability.zip/CoastalVulnerability/population_grandbahama.tif",
+        "results_suffix": "",
+        "shelf_contour_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CoastalVulnerability.zip/CoastalVulnerability/continental_shelf_polyline_global.shp",
+        "slr_field": "UNKNOWN",
+        "slr_vector_path": "",
+        "wwiii_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CoastalVulnerability.zip/CoastalVulnerability/WaveWatchIII_global.shp"
+    },
+    "invest_version": "3.7.0.post615+ha3dcaf3cee60",
+    "model_name": "natcap.invest.coastal_vulnerability"
+}

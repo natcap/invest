@@ -18,6 +18,7 @@ import shapely.geometry
 from osgeo import gdal
 from osgeo import ogr
 
+
 gdal.UseExceptions()
 _TEST_FILE_CWD = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(_TEST_FILE_CWD,
@@ -25,6 +26,19 @@ DATA_DIR = os.path.join(_TEST_FILE_CWD,
 SAMPLE_DATA_DIR = os.path.join(
     _TEST_FILE_CWD, '..', 'data', 'invest-sample-data')
 
+# These modules live in tests/test_datastack_modules
+# Each contains a different MODEL_SPEC for the purpose of datastack testing
+MOCK_MODEL_ID_TO_PYNAME = {
+    name: f'test_datastack_modules.{name}' for name in [
+        'archive_extraction',
+        'duplicate_filepaths',
+        'nonspatial_files',
+        'raster',
+        'simple_parameters',
+        'ui_parameter_archive',
+        'vector'
+    ]
+}
 
 # Allow our tests to import the test modules in the test directory.
 sys.path.append(_TEST_FILE_CWD)
@@ -125,8 +139,10 @@ class DatastackArchiveTests(unittest.TestCase):
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
-        datastack.build_datastack_archive(
-            params, 'test_datastack_modules.simple_parameters', archive_path)
+        with patch('natcap.invest.datastack.models') as p:
+            p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+            datastack.build_datastack_archive(
+                params, 'simple_parameters', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         datastack._tarfile_safe_extract(archive_path, out_directory)
 
@@ -152,8 +168,10 @@ class DatastackArchiveTests(unittest.TestCase):
 
             # Collect the raster's files into a single archive
             archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-            datastack.build_datastack_archive(
-                params, 'test_datastack_modules.raster', archive_path)
+            with patch('natcap.invest.datastack.models') as p:
+                p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+                datastack.build_datastack_archive(
+                    params, 'raster', archive_path)
 
             # extract the archive
             out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -193,9 +211,11 @@ class DatastackArchiveTests(unittest.TestCase):
             archive_path = os.path.join(dest_dir,
                                         'archive.invs.tar.gz')
 
-            # Collect the vector's files into a single archive
-            datastack.build_datastack_archive(
-                params, 'test_datastack_modules.vector', archive_path)
+            with patch('natcap.invest.datastack.models') as p:
+                p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+                # Collect the vector's files into a single archive
+                datastack.build_datastack_archive(
+                    params, 'vector', archive_path)
 
             # extract the archive
             out_directory = os.path.join(dest_dir, 'extracted_archive')
@@ -243,16 +263,17 @@ class DatastackArchiveTests(unittest.TestCase):
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
-        datastack.build_datastack_archive(
-            params, 'test_datastack_modules.archive_extraction', archive_path)
+        with patch('natcap.invest.datastack.models') as p:
+            p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+            datastack.build_datastack_archive(
+                params, 'archive_extraction', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         datastack._tarfile_safe_extract(archive_path, out_directory)
 
         # validate metadata in directory to ensure 2 yamls exist
-        files, messages = geometamaker.validate_dir(out_directory,
-                                                    recursive=True)
+        files, messages = geometamaker.validate_dir(out_directory)
         self.assertEqual(len(files), 2)
         self.assertFalse(any(messages))
 
@@ -290,8 +311,10 @@ class DatastackArchiveTests(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        datastack.build_datastack_archive(
-            params, 'test_datastack_modules.nonspatial_files', archive_path)
+        with patch('natcap.invest.datastack.models') as p:
+            p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+            datastack.build_datastack_archive(
+                params, 'nonspatial_files', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -328,8 +351,10 @@ class DatastackArchiveTests(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        datastack.build_datastack_archive(
-            params, 'test_datastack_modules.duplicate_filepaths', archive_path)
+        with patch('natcap.invest.datastack.models') as p:
+            p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+            datastack.build_datastack_archive(
+                params, 'duplicate_filepaths', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -358,6 +383,7 @@ class DatastackArchiveTests(unittest.TestCase):
         """Datastack: test archive extraction."""
         from natcap.invest import datastack
         from natcap.invest import utils
+        from natcap.invest import spec
         from natcap.invest import validation
 
         params = {
@@ -412,8 +438,10 @@ class DatastackArchiveTests(unittest.TestCase):
             spatial_csv.write(f'4,{target_csv_vector_path}\n')
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        datastack.build_datastack_archive(
-            params, 'test_datastack_modules.archive_extraction', archive_path)
+        with patch('natcap.invest.datastack.models') as p:
+            p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+            datastack.build_datastack_archive(
+                params, 'archive_extraction', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         archive_params = datastack.extract_datastack_archive(
             archive_path, out_directory)
@@ -435,13 +463,15 @@ class DatastackArchiveTests(unittest.TestCase):
             self.assertTrue(
                 filecmp.cmp(archive_params[key], params[key], shallow=False))
 
-        spatial_csv_dict = validation.get_validated_dataframe(
-            archive_params['spatial_table'],
+        spatial_csv_dict = spec.CSVInput(
+            id='',
             index_col='id',
-            columns={
-                'id': {'type': 'integer'},
-                'path': {'type': 'file'}
-            }).to_dict(orient='index')
+            columns=[
+                spec.IntegerInput(id='id'),
+                spec.FileInput(id='path')]
+        ).get_validated_dataframe(
+            archive_params['spatial_table']
+        ).to_dict(orient='index')
         spatial_csv_dir = os.path.dirname(archive_params['spatial_table'])
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(
@@ -467,9 +497,28 @@ class DatastackArchiveTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             with patch('natcap.invest.datastack.build_parameter_set',
                        side_effect=ValueError(error_message)):
-                datastack.build_datastack_archive(
-                    params, 'test_datastack_modules.simple_parameters',
-                    archive_path)
+                with patch('natcap.invest.datastack.models') as p:
+                    p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+                    datastack.build_datastack_archive(
+                        params, 'simple_parameters', archive_path)
+
+    def test_extract_old_style_datastack(self):
+        """Datastack: extract old-style datastack that uses pyname"""
+        from natcap.invest import datastack
+        json_path = os.path.join(self.workspace, 'old_datastack.json')
+        with open(json_path, 'w') as file:
+            json.dump({
+                "args": {
+                    "factor": "",
+                    "raster_path": "",
+                    "results_suffix": "",
+                    "workspace_dir": ""
+                },
+                "invest_version": "3.14.2",
+                "model_name": "natcap.invest.carbon"
+            }, file)
+        datastack_info = datastack.extract_parameter_set(json_path)
+        self.assertEqual(datastack_info.model_id, "carbon")
 
 
 class ParameterSetTest(unittest.TestCase):
@@ -513,7 +562,7 @@ class ParameterSetTest(unittest.TestCase):
         datastack.build_parameter_set(params, modelname, paramset_filename)
 
         # Read back the parameter set
-        args, callable_name, invest_version = datastack.extract_parameter_set(
+        args, callable_name = datastack.extract_parameter_set(
             paramset_filename)
 
         # parameter set calculations normalizes all paths.
@@ -524,7 +573,6 @@ class ParameterSetTest(unittest.TestCase):
             normalized_params[key] = os.path.normpath(normalized_params[key])
 
         self.assertEqual(args, normalized_params)
-        self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
     def test_relative_parameter_set(self):
@@ -573,11 +621,10 @@ class ParameterSetTest(unittest.TestCase):
 
         # Read back the parameter set and verify the returned paths are
         # absolute
-        args, callable_name, invest_version = datastack.extract_parameter_set(
+        args, callable_name = datastack.extract_parameter_set(
             paramset_filename)
 
         self.assertEqual(args, params)
-        self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
     def test_relative_path_failure(self):
@@ -639,11 +686,10 @@ class ParameterSetTest(unittest.TestCase):
 
         # Read back the parameter set and verify the returned paths are
         # absolute
-        args, callable_name, invest_version = datastack.extract_parameter_set(
+        args, callable_name = datastack.extract_parameter_set(
             paramset_filename)
 
         self.assertEqual(args, params)
-        self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
     def test_extract_parameters_from_logfile(self):
@@ -661,7 +707,6 @@ class ParameterSetTest(unittest.TestCase):
 
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
             """))
-
         params = datastack.extract_parameters_from_logfile(logfile_path)
 
         expected_params = datastack.ParameterSet(
@@ -669,8 +714,7 @@ class ParameterSetTest(unittest.TestCase):
              'some_int': 1,
              'some_float': 2.33,
              'workspace_dir': 'some_workspace_dir'},
-            'some_model',
-            'some_version')
+            'some_model')
 
         self.assertEqual(params, expected_params)
 
@@ -700,16 +744,18 @@ class ParameterSetTest(unittest.TestCase):
         }
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        datastack.build_datastack_archive(
-            params, 'test_datastack_modules.simple_parameters', archive_path)
+
+        with patch('natcap.invest.datastack.models') as p:
+            p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+            datastack.build_datastack_archive(
+                params, 'simple_parameters', archive_path)
 
         stack_type, stack_info = datastack.get_datastack_info(
             archive_path, extract_path=os.path.join(self.workspace, 'archive'))
 
         self.assertEqual(stack_type, 'archive')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            params, 'test_datastack_modules.simple_parameters',
-            natcap.invest.__version__))
+            params, 'simple_parameters'))
 
     def test_get_datastack_info_parameter_set(self):
         """Datastack: test get datastack info parameter set."""
@@ -723,7 +769,7 @@ class ParameterSetTest(unittest.TestCase):
             'd': '',
         }
 
-        test_module_name = 'test_datastack_modules.simple_parameters'
+        test_module_name = 'simple_parameters'
         json_path = os.path.join(self.workspace, 'archive.invs.json')
         datastack.build_parameter_set(
             params, test_module_name, json_path)
@@ -733,12 +779,13 @@ class ParameterSetTest(unittest.TestCase):
         self.assertEqual(
             stack_info,
             datastack.ParameterSet(
-                params, test_module_name, natcap.invest.__version__))
+                params, test_module_name))
 
     def test_get_datastack_info_logfile_new_style(self):
         """Datastack: test get datastack info logfile new style."""
         import natcap.invest
         from natcap.invest import datastack
+        from natcap.invest import utils
         args = {
             'a': 1,
             'b': 2.7,
@@ -749,40 +796,35 @@ class ParameterSetTest(unittest.TestCase):
 
         logfile_path = os.path.join(self.workspace, 'logfile.txt')
         with open(logfile_path, 'w') as logfile:
-            logfile.write(datastack.format_args_dict(args, 'some_modelname'))
+            logfile.write(utils.format_args_dict(args, 'some_modelname'))
 
         stack_type, stack_info = datastack.get_datastack_info(logfile_path)
         self.assertEqual(stack_type, 'logfile')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            args, 'some_modelname', natcap.invest.__version__))
+            args, 'some_modelname'))
 
-    def test_get_datastack_info_logfile_iui_style(self):
-        """Datastack: test get datastack info logfile iui style."""
+    def test_get_datastack_info_logfile_old_style(self):
+        """Datastack: test get datastack info logfile old style."""
+        import natcap.invest
         from natcap.invest import datastack
+        from natcap.invest import utils
+        args = {
+            'a': 1,
+            'b': 2.7,
+            'c': [1, 2, 3.55],
+            'd': 'hello, world!',
+            'e': False,
+        }
 
         logfile_path = os.path.join(self.workspace, 'logfile.txt')
         with open(logfile_path, 'w') as logfile:
-            logfile.write(textwrap.dedent("""
-                Arguments:
-                suffix                           foo
-                some_int                         1
-                some_float                       2.33
-                workspace_dir                    some_workspace_dir
-
-                some other logging here.
-            """))
-
-        expected_args = {
-            'suffix': 'foo',
-            'some_int': 1,
-            'some_float': 2.33,
-            'workspace_dir': 'some_workspace_dir',
-        }
+            # Old style of log files include the pyname instead of model ID
+            logfile.write(utils.format_args_dict(args, 'natcap.invest.carbon'))
 
         stack_type, stack_info = datastack.get_datastack_info(logfile_path)
         self.assertEqual(stack_type, 'logfile')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
+            args, 'carbon'))
 
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_mixed_path_separators_in_paramset_windows(self):
@@ -870,24 +912,3 @@ class ParameterSetTest(unittest.TestCase):
 
         extracted_paramset = datastack.extract_parameter_set(paramset_path)
         self.assertEqual(extracted_paramset.args, expected_args)
-
-
-class UtilitiesTest(unittest.TestCase):
-    """Datastack Utilities Tests."""
-    def test_print_args(self):
-        """Datastacks: verify that we format args correctly."""
-        from natcap.invest.datastack import __version__
-        from natcap.invest.datastack import format_args_dict
-
-        args_dict = {
-            'some_arg': [1, 2, 3, 4],
-            'foo': 'bar',
-        }
-
-        args_string = format_args_dict(args_dict=args_dict,
-                                       model_name='test_model')
-        expected_string = str(
-            'Arguments for InVEST test_model %s:\n'
-            'foo      bar\n'
-            'some_arg [1, 2, 3, 4]\n') % __version__
-        self.assertEqual(args_string, expected_string)

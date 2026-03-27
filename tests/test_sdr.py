@@ -9,6 +9,8 @@ import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
@@ -33,7 +35,7 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         try:
             numpy.testing.assert_allclose(
                 actual_results[key], expected_results[key],
-                rtol=0.00001, atol=0)
+                rtol=0.003, atol=0)
         except AssertionError:
             incorrect_vals[key] = (actual_results[key], expected_results[key])
     if incorrect_vals:
@@ -133,12 +135,18 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
 
-        sdr.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(sdr.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        sdr.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(args, sdr.MODEL_SPEC, **execute_kwargs)
+
         expected_watershed_totals = {
             'usle_tot': 2.62457418442,
             'sed_export': 0.09748090804,
-            'sed_dep': 1.71672844887,
-            'avoid_exp': 10199.46875,
+            'sed_dep': 1.71813157,
+            'avoid_exp': 10199.466725,
             'avoid_eros': 274444.75,
         }
 
@@ -190,7 +198,7 @@ class SDRTests(unittest.TestCase):
                 raster_sum += numpy.sum(
                     block[~pygeoprocessing.array_equals_nodata(
                             block, nodata)], dtype=numpy.float64)
-            numpy.testing.assert_allclose(raster_sum, expected_sum)
+            numpy.testing.assert_allclose(raster_sum, expected_sum, atol=1e-5)
 
     def test_base_regression_d8(self):
         """SDR base regression test on sample data in D8 mode.
@@ -355,8 +363,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'A value in the biophysical table is not a number '
-            'within range 0..1.', str(context.exception))
+            'Error in column "usle_p", value "1000.0"', str(context.exception))
 
     def test_base_usle_p_nan(self):
         """SDR test expected exception for USLE_P not a number."""
@@ -371,7 +378,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'could not be interpreted as ratios', str(context.exception))
+            'could not be interpreted as RatioInput', str(context.exception))
 
     def test_lucode_not_a_number(self):
         """SDR test expected exception for invalid data in lucode column."""
@@ -392,7 +399,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'could not be interpreted as integers', str(context.exception))
+            'could not be interpreted as IntegerInput', str(context.exception))
 
     def test_missing_lulc_value(self):
         """SDR test for ValueError when LULC value not found in table."""

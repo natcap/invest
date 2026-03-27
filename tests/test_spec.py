@@ -1,0 +1,517 @@
+import os
+import shutil
+import tempfile
+import unittest
+
+import geometamaker
+import numpy
+import pygeoprocessing
+from natcap.invest import spec, models
+from natcap.invest.unit_registry import u
+from osgeo import gdal
+from osgeo import osr
+from pydantic import ValidationError
+
+from .utils import assert_complete_execute, fake_execute
+
+
+gdal.UseExceptions()
+
+
+class SpecUtilsUnitTests(unittest.TestCase):
+    """Unit tests for natcap.invest.spec."""
+
+    def test_format_unit(self):
+        """spec: test converting units to strings with format_unit."""
+        for unit_name, expected in [
+                ('meter', 'm'),
+                ('meter / second', 'm/s'),
+                ('foot * mm', 'ft · mm'),
+                ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
+                ('mm^3 / year', 'mm³/year')
+        ]:
+            unit = spec.u.Unit(unit_name)
+            actual = spec.format_unit(unit)
+            self.assertEqual(expected, actual)
+
+    def test_format_unit_raises_error(self):
+        """spec: format_unit raises TypeError if not a pint.Unit."""
+        with self.assertRaises(TypeError):
+            spec.format_unit({})
+
+
+class TestDescribeArgFromSpec(unittest.TestCase):
+    """Test building RST for various invest args specifications."""
+
+    def test_number_spec(self):
+        number_spec = spec.NumberInput(
+            id="bar",
+            name="Bar",
+            about="Description",
+            units=u.meter**3/u.month,
+            expression="value >= 0"
+        )
+        out = number_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`number <input_types.html#number>`__, '
+            'units: **m³/month**, *required*): Description'])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_ratio_spec(self):
+        ratio_spec = spec.RatioInput(
+            id="bar",
+            name="Bar",
+            about="Description"
+        )
+        out = ratio_spec.describe_rst()
+        expected_rst = (['**Bar** (`ratio <input_types.html#ratio>`__, '
+                         '*required*): Description'])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_percent_spec(self):
+        percent_spec = spec.PercentInput(
+            id="bar",
+            name="Bar",
+            about="Description",
+            required=False
+        )
+        out = percent_spec.describe_rst()
+        expected_rst = (['**Bar** (`percent <input_types.html#percent>`__, '
+                         '*optional*): Description'])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_integer_spec(self):
+        integer_spec = spec.IntegerInput(
+            id="bar",
+            name="Bar",
+            about="Description",
+            required=True
+        )
+        out = integer_spec.describe_rst()
+        expected_rst = (['**Bar** (`integer <input_types.html#integer>`__, '
+                         '*required*): Description'])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_boolean_spec(self):
+        boolean_spec = spec.BooleanInput(
+            id="bar",
+            name="Bar",
+            about="Description"
+        )
+        out = boolean_spec.describe_rst()
+        expected_rst = (['**Bar** (`true/false <input_types.html#truefalse>'
+                         '`__): Description'])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_freestyle_string_spec(self):
+        string_spec = spec.StringInput(
+            id="bar",
+            name="Bar",
+            about="Description"
+        )
+        out = string_spec.describe_rst()
+        expected_rst = (['**Bar** (`text <input_types.html#text>`__, '
+                         '*required*): Description'])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_option_string_spec(self):
+        option_spec = spec.OptionStringInput(
+            id="bar",
+            name="Bar",
+            about="Description",
+            options=[
+                spec.Option(key="option_a", display_name="A"),
+                spec.Option(key="Option_b", about="do something"),
+                spec.Option(
+                    key="option_c",
+                    display_name="c",
+                    about="do something else")])
+        # expect that option case is ignored
+        # otherwise, c would sort before A
+        out = option_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`option <input_types.html#option>`__, *required*): Description',
+            '\tValues must be one of the following text strings:',
+            '\t- "**A**"',
+            '\t- "**c**": do something else',
+            '\t- "**Option_b**": do something'
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_raster_spec(self):
+        raster_spec = spec.SingleBandRasterInput(
+            id="bar",
+            data_type=int,
+            units=None,
+            about="Description",
+            name="Bar"
+        )
+        out = raster_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`raster <input_types.html#raster>`__, *required*): Description'
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+        raster_spec = spec.SingleBandRasterInput(
+            id="bar",
+            data_type=float,
+            units=u.millimeter/u.year,
+            about="Description",
+            name="Bar"
+        )
+        out = raster_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`raster <input_types.html#raster>`__, units: **mm/year**, *required*): Description'
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_vector_spec(self):
+        vector_spec = spec.VectorInput(
+            id="bar",
+            fields=[],
+            geometry_types={"LINESTRING"},
+            about="Description",
+            name="Bar"
+        )
+        out = vector_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`vector <input_types.html#vector>`__, linestring, *required*): Description'
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+        vector_spec = spec.VectorInput(
+            id="bar",
+            fields=[
+                spec.IntegerInput(
+                    id="id",
+                    about="Unique identifier for each feature"
+                ),
+                spec.NumberInput(
+                    id="precipitation",
+                    units=u.millimeter/u.year,
+                    about="Average annual precipitation over the area"
+                )
+            ],
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            about="Description",
+            name="Bar"
+        )
+        out = vector_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`vector <input_types.html#vector>`__, polygon/multipolygon, *required*): Description',
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_csv_spec(self):
+        csv_spec = spec.CSVInput(
+            id="bar",
+            about="Description.",
+            name="Bar"
+        )
+        out = csv_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`CSV <input_types.html#csv>`__, *required*): Description. '
+            'Please see the sample data table for details on the format.'
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+        # Test every type that can be nested in a CSV column:
+        # number, ratio, percent, code,
+        csv_spec = spec.CSVInput(
+            id="bar",
+            about="Description",
+            name="Bar",
+            columns=[
+                spec.RatioInput(
+                    id="b",
+                    about="description"
+                )
+            ]
+        )
+        out = csv_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`CSV <input_types.html#csv>`__, *required*): Description'
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_directory_spec(self):
+        self.maxDiff = None
+        dir_spec = spec.DirectoryInput(
+            id="bar",
+            about="Description",
+            name="Bar",
+            contents=[]
+        )
+        out = dir_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`directory <input_types.html#directory>`__, *required*): Description'
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_multi_type_spec(self):
+        multi_spec = spec.RasterOrVectorInput(
+            id="bar",
+            about="Description",
+            name="Bar",
+            data_type=int,
+            units=None,
+            geometry_types={"POLYGON"},
+            fields=[]
+        )
+        out = multi_spec.describe_rst()
+        expected_rst = ([
+            '**Bar** (`raster <input_types.html#raster>`__ or `vector <input_types.html#vector>`__, *required*): Description'
+        ])
+        self.assertEqual(repr(out), repr(expected_rst))
+
+
+class TestMetadataFromSpec(unittest.TestCase):
+    """Tests for metadata-generation functions."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_write_metadata_for_outputs(self):
+        """Test writing metadata for an invest output workspace."""
+        from .utils import SAMPLE_MODEL_SPEC
+        
+        # Generate an output workspace with real files, without
+        # running an invest model.
+        args_dict = {'workspace_dir': self.workspace_dir}
+        SAMPLE_MODEL_SPEC.create_output_directories(args_dict)
+        file_registry = fake_execute(SAMPLE_MODEL_SPEC.outputs, self.workspace_dir)
+        SAMPLE_MODEL_SPEC.generate_metadata_for_outputs(file_registry, args_dict)
+
+        files, messages = geometamaker.validate_dir(self.workspace_dir)
+        self.assertEqual(len(files), 4)
+        self.assertFalse(any(messages))
+
+        # Test some specific content of the metadata
+        vector_spec = SAMPLE_MODEL_SPEC.get_output('admin_boundaries')
+        resource = geometamaker.describe(
+            os.path.join(self.workspace_dir, vector_spec.path))
+        self.assertCountEqual(
+            resource.get_keywords(),
+            [SAMPLE_MODEL_SPEC.model_id, 'InVEST'])
+        self.assertEqual(
+            resource.get_field_description('SUP_DEMadm_cap').description,
+            vector_spec.get_field('SUP_DEMadm_cap').about)
+        self.assertEqual(
+            resource.get_field_description('SUP_DEMadm_cap').units,
+            spec.format_unit(vector_spec.get_field('SUP_DEMadm_cap').units))
+
+
+class ResultsSuffixTests(unittest.TestCase):
+    """Tests for natcap.invest.spec.ResultsSuffixInput."""
+
+    def test_suffix_string(self):
+        """Utils: test suffix_string."""
+        self.assertEqual(spec.SUFFIX.preprocess('suff'), '_suff')
+
+    def test_suffix_string_underscore(self):
+        """Utils: test suffix_string underscore."""
+        self.assertEqual(spec.SUFFIX.preprocess('_suff'), '_suff')
+
+    def test_suffix_string_empty(self):
+        """Utils: test empty suffix_string."""
+        self.assertEqual(spec.SUFFIX.preprocess(''), '')
+
+    def test_suffix_string_no_entry(self):
+        """Utils: test no suffix entry in args."""
+        self.assertEqual(spec.SUFFIX.preprocess(None), '')
+
+    def test_suffix_included_in_all_models(self):
+        """Test that all core models include ResultsSuffixInput."""
+        missing_suffix = []
+        for module in models.pyname_to_module.values():
+            if not any([isinstance(i, spec.ResultsSuffixInput)
+                        for i in module.MODEL_SPEC.inputs]):
+                missing_suffix.append(module.MODEL_SPEC.model_id)
+        self.assertEqual(missing_suffix, [])
+
+
+class MissingResultsSuffixTests(unittest.TestCase):
+    """Test ModelSpec.execute for model without ResultsSuffixInput."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_spec_no_results_suffix(self):
+        """Test ModelSpec.execute succeeds without ResultsSuffixInput.
+
+        This test uses the carbon model, as it can be run with minimal
+          inputs and has a reporter
+        """
+        from natcap.invest import carbon
+
+        # The input at index 1 is the results suffix
+        results_suffix_input = carbon.MODEL_SPEC.inputs.pop(1)
+        assert isinstance(results_suffix_input, spec.ResultsSuffixInput)
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        # Create LULC raster and pools csv in workspace and add them to args.
+        args['lulc_bas_path'] = os.path.join(args['workspace_dir'],
+                                       'lulc_bas_path.tif')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        projection_wkt = srs.ExportToWkt()
+        # origin hand-picked for this epsg:
+        origin = (461261, 4923265)
+
+        array = numpy.ones((5, 5), dtype=numpy.int32)
+        pixel_size = (1, -1)
+
+        pygeoprocessing.numpy_array_to_raster(
+            array, -1, pixel_size, origin, projection_wkt,
+            args['lulc_bas_path'])
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        with open(args['carbon_pools_path'], 'w') as open_table:
+            open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
+            open_table.write('15,10,60,1,1,"lulc code 1"\n')
+            open_table.write('5,3,20,0,2,"lulc code 2"\n')
+
+        execute_kwargs = {
+            'generate_report': bool(carbon.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        carbon.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, carbon.MODEL_SPEC, **execute_kwargs)
+
+
+class InputTests(unittest.TestCase):
+    """Tests for natcap.invest.spec.Input and subclasses."""
+
+    def test_raster_input_preprocess(self):
+        """Test SingleBandRasterInput.preprocess method"""
+        raster_input = spec.RasterInput(
+            id="foo",
+            bands=[spec.RasterBand(units=None)])
+        self.assertEqual(raster_input.preprocess('foo/bar.tif'), 'foo/bar.tif')
+        self.assertEqual(
+            raster_input.preprocess('zip+https://storage.googleapis.com/foo/bar.tif'),
+            '/vsizip/vsicurl/https://storage.googleapis.com/foo/bar.tif')
+        self.assertEqual(raster_input.preprocess(''), None)
+        self.assertEqual(raster_input.preprocess(None), None)
+
+    def test_single_band_raster_input_preprocess(self):
+        """Test SingleBandRasterInput.preprocess method"""
+        raster_input = spec.SingleBandRasterInput(
+            id="foo",
+            data_type=int,
+            units=None)
+        self.assertEqual(raster_input.preprocess('foo/bar.tif'), 'foo/bar.tif')
+        self.assertEqual(
+            raster_input.preprocess('zip+https://storage.googleapis.com/foo/bar.tif'),
+            '/vsizip/vsicurl/https://storage.googleapis.com/foo/bar.tif')
+        self.assertEqual(raster_input.preprocess(''), None)
+        self.assertEqual(raster_input.preprocess(None), None)
+
+    def test_vector_input_preprocess(self):
+        """Test VectorInput.preprocess method"""
+        vector_input = spec.VectorInput(
+            id="foo",
+            geometry_types={"POLYGON"},
+            fields=[])
+        self.assertEqual(vector_input.preprocess('foo/bar.gpkg'), 'foo/bar.gpkg')
+        self.assertEqual(
+            vector_input.preprocess('zip+https://storage.googleapis.com/foo/bar.gpkg'),
+            '/vsizip/vsicurl/https://storage.googleapis.com/foo/bar.gpkg')
+        self.assertEqual(vector_input.preprocess(''), None)
+        self.assertEqual(vector_input.preprocess(None), None)
+
+    def test_csv_input_preprocess(self):
+        """Test CSVInput.preprocess method"""
+        csv_input = spec.CSVInput(
+            id="foo")
+        self.assertEqual(csv_input.preprocess('foo/bar.csv'), 'foo/bar.csv')
+        self.assertEqual(
+            csv_input.preprocess('https://storage.googleapis.com/foo/bar.csv'),
+            'https://storage.googleapis.com/foo/bar.csv')
+        self.assertEqual(csv_input.preprocess(''), None)
+        self.assertEqual(csv_input.preprocess(None), None)
+
+    def test_number_input_preprocess(self):
+        """Test NumberInput.preprocess method"""
+        number_input = spec.NumberInput(id='foo', units=None)
+        self.assertEqual(number_input.preprocess(1.5), 1.5)
+        self.assertEqual(number_input.preprocess('1.5'), 1.5)
+        self.assertEqual(number_input.preprocess(0), 0)
+        self.assertEqual(number_input.preprocess(''), None)
+        self.assertEqual(number_input.preprocess(None), None)
+
+    def test_integer_input_preprocess(self):
+        """Test IntegerInput.preprocess method"""
+        integer_input = spec.IntegerInput(id='foo')
+        self.assertEqual(integer_input.preprocess(1), 1)
+        self.assertEqual(integer_input.preprocess('1'), 1)
+        self.assertEqual(integer_input.preprocess(0), 0)
+        self.assertEqual(integer_input.preprocess(''), None)
+        self.assertEqual(integer_input.preprocess(None), None)
+
+    def test_boolean_input_preprocess(self):
+        """Test BooleanInput.preprocess method"""
+        boolean_input = spec.BooleanInput(id='foo')
+        self.assertEqual(boolean_input.preprocess(False), False)
+        self.assertEqual(boolean_input.preprocess(True), True)
+        self.assertEqual(boolean_input.preprocess(''), None)
+        self.assertEqual(boolean_input.preprocess(None), None)
+
+    def test_string_input_preprocess(self):
+        """Test StringInput.preprocess method"""
+        string_input = spec.StringInput(id='foo')
+        self.assertEqual(string_input.preprocess('foo'), 'foo')
+        self.assertEqual(string_input.preprocess(1), '1')
+        self.assertEqual(string_input.preprocess(''), None)
+        self.assertEqual(string_input.preprocess(None), None)
+
+    def test_option_string_input_preprocess(self):
+        """Test StringInput.preprocess method"""
+        option_string_input = spec.OptionStringInput(
+            id='foo', options=[spec.Option(key='foo'), spec.Option(key='bar')])
+        self.assertEqual(option_string_input.preprocess('foo'), 'foo')
+        self.assertEqual(option_string_input.preprocess('Foo'), 'foo')
+        self.assertEqual(option_string_input.preprocess(''), None)
+        self.assertEqual(option_string_input.preprocess(None), None)
+
+
+class ModelSpecTests(unittest.TestCase):
+    """Tests for natcap.invest.spec.ModelSpec."""
+
+    def test_reporter_field_validator(self):
+        """Test that the field validator raises pydantic.ValidationError."""
+
+        data = {
+            'model_id': 'foo',
+            'model_title': 'Foo',
+            'userguide': '',
+            'input_field_order': [],
+            'inputs': [],
+            'outputs': [],
+            'module_name': 'foo',
+        }
+
+        _ = spec.ModelSpec(**data, reporter='')
+        with self.assertRaises(ValidationError):
+            spec.ModelSpec(**data, reporter='foo.bar')
+        with self.assertRaises(ValidationError):
+            # This module is importable, but has no 'report' attribute
+            spec.ModelSpec(**data, reporter='natcap.invest')

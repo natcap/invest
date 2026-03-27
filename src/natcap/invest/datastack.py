@@ -34,31 +34,19 @@ import warnings
 
 from osgeo import gdal
 
-from . import spec_utils
+from . import spec
 from . import utils
-from . import validation
-
-try:
-    from . import __version__
-except ImportError:
-    # The only known case where this will be triggered is when building the API
-    # documentation because natcap.invest is not installed into the
-    # environment.
-    __version__ = 'UNKNOWN'
-    warnings.warn(
-        '__version__ attribute of natcap.invest could not be imported.',
-        RuntimeWarning)
+from . import models
 
 
 LOGGER = logging.getLogger(__name__)
-ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 DATASTACK_EXTENSION = '.invest.tar.gz'
 PARAMETER_SET_EXTENSION = '.invest.json'
 DATASTACK_PARAMETER_FILENAME = 'parameters' + PARAMETER_SET_EXTENSION
-UNKNOWN = 'UNKNOWN'
+
 
 ParameterSet = collections.namedtuple('ParameterSet',
-                                      'args model_name invest_version')
+                                      'args model_id')
 
 
 def _tarfile_safe_extract(archive_path, dest_dir_path):
@@ -96,82 +84,6 @@ def _tarfile_safe_extract(archive_path, dest_dir_path):
         safe_extract(tar, dest_dir_path)
 
 
-def _copy_spatial_files(spatial_filepath, target_dir):
-    """Copy spatial files to a new directory.
-
-    Args:
-        spatial_filepath (str): The filepath to a GDAL-supported file.
-        target_dir (str): The directory where all component files of
-            ``spatial_filepath`` should be copied.  If this directory does not
-            exist, it will be created.
-
-    Returns:
-        filepath (str): The path to a representative file copied into the
-        ``target_dir``.  If possible, this will match the basename of
-        ``spatial_filepath``, so if someone provides an ESRI Shapefile called
-        ``my_vector.shp``, the return value will be ``os.path.join(target_dir,
-        my_vector.shp)``.
-    """
-    LOGGER.info(f'Copying {spatial_filepath} --> {target_dir}')
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-
-    source_basename = os.path.basename(spatial_filepath)
-    return_filepath = None
-
-    spatial_file = gdal.OpenEx(spatial_filepath)
-    for member_file in spatial_file.GetFileList():
-        # ArcGIS Binary/Grid format includes the directory in the file listing.
-        # The parent directory isn't strictly needed, so we can just skip it.
-        if os.path.isdir(member_file):
-            continue
-
-        target_basename = os.path.basename(member_file)
-        target_filepath = os.path.join(target_dir, target_basename)
-        if source_basename == target_basename:
-            return_filepath = target_filepath
-        shutil.copyfile(member_file, target_filepath)
-    spatial_file = None
-
-    # I can't conceive of a case where the basename of the source file does not
-    # match any of the member file basenames, but just in case there's a
-    # weird GDAL driver that does this, it seems reasonable to fall back to
-    # whichever of the member files was most recent.
-    if not return_filepath:
-        return_filepath = target_filepath
-
-    return return_filepath
-
-
-def format_args_dict(args_dict, model_name):
-    """Nicely format an arguments dictionary for writing to a stream.
-
-    If printed to a console, the returned string will be aligned in two columns
-    representing each key and value in the arg dict.  Keys are in ascending,
-    sorted order.  Both columns are left-aligned.
-
-    Args:
-        args_dict (dict): The args dictionary to format.
-        model_name (string): The model name (in python package import format)
-
-    Returns:
-        A formatted, unicode string.
-    """
-    sorted_args = sorted(args_dict.items(), key=lambda x: x[0])
-
-    max_key_width = 0
-    if len(sorted_args) > 0:
-        max_key_width = max(len(x[0]) for x in sorted_args)
-
-    format_str = "%-" + str(max_key_width) + "s %s"
-
-    args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = "Arguments for InVEST %s %s:\n%s\n" % (model_name,
-                                                         __version__,
-                                                         args_string)
-    return args_string
-
-
 def get_datastack_info(filepath, extract_path=None):
     """Get information about a datastack.
 
@@ -190,7 +102,7 @@ def get_datastack_info(filepath, extract_path=None):
             * ``"logfile"`` when the file is a text logfile.
 
         The second item of the tuple is a ParameterSet namedtuple with the raw
-        parsed args, modelname and invest version that the file was built with.
+        parsed args, model id and invest version that the file was built with.
     """
     if tarfile.is_tarfile(filepath):
         if not extract_path:
@@ -215,20 +127,22 @@ def get_datastack_info(filepath, extract_path=None):
     return 'logfile', extract_parameters_from_logfile(filepath)
 
 
-def build_datastack_archive(args, model_name, datastack_path):
+def build_datastack_archive(args, model_id, datastack_path):
     """Build an InVEST datastack from an arguments dict.
 
     Args:
         args (dict): The arguments dictionary to include in the datastack.
-        model_name (string): The python-importable module string of the model
-            these args are for.
+        model_id (string): The id the model these args are for. For core models,
+            this is the regular id. For plugins, this has the format model_id@version
         datastack_path (string): The path to where the datastack archive
             should be written.
 
     Returns:
         ``None``
     """
-    module = importlib.import_module(name=model_name)
+    module = importlib.import_module(
+        # For plugins, use the model id before the '@'
+        name=models.model_id_to_pyname[model_id.split('@')[0]])
 
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')
@@ -247,10 +161,11 @@ def build_datastack_archive(args, model_name, datastack_path):
     # For tracking existing files so we don't copy files in twice
     files_found = {}
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
-    args_spec = module.MODEL_SPEC['args']
 
-    spatial_types = {'raster', 'vector'}
-    file_based_types = spatial_types.union({'csv', 'file', 'directory'})
+    spatial_types = {spec.SingleBandRasterInput, spec.VectorInput,
+        spec.RasterOrVectorInput}
+    file_based_types = spatial_types.union({
+        spec.CSVInput, spec.FileInput, spec.DirectoryInput})
     rewritten_args = {}
     for key in args:
         # Allow the model to override specific arguments in datastack archive
@@ -283,11 +198,11 @@ def build_datastack_archive(args, model_name, datastack_path):
         LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
-        if key not in args_spec:
+        if key not in module.MODEL_SPEC.inputs:
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
-        input_type = args_spec[key]['type']
-        if input_type in file_based_types:
+        input_spec = module.MODEL_SPEC.get_input(key)
+        if type(input_spec) in file_based_types:
             if args[key] in {None, ''}:
                 LOGGER.info(
                     f'Skipping key {key}, value is empty and cannot point to '
@@ -307,22 +222,16 @@ def build_datastack_archive(args, model_name, datastack_path):
                 rewritten_args[key] = files_found[source_path]
                 continue
 
-        if input_type == 'csv':
+        if type(input_spec) is spec.CSVInput:
             # check the CSV for columns that may be spatial.
             # But also, the columns specification might not be listed, so don't
             # require that 'columns' exists in the MODEL_SPEC.
             spatial_columns = []
-            if 'columns' in args_spec[key]:
-                for col_name, col_definition in (
-                        args_spec[key]['columns'].items()):
-                    # Type attribute may be a string (one type) or set
-                    # (multiple types allowed), so always convert to a set for
-                    # easier comparison.
-                    col_types = col_definition['type']
-                    if isinstance(col_types, str):
-                        col_types = set([col_types])
-                    if col_types.intersection(spatial_types):
-                        spatial_columns.append(col_name)
+            if input_spec.columns:
+                for col_spec in input_spec.columns:
+                    if type(col_spec) in spatial_types:
+                        spatial_columns.append(col_spec.id)
+
             LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
 
             target_csv_path = os.path.join(
@@ -335,8 +244,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                 contained_files_dir = os.path.join(
                     data_dir, f'{key}_csv_data')
 
-                dataframe = validation.get_validated_dataframe(
-                    source_path, **args_spec[key])
+                dataframe = input_spec.get_validated_dataframe(source_path)
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of
@@ -377,7 +285,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                             target_dir = os.path.join(
                                 contained_files_dir,
                                 f'{row_index}_{basename}')
-                            target_filepath = _copy_spatial_files(
+                            target_filepath = utils.copy_spatial_files(
                                 source_filepath, target_dir)
                             target_filepath = os.path.relpath(
                                 target_filepath, data_dir)
@@ -396,14 +304,14 @@ def build_datastack_archive(args, model_name, datastack_path):
             target_arg_value = target_csv_path
             files_found[source_path] = target_arg_value
 
-        elif input_type == 'file':
+        elif type(input_spec) is spec.FileInput:
             target_filepath = os.path.join(
                 data_dir, f'{key}_file')
             shutil.copyfile(source_path, target_filepath)
             target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
-        elif input_type == 'directory':
+        elif type(input_spec)is spec.DirectoryInput:
             # copy the whole folder
             target_directory = os.path.join(data_dir, f'{key}_directory')
             os.makedirs(target_directory)
@@ -423,22 +331,17 @@ def build_datastack_archive(args, model_name, datastack_path):
             target_arg_value = target_directory
             files_found[source_path] = target_arg_value
 
-        elif input_type in spatial_types:
+        elif type(input_spec) in spatial_types:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
-            spatial_dir = os.path.join(data_dir, f'{key}_{input_type}')
-            target_arg_value = _copy_spatial_files(
+            spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.type}')
+            target_arg_value = utils.copy_spatial_files(
                 source_path, spatial_dir)
             files_found[source_path] = target_arg_value
 
-        elif input_type == 'other':
-            # Note that no models currently use this to the best of my
-            # knowledge, so better to raise a NotImplementedError
-            raise NotImplementedError(
-                'The "other" MODEL_SPEC input type is not supported')
         else:
             LOGGER.debug(
-                f"Type {input_type} is not filesystem-based; "
+                f"Type {type(input_spec)} is not filesystem-based; "
                 "recording value directly")
             # not a filesystem-based type
             # Record the value directly
@@ -453,17 +356,17 @@ def build_datastack_archive(args, model_name, datastack_path):
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
     parameter_set = build_parameter_set(
-        rewritten_args, model_name, param_file_uri, relative=True)
+        rewritten_args, model_id, param_file_uri, relative=True)
 
     # write metadata for all files in args
-    keywords = [module.MODEL_SPEC['model_id'], 'InVEST']
+    keywords = [module.MODEL_SPEC.model_id, 'InVEST']
     for k, v in args.items():
         if isinstance(v, str) and os.path.isfile(v):
-            this_arg_spec = module.MODEL_SPEC['args'][k]
+            this_arg_spec = module.MODEL_SPEC.get_input(k)
             # write metadata file to target location (in temp dir)
             subdir = os.path.dirname(parameter_set['args'][k])
             target_location = os.path.join(temp_workspace, subdir)
-            spec_utils.write_metadata_file(v, this_arg_spec, keywords,
+            spec.write_metadata_file(v, this_arg_spec, keywords,
                                            out_workspace=target_location)
 
     # Remove the handler before archiving the working dir (and the logfile)
@@ -471,7 +374,7 @@ def build_datastack_archive(args, model_name, datastack_path):
     logging.getLogger().removeHandler(archive_filehandler)
 
     # archive the workspace.
-    with utils.sandbox_tempdir() as temp_dir:
+    with tempfile.TemporaryDirectory() as temp_dir:
         temp_archive = os.path.join(temp_dir, 'invest_archive')
         archive_name = shutil.make_archive(
             temp_archive, 'gztar', root_dir=temp_workspace,
@@ -530,12 +433,12 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
     return new_args
 
 
-def build_parameter_set(args, model_name, paramset_path, relative=False):
+def build_parameter_set(args, model_id, paramset_path, relative=False):
     """Record a parameter set to a file on disk.
 
     Args:
         args (dict): The args dictionary to record to the parameter set.
-        model_name (string): An identifier string for the callable or InVEST
+        model_id (string): An identifier string for the callable or InVEST
             model that would accept the arguments given.
         paramset_path (string): The path to the file on disk where the
             parameters should be recorded.
@@ -584,8 +487,7 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
                 return linux_style_path
         return args_param
     parameter_data = {
-        'model_name': model_name,
-        'invest_version': __version__,
+        'model_id': model_id,
         'args': _recurse(args)
     }
     with codecs.open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
@@ -610,10 +512,7 @@ def extract_parameter_set(paramset_path):
         A ``ParameterSet`` namedtuple with these attributes::
 
             args (dict): The arguments dict for the callable
-            invest_version (string): The version of InVEST used to record the
-                parameter set.
-            model_name (string): The name of the callable or model that these
-                arguments are intended for.
+            model_id (string): the ID of the model that these parameters are for
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
     with codecs.open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
@@ -635,6 +534,11 @@ def extract_parameter_set(paramset_path):
                 # Probably not a boolean, so continue checking paths.
                 pass
 
+            # Don't expand or modify remote paths
+            gdal_path = utils._GDALPath.from_uri(args_param)
+            if not gdal_path.is_local:
+                return args_param
+
             # Convert paths to whatever makes sense for the current OS.
             expanded_param = os.path.expandvars(
                 os.path.expanduser(
@@ -650,9 +554,16 @@ def extract_parameter_set(paramset_path):
             return args_param
         return args_param
 
-    return ParameterSet(_recurse(read_params['args']),
-                        read_params['model_name'],
-                        read_params['invest_version'])
+    if 'model_id' in read_params:
+        # New style datastacks include the model ID
+        model_id = read_params['model_id']
+    else:
+        # Old style datastacks use the pyname (core models only, no plugins)
+        _module = importlib.import_module(read_params['model_name'])
+        model_id = _module.MODEL_SPEC.model_id
+    return ParameterSet(
+        args=_recurse(read_params['args']),
+        model_id=model_id)
 
 
 def extract_parameters_from_logfile(logfile_path):
@@ -671,10 +582,7 @@ def extract_parameters_from_logfile(logfile_path):
         logfile_path (string): The path to an InVEST logfile on disk.
 
     Returns:
-        An instance of the ParameterSet namedtuple.  If a model name and InVEST
-        version cannot be parsed from the Arguments section of the logfile,
-        ``ParameterSet.model_name`` and ``ParameterSet.invest_version`` will be
-        set to ``datastack.UNKNOWN``.
+        An instance of the ParameterSet namedtuple.
 
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
@@ -687,16 +595,19 @@ def extract_parameters_from_logfile(logfile_path):
 
             if not args_started:
                 # Line would look something like this:
+                # "Arguments for InVEST carbon 3.4.1rc1:\n"
+                # (new style, using model id)
+                # or
                 # "Arguments for InVEST natcap.invest.carbon 3.4.1rc1:\n"
-                if line.startswith('Arguments'):
-                    try:
-                        modelname, invest_version = line.split(' ')[3:5]
-                        invest_version = invest_version.replace(':', '')
-                    except ValueError:
-                        # Old-style logfiles don't provide the modelename or
-                        # version info.
-                        modelname = UNKNOWN
-                        invest_version = UNKNOWN
+                # (old style, using model pyname)
+                if line.startswith('Arguments for InVEST'):
+                    identifier = line.split(' ')[3]
+                    if identifier.startswith('natcap.invest'):
+                        _module = importlib.import_module(identifier)
+                        model_id = _module.MODEL_SPEC.model_id
+                    else:
+                        # New style logfiles use the model id
+                        model_id = identifier
                     args_started = True
                     continue
             else:
@@ -742,4 +653,4 @@ def extract_parameters_from_logfile(logfile_path):
             pass
 
         args_dict[args_key] = args_value
-    return ParameterSet(args_dict, modelname, invest_version)
+    return ParameterSet(args_dict, model_id)

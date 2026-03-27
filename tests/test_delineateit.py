@@ -19,6 +19,8 @@ from shapely.geometry import box
 from shapely.geometry import MultiPoint
 from shapely.geometry import Point
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -86,7 +88,13 @@ class DelineateItTests(unittest.TestCase):
             'results_suffix': 'w',
             'n_workers': None,  # Trigger error and default to -1
         }
-        delineateit.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(delineateit.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        delineateit.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, delineateit.MODEL_SPEC, **execute_kwargs)
 
         vector = gdal.OpenEx(os.path.join(args['workspace_dir'],
                                           'watersheds_w.gpkg'), gdal.OF_VECTOR)
@@ -151,7 +159,7 @@ class DelineateItTests(unittest.TestCase):
 
     def test_delineateit_validate(self):
         """DelineateIt: test validation function."""
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
         from natcap.invest.delineateit import delineateit
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
@@ -168,7 +176,8 @@ class DelineateItTests(unittest.TestCase):
         }
         validation_warnings = delineateit.validate(missing_values_args)
         self.assertEqual(len(validation_warnings), 1)
-        self.assertEqual(validation_warnings[0][1], validation.MESSAGES['MISSING_VALUE'])
+        self.assertEqual(validation_warnings[0][1],
+                         validation_messages.MISSING_VALUE)
 
         file_not_found_args = {
             'workspace_dir': os.path.join(self.workspace_dir),
@@ -180,8 +189,8 @@ class DelineateItTests(unittest.TestCase):
         validation_warnings = delineateit.validate(file_not_found_args)
         self.assertEqual(
             validation_warnings,
-            [(['dem_path'], validation.MESSAGES['FILE_NOT_FOUND']),
-             (['outlet_vector_path'], validation.MESSAGES['FILE_NOT_FOUND'])])
+            [(['dem_path'], validation_messages.FILE_NOT_FOUND),
+             (['outlet_vector_path'], validation_messages.FILE_NOT_FOUND)])
 
         bad_spatial_files_args = {
             'workspace_dir': self.workspace_dir,
@@ -200,12 +209,12 @@ class DelineateItTests(unittest.TestCase):
         validation_warnings = delineateit.validate(bad_spatial_files_args)
         self.assertEqual(
             validation_warnings,
-            [(['dem_path'], validation.MESSAGES['NOT_GDAL_RASTER']),
-             (['flow_threshold'], validation.MESSAGES['INVALID_VALUE'].format(
+            [(['dem_path'], validation_messages.NOT_GDAL_RASTER),
+             (['flow_threshold'], validation_messages.INVALID_VALUE.format(
                 condition='value >= 0')),
-             (['outlet_vector_path'], validation.MESSAGES['NOT_GDAL_VECTOR']),
+             (['outlet_vector_path'], validation_messages.NOT_GDAL_VECTOR),
              (['snap_distance'], (
-                validation.MESSAGES['NOT_A_NUMBER'].format(
+                validation_messages.NOT_A_NUMBER.format(
                     value=bad_spatial_files_args['snap_distance'])))])
 
     def test_point_snapping(self):

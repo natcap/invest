@@ -1,0 +1,16 @@
+{
+    "args": {
+        "biophysical_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/Annual_Water_Yield/biophysical_table_gura.csv",
+        "depth_to_root_rest_layer_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Annual_Water_Yield.zip/Annual_Water_Yield/depth_to_root_restricting_layer_gura.tif",
+        "eto_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Annual_Water_Yield.zip/Annual_Water_Yield/reference_ET_gura.tif",
+        "lulc_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Annual_Water_Yield.zip/Annual_Water_Yield/land_use_gura.tif",
+        "pawc_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Annual_Water_Yield.zip/Annual_Water_Yield/plant_available_water_fraction_gura.tif",
+        "precipitation_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Annual_Water_Yield.zip/Annual_Water_Yield/precipitation_gura.tif",
+        "results_suffix": "gura", 
+        "seasonality_constant": "5", 
+        "sub_watersheds_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Annual_Water_Yield.zip/Annual_Water_Yield/subwatersheds_gura.shp",
+        "watersheds_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Annual_Water_Yield.zip/Annual_Water_Yield/watershed_gura.shp"
+    }, 
+    "invest_version": "3.7.0", 
+    "model_name": "natcap.invest.annual_water_yield"
+}

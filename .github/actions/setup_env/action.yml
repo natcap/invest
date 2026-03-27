@@ -55,11 +55,13 @@ runs:
     - name: Setup conda environment
       uses: mamba-org/setup-micromamba@v2
       with:
+        micromamba-version: '1.5.12-0'
         environment-file: environment.yml
         environment-name: env
         condarc: |
-              channels:
-                - conda-forge
+          channels:
+            - conda-forge
+            - nodefaults
         init-shell: bash
         cache-environment: true
         cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}

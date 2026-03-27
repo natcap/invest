@@ -1,5 +1,4 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
-import copy
 import logging
 import os
 import pickle
@@ -7,549 +6,701 @@ import pickle
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
-import taskgraph
 from osgeo import gdal
 from osgeo import gdal_array
 from osgeo import ogr
 
-from .. import gettext
-from .. import spec_utils
-from .. import utils
-from .. import validation
-from ..model_metadata import MODEL_METADATA
-from ..sdr import sdr
-from ..unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import validation
+from natcap.invest.sdr import sdr
+from natcap.invest.unit_registry import u
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
-MODEL_SPEC = {
-    "model_id": "ndr",
-    "model_name": MODEL_METADATA["ndr"].model_title,
-    "pyname": MODEL_METADATA["ndr"].pyname,
-    "userguide": MODEL_METADATA["ndr"].userguide,
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
-                         "watersheds_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "dem_path": {
-            **spec_utils.DEM,
-            "projected": True
-        },
-        "lulc_path": {
-            **spec_utils.LULC,
-            "projected": True,
-            "about": spec_utils.LULC['about'] + " " + gettext(
-                "All values in this raster must "
-                "have corresponding entries in the Biophysical table.")
-        },
-        "runoff_proxy_path": {
-            "type": "raster",
-            "bands": {1: {
-                "type": "number",
-                "units": u.none
-            }},
-            "about": gettext(
-                "Map of runoff potential, the capacity to transport "
-                "nutrients downslope. This can be a quickflow index "
-                "or annual precipitation. Any units are allowed since "
-                "the values will be normalized by their average."),
-            "name": gettext("nutrient runoff proxy")
-        },
-        "watersheds_path": {
-            "type": "vector",
-            "projected": True,
-            "geometries": spec_utils.POLYGONS,
-            "fields": {},
-            "about": gettext(
-                "Map of the boundaries of the watershed(s) over which to "
-                "aggregate the model results."),
-            "name": gettext("watersheds")
-        },
-        "biophysical_table_path": {
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
-                "load_type_p": {
-                    "type": "option_string",
-                    "required": True,
-                    "options": {
-                        "application-rate": {
-                            "description": gettext(
-                                "Treat the load values as nutrient "
-                                "application rates (e.g. fertilizer, livestock "
-                                "waste, ...)."
-                                "The model will adjust the load using the "
-                                "application rate and retention efficiency: "
-                                "load_p * (1 - eff_p).")},
-                        "measured-runoff": {
-                            "description": gettext(
-                                "Treat the load values as measured contaminant "
-                                "runoff.")},
-                    },
-                    "about": gettext(
-                        "Whether the nutrient load in column "
-                        "load_p should be treated as "
-                        "nutrient application rate or measured contaminant "
-                        "runoff. 'application-rate' | 'measured-runoff'")
-                },
-                "load_type_n": {
-                    "type": "option_string",
-                    "required": True,
-                    "options": {
-                        "application-rate": {
-                            "description": gettext(
-                                "Treat the load values as nutrient "
-                                "application rates (e.g. fertilizer, livestock "
-                                "waste, ...)."
-                                "The model will adjust the load using the "
-                                "application rate and retention efficiency: "
-                                "load_n * (1 - eff_n).")},
-                        "measured-runoff": {
-                            "description": gettext(
-                                "Treat the load values as measured contaminant "
-                                "runoff.")},
-                    },
-                    "about": gettext(
-                        "Whether the nutrient load in column "
-                        "load_n should be treated as "
-                        "nutrient application rate or measured contaminant "
-                        "runoff. 'application-rate' | 'measured-runoff'")
-                },
-                "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
-                    "type": "number",
-                    "units": u.kilogram/u.hectare/u.year,
-                    "about": gettext(
-                        "The nutrient loading for this land use class.")},
-                "eff_[NUTRIENT]": {  # nutrient retention capacities
-                    "type": "ratio",
-                    "about": gettext(
-                        "Maximum nutrient retention efficiency. This is the "
-                        "maximum proportion of the nutrient that is retained "
-                        "on this LULC class.")},
-                "crit_len_[NUTRIENT]": {  # nutrient critical lengths
-                    "type": "number",
-                    "units": u.meter,
-                    "about": gettext(
-                        "The distance after which it is assumed that this "
-                        "LULC type retains the nutrient at its maximum "
-                        "capacity.")},
-                "proportion_subsurface_n": {
-                    "type": "ratio",
-                    "required": "calc_n",
-                    "about": gettext(
-                        "The proportion of the total amount of nitrogen that "
-                        "is dissolved into the subsurface. By default, this "
-                        "value should be set to 0, indicating that all "
-                        "nutrients are delivered via surface flow. There is "
-                        "no equivalent of this for phosphorus.")},
-            },
-            "about": gettext(
-                "A table mapping each LULC class to its biophysical "
-                "properties related to nutrient load and retention. Replace "
-                "'[NUTRIENT]' in the column names with 'n' or 'p' for "
-                "nitrogen or phosphorus respectively. Nitrogen data must be "
-                "provided if Calculate Nitrogen is selected. Phosphorus data "
-                "must be provided if Calculate Phosphorus is selected. All "
-                "LULC codes in the LULC raster must have corresponding "
-                "entries in this table."),
-            "name": gettext("biophysical table")
-        },
-        "calc_p": {
-            "type": "boolean",
-            "about": gettext("Calculate phosphorus retention and export."),
-            "name": gettext("calculate phosphorus")
-        },
-        "calc_n": {
-            "type": "boolean",
-            "about": gettext("Calculate nitrogen retention and export."),
-            "name": gettext("calculate nitrogen")
-        },
-        "threshold_flow_accumulation": {
-            **spec_utils.THRESHOLD_FLOW_ACCUMULATION
-        },
-        "k_param": {
-            "type": "number",
-            "units": u.none,
-            "about": gettext(
-                "Calibration parameter that determines the shape of the "
-                "relationship between hydrologic connectivity (the degree of "
-                "connection from patches of land to the stream) and the "
-                "nutrient delivery ratio (percentage of nutrient that "
-                "actually reaches the stream)."),
-            "name": gettext("Borselli k parameter"),
-        },
-        "runoff_proxy_av": {
-            "type": "number",
-            "units": u.none,
-            'expression': 'value > 0',
-            "required": False,
-            "name": gettext("average runoff proxy"),
-            "about": gettext(
-                "This parameter allows the user to specify a predefined "
-                "average value for the runoff proxy. This value is used "
-                "to normalize the Runoff Proxy raster when calculating "
-                "the Runoff Proxy Index (RPI). If a user does not specify "
-                "the runoff proxy average, this value will be automatically "
-                "calculated from the Runoff Proxy raster. The units will "
-                "be the same as those in the Runoff Proxy raster."),
-        },
-        "subsurface_critical_length_n": {
-            "type": "number",
-            "units": u.meter,
-            "required": "calc_n",
-            "name": gettext("subsurface critical length (nitrogen)"),
-            "about": gettext(
-                "The distance traveled (subsurface and downslope) after which "
-                "it is assumed that soil retains nitrogen at its maximum "
-                "capacity. Required if Calculate Nitrogen is selected."),
-        },
-        "subsurface_eff_n": {
-            "type": "ratio",
-            "required": "calc_n",
-            "name": gettext("subsurface maximum retention efficiency (nitrogen)"),
-            "about": gettext(
-                "The maximum nitrogen retention efficiency that can be "
-                "reached through subsurface flow. This characterizes the "
-                "retention due to biochemical degradation in soils. Required "
-                "if Calculate Nitrogen is selected.")
-        },
-        **spec_utils.FLOW_DIR_ALGORITHM
-    },
-    "outputs": {
-        "watershed_results_ndr.gpkg": {
-            "about": "Vector with aggregated nutrient model results per watershed.",
-            "geometries": spec_utils.POLYGONS,
-            "fields": {
-                "p_surface_load": {
-                    "type": "number",
-                    "units": u.kilogram/u.year,
-                    "about": "Total phosphorus loads (sources) in the watershed, i.e. the sum of the nutrient contribution from all surface LULC without filtering by the landscape."
-                },
-                "n_surface_load": {
-                    "type": "number",
-                    "units": u.kilogram/u.year,
-                    "about": "Total nitrogen loads (sources) in the watershed, i.e. the sum of the nutrient contribution from all surface LULC without filtering by the landscape."
-                },
-                "n_subsurface_load": {
-                    "type": "number",
-                    "units": u.kilogram/u.year,
-                    "about": "Total subsurface nitrogen loads in the watershed."
-                },
-                "p_surface_export": {
-                    "type": "number",
-                    "units": u.kilogram/u.year,
-                    "about": "Total phosphorus export from the watershed by surface flow."
-                },
-                "n_surface_export": {
-                    "type": "number",
-                    "units": u.kilogram/u.year,
-                    "about": "Total nitrogen export from the watershed by surface flow."
-                },
-                "n_subsurface_export": {
-                    "type": "number",
-                    "units": u.kilogram/u.year,
-                    "about": "Total nitrogen export from the watershed by subsurface flow."
-                },
-                "n_total_export": {
-                    "type": "number",
-                    "units": u.kilogram/u.year,
-                    "about": "Total nitrogen export from the watershed by surface and subsurface flow."
-                }
-            }
-        },
-        "p_surface_export.tif": {
-            "about": "A pixel level map showing how much phosphorus from each pixel eventually reaches the stream by surface flow.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.kilogram/u.hectare
-            }}
-        },
-        "n_surface_export.tif": {
-            "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by surface flow.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.kilogram/u.hectare
-            }}
-        },
-        "n_subsurface_export.tif": {
-            "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by subsurface flow.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.kilogram/u.hectare
-            }}
-        },
-        "n_total_export.tif": {
-            "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by either flow.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.kilogram/u.hectare
-            }}
-        },
-        "stream.tif": spec_utils.STREAM,
-        "intermediate_outputs": {
-            "type": "directory",
-            "contents": {
-                "crit_len_n.tif": {
-                    "about": (
-                        "Nitrogen retention length, found in the biophysical table"),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "crit_len_p.tif": {
-                    "about": (
-                        "Phosphorus retention length, found in the biophysical table"),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "d_dn.tif": {
-                    "about": "Downslope factor of the index of connectivity",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "d_up.tif": {
-                    "about": "Upslope factor of the index of connectivity",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "dist_to_channel.tif": {
-                    "about": "Average downslope distance from a pixel to the stream",
-                    "bands": {1: {"type": "number", "units": u.pixel}}
-                },
-                "eff_n.tif": {
-                    "about": "Raw per-landscape cover retention efficiency for nitrogen.",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "eff_p.tif": {
-                    "about": "Raw per-landscape cover retention efficiency for phosphorus",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "effective_retention_n.tif": {
-                    "about": "Effective nitrogen retention provided by the downslope flow path for each pixel",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "effective_retention_p.tif": {
-                    "about": "Effective phosphorus retention provided by the downslope flow path for each pixel",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
-                "flow_direction.tif": spec_utils.FLOW_DIRECTION,
-                "ic_factor.tif": {
-                    "about": "Index of connectivity",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "load_n.tif": {
-                    "about": "Nitrogen load (for surface transport) per pixel",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilogram/u.year
-                    }}
-                },
-                "load_p.tif": {
-                    "about": "Phosphorus load (for surface transport) per pixel",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilogram/u.year
-                    }}
-                },
-                "modified_load_n.tif": {
-                    "about": "Raw nitrogen load scaled by the runoff proxy index.",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilogram/u.year
-                    }}
-                },
-                "modified_load_p.tif": {
-                    "about": "Raw phosphorus load scaled by the runoff proxy index.",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilogram/u.year
-                    }}
-                },
-                "ndr_n.tif": {
-                    "about": "NDR values for nitrogen",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "ndr_p.tif": {
-                    "about": "NDR values for phosphorus",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "runoff_proxy_index.tif": {
-                    "about": "Normalized values for the Runoff Proxy input to the model",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "s_accumulation.tif": {
-                    "about": "Flow accumulation weighted by slope",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "s_bar.tif": {
-                    "about": "Average slope gradient of the upslope contributing area",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "s_factor_inverse.tif": {
-                    "about": "Inverse of slope",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "sub_load_n.tif": {
-                    "about": "Nitrogen loads for subsurface transport",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilogram/u.year
-                    }}
-                },
-                "sub_ndr_n.tif": {
-                    "about": "Subsurface nitrogen NDR values",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "surface_load_n.tif": {
-                    "about": "Above ground nitrogen loads",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilogram/u.hectare/u.year,
-                    }}
-                },
-                "surface_load_p.tif": {
-                    "about": "Above ground phosphorus loads",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilogram/u.hectare/u.year,
-                    }}
-                },
-                "thresholded_slope.tif": {
-                    "about": (
-                        "Percent slope thresholded for correct calculation of IC."),
-                    "bands": {1: {"type": "percent"}}
-                },
-                "what_drains_to_stream.tif": {
-                    "about": (
-                        "Map of which pixels drain to a stream. A value of 1 "
-                        "means that at least some of the runoff from that "
-                        "pixel drains to a stream in stream.tif. A value of 0 "
-                        "means that it does not drain at all to any stream in "
-                        "stream.tif."),
-                    "bands": {1: {
-                        "type": "integer"
-                    }}
-                },
-                "aligned_dem.tif": {
-                    "about": "Copy of the DEM clipped to the extent of the other inputs",
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "aligned_lulc.tif": {
-                    "about": (
-                        "Copy of the LULC clipped to the extent of the other inputs "
-                        "and reprojected to the DEM projection"),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "aligned_runoff_proxy.tif": {
-                    "about": (
-                        "Copy of the runoff proxy clipped to the extent of the other inputs "
-                        "and reprojected to the DEM projection"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "masked_dem.tif": {
-                    "about": "DEM input masked to exclude pixels outside the watershed",
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "masked_lulc.tif": {
-                    "about": "LULC input masked to exclude pixels outside the watershed",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "masked_runoff_proxy.tif": {
-                    "about": "Runoff proxy input masked to exclude pixels outside the watershed",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "filled_dem.tif": spec_utils.FILLED_DEM,
-                "slope.tif": spec_utils.SLOPE,
-                "subsurface_export_n.pickle": {
-                    "about": "Pickled zonal statistics of nitrogen subsurface export"
-                },
-                "subsurface_load_n.pickle": {
-                    "about": "Pickled zonal statistics of nitrogen subsurface load"
-                },
-                "surface_export_n.pickle": {
-                    "about": "Pickled zonal statistics of nitrogen surface export"
-                },
-                "surface_export_p.pickle": {
-                    "about": "Pickled zonal statistics of phosphorus surface export"
-                },
-                "surface_load_n.pickle": {
-                    "about": "Pickled zonal statistics of nitrogen surface load"
-                },
-                "surface_load_p.pickle": {
-                    "about": "Pickled zonal statistics of phosphorus surface load"
-                },
-                "total_export_n.pickle": {
-                    "about": "Pickled zonal statistics of total nitrogen export"
-                }
-            }
-        },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
-    }
-}
+_model_description = gettext(
+    """
+    The InVEST Nutrient Delivery Ratio model maps nutrient sources from 
+    watersheds and their transport to the stream. This spatial information 
+    can be used to assess the service of nutrient retention by natural 
+    vegetation. The model represents the long-term, steady-state flow of 
+    nutrients through empirical relationships. Sources of nutrients across 
+    the landscape, also called nutrient loads, are determined based on a 
+    land use/land cover (LULC) map and associated loading rates. Nutrient 
+    loads are divided into sediment-bound and dissolved parts, which will be 
+    transported through surface and subsurface flow, respectively, stopping 
+    when they reach a stream.
+    """)
 
-_OUTPUT_BASE_FILES = {
-    'n_surface_export_path': 'n_surface_export.tif',
-    'n_subsurface_export_path': 'n_subsurface_export.tif',
-    'n_total_export_path': 'n_total_export.tif',
-    'p_surface_export_path': 'p_surface_export.tif',
-    'watershed_results_ndr_path': 'watershed_results_ndr.gpkg',
-    'stream_path': 'stream.tif'
-}
+MODEL_SPEC = spec.ModelSpec(
+    model_id="ndr",
+    model_title=gettext("Nutrient Delivery Ratio"),
+    userguide="ndr.html",
+    reporter="natcap.invest.ndr.reporter",
+    about=_model_description,
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=(),
+    module_name=__name__,
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["dem_path", "lulc_path", "runoff_proxy_path",
+         "watersheds_path", "biophysical_table_path"],
+        ["calc_p"],
+        ["calc_n", "subsurface_critical_length_n", "subsurface_eff_n"],
+        ["flow_dir_algorithm", "threshold_flow_accumulation",
+         "k_param", "runoff_proxy_av"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.PROJECTED_DEM,
+        spec.SingleBandRasterInput(
+            id="lulc_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of land use/land cover codes. Each land use/land cover type must be"
+                " assigned a unique integer code. All values in this raster must have"
+                " corresponding entries in the Biophysical table."
+            ),
+            data_type=int,
+            units=u.none,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="runoff_proxy_path",
+            name=gettext("nutrient runoff proxy"),
+            about=gettext(
+                "Map of runoff potential, the capacity to transport nutrients downslope."
+                " This can be a quickflow index or annual precipitation. Any units are"
+                " allowed since the values will be normalized by their average."
+            ),
+            data_type=float,
+            units=u.none,
+            projected=None
+        ),
+        spec.VectorInput(
+            id="watersheds_path",
+            name=gettext("watersheds"),
+            about=gettext(
+                "Map of the boundaries of the watershed(s) over which to aggregate the"
+                " model results."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+            projected=True
+        ),
+        spec.CSVInput(
+            id="biophysical_table_path",
+            name=gettext("biophysical table"),
+            about=gettext(
+                "A table mapping each LULC class to its biophysical properties related to"
+                " nutrient load and retention. Nitrogen data must be provided if"
+                " Calculate Nitrogen is selected. Phosphorus data must be provided if"
+                " Calculate Phosphorus is selected. All LULC codes in the LULC raster"
+                " must have corresponding entries in this table."
+            ),
+            columns=[
+                spec.LULC_TABLE_COLUMN,
+                spec.OptionStringInput(
+                    id="load_type_p",
+                    about=(
+                        "Whether the nutrient load in column load_p should be treated as"
+                        " nutrient application rate or measured contaminant runoff."
+                    ),
+                    required="calc_p",
+                    options=[
+                        spec.Option(
+                            key="application-rate",
+                            about=(
+                                "Treat the load value as nutrient application rates"
+                                " (e.g. fertilizer, livestock waste, ...).The model will"
+                                " adjust the load using the application rate and"
+                                " retention efficiency: load_p * (1 - eff_p).")),
+                        spec.Option(
+                            key="measured-runoff",
+                            about="Treat the load value as measured contaminant runoff.")
+                    ]
+                ),
+                spec.OptionStringInput(
+                    id="load_type_n",
+                    about=(
+                        "Whether the nutrient load in column load_n should be treated as"
+                        " nutrient application rate or measured contaminant runoff."
+                    ),
+                    required="calc_n",
+                    options=[
+                        spec.Option(
+                            key="application-rate",
+                            about=(
+                                "Treat the load values as nutrient application rates"
+                                " (e.g. fertilizer, livestock waste, ...).The model will"
+                                " adjust the load using the application rate and"
+                                " retention efficiency: load_n * (1 - eff_n).")),
+                        spec.Option(
+                            key="measured-runoff",
+                            about="Treat the load values as measured contaminant runoff.")
+                    ]
+                ),
+                spec.NumberInput(
+                    id="load_n",
+                    about=gettext("The nitrogen loading for this land use class."),
+                    required="calc_n",
+                    units=u.kilogram / u.hectare / u.year
+                ),
+                spec.NumberInput(
+                    id="load_p",
+                    about=gettext("The phosphorus loading for this land use class."),
+                    required="calc_p",
+                    units=u.kilogram / u.hectare / u.year
+                ),
+                spec.RatioInput(
+                    id="eff_n",
+                    about=gettext(
+                        "Maximum nitrogen retention efficiency. This is the maximum"
+                        " proportion of the nitrogen that is retained on this LULC class."
+                    ),
+                    required="calc_n",
+                    units=u.none
+                ),
+                spec.RatioInput(
+                    id="eff_p",
+                    about=gettext(
+                        "Maximum phosphorus retention efficiency. This is the maximum"
+                        " proportion of the phosphorus that is retained on this LULC"
+                        " class."
+                    ),
+                    required="calc_p",
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="crit_len_n",
+                    about=gettext(
+                        "The distance after which it is assumed that this LULC type"
+                        " retains nitrogen at its maximum capacity."
+                    ),
+                    required="calc_n",
+                    units=u.meter
+                ),
+                spec.NumberInput(
+                    id="crit_len_p",
+                    about=gettext(
+                        "The distance after which it is assumed that this LULC type"
+                        " retains phosphorus at its maximum capacity."
+                    ),
+                    required="calc_p",
+                    units=u.meter
+                ),
+                spec.RatioInput(
+                    id="proportion_subsurface_n",
+                    about=gettext(
+                        "The proportion of the total amount of nitrogen that is dissolved"
+                        " into the subsurface. By default, this value should be set to 0,"
+                        " indicating that all nutrients are delivered via surface flow."
+                        " There is no equivalent of this for phosphorus."
+                    ),
+                    required="calc_n",
+                    units=u.none
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.BooleanInput(
+            id="calc_p",
+            name=gettext("calculate phosphorus"),
+            about=gettext("Calculate phosphorus retention and export.")
+        ),
+        spec.BooleanInput(
+            id="calc_n",
+            name=gettext("calculate nitrogen"),
+            about=gettext("Calculate nitrogen retention and export.")
+        ),
+        spec.THRESHOLD_FLOW_ACCUMULATION,
+        spec.NumberInput(
+            id="k_param",
+            name=gettext("Borselli k parameter"),
+            about=gettext(
+                "Calibration parameter that determines the shape of the relationship"
+                " between hydrologic connectivity (the degree of connection from patches"
+                " of land to the stream) and the nutrient delivery ratio (percentage of"
+                " nutrient that actually reaches the stream)."
+            ),
+            units=u.none
+        ),
+        spec.NumberInput(
+            id="runoff_proxy_av",
+            name=gettext("average runoff proxy"),
+            about=gettext(
+                "This parameter allows the user to specify a predefined average value for"
+                " the runoff proxy. This value is used to normalize the Runoff Proxy"
+                " raster when calculating the Runoff Proxy Index (RPI). If a user does"
+                " not specify the runoff proxy average, this value will be automatically"
+                " calculated from the Runoff Proxy raster. The units will be the same as"
+                " those in the Runoff Proxy raster."
+            ),
+            required=False,
+            units=u.none,
+            expression="value > 0"
+        ),
+        spec.NumberInput(
+            id="subsurface_critical_length_n",
+            name=gettext("subsurface critical length (nitrogen)"),
+            about=gettext(
+                "The distance traveled (subsurface and downslope) after which it is"
+                " assumed that soil retains nitrogen at its maximum capacity. Required if"
+                " Calculate Nitrogen is selected."
+            ),
+            required="calc_n",
+            allowed="calc_n",
+            units=u.meter
+        ),
+        spec.RatioInput(
+            id="subsurface_eff_n",
+            name=gettext("subsurface maximum retention efficiency (nitrogen)"),
+            about=gettext(
+                "The maximum nitrogen retention efficiency that can be reached through"
+                " subsurface flow. This characterizes the retention due to biochemical"
+                " degradation in soils. Required if Calculate Nitrogen is selected."
+            ),
+            required="calc_n",
+            allowed="calc_n",
+            units=u.none
+        ),
+        spec.FLOW_DIR_ALGORITHM
+    ],
+    outputs=[
+        spec.VectorOutput(
+            id="watershed_results_ndr",
+            path="watershed_results_ndr.gpkg",
+            about=gettext("Vector with aggregated nutrient model results per watershed."),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="p_surface_load",
+                    about=gettext(
+                        "Total phosphorus loads (sources) in the watershed, i.e. the sum"
+                        " of the nutrient contribution from all surface LULC without"
+                        " filtering by the landscape."
+                    ),
+                    units=u.kilogram / u.year
+                ),
+                spec.NumberOutput(
+                    id="n_surface_load",
+                    about=gettext(
+                        "Total nitrogen loads (sources) in the watershed, i.e. the sum of"
+                        " the nutrient contribution from all surface LULC without"
+                        " filtering by the landscape."
+                    ),
+                    units=u.kilogram / u.year
+                ),
+                spec.NumberOutput(
+                    id="n_subsurface_load",
+                    about=gettext("Total subsurface nitrogen loads in the watershed."),
+                    units=u.kilogram / u.year
+                ),
+                spec.NumberOutput(
+                    id="p_surface_export",
+                    about=gettext(
+                        "Total phosphorus export from the watershed by surface flow."
+                    ),
+                    units=u.kilogram / u.year
+                ),
+                spec.NumberOutput(
+                    id="n_surface_export",
+                    about=gettext(
+                        "Total nitrogen export from the watershed by surface flow."
+                    ),
+                    units=u.kilogram / u.year
+                ),
+                spec.NumberOutput(
+                    id="n_subsurface_export",
+                    about=gettext(
+                        "Total nitrogen export from the watershed by subsurface flow."
+                    ),
+                    units=u.kilogram / u.year
+                ),
+                spec.NumberOutput(
+                    id="n_total_export",
+                    about=gettext(
+                        "Total nitrogen export from the watershed by surface and"
+                        " subsurface flow."
+                    ),
+                    units=u.kilogram / u.year
+                )
+            ]
+        ),
+        spec.SingleBandRasterOutput(
+            id="p_surface_export",
+            path="p_surface_export.tif",
+            about=gettext(
+                "A pixel level map showing how much phosphorus from each pixel eventually"
+                " reaches the stream by surface flow."
+            ),
+            data_type=float,
+            units=u.kilogram / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="n_surface_export",
+            path="n_surface_export.tif",
+            about=gettext(
+                "A pixel level map showing how much nitrogen from each pixel eventually"
+                " reaches the stream by surface flow."
+            ),
+            data_type=float,
+            units=u.kilogram / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="n_subsurface_export",
+            path="n_subsurface_export.tif",
+            about=gettext(
+                "A pixel level map showing how much nitrogen from each pixel eventually"
+                " reaches the stream by subsurface flow."
+            ),
+            data_type=float,
+            units=u.kilogram / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="n_total_export",
+            path="n_total_export.tif",
+            about=gettext(
+                "A pixel level map showing how much nitrogen from each pixel eventually"
+                " reaches the stream by either flow."
+            ),
+            data_type=float,
+            units=u.kilogram / u.hectare
+        ),
+        spec.STREAM,
+        spec.SingleBandRasterOutput(
+            id="mask",
+            path="intermediate_outputs/watersheds_mask.tif",
+            about=gettext("Watersheds mask raster"),
+            data_type=int,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="crit_len_n",
+            path="intermediate_outputs/crit_len_n.tif",
+            about=gettext(
+                "Nitrogen retention length, found in the biophysical table"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="crit_len_p",
+            path="intermediate_outputs/crit_len_p.tif",
+            about=gettext(
+                "Phosphorus retention length, found in the biophysical table"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="d_dn",
+            path="intermediate_outputs/d_dn.tif",
+            about=gettext("Downslope factor of the index of connectivity"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="d_up",
+            path="intermediate_outputs/d_up.tif",
+            about=gettext("Upslope factor of the index of connectivity"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="dist_to_channel",
+            path="intermediate_outputs/dist_to_channel.tif",
+            about=gettext(
+                "Average downslope distance from a pixel to the stream"
+            ),
+            data_type=float,
+            units=u.pixel
+        ),
+        spec.SingleBandRasterOutput(
+            id="eff_n",
+            path="intermediate_outputs/eff_n.tif",
+            about=gettext(
+                "Raw per-landscape cover retention efficiency for nitrogen."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="eff_p",
+            path="intermediate_outputs/eff_p.tif",
+            about=gettext(
+                "Raw per-landscape cover retention efficiency for phosphorus"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="effective_retention_n",
+            path="intermediate_outputs/effective_retention_n.tif",
+            about=gettext(
+                "Effective nitrogen retention provided by the downslope flow path"
+                " for each pixel"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="effective_retention_p",
+            path="intermediate_outputs/effective_retention_p.tif",
+            about=gettext(
+                "Effective phosphorus retention provided by the downslope flow"
+                " path for each pixel"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.FLOW_ACCUMULATION.model_copy(update=dict(
+            path="intermediate_outputs/flow_accumulation.tif")),
+        spec.FLOW_DIRECTION.model_copy(update=dict(
+            path="intermediate_outputs/flow_direction.tif")),
+        spec.SingleBandRasterOutput(
+            id="ic_factor",
+            path="intermediate_outputs/ic_factor.tif",
+            about=gettext("Index of connectivity"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="load_n",
+            path="intermediate_outputs/load_n.tif",
+            about=gettext("Nitrogen load (for surface transport)"),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="load_p",
+            path="intermediate_outputs/load_p.tif",
+            about=gettext("Phosphorus load (for surface transport)"),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="modified_load_n",
+            path="intermediate_outputs/modified_load_n.tif",
+            about=gettext("Raw nitrogen load scaled by the runoff proxy index."),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="modified_load_p",
+            path="intermediate_outputs/modified_load_p.tif",
+            about=gettext(
+                "Raw phosphorus load scaled by the runoff proxy index."
+            ),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="ndr_n",
+            path="intermediate_outputs/ndr_n.tif",
+            about=gettext("NDR values for nitrogen"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="ndr_p",
+            path="intermediate_outputs/ndr_p.tif",
+            about=gettext("NDR values for phosphorus"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="runoff_proxy_index",
+            path="intermediate_outputs/runoff_proxy_index.tif",
+            about=gettext(
+                "Normalized values for the Runoff Proxy input to the model"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="s_accumulation",
+            path="intermediate_outputs/s_accumulation.tif",
+            about=gettext("Flow accumulation weighted by slope"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="s_bar",
+            path="intermediate_outputs/s_bar.tif",
+            about=gettext(
+                "Average slope gradient of the upslope contributing area"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="s_factor_inverse",
+            path="intermediate_outputs/s_factor_inverse.tif",
+            about=gettext("Inverse of slope"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="sub_load_n",
+            path="intermediate_outputs/sub_load_n.tif",
+            about=gettext("Nitrogen loads for subsurface transport"),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="sub_ndr_n",
+            path="intermediate_outputs/sub_ndr_n.tif",
+            about=gettext("Subsurface nitrogen NDR values"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="surface_load_n",
+            path="intermediate_outputs/surface_load_n.tif",
+            about=gettext("Above ground nitrogen loads"),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="surface_load_p",
+            path="intermediate_outputs/surface_load_p.tif",
+            about=gettext("Above ground phosphorus loads"),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="thresholded_slope",
+            path="intermediate_outputs/thresholded_slope.tif",
+            about=gettext(
+                "Percent slope thresholded for correct calculation of IC."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="what_drains_to_stream",
+            path="intermediate_outputs/what_drains_to_stream.tif",
+            about=gettext(
+                "Map of which pixels drain to a stream. A value of 1 means that"
+                " at least some of the runoff from that pixel drains to a stream"
+                " in stream.tif. A value of 0 means that it does not drain at all"
+                " to any stream in stream.tif."
+            ),
+            data_type=int,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_dem",
+            path="intermediate_outputs/aligned_dem.tif",
+            about=gettext(
+                "Copy of the DEM clipped to the extent of the other inputs"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_lulc",
+            path="intermediate_outputs/aligned_lulc.tif",
+            about=gettext(
+                "Copy of the LULC clipped to the extent of the other inputs and"
+                " reprojected to the DEM projection"
+            ),
+            data_type=int,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_runoff_proxy",
+            path="intermediate_outputs/aligned_runoff_proxy.tif",
+            about=gettext(
+                "Copy of the runoff proxy clipped to the extent of the other"
+                " inputs and reprojected to the DEM projection"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="masked_dem",
+            path="intermediate_outputs/masked_dem.tif",
+            about=gettext(
+                "DEM input masked to exclude pixels outside the watershed"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="masked_lulc",
+            path="intermediate_outputs/masked_lulc.tif",
+            about=gettext(
+                "LULC input masked to exclude pixels outside the watershed"
+            ),
+            data_type=int,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="masked_runoff_proxy",
+            path="intermediate_outputs/masked_runoff_proxy.tif",
+            about=gettext(
+                "Runoff proxy input masked to exclude pixels outside the"
+                " watershed"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.FILLED_DEM.model_copy(update=dict(
+            path="intermediate_outputs/filled_dem.tif")),
+        spec.SLOPE.model_copy(update=dict(
+            path="intermediate_outputs/slope.tif")),
+        spec.FileOutput(
+            id="subsurface_export_n_pickle",
+            path="intermediate_outputs/subsurface_export_n.pickle",
+            about=gettext(
+                "Pickled zonal statistics of nitrogen subsurface export"
+            )
+        ),
+        spec.FileOutput(
+            id="subsurface_load_n_pickle",
+            path="intermediate_outputs/subsurface_load_n.pickle",
+            about=gettext("Pickled zonal statistics of nitrogen subsurface load")
+        ),
+        spec.FileOutput(
+            id="surface_export_n_pickle",
+            path="intermediate_outputs/surface_export_n.pickle",
+            about=gettext("Pickled zonal statistics of nitrogen surface export")
+        ),
+        spec.FileOutput(
+            id="surface_export_p_pickle",
+            path="intermediate_outputs/surface_export_p.pickle",
+            about=gettext(
+                "Pickled zonal statistics of phosphorus surface export"
+            )
+        ),
+        spec.FileOutput(
+            id="surface_load_n_pickle",
+            path="intermediate_outputs/surface_load_n.pickle",
+            about=gettext("Pickled zonal statistics of nitrogen surface load")
+        ),
+        spec.FileOutput(
+            id="surface_load_p_pickle",
+            path="intermediate_outputs/surface_load_p.pickle",
+            about=gettext("Pickled zonal statistics of phosphorus surface load")
+        ),
+        spec.FileOutput(
+            id="total_export_n_pickle",
+            path="intermediate_outputs/total_export_n.pickle",
+            about=gettext("Pickled zonal statistics of total nitrogen export")
+        ),
+        spec.TASKGRAPH_CACHE
+    ]
+)
 
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
-
-_INTERMEDIATE_BASE_FILES = {
-    'mask_path': 'watersheds_mask.tif',
-    'ic_factor_path': 'ic_factor.tif',
-    'load_n_path': 'load_n.tif',
-    'load_p_path': 'load_p.tif',
-    'modified_load_n_path': 'modified_load_n.tif',
-    'modified_load_p_path': 'modified_load_p.tif',
-    'ndr_n_path': 'ndr_n.tif',
-    'ndr_p_path': 'ndr_p.tif',
-    'runoff_proxy_index_path': 'runoff_proxy_index.tif',
-    's_accumulation_path': 's_accumulation.tif',
-    's_bar_path': 's_bar.tif',
-    's_factor_inverse_path': 's_factor_inverse.tif',
-    'sub_load_n_path': 'sub_load_n.tif',
-    'surface_load_n_path': 'surface_load_n.tif',
-    'surface_load_p_path': 'surface_load_p.tif',
-    'sub_ndr_n_path': 'sub_ndr_n.tif',
-    'crit_len_n_path': 'crit_len_n.tif',
-    'crit_len_p_path': 'crit_len_p.tif',
-    'd_dn_path': 'd_dn.tif',
-    'd_up_path': 'd_up.tif',
-    'eff_n_path': 'eff_n.tif',
-    'eff_p_path': 'eff_p.tif',
-    'effective_retention_n_path': 'effective_retention_n.tif',
-    'effective_retention_p_path': 'effective_retention_p.tif',
-    'flow_accumulation_path': 'flow_accumulation.tif',
-    'flow_direction_path': 'flow_direction.tif',
-    'thresholded_slope_path': 'thresholded_slope.tif',
-    'dist_to_channel_path': 'dist_to_channel.tif',
-    'drainage_mask': 'what_drains_to_stream.tif',
-    'filled_dem_path': 'filled_dem.tif',
-    'aligned_dem_path': 'aligned_dem.tif',
-    'masked_dem_path': 'masked_dem.tif',
-    'slope_path': 'slope.tif',
-    'aligned_lulc_path': 'aligned_lulc.tif',
-    'masked_lulc_path': 'masked_lulc.tif',
-    'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
-    'masked_runoff_proxy_path': 'masked_runoff_proxy.tif',
-    'surface_load_n_pickle_path': 'surface_load_n.pickle',
-    'surface_load_p_pickle_path': 'surface_load_p.pickle',
-    'subsurface_load_n_pickle_path': 'subsurface_load_n.pickle',
-    'surface_export_n_pickle_path': 'surface_export_n.pickle',
-    'surface_export_p_pickle_path': 'surface_export_p.pickle',
-    'subsurface_export_n_pickle_path': 'subsurface_export_n.pickle',
-    'total_export_n_pickle_path': 'total_export_n.pickle'
-}
-
 _TARGET_NODATA = -1
 
 
@@ -607,30 +758,10 @@ def execute(args):
             and >= 1 is number of processes.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    # Load all the tables for preprocessing
-    output_dir = os.path.join(args['workspace_dir'])
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    utils.make_directories([output_dir, intermediate_output_dir])
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        n_workers, reporting_interval=5.0)
-
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    f_reg = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
+    args, f_reg, task_graph = MODEL_SPEC.setup(args)
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
@@ -638,9 +769,9 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
 
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'], args=args)
 
     # Ensure that if user doesn't explicitly assign a value,
     # runoff_proxy_av = None
@@ -652,8 +783,8 @@ def execute(args):
 
     create_vector_task = task_graph.add_task(
         func=create_vector_copy,
-        args=(args['watersheds_path'], f_reg['watershed_results_ndr_path']),
-        target_path_list=[f_reg['watershed_results_ndr_path']],
+        args=(args['watersheds_path'], f_reg['watershed_results_ndr']),
+        target_path_list=[f_reg['watershed_results_ndr']],
         task_name='create target vector')
 
     dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
@@ -661,8 +792,8 @@ def execute(args):
     base_raster_list = [
         args['dem_path'], args['lulc_path'], args['runoff_proxy_path']]
     aligned_raster_list = [
-        f_reg['aligned_dem_path'], f_reg['aligned_lulc_path'],
-        f_reg['aligned_runoff_proxy_path']]
+        f_reg['aligned_dem'], f_reg['aligned_lulc'],
+        f_reg['aligned_runoff_proxy']]
     align_raster_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
@@ -682,67 +813,67 @@ def execute(args):
     mask_task = task_graph.add_task(
         func=_create_mask_raster,
         kwargs={
-            'source_raster_path': f_reg['aligned_dem_path'],
+            'source_raster_path': f_reg['aligned_dem'],
             'source_vector_path': args['watersheds_path'],
-            'target_raster_path': f_reg['mask_path']
+            'target_raster_path': f_reg['mask']
         },
-        target_path_list=[f_reg['mask_path']],
+        target_path_list=[f_reg['mask']],
         dependent_task_list=[align_raster_task],
         task_name='create watersheds mask'
     )
     mask_runoff_proxy_task = task_graph.add_task(
         func=_mask_raster,
         kwargs={
-            'source_raster_path': f_reg['aligned_runoff_proxy_path'],
-            'mask_raster_path': f_reg['mask_path'],
-            'target_masked_raster_path': f_reg['masked_runoff_proxy_path'],
+            'source_raster_path': f_reg['aligned_runoff_proxy'],
+            'mask_raster_path': f_reg['mask'],
+            'target_masked_raster_path': f_reg['masked_runoff_proxy'],
             'target_dtype': gdal.GDT_Float32,
             'target_nodata': _TARGET_NODATA,
         },
         dependent_task_list=[mask_task, align_raster_task],
-        target_path_list=[f_reg['masked_runoff_proxy_path']],
-        task_name='mask runoff proxy raster',
+        target_path_list=[f_reg['masked_runoff_proxy']],
+        task_name='mask runoff proxy raster'
     )
     mask_dem_task = task_graph.add_task(
         func=_mask_raster,
         kwargs={
-            'source_raster_path': f_reg['aligned_dem_path'],
-            'mask_raster_path': f_reg['mask_path'],
-            'target_masked_raster_path': f_reg['masked_dem_path'],
+            'source_raster_path': f_reg['aligned_dem'],
+            'mask_raster_path': f_reg['mask'],
+            'target_masked_raster_path': f_reg['masked_dem'],
             'target_dtype': gdal.GDT_Float32,
             'target_nodata': float(numpy.finfo(numpy.float32).min),
         },
         dependent_task_list=[mask_task, align_raster_task],
-        target_path_list=[f_reg['masked_dem_path']],
-        task_name='mask dem raster',
+        target_path_list=[f_reg['masked_dem']],
+        task_name='mask dem raster'
     )
     mask_lulc_task = task_graph.add_task(
         func=_mask_raster,
         kwargs={
-            'source_raster_path': f_reg['aligned_lulc_path'],
-            'mask_raster_path': f_reg['mask_path'],
-            'target_masked_raster_path': f_reg['masked_lulc_path'],
+            'source_raster_path': f_reg['aligned_lulc'],
+            'mask_raster_path': f_reg['mask'],
+            'target_masked_raster_path': f_reg['masked_lulc'],
             'target_dtype': gdal.GDT_Int32,
             'target_nodata': numpy.iinfo(numpy.int32).min,
         },
         dependent_task_list=[mask_task, align_raster_task],
-        target_path_list=[f_reg['masked_lulc_path']],
-        task_name='mask lulc raster',
+        target_path_list=[f_reg['masked_lulc']],
+        task_name='mask lulc raster'
     )
 
     fill_pits_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
-            (f_reg['masked_dem_path'], 1), f_reg['filled_dem_path']),
-        kwargs={'working_dir': intermediate_output_dir},
+            (f_reg['masked_dem'], 1), f_reg['filled_dem']),
+        kwargs={'working_dir': args['workspace_dir']},
         dependent_task_list=[align_raster_task, mask_dem_task],
-        target_path_list=[f_reg['filled_dem_path']],
+        target_path_list=[f_reg['filled_dem']],
         task_name='fill pits')
 
     calculate_slope_task = task_graph.add_task(
         func=pygeoprocessing.calculate_slope,
-        args=((f_reg['filled_dem_path'], 1), f_reg['slope_path']),
-        target_path_list=[f_reg['slope_path']],
+        args=((f_reg['filled_dem'], 1), f_reg['slope']),
+        target_path_list=[f_reg['slope']],
         dependent_task_list=[fill_pits_task],
         task_name='calculate slope')
 
@@ -750,93 +881,93 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=_slope_proportion_and_threshold_op,
-            rasters=[f_reg['slope_path']],
-            target_path=f_reg['thresholded_slope_path']),
-        target_path_list=[f_reg['thresholded_slope_path']],
+            rasters=[f_reg['slope']],
+            target_path=f_reg['thresholded_slope']),
+        target_path_list=[f_reg['thresholded_slope']],
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
-                (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
-            kwargs={'working_dir': intermediate_output_dir},
+                (f_reg['filled_dem'], 1), f_reg['flow_direction']),
+            kwargs={'working_dir': args['workspace_dir']},
             dependent_task_list=[fill_pits_task],
-            target_path_list=[f_reg['flow_direction_path']],
+            target_path_list=[f_reg['flow_direction']],
             task_name='flow dir')
 
         flow_accum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                f_reg['flow_accumulation_path']),
-            target_path_list=[f_reg['flow_accumulation_path']],
+                (f_reg['flow_direction'], 1),
+                f_reg['flow_accumulation']),
+            target_path_list=[f_reg['flow_accumulation']],
             dependent_task_list=[flow_dir_task],
             task_name='flow accum')
 
         stream_extraction_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_mfd,
             args=(
-                (f_reg['flow_accumulation_path'], 1),
-                (f_reg['flow_direction_path'], 1),
+                (f_reg['flow_accumulation'], 1),
+                (f_reg['flow_direction'], 1),
                 float(args['threshold_flow_accumulation']),
-                f_reg['stream_path']),
-            target_path_list=[f_reg['stream_path']],
+                f_reg['stream']),
+            target_path_list=[f_reg['stream']],
             dependent_task_list=[flow_accum_task],
             task_name='stream extraction')
         s_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
-            args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+            args=((f_reg['flow_direction'], 1), f_reg['s_accumulation']),
             kwargs={
-                'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
-            target_path_list=[f_reg['s_accumulation_path']],
+                'weight_raster_path_band': (f_reg['thresholded_slope'], 1)},
+            target_path_list=[f_reg['s_accumulation']],
             dependent_task_list=[flow_dir_task, threshold_slope_task],
             task_name='route s')
     else:  # D8
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_d8,
             args=(
-                (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
-            kwargs={'working_dir': intermediate_output_dir},
+                (f_reg['filled_dem'], 1), f_reg['flow_direction']),
+            kwargs={'working_dir': args['workspace_dir']},
             dependent_task_list=[fill_pits_task],
-            target_path_list=[f_reg['flow_direction_path']],
+            target_path_list=[f_reg['flow_direction']],
             task_name='flow dir')
 
         flow_accum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_d8,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                f_reg['flow_accumulation_path']),
-            target_path_list=[f_reg['flow_accumulation_path']],
+                (f_reg['flow_direction'], 1),
+                f_reg['flow_accumulation']),
+            target_path_list=[f_reg['flow_accumulation']],
             dependent_task_list=[flow_dir_task],
             task_name='flow accum')
 
         stream_extraction_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_d8,
             kwargs=dict(
-                flow_accum_raster_path_band=(f_reg['flow_accumulation_path'], 1),
+                flow_accum_raster_path_band=(f_reg['flow_accumulation'], 1),
                 flow_threshold=float(args['threshold_flow_accumulation']),
-                target_stream_raster_path=f_reg['stream_path']),
-            target_path_list=[f_reg['stream_path']],
+                target_stream_raster_path=f_reg['stream']),
+            target_path_list=[f_reg['stream']],
             dependent_task_list=[flow_accum_task],
             task_name='stream extraction')
 
         s_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_d8,
-            args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+            args=((f_reg['flow_direction'], 1), f_reg['s_accumulation']),
             kwargs={
-                'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
-            target_path_list=[f_reg['s_accumulation_path']],
+                'weight_raster_path_band': (f_reg['thresholded_slope'], 1)},
+            target_path_list=[f_reg['s_accumulation']],
             dependent_task_list=[flow_dir_task, threshold_slope_task],
             task_name='route s')
 
     runoff_proxy_index_task = task_graph.add_task(
         func=_normalize_raster,
-        args=((f_reg['masked_runoff_proxy_path'], 1),
-              f_reg['runoff_proxy_index_path']),
+        args=((f_reg['masked_runoff_proxy'], 1),
+              f_reg['runoff_proxy_index']),
         kwargs={'user_provided_mean': runoff_proxy_av},
-        target_path_list=[f_reg['runoff_proxy_index_path']],
+        target_path_list=[f_reg['runoff_proxy_index']],
         dependent_task_list=[align_raster_task, mask_runoff_proxy_task],
         task_name='runoff proxy mean')
 
@@ -844,19 +975,19 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=numpy.divide,  # s_bar = s_accum / flow_accum
-            rasters=[f_reg['s_accumulation_path'], f_reg['flow_accumulation_path']],
-            target_path=f_reg['s_bar_path'],
+            rasters=[f_reg['s_accumulation'], f_reg['flow_accumulation']],
+            target_path=f_reg['s_bar'],
             target_dtype=numpy.float32,
             target_nodata=_TARGET_NODATA),
-        target_path_list=[f_reg['s_bar_path']],
+        target_path_list=[f_reg['s_bar']],
         dependent_task_list=[s_task, flow_accum_task],
         task_name='calculate s bar')
 
     d_up_task = task_graph.add_task(
         func=d_up_calculation,
-        args=(f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
-              f_reg['d_up_path']),
-        target_path_list=[f_reg['d_up_path']],
+        args=(f_reg['s_bar'], f_reg['flow_accumulation'],
+              f_reg['d_up']),
+        target_path_list=[f_reg['d_up']],
         dependent_task_list=[s_bar_task, flow_accum_task],
         task_name='d up')
 
@@ -864,78 +995,76 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=_inverse_op,
-            rasters=[f_reg['thresholded_slope_path']],
-            target_path=f_reg['s_factor_inverse_path'],
+            rasters=[f_reg['thresholded_slope']],
+            target_path=f_reg['s_factor_inverse'],
             target_nodata=_TARGET_NODATA),
-        target_path_list=[f_reg['s_factor_inverse_path']],
+        target_path_list=[f_reg['s_factor_inverse']],
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         d_dn_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_mfd,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['stream_path'], 1),
-                f_reg['d_dn_path']),
+                (f_reg['flow_direction'], 1),
+                (f_reg['stream'], 1),
+                f_reg['d_dn']),
             kwargs={'weight_raster_path_band': (
-                f_reg['s_factor_inverse_path'], 1)},
+                f_reg['s_factor_inverse'], 1)},
             dependent_task_list=[stream_extraction_task, s_inv_task],
-            target_path_list=[f_reg['d_dn_path']],
+            target_path_list=[f_reg['d_dn']],
             task_name='d dn')
 
         dist_to_channel_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_mfd,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['stream_path'], 1),
-                f_reg['dist_to_channel_path']),
+                (f_reg['flow_direction'], 1),
+                (f_reg['stream'], 1),
+                f_reg['dist_to_channel']),
             dependent_task_list=[stream_extraction_task],
-            target_path_list=[f_reg['dist_to_channel_path']],
+            target_path_list=[f_reg['dist_to_channel']],
             task_name='dist to channel')
     else: # D8
         d_dn_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_d8,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['stream_path'], 1),
-                f_reg['d_dn_path']),
+                (f_reg['flow_direction'], 1),
+                (f_reg['stream'], 1),
+                f_reg['d_dn']),
             kwargs={'weight_raster_path_band': (
-                f_reg['s_factor_inverse_path'], 1)},
+                f_reg['s_factor_inverse'], 1)},
             dependent_task_list=[stream_extraction_task, s_inv_task],
-            target_path_list=[f_reg['d_dn_path']],
+            target_path_list=[f_reg['d_dn']],
             task_name='d dn')
 
         dist_to_channel_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_d8,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['stream_path'], 1),
-                f_reg['dist_to_channel_path']),
+                (f_reg['flow_direction'], 1),
+                (f_reg['stream'], 1),
+                f_reg['dist_to_channel']),
             dependent_task_list=[stream_extraction_task],
-            target_path_list=[f_reg['dist_to_channel_path']],
+            target_path_list=[f_reg['dist_to_channel']],
             task_name='dist to channel')
 
     _ = task_graph.add_task(
         func=sdr._calculate_what_drains_to_stream,
-        args=(f_reg['flow_direction_path'],
-              f_reg['dist_to_channel_path'],
-              f_reg['drainage_mask']),
-        target_path_list=[f_reg['drainage_mask']],
+        args=(f_reg['flow_direction'],
+              f_reg['dist_to_channel'],
+              f_reg['what_drains_to_stream']),
+        target_path_list=[f_reg['what_drains_to_stream']],
         dependent_task_list=[flow_dir_task, dist_to_channel_task],
         task_name='write mask of what drains to stream')
 
     ic_task = task_graph.add_task(
         func=calculate_ic,
         args=(
-            f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_factor_path']),
-        target_path_list=[f_reg['ic_factor_path']],
+            f_reg['d_up'], f_reg['d_dn'], f_reg['ic_factor']),
+        target_path_list=[f_reg['ic_factor']],
         dependent_task_list=[d_dn_task, d_up_task],
         task_name='calc ic')
 
     for nutrient in nutrients_to_process:
-        load_path = f_reg[f'load_{nutrient}_path']
-        modified_load_path = f_reg[f'modified_load_{nutrient}_path']
         # Perrine says that 'n' is the only case where we could consider a
         # prop subsurface component.  So there's a special case for that.
         if nutrient == 'n':
@@ -946,98 +1075,95 @@ def execute(args):
         load_task = task_graph.add_task(
             func=_calculate_load,
             args=(
-                f_reg['masked_lulc_path'],
+                f_reg['masked_lulc'],
                 biophysical_df[
                     [f'load_{nutrient}', f'eff_{nutrient}',
                      f'load_type_{nutrient}']].to_dict('index'),
                 nutrient,
-                load_path),
+                f_reg[f'load_{nutrient}']),
             dependent_task_list=[align_raster_task, mask_lulc_task],
-            target_path_list=[load_path],
+            target_path_list=[f_reg[f'load_{nutrient}']],
             task_name=f'{nutrient} load')
 
         modified_load_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=_mult_op,
-                rasters=[load_path, f_reg['runoff_proxy_index_path']],
-                target_path=modified_load_path,
+                rasters=[f_reg[f'load_{nutrient}'], f_reg['runoff_proxy_index']],
+                target_path=f_reg[f'modified_load_{nutrient}'],
                 target_nodata=_TARGET_NODATA),
-            target_path_list=[modified_load_path],
+            target_path_list=[f_reg[f'modified_load_{nutrient}']],
             dependent_task_list=[load_task, runoff_proxy_index_task],
             task_name=f'modified load {nutrient}')
 
-        surface_load_path = f_reg[f'surface_load_{nutrient}_path']
         surface_load_task = task_graph.add_task(
             func=_map_surface_load,
-            args=(modified_load_path, f_reg['masked_lulc_path'],
-                  subsurface_proportion_map, surface_load_path),
-            target_path_list=[surface_load_path],
+            args=(f_reg[f'modified_load_{nutrient}'], f_reg['masked_lulc'],
+                  subsurface_proportion_map, f_reg[f'surface_load_{nutrient}']),
+            target_path_list=[f_reg[f'surface_load_{nutrient}']],
             dependent_task_list=[modified_load_task, align_raster_task],
             task_name=f'map surface load {nutrient}')
 
-        eff_path = f_reg[f'eff_{nutrient}_path']
         eff_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
-                f_reg['masked_lulc_path'], f_reg['stream_path'],
-                biophysical_df[f'eff_{nutrient}'].to_dict(), eff_path),
-            target_path_list=[eff_path],
+                f_reg['masked_lulc'], f_reg['stream'],
+                biophysical_df[f'eff_{nutrient}'].to_dict(),
+                f_reg[f'eff_{nutrient}']),
+            target_path_list=[f_reg[f'eff_{nutrient}']],
             dependent_task_list=[align_raster_task, stream_extraction_task],
             task_name=f'ret eff {nutrient}')
 
-        crit_len_path = f_reg[f'crit_len_{nutrient}_path']
         crit_len_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
-                f_reg['masked_lulc_path'], f_reg['stream_path'],
+                f_reg['masked_lulc'], f_reg['stream'],
                 biophysical_df[f'crit_len_{nutrient}'].to_dict(),
-                crit_len_path),
-            target_path_list=[crit_len_path],
+                f_reg[f'crit_len_{nutrient}']),
+            target_path_list=[f_reg[f'crit_len_{nutrient}']],
             dependent_task_list=[align_raster_task, stream_extraction_task],
             task_name=f'ret eff {nutrient}')
 
-        effective_retention_path = (
-            f_reg[f'effective_retention_{nutrient}_path'])
         ndr_eff_task = task_graph.add_task(
             func=ndr_core.ndr_eff_calculation,
             args=(
-                f_reg['flow_direction_path'],
-                f_reg['stream_path'], eff_path,
-                crit_len_path, effective_retention_path,
+                f_reg['flow_direction'],
+                f_reg['stream'], f_reg[f'eff_{nutrient}'],
+                f_reg[f'crit_len_{nutrient}'],
+                f_reg[f'effective_retention_{nutrient}'],
                 args['flow_dir_algorithm']),
-            target_path_list=[effective_retention_path],
+            target_path_list=[f_reg[f'effective_retention_{nutrient}']],
             dependent_task_list=[
                 stream_extraction_task, eff_task, crit_len_task],
             task_name=f'eff ret {nutrient}')
 
-        ndr_path = f_reg[f'ndr_{nutrient}_path']
         ndr_task = task_graph.add_task(
             func=_calculate_ndr,
             args=(
-                effective_retention_path, f_reg['ic_factor_path'],
-                float(args['k_param']), ndr_path),
-            target_path_list=[ndr_path],
+                f_reg[f'effective_retention_{nutrient}'], f_reg['ic_factor'],
+                float(args['k_param']), f_reg[f'ndr_{nutrient}']),
+            target_path_list=[f_reg[f'ndr_{nutrient}']],
             dependent_task_list=[ndr_eff_task, ic_task],
             task_name=f'calc ndr {nutrient}')
 
-        surface_export_path = f_reg[f'{nutrient}_surface_export_path']
         surface_export_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=numpy.multiply,  # export = load * ndr
-                rasters=[surface_load_path, ndr_path],
-                target_path=surface_export_path,
+                rasters=[
+                    f_reg[f'surface_load_{nutrient}'],
+                    f_reg[f'ndr_{nutrient}']],
+                target_path=f_reg[f'{nutrient}_surface_export'],
                 target_nodata=_TARGET_NODATA),
-            target_path_list=[surface_export_path],
+            target_path_list=[f_reg[f'{nutrient}_surface_export']],
             dependent_task_list=[
                 load_task, ndr_task, surface_load_task],
             task_name=f'surface export {nutrient}')
 
         field_pickle_map[f'{nutrient}_surface_load'] = (
-            f_reg[f'surface_load_{nutrient}_pickle_path'])
+            f_reg[f'surface_load_{nutrient}_pickle'])
         field_pickle_map[f'{nutrient}_surface_export'] = (
-            f_reg[f'surface_export_{nutrient}_pickle_path'])
+            f_reg[f'surface_export_{nutrient}_pickle'])
 
         # only calculate subsurface things for nitrogen
         if nutrient == 'n':
@@ -1045,9 +1171,9 @@ def execute(args):
                 biophysical_df['proportion_subsurface_n'].to_dict())
             subsurface_load_task = task_graph.add_task(
                 func=_map_subsurface_load,
-                args=(modified_load_path, f_reg['masked_lulc_path'],
-                      proportion_subsurface_map, f_reg['sub_load_n_path']),
-                target_path_list=[f_reg['sub_load_n_path']],
+                args=(f_reg[f'modified_load_{nutrient}'], f_reg['masked_lulc'],
+                      proportion_subsurface_map, f_reg['sub_load_n']),
+                target_path_list=[f_reg['sub_load_n']],
                 dependent_task_list=[modified_load_task, align_raster_task],
                 task_name='map subsurface load n')
 
@@ -1056,8 +1182,8 @@ def execute(args):
                 args=(
                     float(args['subsurface_eff_n']),
                     float(args['subsurface_critical_length_n']),
-                    f_reg['dist_to_channel_path'], f_reg['sub_ndr_n_path']),
-                target_path_list=[f_reg['sub_ndr_n_path']],
+                    f_reg['dist_to_channel'], f_reg['sub_ndr_n']),
+                target_path_list=[f_reg['sub_ndr_n']],
                 dependent_task_list=[dist_to_channel_task],
                 task_name='sub ndr n')
 
@@ -1065,10 +1191,10 @@ def execute(args):
                 func=pygeoprocessing.raster_map,
                 kwargs=dict(
                     op=numpy.multiply,  # export = load * ndr
-                    rasters=[f_reg['sub_load_n_path'], f_reg['sub_ndr_n_path']],
-                    target_path=f_reg['n_subsurface_export_path'],
+                    rasters=[f_reg['sub_load_n'], f_reg['sub_ndr_n']],
+                    target_path=f_reg['n_subsurface_export'],
                     target_nodata=_TARGET_NODATA),
-                target_path_list=[f_reg['n_subsurface_export_path']],
+                target_path_list=[f_reg['n_subsurface_export']],
                 dependent_task_list=[
                     subsurface_load_task, subsurface_ndr_task],
                 task_name='subsurface export n')
@@ -1079,10 +1205,10 @@ def execute(args):
                 func=pygeoprocessing.raster_map,
                 kwargs=dict(
                     op=_sum_op,
-                    rasters=[surface_export_path, f_reg['n_subsurface_export_path']],
-                    target_path=f_reg['n_total_export_path'],
+                    rasters=[f_reg[f'{nutrient}_surface_export'], f_reg['n_subsurface_export']],
+                    target_path=f_reg['n_total_export'],
                     target_nodata=_TARGET_NODATA),
-                target_path_list=[f_reg['n_total_export_path']],
+                target_path_list=[f_reg['n_total_export']],
                 dependent_task_list=[
                     surface_export_task, subsurface_export_task],
                 task_name='total export n')
@@ -1090,10 +1216,10 @@ def execute(args):
             _ = task_graph.add_task(
                 func=_aggregate_and_pickle_total,
                 args=(
-                    (f_reg['n_subsurface_export_path'], 1),
-                    f_reg['watershed_results_ndr_path'],
-                    f_reg['subsurface_export_n_pickle_path']),
-                target_path_list=[f_reg['subsurface_export_n_pickle_path']],
+                    (f_reg['n_subsurface_export'], 1),
+                    f_reg['watershed_results_ndr'],
+                    f_reg['subsurface_export_n_pickle']),
+                target_path_list=[f_reg['subsurface_export_n_pickle']],
                 dependent_task_list=[
                     subsurface_export_task, create_vector_task],
                 task_name='aggregate n subsurface export')
@@ -1101,47 +1227,47 @@ def execute(args):
             _ = task_graph.add_task(
                 func=_aggregate_and_pickle_total,
                 args=(
-                    (f_reg['n_total_export_path'], 1),
-                    f_reg['watershed_results_ndr_path'],
-                    f_reg['total_export_n_pickle_path']),
+                    (f_reg['n_total_export'], 1),
+                    f_reg['watershed_results_ndr'],
+                    f_reg['total_export_n_pickle']),
                 target_path_list=[
-                    f_reg[f'total_export_{nutrient}_pickle_path']],
+                    f_reg[f'total_export_{nutrient}_pickle']],
                 dependent_task_list=[total_export_task, create_vector_task],
                 task_name='aggregate n total export')
 
             _ = task_graph.add_task(
                 func=_aggregate_and_pickle_total,
                 args=(
-                    (f_reg['sub_load_n_path'], 1),
-                    f_reg['watershed_results_ndr_path'],
-                    f_reg[f'subsurface_load_{nutrient}_pickle_path']),
+                    (f_reg['sub_load_n'], 1),
+                    f_reg['watershed_results_ndr'],
+                    f_reg[f'subsurface_load_{nutrient}_pickle']),
                 target_path_list=[
-                    f_reg[f'subsurface_load_{nutrient}_pickle_path']],
+                    f_reg[f'subsurface_load_{nutrient}_pickle']],
                 dependent_task_list=[subsurface_load_task, create_vector_task],
                 task_name=f'aggregate {nutrient} subsurface load')
 
             field_pickle_map['n_subsurface_export'] = f_reg[
-                'subsurface_export_n_pickle_path']
+                'subsurface_export_n_pickle']
             field_pickle_map['n_total_export'] = f_reg[
-                'total_export_n_pickle_path']
+                'total_export_n_pickle']
             field_pickle_map['n_subsurface_load'] = f_reg[
-                'subsurface_load_n_pickle_path']
+                'subsurface_load_n_pickle']
 
         _ = task_graph.add_task(
             func=_aggregate_and_pickle_total,
             args=(
-                (surface_export_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg[f'surface_export_{nutrient}_pickle_path']),
-            target_path_list=[f_reg[f'surface_export_{nutrient}_pickle_path']],
+                (f_reg[f'{nutrient}_surface_export'], 1), f_reg['watershed_results_ndr'],
+                f_reg[f'surface_export_{nutrient}_pickle']),
+            target_path_list=[f_reg[f'surface_export_{nutrient}_pickle']],
             dependent_task_list=[surface_export_task, create_vector_task],
             task_name=f'aggregate {nutrient} export')
 
         _ = task_graph.add_task(
             func=_aggregate_and_pickle_total,
             args=(
-                (surface_load_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg[f'surface_load_{nutrient}_pickle_path']),
-            target_path_list=[f_reg[f'surface_load_{nutrient}_pickle_path']],
+                (f_reg[f'surface_load_{nutrient}'], 1), f_reg['watershed_results_ndr'],
+                f_reg[f'surface_load_{nutrient}_pickle']),
+            target_path_list=[f_reg[f'surface_load_{nutrient}_pickle']],
             dependent_task_list=[surface_load_task, create_vector_task],
             task_name=f'aggregate {nutrient} surface load')
 
@@ -1150,7 +1276,7 @@ def execute(args):
 
     LOGGER.info('Writing summaries to output shapefile')
     _add_fields_to_shapefile(
-        field_pickle_map, f_reg['watershed_results_ndr_path'])
+        field_pickle_map, f_reg['watershed_results_ndr'])
 
     LOGGER.info(r'NDR complete!')
     LOGGER.info(r'  _   _    ____    ____     ')
@@ -1160,6 +1286,8 @@ def execute(args):
     LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
     LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
+
+    return f_reg.registry
 
 
 # raster_map equation: Multiply a series of arrays element-wise
@@ -1304,26 +1432,12 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    spec_copy = copy.deepcopy(MODEL_SPEC['args'])
     # Check required fields given the state of ``calc_n`` and ``calc_p``
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     nutrients_selected = []
     for nutrient_letter in ('n', 'p'):
         if f'calc_{nutrient_letter}' in args and args[f'calc_{nutrient_letter}']:
             nutrients_selected.append(nutrient_letter)
-
-    for param in ['load', 'eff', 'crit_len']:
-        for nutrient in nutrients_selected:
-            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}'] = (
-                spec_copy['biophysical_table_path']['columns'][f'{param}_[NUTRIENT]'])
-            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}']['required'] = True
-        spec_copy['biophysical_table_path']['columns'].pop(f'{param}_[NUTRIENT]')
-
-    if 'n' in nutrients_selected:
-        spec_copy['biophysical_table_path']['columns']['proportion_subsurface_n'][
-            'required'] = True
-
-    validation_warnings = validation.validate(
-        args, spec_copy, MODEL_SPEC['args_with_spatial_overlap'])
 
     if not nutrients_selected:
         validation_warnings.append(
@@ -1380,7 +1494,7 @@ def _calculate_load(
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
             efficiency, and load type. The load type value can be one of:
-            [ 'measured-runoff' | 'appliation-rate' ].
+            [ 'measured-runoff' | 'application-rate' ].
         nutrient_type (str): the nutrient type key ('p' | 'n').
         target_load_raster (string): path to target raster that will have
             load values (kg/ha) mapped to pixels based on LULC.
@@ -1394,16 +1508,6 @@ def _calculate_load(
     load_key = f'load_{nutrient_type}'
     eff_key = f'eff_{nutrient_type}'
     load_type_key = f'load_type_{nutrient_type}'
-    
-    # Raise ValueError if unknown load_type
-    for key, value in lucode_to_load.items():
-        load_type = value[load_type_key]
-        if not load_type in [app_rate, measured_runoff]:
-            # unknown load type, raise ValueError
-            raise ValueError(
-                'nutrient load type must be: '
-                f'"{app_rate}" | "{measured_runoff}". Instead '
-                f'found value of: "{load_type}".')
 
     def _map_load_op(lucode_array):
         """Convert unit load to total load."""

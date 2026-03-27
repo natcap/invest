@@ -10,7 +10,7 @@ from osgeo import gdal
 
 from ..managed_raster.managed_raster cimport D8
 from ..managed_raster.managed_raster cimport MFD
-from .effective_retention cimport run_effective_retention
+from .retention cimport calculate_retention
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -54,6 +54,7 @@ def ndr_eff_calculation(
         suffix='.tif', prefix='flow_to_process',
         dir=os.path.dirname(effective_retention_path))
     os.close(fp)
+    algorithm = algorithm.lower()
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
@@ -69,7 +70,7 @@ def ndr_eff_calculation(
             result[d8_array == i] = 1 << i
         return result
 
-    flow_dir_op = _mfd_to_flow_dir_op if algorithm == 'MFD' else _d8_to_flow_dir_op
+    flow_dir_op = _mfd_to_flow_dir_op if algorithm == 'mfd' else _d8_to_flow_dir_op
 
     # convert mfd raster to binary mfd
     # each value is an 8-digit binary number
@@ -79,8 +80,8 @@ def ndr_eff_calculation(
         [(flow_direction_path, 1)], flow_dir_op,
         to_process_flow_directions_path, gdal.GDT_Byte, None)
 
-    if algorithm == 'MFD':
-        run_effective_retention[MFD](
+    if algorithm == 'mfd':
+        calculate_retention[MFD](
             flow_direction_path.encode('utf-8'),
             stream_path.encode('utf-8'),
             retention_eff_lulc_path.encode('utf-8'),
@@ -88,7 +89,7 @@ def ndr_eff_calculation(
             to_process_flow_directions_path.encode('utf-8'),
             effective_retention_path.encode('utf-8'))
     else: # D8
-        run_effective_retention[D8](
+        calculate_retention[D8](
             flow_direction_path.encode('utf-8'),
             stream_path.encode('utf-8'),
             retention_eff_lulc_path.encode('utf-8'),

@@ -18,6 +18,7 @@ except ImportError:
 from osgeo import gdal
 gdal.UseExceptions()
 
+
 @contextlib.contextmanager
 def redirect_stdout():
     """Redirect stdout to a stream, which is then yielded."""
@@ -126,6 +127,46 @@ class CLIHeadlessTests(unittest.TestCase):
             ])
         self.assertEqual(exit_cm.exception.code, 1)
 
+    def test_run_produces_file_registry_json(self):
+        """CLI: file_registry.json should be produced in the workspace."""
+        from natcap.invest import cli
+        parameter_set = {
+            "args": {
+                "skip_invalid_geometry": True,
+                "dem_path": os.path.join(os.path.dirname(__file__), '..',
+                    'data', 'invest-test-data', 'delineateit', 'input', 'dem.tif'),
+                "flow_threshold": "1000",
+                "outlet_vector_path": os.path.join(os.path.dirname(__file__), '..',
+                    'data', 'invest-test-data', 'delineateit', 'input', 'outlets.shp'),
+                "results_suffix": "gura",
+                "snap_distance": "3",
+                "snap_points": True
+            },
+            "invest_version": "3.16.2",
+            "model_name": "natcap.invest.delineateit.delineateit"
+        }
+        parameter_set_path = os.path.join(self.workspace_dir, 'delineateit_params.json')
+        with open(parameter_set_path, 'w') as fp:
+            json.dump(parameter_set, fp)
+        cli.main([
+            'run',
+            'delineateit',
+            '--datastack', parameter_set_path,
+            '--workspace', self.workspace_dir
+        ])
+        expected_file_registry = {
+            'taskgraph_cache': os.path.join(self.workspace_dir, 'taskgraph_cache', 'taskgraph_gura.db'),
+            'filled_dem': os.path.join(self.workspace_dir, 'filled_dem_gura.tif'),
+            'flow_direction': os.path.join(self.workspace_dir, 'flow_direction_gura.tif'),
+            'preprocessed_geometries': os.path.join(self.workspace_dir, 'preprocessed_geometries_gura.gpkg'),
+            'flow_accumulation': os.path.join(self.workspace_dir, 'flow_accumulation_gura.tif'),
+            'streams': os.path.join(self.workspace_dir, 'streams_gura.tif'),
+            'snapped_outlets': os.path.join(self.workspace_dir, 'snapped_outlets_gura.gpkg'),
+            'watersheds': os.path.join(self.workspace_dir, 'watersheds_gura.gpkg')
+        }
+        with open(os.path.join(self.workspace_dir, 'file_registry_gura.json')) as json_file:
+            self.assertEqual(json.load(json_file), expected_file_registry)
+
     def test_run_ambiguous_modelname(self):
         """CLI: Raise an error when an ambiguous model name used."""
         from natcap.invest import cli
@@ -198,10 +239,10 @@ class CLIHeadlessTests(unittest.TestCase):
 
     def test_validate_carbon(self):
         """CLI: Validate a model inputs through the cli."""
-        from natcap.invest import cli, validation
+        from natcap.invest import cli, validation_messages
 
         datastack_dict = {
-            'model_name': 'natcap.invest.carbon',
+            'model_id': 'carbon',
             'invest_version': '3.10',
             'args': {}
         }
@@ -222,7 +263,7 @@ class CLIHeadlessTests(unittest.TestCase):
         # it's expected that these keys are missing because the only
         # key we included was the workspace_dir
         expected_warning = [(['carbon_pools_path', 'lulc_bas_path'],
-                            validation.MESSAGES['MISSING_KEY'])]
+                            validation_messages.MISSING_KEY)]
         self.assertEqual(validation_output, str(expected_warning))
         self.assertEqual(exit_cm.exception.code, 0)
 
@@ -292,7 +333,7 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Get validation results as JSON from cli."""
         from natcap.invest import cli
         datastack_dict = {
-            'model_name': 'natcap.invest.carbon',
+            'model_id': 'carbon',
             'invest_version': '3.10',
             'args': {}
         }
@@ -384,20 +425,20 @@ class CLIUnitTests(unittest.TestCase):
 
     def test_export_to_python_default_args(self):
         """Export a python script w/ default args for a model."""
-        from natcap.invest import cli, model_metadata
+        from natcap.invest import cli, models
 
         filename = 'foo.py'
         target_filepath = os.path.join(self.workspace_dir, filename)
         target_model = 'carbon'
-        expected_data = 'natcap.invest.carbon.execute(args)'
+        expected_data = 'natcap.invest.carbon.carbon.execute(args)'
         cli.export_to_python(target_filepath, target_model)
 
         self.assertTrue(os.path.exists(target_filepath))
 
-        target_model = model_metadata.MODEL_METADATA[target_model].pyname
+        target_model = models.model_id_to_pyname[target_model]
         model_module = importlib.import_module(name=target_model)
         spec = model_module.MODEL_SPEC
-        expected_args = {key: '' for key in spec['args'].keys()}
+        expected_args = {_input.id: '' for _input in spec.inputs}
 
         module_name = str(uuid.uuid4()) + 'testscript'
         spec = importlib.util.spec_from_file_location(module_name, target_filepath)

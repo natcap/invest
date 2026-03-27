@@ -14,6 +14,8 @@ from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 _SRS = osr.SpatialReference()
 _SRS.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
@@ -317,7 +319,13 @@ class ScenicQualityTests(unittest.TestCase):
         with open(clipped_structures_path, 'w') as fake_file:
             fake_file.write('this is a vector :)')
 
-        scenic_quality.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(scenic_quality.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        scenic_quality.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, scenic_quality.MODEL_SPEC, **execute_kwargs)
 
         # 3 of the 4 viewpoints overlap the DEM, so there should only be files
         # from 3 viewsheds.
@@ -738,7 +746,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
     def test_bad_values(self):
         """SQ Validate: Assert we can catch various validation errors."""
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
         from natcap.invest.scenic_quality import scenic_quality
 
         # AOI path is missing
@@ -768,19 +776,19 @@ class ScenicQualityValidationTests(unittest.TestCase):
         self.assertTrue('refraction' not in single_key_errors)
         self.assertEqual(
             single_key_errors['a_coef'],
-            validation.MESSAGES['NOT_A_NUMBER'].format(value=args['a_coef']))
+            validation_messages.NOT_A_NUMBER.format(value=args['a_coef']))
         self.assertEqual(
             single_key_errors['dem_path'],
-            validation.MESSAGES['FILE_NOT_FOUND'])
+            validation_messages.FILE_NOT_FOUND)
         self.assertEqual(
             single_key_errors['structure_path'],
-            validation.MESSAGES['FILE_NOT_FOUND'])
+            validation_messages.FILE_NOT_FOUND)
         self.assertEqual(
             single_key_errors['aoi_path'],
-            validation.MESSAGES['FILE_NOT_FOUND'])
+            validation_messages.FILE_NOT_FOUND)
         self.assertEqual(
             single_key_errors['valuation_function'],
-            validation.MESSAGES['INVALID_OPTION'].format(
+            validation_messages.INVALID_OPTION.format(
                 option_list=[
                     'exponential',
                     'linear',
@@ -788,7 +796,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
     def test_dem_projected_in_m(self):
         """SQ Validate: the DEM must be projected in meters."""
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
         from natcap.invest.scenic_quality import scenic_quality
 
         srs = osr.SpatialReference()
@@ -805,7 +813,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
         validation_errors = scenic_quality.validate(args, limit_to='dem_path')
         self.assertEqual(
             validation_errors,
-            [(['dem_path'], validation.MESSAGES['NOT_PROJECTED'])])
+            [(['dem_path'], validation_messages.NOT_PROJECTED)])
 
 
 class ViewshedTests(unittest.TestCase):

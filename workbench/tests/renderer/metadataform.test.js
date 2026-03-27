@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
-import MetadataForm from '../../src/renderer/components/SettingsModal/MetadataForm';
+import MetadataModal from '../../src/renderer/components/MetadataModal';
 import {
   getGeoMetaMakerProfile,
   setGeoMetaMakerProfile,
@@ -36,8 +36,12 @@ test('Metadata form interact and submit', async () => {
     findByRole,
     getByLabelText,
     getByRole,
-    getByText,
-  } = render(<MetadataForm />);
+  } = render(
+    <MetadataModal
+      show
+      close={() => {}}
+    />
+  );
 
   // The form should render with content from an existing profile
   const nameInput = getByLabelText('Full name');
@@ -55,11 +59,6 @@ test('Metadata form interact and submit', async () => {
   await user.clear(licenseInput);
   await user.type(nameInput, name);
   await user.type(licenseInput, license);
-
-  // Exercise the "more info" button
-  await user.click(getByRole('button', { name: /more info/i }));
-  expect(getByText('Metadata for InVEST results')).toBeInTheDocument();
-  await user.click(getByRole('button', { name: /hide info/i }));
 
   const submit = getByRole('button', { name: /save metadata/i });
   await user.click(submit);
@@ -104,7 +103,12 @@ test('Metadata form error on submit', async () => {
     findByRole,
     getByLabelText,
     getByRole,
-  } = render(<MetadataForm />);
+  } = render(
+    <MetadataModal
+      show
+      close={() => {}}
+    />
+  );
 
   const submit = getByRole('button', { name: /save metadata/i });
   await user.click(submit);

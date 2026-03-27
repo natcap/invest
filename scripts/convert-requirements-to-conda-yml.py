@@ -7,7 +7,7 @@ import sys
 
 YML_TEMPLATE = """channels:
 - conda-forge
-- defaults
+- nodefaults
 dependencies:
 {conda_dependencies}
 {pip_dependencies}

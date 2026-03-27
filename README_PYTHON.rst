@@ -13,12 +13,10 @@ quantify and forecast this return. InVEST enables decision-makers to quantify
 the importance of natural capital, to assess the tradeoffs associated with
 alternative choices, and to integrate conservation and human development.
 
-InVEST is licensed under a permissive, modified BSD license.
-
 For more information, see:
   * `InVEST API documentation <http://invest.readthedocs.io/>`_
   * InVEST on `GitHub <https://github.com/natcap/invest>`__
-  * The `Natural Capital Project website <http://naturalcapitalproject.stanford.edu>`__.
+  * The `Natural Capital Alliance website <http://naturalcapitalalliance.stanford.edu>`__.
 
 
 .. Everything after this comment will be included in the API docs.
@@ -65,6 +63,6 @@ Support
 =======
 
 Participate in the NatCap forums here:
-http://community.naturalcapitalproject.org
+http://community.naturalcapitalalliance.org
 
 Bugs may be reported at http://github.com/natcap/invest

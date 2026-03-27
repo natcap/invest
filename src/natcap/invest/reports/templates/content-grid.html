@@ -1,0 +1,17 @@
+<!--
+  `contents` must be an iterable of (item, width) tuples, where
+  `item` is HTML content and
+  `width` is a number representing the desired width of the item
+  relative to the grid container, in % (e.g., an item with width 50
+  will take up half the width of the grid container).
+-->
+
+{% macro content_grid(contents) -%}
+  <div class="content-grid">
+    {% for (item, width) in contents %}
+    <div class="content-grid-item" style="width: {{ width }}%">
+      {{ item|safe }}
+    </div>
+    {% endfor %}
+  </div>
+{%- endmacro %}

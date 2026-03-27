@@ -87,3 +87,7 @@ export const shell = {
   showItemInFolder: jest.fn(),
   openExternal: jest.fn(),
 };
+
+export const webUtils = {
+  getPathForFile: jest.fn((file) => file.name),
+};

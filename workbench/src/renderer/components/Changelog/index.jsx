@@ -88,8 +88,7 @@ export default function Changelog(props) {
       and not, for example, sourced from user input. */}
       <Modal.Body
         dangerouslySetInnerHTML={htmlContent}
-      >
-      </Modal.Body>
+      />
     </Modal>
   );
 }

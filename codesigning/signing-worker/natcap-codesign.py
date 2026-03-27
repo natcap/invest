@@ -125,6 +125,7 @@ def download_file(url):
     Returns:
         ``None``
     """
+    # See the .service file for the WorkingDirectory.
     local_filename = url.split('/')[-1]
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
@@ -305,6 +306,7 @@ def dmg_has_signature(filename):
 
 def main():
     while True:
+        filename = None
         try:
             file_to_sign = get_from_queue()
             if file_to_sign is None:
@@ -346,15 +348,21 @@ def main():
                             filename=filename,
                             url=file_to_sign['https-url']))
                     LOGGER.info("Signing complete.")
-
-                LOGGER.info(f"Removing {filename}")
-                os.remove(filename)
         except Exception as e:
             LOGGER.exception(f"Unexpected error signing file: {e}")
             post_to_slack(
                 SLACK_NOTIFICATION_FAILURE.format(
                     filename=file_to_sign['https-url'],
                     traceback=traceback.format_exc()))
+        finally:
+            # Always clean up the downloaded file, even if things failed.
+            # As of debian:trixie, /tmp is a separate filesystem with a hard
+            # upper limit. Cleaning up files as we go will help avoid running
+            # out of disk space.
+            if filename is not None:
+                LOGGER.info(f"Removing {filename}")
+                os.remove(filename)
+
         time.sleep(60)
 
 

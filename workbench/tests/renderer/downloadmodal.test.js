@@ -10,7 +10,7 @@ import { ipcRenderer, BrowserWindow } from 'electron';
 import DataDownloadModal from '../../src/renderer/components/DataDownloadModal';
 import DownloadProgressBar from '../../src/renderer/components/DownloadProgressBar';
 import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
-import { getInvestModelNames } from '../../src/renderer/server_requests';
+import { getInvestModelIDs } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import setupDownloadHandlers from '../../src/main/setupDownloadHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
@@ -23,18 +23,18 @@ const modelName = Object.keys(sampledata_registry)[0];
 
 describe('Sample Data Download Form', () => {
   beforeEach(() => {
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelIDs.mockResolvedValue({});
   });
 
   test('Modal displays immediately on user`s first run', async () => {
     const {
       findByText,
-      getByText,
+      getByRole,
     } = render(<App isFirstRun />);
 
     const modalTitle = await findByText('Download InVEST sample data');
     expect(modalTitle).toBeInTheDocument();
-    userEvent.click(getByText('Cancel'));
+    await userEvent.click(getByRole('button', { name: /close modal/i }));
     await waitFor(() => {
       expect(modalTitle).not.toBeInTheDocument();
     });
@@ -164,7 +164,7 @@ describe('DownloadProgressBar', () => {
 describe('Integration tests with main process', () => {
   beforeEach(async () => {
     setupDownloadHandlers(new BrowserWindow());
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelIDs.mockResolvedValue({});
   });
 
   afterEach(async () => {

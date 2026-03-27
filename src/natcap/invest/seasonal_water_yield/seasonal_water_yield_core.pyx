@@ -111,7 +111,7 @@ cpdef calculate_local_recharge(
         target_aet_path.encode('utf-8'),
         target_pi_path.encode('utf-8')]
 
-    if algorithm == 'MFD':
+    if algorithm.lower() == 'mfd':
         run_calculate_local_recharge[MFD](*args)
     else:  # D8
         run_calculate_local_recharge[D8](*args)
@@ -147,7 +147,7 @@ def route_baseflow_sum(
         flow_dir_path, target_b_path, gdal.GDT_Float32,
         [target_nodata], fill_value_list=[target_nodata])
 
-    if algorithm == 'MFD':
+    if algorithm.lower() == 'mfd':
         run_route_baseflow_sum[MFD](
             flow_dir_path.encode('utf-8'),
             l_path.encode('utf-8'),

@@ -22,19 +22,14 @@ import shapely
 import shapely.geometry
 import shapely.prepared
 import shapely.wkt
-import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-# prefer to do intrapackage imports to avoid case where global package is
-# installed and we import the global version of it rather than the local
-from .. import gettext
-from .. import spec_utils
-from .. import utils
-from .. import validation
-from ..model_metadata import MODEL_METADATA
-from ..unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,358 +44,407 @@ MIN_YEAR = 2012
 MAX_YEAR = 2017
 POLYGON_ID_FIELD = 'poly_id'
 
-predictor_table_columns = {
-    "id": {
-        "type": "freestyle_string",
-        "about": gettext("A unique identifier for the predictor.")
-    },
-    "path": {
-        "type": {"raster", "vector"},
-        "about": gettext("A spatial file to use as a predictor."),
-        "bands": {1: {"type": "number", "units": u.none}},
-        "fields": {},
-        "geometries": spec_utils.ALL_GEOMS
-    },
-    "type": {
-        "type": "option_string",
-        "about": gettext("The type of predictor file provided in the 'path' column."),
-        "options": {
-            "raster_mean": {
-                "description": gettext(
-                    "Predictor is a raster. Metric is the mean of values "
-                    "within the AOI grid cell or polygon.")},
-            "raster_sum": {
-                "description": gettext(
-                    "Predictor is a raster. Metric is the sum of values "
-                    "within the AOI grid cell or polygon.")},
-            "point_count": {
-                "description": gettext(
-                    "Predictor is a point vector. Metric is the number of "
-                    "points within each AOI grid cell or polygon.")},
-            "point_nearest_distance": {
-                "description": gettext(
-                    "Predictor is a point vector. Metric is the Euclidean "
-                    "distance between the centroid of each AOI grid cell and "
-                    "the nearest point in this layer.")},
-            "line_intersect_length": {
-                "description": gettext(
-                    "Predictor is a line vector. Metric is the total length "
-                    "of the lines that fall within each AOI grid cell.")},
-            "polygon_area_coverage": {
-                "description": gettext(
-                    "Predictor is a polygon vector. Metric is the area of "
-                    "overlap between the polygon and each AOI grid cell.")},
-            "polygon_percent_coverage": {
-                "description": gettext(
-                    "Predictor is a polygon vector. Metric is the percentage "
-                    "(0-100) of overlapping area between the polygon and each "
-                    "AOI grid cell.")}
-        }
-    }
-}
+PREDICTOR_TABLE_COLUMNS = [
+    spec.StringInput(
+        id="id",
+        about=gettext("A unique identifier for the predictor."),
+        regexp=None
+    ),
+    spec.RasterOrVectorInput(
+        id="path",
+        about=gettext("A spatial file to use as a predictor."),
+        data_type=float,
+        units=u.none,
+        geometry_types={
+            "MULTIPOINT",
+            "MULTIPOLYGON",
+            "LINESTRING",
+            "POINT",
+            "MULTILINESTRING",
+            "POLYGON",
+        },
+        fields=[],
+        projected=None
+    ),
+    spec.OptionStringInput(
+        id="type",
+        about="The type of predictor file provided in the 'path' column.",
+        options=[
+            spec.Option(
+                key="raster_mean",
+                about=(
+                    "Predictor is a raster. Metric is the mean of values"
+                    " within the AOI grid cell or polygon.")),
+            spec.Option(
+                key="raster_sum",
+                about=(
+                    "Predictor is a raster. Metric is the sum of values"
+                    " within the AOI grid cell or polygon.")),
+            spec.Option(
+                key="point_count",
+                about=(
+                    "Predictor is a point vector. Metric is the number of"
+                    " points within each AOI grid cell or polygon.")),
+            spec.Option(
+                key="point_nearest_distance",
+                about=(
+                    "Predictor is a point vector. Metric is the Euclidean"
+                    " distance between the centroid of each AOI grid cell and"
+                    " the nearest point in this layer.")),
+            spec.Option(
+                key="line_intersect_length",
+                about=(
+                    "Predictor is a line vector. Metric is the total length"
+                    " of the lines that fall within each AOI grid cell.")),
+            spec.Option(
+                key="polygon_area_coverage",
+                about=(
+                    "Predictor is a polygon vector. Metric is the area of"
+                    " overlap between the polygon and each AOI grid cell.")),
+            spec.Option(
+                key="polygon_percent_coverage",
+                about=(
+                    "Predictor is a polygon vector. Metric is the percentage"
+                    " (0-100) of overlapping area between the polygon and"
+                    " each AOI grid cell."))
+        ]
+    )
+]
 
-
-MODEL_SPEC = {
-    "model_id": "recreation",
-    "model_name": MODEL_METADATA["recreation"].model_title,
-    "pyname": MODEL_METADATA["recreation"].pyname,
-    "userguide": MODEL_METADATA["recreation"].userguide,
-    "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "aoi_path": {
-            **spec_utils.AOI,
-            "about": gettext("Map of area(s) over which to run the model.")
-        },
-        "hostname": {
-            "type": "freestyle_string",
-            "required": False,
-            "about": gettext(
-                "FQDN to a recreation server.  If not provided, a default is "
-                "assumed."),
-            "name": gettext("hostname")
-        },
-        "port": {
-            "type": "number",
-            "expression": "value >= 0",
-            "units": u.none,
-            "required": False,
-            "about": gettext(
-                "the port on ``hostname`` to use for contacting the "
-                "recreation server."),
-            "name": gettext("port")
-        },
-        "start_year": {
-            "type": "number",
-            "expression": f"{MIN_YEAR} <= value <= {MAX_YEAR}",
-            "units": u.year_AD,
-            "about": gettext(
-                "Year at which to start user-day calculations. "
-                "Calculations start on the first day of the year. Year "
-                f"must be in the range {MIN_YEAR} - {MAX_YEAR}, and must be "
-                "less than or equal to the End Year."),
-            "name": gettext("start year")
-        },
-        "end_year": {
-            "type": "number",
-            "expression": f"{MIN_YEAR} <= value <= {MAX_YEAR}",
-            "units": u.year_AD,
-            "about": gettext(
-                "Year at which to end user-day calculations. "
-                "Calculations continue through the last day of the year. "
-                f"Year must be in the range {MIN_YEAR} - {MAX_YEAR}, and must "
-                "be greater than or equal to the Start Year."),
-            "name": gettext("end year")
-        },
-        "grid_aoi": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext(
-                "Divide the AOI polygons into equal-sized grid cells, and "
-                "compute results for those cells instead of the original "
-                "polygons."),
-            "name": gettext("grid the AOI")
-        },
-        "grid_type": {
-            "type": "option_string",
-            "options": {
-                "square": {"display_name": gettext("square")},
-                "hexagon": {"display_name": gettext("hexagon")}
-            },
-            "required": "grid_aoi",
-            "about": gettext(
-                "The shape of grid cells to make within the AOI polygons. "
-                "Required if Grid AOI is selected."),
-            "name": gettext("grid type")
-        },
-        "cell_size": {
-            "type": "number",
-            "expression": "value > 0",
-            "units": u.other,  # any unit of length is ok
-            "required": "grid_aoi",
-            "about": gettext(
-                "Size of grid cells to make, measured in the projection units "
-                "of the AOI. If the Grid Type is 'square', this is the length "
-                "of each side of the square. If the Grid Type is 'hexagon', "
-                "this is the hexagon's maximal diameter."),
-            "name": gettext("cell size")
-        },
-        "compute_regression": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext(
-                "Run the regression model using the predictor table and "
-                "scenario table, if provided."),
-            "name": gettext("compute regression")
-        },
-        "predictor_table_path": {
-            "type": "csv",
-            "index_col": "id",
-            "columns": predictor_table_columns,
-            "required": "compute_regression",
-            "about": gettext(
-                "A table that maps predictor IDs to spatial files and their "
-                "predictor metric types. The file paths can be absolute or "
-                "relative to the table."),
-            "name": gettext("predictor table")
-        },
-        "scenario_predictor_table_path": {
-            "type": "csv",
-            "index_col": "id",
-            "columns": predictor_table_columns,
-            "required": False,
-            "about": gettext(
-                "A table of future or alternative scenario predictors. Maps "
-                "IDs to files and their types. The file paths can be absolute "
-                "or relative to the table."),
-            "name": gettext("scenario predictor table")
-        }
-    },
-    "outputs": {
-        "PUD_results.gpkg": {
-            "about": gettext(
-                "Results of photo-user-days aggregations in the AOI."),
-            "geometries": spec_utils.POLYGONS,
-            "fields": {
-                "PUD_YR_AVG": {
-                    "about": gettext(
-                        "The average photo-user-days per year"),
-                    "type": "number",
-                    "units": u.none
-                },
-                "PUD_[MONTH]": {
-                    "about": gettext(
-                        "The average photo-user-days for each month."),
-                    "type": "number",
-                    "units": u.none
-                }
-            }
-        },
-        "TUD_results.gpkg": {
-            "about": gettext(
-                "Results of twitter-user-days aggregations in the AOI."),
-            "geometries": spec_utils.POLYGONS,
-            "fields": {
-                "PUD_YR_AVG": {
-                    "about": gettext(
-                        "The average twitter-user-days per year"),
-                    "type": "number",
-                    "units": u.none
-                },
-                "PUD_[MONTH]": {
-                    "about": gettext(
-                        "The average twitter-user-days for each month."),
-                    "type": "number",
-                    "units": u.none
-                }
-            }
-        },
-        "PUD_monthly_table.csv": {
-            "about": gettext("Table of monthly photo-user-days in each AOI polygon."),
-            "index_col": "poly_id",
-            "columns": {
-                "poly_id": {
-                    "type": "integer",
-                    "about": gettext("Polygon ID")
-                },
-                "[YEAR]-[MONTH]": {
-                    "about": gettext(
-                        "Total photo-user-days counted in the polygon in the "
-                        "given month."),
-                    "type": "number",
-                    "units": u.none
-                }
-            }
-        },
-        "TUD_monthly_table.csv": {
-            "about": gettext("Table of monthly twitter-user-days in each AOI polygon."),
-            "index_col": "poly_id",
-            "columns": {
-                "poly_id": {
-                    "type": "integer",
-                    "about": gettext("Polygon ID")
-                },
-                "[YEAR]-[MONTH]": {
-                    "about": gettext(
-                        "Total twitter-user-days counted in the polygon in the "
-                        "given month."),
-                    "type": "number",
-                    "units": u.none
-                }
-            }
-        },
-        "regression_data.gpkg": {
-            "created_if": "compute_regression",
-            "about": gettext(
-                "AOI polygons with all the variables needed to compute a regression, "
-                "including predictor attributes and the user-days response variable."),
-            "geometries": spec_utils.POLYGONS,
-            "fields": {
-                "[PREDICTOR]": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Predictor attribute value for each polygon.")
-                },
-                "pr_TUD": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "proportion of the sum of TUD_YR_AVG across all features.")
-                },
-                "pr_PUD": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "proportion of the sum of PUD_YR_AVG across all features.")
-                },
-                "avg_pr_UD": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "average of pr_TUD and pr_TUD. This variable "
-                        "is logit-transformed and then used as the response "
-                        "variable in the regression model.")
-                }
-            }
-        },
-        "regression_summary.txt": {
-            "created_if": "compute_regression",
-            "about": gettext(
-                "This is a text file output of the regression analysis. It "
-                "includes estimates for each predictor variable. It also "
-                "contains a “server id hash” value which can be used to "
-                "correlate the PUD result with the data available on the PUD "
-                "server. If these results are used in publication this hash "
-                "should be included with the results for reproducibility.")
-        },
-        "scenario_results.gpkg": {
-            "created_if": "scenario_predictor_table_path",
-            "about": gettext(
-                "Results of scenario, including the predictor data used in the "
-                "scenario and the predicted visitation patterns for the scenario."),
-            "geometries": spec_utils.POLYGONS,
-            "fields": {
-                "[PREDICTOR]": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Predictor attribute value for each polygon.")
-                },
-                "pr_UD_EST": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "The estimated avg_pr_UD for each polygon. "
-                        "Estimated using the regression coefficients for each "
-                        "predictor in regression_coefficients.txt")
-                }
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aoi.gpkg": {
-                    "about": gettext(
-                        "Copy of the input AOI, gridded if applicable."),
-                    "fields": {},
-                    "geometries": spec_utils.POLYGONS
-                },
-                "aoi.zip": {
-                    "about": gettext("Compressed AOI")
-                },
-                "[PREDICTOR].json": {
-                    "about": gettext(
-                        "aggregated predictor values within each polygon")
-                },
-                "predictor_estimates.json": {
-                    "about": gettext("Predictor estimates")
-                },
-                "pud.zip": {
-                    "about": gettext("Compressed photo-user-day data")},
-                "response_polygons_lookup.pickle": {
-                    "about": gettext(
-                        "Pickled dictionary mapping FIDs to shapely geometries")
-                },
-                "scenario": {
-                    "type": "directory",
-                    "contents": {
-                        "[PREDICTOR].json": {
-                            "about": gettext(
-                                "aggregated scenario predictor values within "
-                                "each polygon")
-                        }
-                    }
-                },
-                "server_version.pickle": {
-                    "about": gettext("Server version info")
-                }
-            }
-        },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
-    }
-}
+MODEL_SPEC = spec.ModelSpec(
+    model_id="recreation",
+    model_title=gettext("Visitation: Recreation and Tourism"),
+    userguide="recreation.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=(),
+    module_name=__name__,
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["aoi_path"],
+        ["start_year", "end_year"],
+        ["compute_regression", "predictor_table_path", "scenario_predictor_table_path"],
+        ["grid_aoi", "grid_type", "cell_size"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.AOI.model_copy(update=dict(id="aoi_path")),
+        spec.StringInput(
+            id="hostname",
+            name=gettext("hostname"),
+            about=gettext(
+                "FQDN to a recreation server.  If not provided, a default is assumed."
+            ),
+            required=False,
+            hidden=True,
+            regexp=None
+        ),
+        spec.IntegerInput(
+            id="port",
+            name=gettext("port"),
+            about=gettext(
+                "the port on ``hostname`` to use for contacting the recreation server."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= 0"
+        ),
+        spec.IntegerInput(
+            id="start_year",
+            name=gettext("start year"),
+            about=gettext(
+                "Year at which to start user-day calculations. Calculations start on the"
+                " first day of the year. Year must be in the range 2012 - 2017, and must"
+                " be less than or equal to the End Year."
+            ),
+            units=u.year_AD,
+            expression="2012 <= value <= 2017"
+        ),
+        spec.IntegerInput(
+            id="end_year",
+            name=gettext("end year"),
+            about=gettext(
+                "Year at which to end user-day calculations. Calculations continue"
+                " through the last day of the year. Year must be in the range 2012 -"
+                " 2017, and must be greater than or equal to the Start Year."
+            ),
+            units=u.year_AD,
+            expression="2012 <= value <= 2017"
+        ),
+        spec.BooleanInput(
+            id="grid_aoi",
+            name=gettext("grid the AOI"),
+            about=gettext(
+                "Divide the AOI polygons into equal-sized grid cells, and compute results"
+                " for those cells instead of the original polygons."
+            ),
+            required=False
+        ),
+        spec.OptionStringInput(
+            id="grid_type",
+            name=gettext("grid type"),
+            about=gettext(
+                "The shape of grid cells to make within the AOI polygons. Required if"
+                " Grid AOI is selected."
+            ),
+            required="grid_aoi",
+            allowed="grid_aoi",
+            options=[
+                spec.Option(key="square"),
+                spec.Option(key="hexagon")
+            ]
+        ),
+        spec.NumberInput(
+            id="cell_size",
+            name=gettext("cell size"),
+            about=(
+                "Size of grid cells to make, measured in the projection units of the AOI."
+                " If the Grid Type is 'square', this is the length of each side of the"
+                " square. If the Grid Type is 'hexagon', this is the hexagon's maximal"
+                " diameter."
+            ),
+            required="grid_aoi",
+            allowed="grid_aoi",
+            units=u.other,
+            expression="value > 0"
+        ),
+        spec.BooleanInput(
+            id="compute_regression",
+            name=gettext("compute regression"),
+            about=gettext(
+                "Run the regression model using the predictor table and scenario table,"
+                " if provided."
+            ),
+            required=False
+        ),
+        spec.CSVInput(
+            id="predictor_table_path",
+            name=gettext("predictor table"),
+            about=gettext(
+                "A table that maps predictor IDs to spatial files and their predictor"
+                " metric types. The file paths can be absolute or relative to the table."
+            ),
+            required="compute_regression",
+            allowed="compute_regression",
+            columns=PREDICTOR_TABLE_COLUMNS,
+            index_col="id"
+        ),
+        spec.CSVInput(
+            id="scenario_predictor_table_path",
+            name=gettext("scenario predictor table"),
+            about=gettext(
+                "A table of future or alternative scenario predictors. Maps IDs to files"
+                " and their types. The file paths can be absolute or relative to the"
+                " table."
+            ),
+            required=False,
+            allowed="compute_regression",
+            columns=PREDICTOR_TABLE_COLUMNS,
+            index_col="id"
+        )
+    ],
+    outputs=[
+        spec.VectorOutput(
+            id="pud_results",
+            path="PUD_results.gpkg",
+            about=gettext("Results of photo-user-days aggregations in the AOI."),
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="PUD_YR_AVG",
+                    about=gettext("The average photo-user-days per year"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="PUD_[MONTH]",
+                    about=gettext("The average photo-user-days for each month."),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.VectorOutput(
+            id="tud_results",
+            path="TUD_results.gpkg",
+            about=gettext("Results of twitter-user-days aggregations in the AOI."),
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="PUD_YR_AVG",
+                    about=gettext("The average twitter-user-days per year"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="PUD_[MONTH]",
+                    about=gettext("The average twitter-user-days for each month."),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.CSVOutput(
+            id="pud_monthly_table",
+            path="PUD_monthly_table.csv",
+            about=gettext("Table of monthly photo-user-days in each AOI polygon."),
+            columns=[
+                spec.IntegerOutput(id="poly_id", about=gettext("Polygon ID")),
+                spec.NumberOutput(
+                    id="[YEAR]-[MONTH]",
+                    about=gettext(
+                        "Total photo-user-days counted in the polygon in the given month."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="poly_id"
+        ),
+        spec.CSVOutput(
+            id="tud_monthly_table",
+            path="TUD_monthly_table.csv",
+            about=gettext("Table of monthly twitter-user-days in each AOI polygon."),
+            columns=[
+                spec.IntegerOutput(id="poly_id", about=gettext("Polygon ID")),
+                spec.NumberOutput(
+                    id="[YEAR]-[MONTH]",
+                    about=gettext(
+                        "Total twitter-user-days counted in the polygon in the given"
+                        " month."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="poly_id"
+        ),
+        spec.VectorOutput(
+            id="regression_data",
+            path="regression_data.gpkg",
+            about=gettext(
+                "AOI polygons with all the variables needed to compute a regression,"
+                " including predictor attributes and the user-days response variable."
+            ),
+            created_if="compute_regression",
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="[PREDICTOR]",
+                    about=gettext("Predictor attribute value for each polygon."),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="pr_TUD",
+                    about=gettext(
+                        "proportion of the sum of TUD_YR_AVG across all features."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="pr_PUD",
+                    about=gettext(
+                        "proportion of the sum of PUD_YR_AVG across all features."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="avg_pr_UD",
+                    about=gettext(
+                        "average of pr_TUD and pr_TUD. This variable is logit-transformed"
+                        " and then used as the response variable in the regression model."
+                    ),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.FileOutput(
+            id="regression_summary",
+            path="regression_summary.txt",
+            about=gettext(
+                "This is a text file output of the regression analysis. It includes"
+                " estimates for each predictor variable. It also contains a “server id"
+                " hash” value which can be used to correlate the PUD result with the data"
+                " available on the PUD server. If these results are used in publication"
+                " this hash should be included with the results for reproducibility."
+            ),
+            created_if="compute_regression"
+        ),
+        spec.CSVOutput(
+            id="regression_coefficients",
+            path="regression_coefficients.csv",
+            about=gettext("Regression coefficients table")
+        ),
+        spec.VectorOutput(
+            id="scenario_results",
+            path="scenario_results.gpkg",
+            about=gettext(
+                "Results of scenario, including the predictor data used in the scenario"
+                " and the predicted visitation patterns for the scenario."
+            ),
+            created_if="scenario_predictor_table_path",
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="[PREDICTOR]",
+                    about=gettext("Predictor attribute value for each polygon."),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="pr_UD_EST",
+                    about=gettext(
+                        "The estimated avg_pr_UD for each polygon. Estimated using the"
+                        " regression coefficients for each predictor in"
+                        " regression_coefficients.txt"
+                    ),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.VectorOutput(
+            id="aoi",
+            path="intermediate/aoi.gpkg",
+            about=gettext("Copy of the input AOI, gridded if applicable."),
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[]
+        ),
+        spec.FileOutput(
+            id="aoi_zip",
+            path="intermediate/aoi.zip",
+            about=gettext("Compressed AOI")
+        ),
+        spec.FileOutput(
+            id="[PREDICTOR]_json",
+            path="intermediate/[PREDICTOR].json",
+            about=gettext("aggregated predictor values within each polygon")
+        ),
+        spec.FileOutput(
+            id="predictor_estimates",
+            path="intermediate/predictor_estimates.json",
+            about=gettext("Predictor estimates")
+        ),
+        spec.FileOutput(
+            id="pud_zip",
+            path="intermediate/pud.zip",
+            about=gettext("Compressed photo-user-day data")
+        ),
+        spec.FileOutput(
+            id="tud_zip",
+            path="intermediate/tud.zip",
+            about=gettext("Compressed twitter-user-day data")
+        ),
+        spec.FileOutput(
+            id="response_polygons_lookup",
+            path="intermediate/response_polygons_lookup.pickle",
+            about=gettext(
+                "Pickled dictionary mapping FIDs to shapely geometries"
+            )
+        ),
+        spec.FileOutput(
+            id="server_version",
+            path="intermediate/server_version.pickle",
+            about=gettext("Server version info")
+        ),
+        spec.TASKGRAPH_CACHE
+    ]
+)
 
 
 # Have 5 seconds between timed progress outputs
@@ -408,26 +452,6 @@ LOGGER_TIME_DELAY = 5
 
 RESPONSE_VARIABLE_ID = 'avg_pr_UD'
 SCENARIO_RESPONSE_ID = 'pr_UD_EST'
-
-_OUTPUT_BASE_FILES = {
-    'pud_results_path': 'PUD_results.gpkg',
-    'pud_monthly_table_path': 'PUD_monthly_table.csv',
-    'tud_results_path': 'TUD_results.gpkg',
-    'tud_monthly_table_path': 'TUD_monthly_table.csv',
-    'regression_vector_path': 'regression_data.gpkg',
-    'scenario_results_path': 'scenario_results.gpkg',
-    'regression_summary': 'regression_summary.txt',
-    'regression_coefficients': 'regression_coefficients.csv',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'local_aoi_path': 'aoi.gpkg',
-    'compressed_aoi_path': 'aoi.zip',
-    'pud_compressed_userdays_path': 'pud_userdays.zip',
-    'tud_compressed_userdays_path': 'tud_userdays.zip',
-    'response_polygons_lookup': 'response_polygons_lookup.pickle',
-    'server_version': 'server_version.pickle',
-}
 
 
 def execute(args):
@@ -495,56 +519,37 @@ def execute(args):
             any output file paths.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    if int(args['end_year']) < int(args['start_year']):
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
+    if args['end_year'] < args['start_year']:
         raise ValueError(
             "Start year must be less than or equal to end year.\n"
             f"start_year: {args['start_year']}\nend_year: {args['end_year']}")
     # in case the user defines a hostname
-    if 'hostname' in args:
+    if args['hostname'] and args['port']:
         server_url = f"PYRO:natcap.invest.recreation@{args['hostname']}:{args['port']}"
     else:
         # else use a well known path to get active server
         server_url = requests.get(SERVER_URL).text.rstrip()
         LOGGER.info(server_url)
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    output_dir = args['workspace_dir']
-    intermediate_dir = os.path.join(output_dir, 'intermediate')
-    scenario_dir = os.path.join(intermediate_dir, 'scenario')
-    utils.make_directories([output_dir, intermediate_dir])
-
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_dir)], file_suffix)
-
-    # Initialize a TaskGraph
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(output_dir, 'taskgraph_cache'), n_workers)
 
     if args['grid_aoi']:
         prep_aoi_task = task_graph.add_task(
             func=_grid_vector,
             args=(args['aoi_path'], args['grid_type'],
-                  float(args['cell_size']), file_registry['local_aoi_path']),
-            target_path_list=[file_registry['local_aoi_path']],
+                  float(args['cell_size']), file_registry['aoi']),
+            target_path_list=[file_registry['aoi']],
             task_name='grid_aoi')
     else:
         # Even if we don't modify the AOI by gridding it, we still need
         # to move it to the expected location.
         prep_aoi_task = task_graph.add_task(
             func=_copy_aoi_no_grid,
-            args=(args['aoi_path'], file_registry['local_aoi_path']),
-            target_path_list=[file_registry['local_aoi_path']],
+            args=(args['aoi_path'], file_registry['aoi']),
+            target_path_list=[file_registry['aoi']],
             task_name='copy_aoi')
     # All other tasks are dependent on this one, including tasks added
     # within _schedule_predictor_data_processing(). Rather than passing
@@ -554,100 +559,98 @@ def execute(args):
     # All the server communication happens in this task.
     calc_user_days_task = task_graph.add_task(
         func=_retrieve_user_days,
-        args=(file_registry['local_aoi_path'],
-              file_registry['compressed_aoi_path'],
-              args['start_year'], args['end_year'], file_suffix,
-              output_dir, server_url, file_registry['server_version']),
-        target_path_list=[file_registry['compressed_aoi_path'],
-                          file_registry['pud_results_path'],
-                          file_registry['pud_monthly_table_path'],
-                          file_registry['tud_results_path'],
-                          file_registry['tud_monthly_table_path'],
+        args=(file_registry['aoi'],
+              file_registry['aoi_zip'],
+              args['start_year'], args['end_year'], args['results_suffix'],
+              args['workspace_dir'], server_url, file_registry['server_version'],
+              file_registry['pud_zip'], file_registry['tud_zip']),
+        target_path_list=[file_registry['aoi_zip'],
+                          file_registry['pud_results'],
+                          file_registry['pud_monthly_table'],
+                          file_registry['tud_results'],
+                          file_registry['tud_monthly_table'],
                           file_registry['server_version']],
         task_name='user-day-calculation')
 
     assemble_userday_variables_task = task_graph.add_task(
         func=_assemble_regression_data,
-        args=(file_registry['pud_results_path'],
-              file_registry['tud_results_path'],
-              file_registry['regression_vector_path']),
-        target_path_list=[file_registry['regression_vector_path']],
+        args=(file_registry['pud_results'],
+              file_registry['tud_results'],
+              file_registry['regression_data']),
+        target_path_list=[file_registry['regression_data']],
         dependent_task_list=[calc_user_days_task],
         task_name='assemble userday variables')
 
-    if 'compute_regression' in args and args['compute_regression']:
+    if args['compute_regression']:
         # Prepare the AOI for geoprocessing.
         prepare_response_polygons_task = task_graph.add_task(
             func=_prepare_response_polygons_lookup,
-            args=(file_registry['local_aoi_path'],
+            args=(file_registry['aoi'],
                   file_registry['response_polygons_lookup']),
             target_path_list=[file_registry['response_polygons_lookup']],
             task_name='prepare response polygons for geoprocessing')
 
         # Build predictor data
         assemble_predictor_data_task = _schedule_predictor_data_processing(
-            file_registry['local_aoi_path'],
+            file_registry['aoi'],
             file_registry['response_polygons_lookup'],
             [prepare_response_polygons_task, assemble_userday_variables_task],
             args['predictor_table_path'],
-            file_registry['regression_vector_path'],
-            intermediate_dir, task_graph)
+            file_registry['regression_data'],
+            task_graph, file_registry)
 
         # Compute the regression
-        coefficient_json_path = os.path.join(
-            intermediate_dir, 'predictor_estimates.json')
-        predictor_df = validation.get_validated_dataframe(
-            args['predictor_table_path'],
-            **MODEL_SPEC['args']['predictor_table_path'])
+        predictor_df = MODEL_SPEC.get_input(
+            'predictor_table_path').get_validated_dataframe(
+            args['predictor_table_path'])
         predictor_id_list = predictor_df.index
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
-            args=(file_registry['regression_vector_path'],
+            args=(file_registry['regression_data'],
                   RESPONSE_VARIABLE_ID,
                   predictor_id_list,
                   file_registry['server_version'],
-                  coefficient_json_path,
+                  file_registry['predictor_estimates'],
                   file_registry['regression_coefficients'],
                   file_registry['regression_summary']),
             target_path_list=[file_registry['regression_coefficients'],
                               file_registry['regression_summary'],
-                              coefficient_json_path],
+                              file_registry['predictor_estimates']],
             dependent_task_list=[assemble_predictor_data_task],
             task_name='compute regression')
 
-        if ('scenario_predictor_table_path' in args and
-                args['scenario_predictor_table_path'] != ''):
+        if args['scenario_predictor_table_path']:
             driver = gdal.GetDriverByName('GPKG')
-            if os.path.exists(file_registry['scenario_results_path']):
-                driver.Delete(file_registry['scenario_results_path'])
-            aoi_vector = gdal.OpenEx(file_registry['local_aoi_path'])
+            if os.path.exists(file_registry['scenario_results']):
+                driver.Delete(file_registry['scenario_results'])
+            aoi_vector = gdal.OpenEx(file_registry['aoi'])
             target_vector = driver.CreateCopy(
-                file_registry['scenario_results_path'], aoi_vector)
+                file_registry['scenario_results'], aoi_vector)
             target_layer = target_vector.GetLayer()
             _rename_layer_from_parent(target_layer)
             target_vector = target_layer = None
             aoi_vector = None
-            utils.make_directories([scenario_dir])
 
             build_scenario_data_task = _schedule_predictor_data_processing(
-                file_registry['local_aoi_path'],
+                file_registry['aoi'],
                 file_registry['response_polygons_lookup'],
                 [prepare_response_polygons_task],
                 args['scenario_predictor_table_path'],
-                file_registry['scenario_results_path'],
-                scenario_dir, task_graph)
+                file_registry['scenario_results'],
+                task_graph, file_registry)
 
             task_graph.add_task(
                 func=_calculate_scenario,
-                args=(file_registry['scenario_results_path'],
-                      SCENARIO_RESPONSE_ID, coefficient_json_path),
-                target_path_list=[file_registry['scenario_results_path']],
+                args=(file_registry['scenario_results'],
+                      SCENARIO_RESPONSE_ID, file_registry['predictor_estimates']),
+                target_path_list=[file_registry['scenario_results']],
                 dependent_task_list=[
                     compute_regression_task, build_scenario_data_task],
                 task_name='calculate scenario')
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
@@ -674,7 +677,8 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
 
 def _retrieve_user_days(
         local_aoi_path, compressed_aoi_path, start_year, end_year,
-        file_suffix, output_dir, server_url, server_version_pickle):
+        file_suffix, output_dir, server_url, server_version_pickle,
+        pud_userdays_path, tud_userdays_path):
     """Calculate user-days (PUD & TUD) on the server and send back results.
 
     All of the client-server communication happens in this scope. The local AOI
@@ -693,6 +697,8 @@ def _retrieve_user_days(
         server_url (string): URL for connecting to the server
         server_version_pickle (string): path to a pickle that stores server
             version and workspace id info.
+        pud_userdays_path (string): path to compressed photo-user-days data
+        tud_userdays_path (string): path to compressed twitter-user-days data
 
     Returns:
         None
@@ -701,10 +707,10 @@ def _retrieve_user_days(
     LOGGER.info('Contacting server, please wait.')
     recmodel_manager = Pyro5.api.Proxy(server_url)
 
-    datasets = {
-        'flickr': 'PUD',
-        'twitter': 'TUD'
-    }
+    dataset_tuples = [
+        ('flickr', 'PUD', pud_userdays_path),
+        ('twitter', 'TUD', tud_userdays_path)
+    ]
 
     aoi_info = pygeoprocessing.get_vector_info(local_aoi_path)
     srs = osr.SpatialReference()
@@ -713,7 +719,7 @@ def _retrieve_user_days(
     aoi_bounding_box = pygeoprocessing.transform_bounding_box(
         aoi_info['bounding_box'], aoi_info['projection_wkt'], target_proj)
 
-    for dataset in datasets:
+    for dataset, _, _ in dataset_tuples:
         # validate available year range
         min_year, max_year = recmodel_manager.get_valid_year_range(dataset)
         LOGGER.info(
@@ -758,7 +764,7 @@ def _retrieve_user_days(
         with Pyro5.api.Proxy(server_url) as proxy:
             return proxy.calculate_userdays(
                 zip_file_binary, os.path.basename(local_aoi_path),
-                start_year, end_year, list(datasets), client_id)
+                start_year, end_year, [tup[0] for tup in dataset_tuples], client_id)
 
     # Use a separate thread for the long-running remote function call so
     # that we can make concurrent requests for the logging messages
@@ -776,8 +782,8 @@ def _retrieve_user_days(
                 LOGGER.handle(logging.makeLogRecord(record_dict))
         result_dict = future.result()
 
-    for dataset in datasets:
-        result = result_dict[datasets[dataset]]
+    for dataset, result_key, compressed_userdays_path in dataset_tuples:
+        result = result_dict[result_key]
 
         # If an exception occurred on the server's worker, we returned it
         # as a 2-tuple: ('ERROR', 'traceback as formatted string')
@@ -798,8 +804,6 @@ def _retrieve_user_days(
                     'workspace_id': workspace_id}}, f)
 
         # unpack result
-        compressed_userdays_path = os.path.join(
-            output_dir, 'intermediate', f'{dataset}_userdays.zip')
         with open(compressed_userdays_path, 'wb') as pud_file:
             pud_file.write(result_zip_file_binary)
         temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
@@ -939,7 +943,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 def _schedule_predictor_data_processing(
         response_vector_path, response_polygons_pickle_path,
         dependent_task_list, predictor_table_path,
-        target_predictor_vector_path, working_dir, task_graph):
+        target_predictor_vector_path, task_graph, file_registry):
     """Summarize spatial predictor data by polygons in the response vector.
 
     Build a shapefile with geometry from the response vector, and tabular
@@ -973,9 +977,8 @@ def _schedule_predictor_data_processing(
         target_predictor_vector_path (string): path to a copy of
             ``response_vector_path`` with a column for each id in
             predictor_table_path. Overwritten if exists.
-        working_dir (string): path to an intermediate directory to store json
-            files with geoprocessing results.
         task_graph (Taskgraph): the graph that was initialized in execute()
+        file_registry (FileRegistry): used to look up predictor json paths
 
     Returns:
         The ultimate task object from this branch of the taskgraph.
@@ -992,55 +995,46 @@ def _schedule_predictor_data_processing(
         'line_intersect_length': _line_intersect_length,
     }
 
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(predictor_table_path)
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to gpkg
-
+    predictor_ids = []
     for predictor_id, row in predictor_df.iterrows():
         LOGGER.info(f"Building predictor {predictor_id}")
         predictor_type = row['type']
+        predictor_target_path = file_registry['[PREDICTOR]_json', predictor_id]
+        predictor_ids.append(predictor_id)
+        predictor_json_list.append(predictor_target_path)
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             raster_op_mode = predictor_type.split('_')[1]
-            predictor_target_path = os.path.join(
-                working_dir, predictor_id + '.json')
-            predictor_json_list.append(predictor_target_path)
-            predictor_task_list.append(task_graph.add_task(
-                func=_raster_sum_mean,
-                args=(row['path'], raster_op_mode,
-                      response_vector_path, predictor_target_path),
-                target_path_list=[predictor_target_path],
-                task_name=f'predictor {predictor_id}'))
+            func = _raster_sum_mean
+            args = (row['path'], raster_op_mode,
+                    response_vector_path, predictor_target_path)
         # polygon types are a special case because the polygon_area
         # function requires an additional 'mode' argument.
         elif predictor_type.startswith('polygon'):
-            predictor_target_path = os.path.join(
-                working_dir, predictor_id + '.json')
-            predictor_json_list.append(predictor_target_path)
-            predictor_task_list.append(task_graph.add_task(
-                func=_polygon_area,
-                args=(predictor_type, response_polygons_pickle_path,
-                      row['path'], predictor_target_path),
-                target_path_list=[predictor_target_path],
-                dependent_task_list=dependent_task_list,
-                task_name=f'predictor {predictor_id}'))
+            func = _polygon_area
+            args = (predictor_type, response_polygons_pickle_path,
+                    row['path'], predictor_target_path)
         else:
-            predictor_target_path = os.path.join(
-                working_dir, predictor_id + '.json')
-            predictor_json_list.append(predictor_target_path)
-            predictor_task_list.append(task_graph.add_task(
-                func=predictor_functions[predictor_type],
-                args=(response_polygons_pickle_path,
-                      row['path'], predictor_target_path),
-                target_path_list=[predictor_target_path],
-                dependent_task_list=dependent_task_list,
-                task_name=f'predictor {predictor_id}'))
+            func = predictor_functions[predictor_type]
+            args = (response_polygons_pickle_path,
+                    row['path'], predictor_target_path)
+
+        predictor_task_list.append(task_graph.add_task(
+            func=func,
+            args=args,
+            target_path_list=[predictor_target_path],
+            dependent_task_list=dependent_task_list,
+            task_name=f'predictor {predictor_id}'))
 
     assemble_predictor_data_task = task_graph.add_task(
         func=_json_to_gpkg_table,
         args=(target_predictor_vector_path,
-              predictor_json_list),
+              predictor_ids,
+              file_registry),
         target_path_list=[target_predictor_vector_path],
         dependent_task_list=predictor_task_list,
         task_name='assemble predictor data')
@@ -1065,17 +1059,14 @@ def _prepare_response_polygons_lookup(
         pickle.dump(response_polygons_lookup, pickle_file)
 
 
-def _json_to_gpkg_table(
-        regression_vector_path, predictor_json_list):
+def _json_to_gpkg_table(regression_vector_path, predictor_ids, file_registry):
     """Create a GeoPackage and a field with data from each json file."""
     target_vector = gdal.OpenEx(
         regression_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_layer = target_vector.GetLayer()
 
-    predictor_id_list = []
-    for json_filename in predictor_json_list:
-        predictor_id = os.path.basename(os.path.splitext(json_filename)[0])
-        predictor_id_list.append(predictor_id)
+    for predictor_id in predictor_ids:
+        json_filename = file_registry['[PREDICTOR]_json', predictor_id]
         # Create a new field for the predictor
         # Delete the field first if it already exists
         field_index = target_layer.FindFieldIndex(
@@ -1595,7 +1586,6 @@ def _build_regression(
 
     # Y-Intercept data matrix
     intercept_array = numpy.ones_like(transformed_array)
-
     # Predictor data matrix
     predictor_matrix = numpy.empty((n_features, len(predictor_id_list)))
     for row_index, feature in enumerate(data_layer):
@@ -1656,7 +1646,6 @@ def _build_regression(
         # have been observed on some platforms.
         var_est[var_est < 0] = 0
         se_est = numpy.sqrt(var_est)
-
     else:
         LOGGER.warning(f"Linear model is under constrained with DOF={dof}")
         std_err = sigma2 = numpy.nan
@@ -1754,8 +1743,8 @@ def _validate_same_id_lengths(table_path):
         string message if IDs are too long
 
     """
-    predictor_df = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(table_path)
     too_long = set()
     for p_id in predictor_df.index:
         if len(p_id) > 10:
@@ -1783,12 +1772,13 @@ def _validate_same_ids_and_types(
         string message if any of the fields in 'id' and 'type' don't match
         between tables.
     """
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(
+        predictor_table_path)
 
-    scenario_predictor_df = validation.get_validated_dataframe(
-        scenario_predictor_table_path,
-        **MODEL_SPEC['args']['scenario_predictor_table_path'])
+    scenario_predictor_df = MODEL_SPEC.get_input(
+        'scenario_predictor_table_path').get_validated_dataframe(
+        scenario_predictor_table_path)
 
     predictor_pairs = set([
         (p_id, row['type']) for p_id, row in predictor_df.iterrows()])
@@ -1813,9 +1803,9 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
-    data_paths = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path']
-    )['path'].tolist()
+    data_paths = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(
+        table_path)['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -1843,30 +1833,6 @@ def _validate_same_projection(base_vector_path, table_path):
         return (
             f"One or more of the projections in the table ({path}) did not "
             f"match the projection of the base vector ({base_vector_path})")
-
-
-def _validate_predictor_types(table_path):
-    """Validate the type values in a predictor table.
-
-    Args:
-        table_path (string): path to a csv table that has at least
-            the field 'type'
-
-    Returns:
-        string message if any value in the ``type`` column does not match a
-        valid type, ignoring leading/trailing whitespace.
-    """
-    df = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path'])
-    # ignore leading/trailing whitespace because it will be removed
-    # when the type values are used
-    valid_types = set({'raster_mean', 'raster_sum', 'point_count',
-                       'point_nearest_distance', 'line_intersect_length',
-                       'polygon_area_coverage', 'polygon_percent_coverage'})
-    difference = set(df['type']).difference(valid_types)
-    if difference:
-        return (f'The table contains invalid type value(s): {difference}. '
-                f'The allowed types are: {valid_types}')
 
 
 def delay_op(last_time, time_delay, func):
@@ -1916,15 +1882,14 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_messages = validation.validate(args, MODEL_SPEC['args'])
+    validation_messages = validation.validate(args, MODEL_SPEC)
     sufficient_valid_keys = (validation.get_sufficient_keys(args) -
                              validation.get_invalid_keys(validation_messages))
 
     validation_tuples = []
     if 'predictor_table_path' in sufficient_valid_keys:
-        validation_tuples += [
-            (_validate_same_id_lengths, ['predictor_table_path']),
-            (_validate_predictor_types, ['predictor_table_path'])]
+        validation_tuples.append(
+           (_validate_same_id_lengths, ['predictor_table_path']))
         if 'aoi_path' in sufficient_valid_keys:
             validation_tuples.append(
                 (_validate_same_projection, ['aoi_path', 'predictor_table_path']))
@@ -1932,10 +1897,8 @@ def validate(args, limit_to=None):
             validation_tuples.append((
                 _validate_same_ids_and_types,
                 ['predictor_table_path', 'scenario_predictor_table_path']))
-    if 'scenario_predictor_table_path' in sufficient_valid_keys:
-        validation_tuples.append((
-            _validate_predictor_types, ['scenario_predictor_table_path']))
-        if 'aoi_path' in sufficient_valid_keys:
+    if ('scenario_predictor_table_path' in sufficient_valid_keys and
+                'aoi_path' in sufficient_valid_keys):
             validation_tuples.append((_validate_same_projection,
                 ['aoi_path', 'scenario_predictor_table_path']))
 

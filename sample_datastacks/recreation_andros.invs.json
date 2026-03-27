@@ -1,0 +1,16 @@
+{
+	"args": {
+		"grid_aoi": true,
+	    "cell_size": 7000,
+	    "start_year": 2012,
+	    "end_year": 2017,
+	    "predictor_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/vsi-data/recreation/predictors_remote.csv",
+	    "compute_regression": true,
+	    "results_suffix": "",
+	    "aoi_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/recreation.zip/recreation/andros_aoi.shp",
+	    "scenario_predictor_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/vsi-data/recreation/predictors_scenario_remote.csv",
+	    "grid_type": "hexagon"
+	},
+	"invest_version": "3.15.0",
+	"model_name": "natcap.invest.recreation.recmodel_client"
+}

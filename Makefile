@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 3d7a33c3d599daaec087a9c283a0c6b8377210f5
+GIT_SAMPLE_DATA_REPO_REV    := cfd1f07673e66823fd22989a2b87afb017aac447
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := d8a7397ba5992de7a80260e40956e4c29176383d
+GIT_TEST_DATA_REPO_REV      := c791f2b50e67680832054536899efacbc72e9e0b
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 33427e65bc77f603f24cfee4f9ccfa10935b2e1e
+GIT_UG_REPO_REV             := 57bd0a9c2822daa40c07fbb436eb1f54f2e0b4d0
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -100,6 +100,7 @@ else
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
+REPORTS_BASE_URL := $(DIST_URL_BASE)/reports
 
 TESTRUNNER := pytest -vs --import-mode=importlib --durations=0
 
@@ -119,15 +120,19 @@ USERGUIDE_BUILD_DIR := $(BUILD_DIR)/sphinx/userguide
 USERGUIDE_TARGET_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 
-INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest
+INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest --workspace $(AUTOTEST_DIR)
 
 
-.PHONY: fetch install binaries apidocs userguide sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide changelog sampledata \
+sampledata_single test clean help check python_packages purge deploy \
+deploy_dist deploy_data deploy_userguide deploy_workbench codesign \
+validate_sampledata validate_userguide_filenames invest_autotest deploy_autotest_reports \
+$(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
 print-%:
-	@echo "$* = $($*)"
+	@echo "$*=$($*)"
 
 # Very useful for printing variables within scripts!
 # Like `make print-<variable>, only without also printing the variable name.
@@ -137,22 +142,31 @@ jprint-%:
 
 help:
 	@echo "Please use make <target> where <target> is one of"
-	@echo "  check             to verify all needed programs and packages are installed"
-	@echo "  env               to create a virtualenv with packages from requirements.txt, requirements-dev.txt"
-	@echo "  fetch             to clone all managed repositories"
-	@echo "  install           to build and install a wheel of natcap.invest into the active python installation"
-	@echo "  binaries          to build pyinstaller binaries"
-	@echo "  apidocs           to build HTML API documentation"
-	@echo "  userguide         to build HTML version of the users guide"
-	@echo "  changelog         to build HTML version of the changelog"
-	@echo "  python_packages   to build natcap.invest wheel and source distributions"
-	@echo "  codesign          to enqueue a built binary for signing using our codesigning service"
-	@echo "  sampledata        to build sample data zipfiles"
-	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
-	@echo "  test              to run pytest on the tests directory"
-	@echo "  clean             to remove temporary directories and files (but not dist/)"
-	@echo "  purge             to remove temporary directories, cloned repositories and the built environment."
-	@echo "  help              to print this help and exit"
+	@echo "  check                        to verify all needed programs and packages are installed"
+	@echo "  env                          to create a virtualenv with packages from requirements.txt, requirements-dev.txt"
+	@echo "  fetch                        to clone all managed repositories"
+	@echo "  install                      to build and install a wheel of natcap.invest into the active python installation"
+	@echo "  binaries                     to build pyinstaller binaries"
+	@echo "  apidocs                      to build HTML API documentation"
+	@echo "  userguide                    to build HTML version of the users guide"
+	@echo "  changelog                    to build HTML version of the changelog"
+	@echo "  python_packages              to build natcap.invest wheel and source distributions"
+	@echo "  codesign                     to enqueue a built binary for signing using our codesigning service"
+	@echo "  sampledata                   to build sample data zipfiles"
+	@echo "  sampledata_single            to build a single self-contained data zipfile.  Used for advanced NSIS install."
+	@echo "  test                         to run pytest on the tests directory"
+	@echo "  validate_sampledata          to run invest model validation on sampledata datastacks"
+	@echo "  validate_userguide_filenames to validate that userguide filenames exist"
+	@echo "  invest_autotest              to run invest via the CLI on all sampledata datastacks"
+	@echo "  deploy_autotest_reports      to deploy to GCS any model's HTML report generated by the autotest"
+	@echo "  deploy                       to deploy any artifacts in dist/ folder to GCS"
+	@echo "  deploy_dist                  to deploy the contents of dist/ folder to GCS"
+	@echo "  deploy_data                  to deploy the contents of dist/data/ folder to GCS"
+	@echo "  deploy_userguide             to deploy the contents of dist/userguide/ folder to GCS"
+	@echo "  deploy_workbench             to deploy the contents of workbench/dist/ folder to GCS"
+	@echo "  clean                        to remove temporary directories and files (but not dist/)"
+	@echo "  purge                        to remove temporary directories, cloned repositories and the built environment."
+	@echo "  help                         to print this help and exit"
 
 $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
@@ -169,6 +183,9 @@ validate_userguide_filenames: $(GIT_UG_REPO_PATH)
 
 invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
+
+deploy_autotest_reports:
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(REPORTS_BASE_URL)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
@@ -219,7 +236,7 @@ fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PAT
 env:
 	@echo "NOTE: requires 'requests' be installed in base Python"
 	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-docs.txt > requirements-all.yml
-	$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
+	$(CONDA) create -p $(ENV) -y --override-channels -c conda-forge python=3.13
 	$(CONDA) env update -p $(ENV) --file requirements-all.yml
 	@echo "----------------------------"
 	@echo "To activate the new conda environment and install natcap.invest:"
@@ -343,6 +360,18 @@ deploy:
 	-$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)"
+
+deploy_dist:
+	$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+
+deploy_data:
+	$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+
+deploy_userguide:
+	$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+
+deploy_workbench:
+	$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 
 changelog:
 	$(RST2HTML5) $(CHANGELOG_SRC) $(CHANGELOG_DEST)

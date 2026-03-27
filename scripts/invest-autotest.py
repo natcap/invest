@@ -16,6 +16,7 @@ LOGGER = logging.getLogger('invest-autotest.py')
 # Mapping of model keys to datastacks to run through the model's UI.
 # Paths are assumed to be relative to the data root.
 DATASTACKS = {
+    'annual_water_yield': ['Annual_Water_Yield/annual_water_yield_gura.invs.json'],
     'carbon': ['Carbon/carbon_willamette.invs.json'],
     'coastal_blue_carbon': ['CoastalBlueCarbon/cbc_galveston_bay.invs.json'],
     'coastal_blue_carbon_preprocessor': ['CoastalBlueCarbon/cbc_pre_galveston_bay.invs.json'],
@@ -28,7 +29,6 @@ DATASTACKS = {
     'forest_carbon_edge_effect': ['forest_carbon_edge_effect/forest_carbon_amazonia.invs.json'],
     'habitat_quality': ['HabitatQuality/habitat_quality_willamette.invs.json'],
     'hra': ['HabitatRiskAssess/hra_wcvi.invs.json'],
-    'annual_water_yield': ['Annual_Water_Yield/annual_water_yield_gura.invs.json'],
     'ndr': ['NDR/ndr_gura.invs.json'],
     'pollination': ['pollination/pollination_willamette.invs.json'],
     'recreation': ['recreation/recreation_andros.invs.json'],
@@ -40,13 +40,14 @@ DATASTACKS = {
     'stormwater': ['UrbanStormwater/stormwater_datastack.invest.json'],
     'urban_cooling_model': ['UrbanCoolingModel/urban_cooling_model_datastack.invest.json'],
     'urban_flood_risk_mitigation': ['UrbanFloodMitigation/urban_flood_risk_mitigation.invs.json'],
-    'wind_energy': ['WindEnergy/wind_energy_new_england.invs.json'],
+    'urban_nature_access': ['UrbanNatureAccess/invest_urban_nature_access_datastack.invest.json'],
     'wave_energy': [
         'WaveEnergy/wave_energy_aquabuoy_wcvi.invs.json',
         'WaveEnergy/wave_energy_owc_wcvi.invs.json',
         'WaveEnergy/wave_energy_pelamis_wcvi.invs.json',
         'WaveEnergy/wave_energy_wavedragon_wcvi.invs.json',
     ],
+    'wind_energy': ['WindEnergy/wind_energy_new_england.invs.json'],
 }
 
 
@@ -118,6 +119,8 @@ def main(user_args=None):
     parser.add_argument(
         '--workspace',
         default=tempfile.mkdtemp(),
+        const=tempfile.mkdtemp(),  # facilitates the Makefile call
+        nargs='?',
         help=('Where the output workspaces for all model runs should be '
               'stored. Default value is a new temporary directory.'))
     parser.add_argument(
@@ -129,7 +132,6 @@ def main(user_args=None):
     LOGGER.debug(args)
     LOGGER.info('Writing all model workspaces to %s', args.workspace)
     LOGGER.info('Running on %s CPUs', args.max_cpus)
-
     pairs = []
     for name, datastacks in DATASTACKS.items():
         if not name.startswith(args.prefix):

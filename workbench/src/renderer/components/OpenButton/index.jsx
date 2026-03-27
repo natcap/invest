@@ -8,6 +8,7 @@ import { withTranslation } from 'react-i18next';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
+import { openDatastack } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -24,43 +25,45 @@ class OpenButton extends React.Component {
   }
 
   async browseFile() {
-    const { t } = this.props;
+    const { investList, openInvestModel } = this.props;
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (!data.canceled) {
       let datastack;
       try {
-        datastack = await fetchDatastackFromFile({ filepath: data.filePaths[0] });
+        datastack = await openDatastack(data.filePaths[0]);
       } catch (error) {
-        logger.error(error);
-        alert( // eslint-disable-line no-alert
-          `${t('No InVEST model data can be parsed from the file:')}\n${data.filePaths[0]}`
-        );
-        return;
+        alert(error);
+      }
+      if (!datastack) {
+        return; // the open dialog was cancelled
       }
       const job = new InvestJob({
-        modelRunName: datastack.model_run_name,
-        modelHumanName: datastack.model_human_name,
+        modelID: datastack.model_id,
+        modelTitle: investList[datastack.model_id].modelTitle,
         argsValues: datastack.args,
+        type: investList[datastack.model_id].type,
       });
-      this.props.openInvestModel(job);
+      openInvestModel(job);
     }
   }
 
   render() {
-    const { t } = this.props;
-    const tipText = t('Browse to a datastack (.json) or InVEST logfile (.txt)');
+    const { t, className } = this.props;
+    const tipText = t(
+      `Open an InVEST model by loading input parameters from
+      a .json, .tgz, or InVEST logfile (.txt)`);
     return (
       <OverlayTrigger
-        placement="left"
+        placement="right"
         delay={{ show: 250, hide: 400 }}
         overlay={<Tooltip>{tipText}</Tooltip>}
       >
         <Button
-          className={this.props.className}
+          className={className}
           onClick={this.browseFile}
-          variant="outline-dark"
+          variant="outline-primary"
         >
-          {t("Open")}
+          {t('Browse to a datastack or InVEST logfile')}
         </Button>
       </OverlayTrigger>
     );
@@ -69,6 +72,12 @@ class OpenButton extends React.Component {
 
 OpenButton.propTypes = {
   openInvestModel: PropTypes.func.isRequired,
+  investList: PropTypes.shape({
+    modelTitle: PropTypes.string,
+    type: PropTypes.string,
+  }).isRequired,
+  t: PropTypes.func.isRequired,
+  className: PropTypes.string.isRequired,
 };
 
 export default withTranslation()(OpenButton);

@@ -1,0 +1,18 @@
+{
+    "args": {
+        "admin_boundaries_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanNatureAccess.zip/UrbanNatureAccess/administrative-units.shp",
+        "aggregate_by_pop_group": true,
+        "decay_function": "dichotomy",
+        "lulc_attribute_table": "https://bitbucket.org/natcap/invest-sample-data/raw/master/UrbanNatureAccess/lulc-attributes.csv",
+        "lulc_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanNatureAccess.zip/UrbanNatureAccess/paris-lulc.tif",
+        "n_workers": "-1",
+        "population_group_radii_table": "https://bitbucket.org/natcap/invest-sample-data/raw/master/UrbanNatureAccess/pop-group-radii.csv",
+        "population_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanNatureAccess.zip/UrbanNatureAccess/population.tif",
+        "results_suffix": "",
+        "search_radius_mode": "radius per population group",
+        "urban_nature_demand": "250",
+        "workspace_dir": ""
+    },
+    "invest_version": "3.12.1.post166+g729bff2f2",
+    "model_name": "natcap.invest.urban_nature_access"
+}

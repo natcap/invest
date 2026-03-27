@@ -1,23 +1,29 @@
+const datetimePrefix = /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\s+[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\s+/;
+
 /**
  * Assign a class based on text content.
+ * 
+ * Core invest models log from a logger name starting with natcap.invest
+ * Plugins should model from a logger name starting with invest
  *
  * @param  {string} message - from a python logger
- * @param  {string} pyModuleName - e.g. 'natcap.invest.carbon'
  * @returns {string} - a class name or an empty string
  */
-export default function markupMessage(message, pyModuleName) {
-  const escapedPyModuleName = pyModuleName.replace(/\./g, '\\.');
-  const patterns = {
-    'invest-log-error': /(ERROR|CRITICAL)/,
-    'invest-log-primary-warning': new RegExp(`${escapedPyModuleName}.*WARNING`),
-    'invest-log-primary': new RegExp(escapedPyModuleName)
-  };
-
-  // eslint-disable-next-line
-  for (const [cls, pattern] of Object.entries(patterns)) {
-    if (pattern.test(message)) {
-      return cls;
-    }
+export default function markupMessage(message) {
+  if (/(ERROR|CRITICAL)/.test(message)) {
+    return 'invest-log-error';
+  }
+  if (
+    new RegExp(`^${datetimePrefix.source}natcap\.invest.*WARNING`).test(message)
+    || new RegExp(`^${datetimePrefix.source}invest.*WARNING`).test(message)
+  ) {
+    return 'invest-log-primary-warning';
+  }
+  if (
+    new RegExp(`^${datetimePrefix.source}natcap\.invest`).test(message)
+    || new RegExp(`^${datetimePrefix.source}invest`).test(message)
+  ) {
+    return 'invest-log-primary';
   }
   return '';
 }

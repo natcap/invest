@@ -117,29 +117,39 @@ ValueError: Values in the LULC raster were found that are not represented under 
 });
 
 describe('Unit tests for invest logger message markup', () => {
-  const pyModuleName = 'natcap.invest.carbon';
-
-  test('Message from the invest model gets primary class attribute', () => {
-    const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... INFO`;
-    const cls = markupMessage(message, pyModuleName);
-    expect(cls).toBe('invest-log-primary');
-  });
-
-  test('Warning from the invest model gets primary-warning class attribute', () => {
-    const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... WARNING`;
-    const cls = markupMessage(message, pyModuleName);
+  test('Warning from natcap.invest gets primary-warning class attribute', () => {
+    const message = '2021-01-15 07:14:37 natcap.invest.carbon WARNING ...';
+    const cls = markupMessage(message);
     expect(cls).toBe('invest-log-primary-warning');
   });
 
-  test('Error from any any module gets error class attribute', () => {
-    const message = '... (osgeo.gdal) ... ERROR';
-    const cls = markupMessage(message, pyModuleName);
+  test('Warning from invest plugin gets primary-warning class attribute', () => {
+    const message = '2021-01-15 07:14:37 invest_foo.bar WARNING ...';
+    const cls = markupMessage(message);
+    expect(cls).toBe('invest-log-primary-warning');
+  });
+
+  test('Error from any module gets error class attribute', () => {
+    const message = '2021-01-15 07:14:37 osgeo.gdal ERROR ...';
+    const cls = markupMessage(message);
     expect(cls).toBe('invest-log-error');
   });
 
-  test('All other messages do not get markup', () => {
-    const message = '2021-01-15 07:14:37,148 (foo.bar) ... INFO';
-    const cls = markupMessage(message, pyModuleName);
+  test('Other natcap.invest messages get primary class attribute', () => {
+    const message = '2021-01-15 07:14:37 natcap.invest.carbon INFO ...';
+    const cls = markupMessage(message);
+    expect(cls).toBe('invest-log-primary');
+  });
+
+  test('Other invest plugin messages get primary class attribute', () => {
+    const message = '2021-01-15 07:14:37 invest_foo.bar INFO ...';
+    const cls = markupMessage(message);
+    expect(cls).toBe('invest-log-primary');
+  });
+
+  test('Others get no markup', () => {
+    const message = '2021-01-15 07:14:37 osgeo.gdal INFO invest is great';
+    const cls = markupMessage(message);
     expect(cls).toBe('');
   });
 });

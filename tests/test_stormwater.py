@@ -13,6 +13,8 @@ import pygeoprocessing
 from pygeoprocessing.geoprocessing_core import (
     DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS as opts_tuple)
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 TEST_DATA = os.path.join(os.path.dirname(
     __file__), '..', 'data', 'invest-test-data', 'stormwater')
@@ -308,14 +310,11 @@ class StormwaterTests(unittest.TestCase):
         stormwater.execute(args)
 
         retention_volume_path = os.path.join(
-            self.workspace_dir,
-            stormwater.FINAL_OUTPUTS['retention_volume_path'])
+            self.workspace_dir, 'retention_volume.tif')
         percolation_volume_path = os.path.join(
-            self.workspace_dir,
-            stormwater.FINAL_OUTPUTS['percolation_volume_path'])
+            self.workspace_dir, 'percolation_volume.tif')
         value_path = os.path.join(
-            self.workspace_dir,
-            stormwater.FINAL_OUTPUTS['retention_value_path'])
+            self.workspace_dir, 'retention_value.tif')
 
         retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
         retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
@@ -400,18 +399,14 @@ class StormwaterTests(unittest.TestCase):
 
         adjusted_ratio_raster = gdal.OpenEx(
             os.path.join(
-                self.workspace_dir,
-                stormwater.FINAL_OUTPUTS['adjusted_retention_ratio_path']),
+                self.workspace_dir, 'adjusted_retention_ratio.tif'),
             gdal.OF_RASTER)
         retention_volume_raster = gdal.OpenEx(
             os.path.join(
-                self.workspace_dir,
-                stormwater.FINAL_OUTPUTS['retention_volume_path']),
+                self.workspace_dir, 'retention_volume.tif'),
             gdal.OF_RASTER)
         runoff_volume_raster = gdal.OpenEx(
-            os.path.join(
-                self.workspace_dir,
-                stormwater.FINAL_OUTPUTS['runoff_volume_path']),
+            os.path.join(self.workspace_dir, 'runoff_volume.tif'),
             gdal.OF_RASTER)
         actual_runoff_volume = runoff_volume_raster.GetRasterBand(
             1).ReadAsArray()
@@ -462,7 +457,12 @@ class StormwaterTests(unittest.TestCase):
             'aggregate_areas_path': os.path.join(TEST_DATA, 'aoi.gpkg'),
             'replacement_cost': retention_cost
         }
-        stormwater.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(stormwater.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        stormwater.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(args, stormwater.MODEL_SPEC, **execute_kwargs)
 
         expected_feature_fields = {
             1: {
@@ -501,8 +501,7 @@ class StormwaterTests(unittest.TestCase):
         }
 
         aggregate_data_path = os.path.join(
-            args['workspace_dir'],
-            stormwater.FINAL_OUTPUTS['reprojected_aggregate_areas_path'])
+            args['workspace_dir'], 'aggregate_data.gpkg')
         aggregate_vector = gdal.OpenEx(aggregate_data_path, gdal.OF_VECTOR)
         aggregate_layer = aggregate_vector.GetLayer()
         for feature in aggregate_layer:
@@ -513,7 +512,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_lookup_ratios(self):
         """Stormwater: test lookup_ratios function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         sorted_lucodes = [10, 11, 12, 13]
         lulc_array = numpy.array([
@@ -547,7 +546,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_volume_op(self):
         """Stormwater: test volume_op function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         precip_nodata = -2.5
         ratio_array = numpy.array([
@@ -578,7 +577,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_pollutant_load_op(self):
         """Stormwater: test pollutant_load_op function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         # test with nodata values greater and less than the LULC codes
         # there was a bug that only happened with a larger nodata value
@@ -615,7 +614,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_retention_value_op(self):
         """Stormwater: test retention_value_op function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         retention_volume_array = numpy.array([
             [0, 1.5, stormwater.FLOAT_NODATA],
@@ -631,7 +630,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_is_near(self):
         """Stormwater: test is_near function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
         is_connected_array = numpy.array([
             [0, 0, 1, 0, 0, 0],
             [1, 0, 1, 0, 0, 0],
@@ -660,7 +659,7 @@ class StormwaterTests(unittest.TestCase):
 
         mocked = functools.partial(mock_iterblocks, yoffs=[0], ysizes=[3],
                                    xoffs=[0, 3], xsizes=[3, 3])
-        with mock.patch('natcap.invest.stormwater.pygeoprocessing.iterblocks',
+        with mock.patch('natcap.invest.stormwater.stormwater.pygeoprocessing.iterblocks',
                         mocked):
             stormwater.is_near(connected_path, radius, distance_path, out_path)
             actual = pygeoprocessing.raster_to_numpy_array(out_path)
@@ -668,7 +667,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_raster_average(self):
         """Stormwater: test raster_average function."""
-        from natcap.invest import stormwater
+        from natcap.invest.stormwater import stormwater
 
         array = numpy.empty((150, 150))
         nodata = -1
@@ -704,7 +703,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_validate(self):
         """Stormwater: test arg validation."""
-        from natcap.invest import stormwater, validation
+        from natcap.invest import stormwater, validation_messages
 
         # test args missing necessary values for adjust ratios
         args = {
@@ -722,11 +721,11 @@ class StormwaterTests(unittest.TestCase):
         messages = stormwater.validate(args)
         for arg_list, message in messages:
             if arg_list[0] in ['retention_radius', 'road_centerlines_path']:
-                self.assertEqual(message, validation.MESSAGES['MISSING_VALUE'])
+                self.assertEqual(message, validation_messages.MISSING_VALUE)
 
     def test_validate_noninteger_soil_raster(self):
         """Stormwater: test arg validation."""
-        from natcap.invest import stormwater, validation
+        from natcap.invest import stormwater
 
         soil_array = numpy.array([[1, 2], [3, 4]], dtype=numpy.float32)
         soil_path = os.path.join(self.workspace_dir, 'soils.tif')
@@ -749,7 +748,7 @@ class StormwaterTests(unittest.TestCase):
         self.assertIn(('soil_group_path',), messages)
         self.assertEqual(
             messages[('soil_group_path',)],
-            stormwater.NONINTEGER_SOILS_RASTER_MESSAGE)
+            stormwater.stormwater.NONINTEGER_SOILS_RASTER_MESSAGE)
 
     def test_lulc_signed_byte(self):
         """Stormwater: regression test for handling signed byte LULC input."""

@@ -18,6 +18,8 @@ from shapely.geometry import Point
 from natcap.invest import utils
 import pygeoprocessing
 
+from .utils import assert_complete_execute
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
@@ -73,7 +75,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
     def test_pixel_size_based_on_coordinate_transform(self):
         """WaveEnergy: test '_pixel_size_based_on_coordinate_transform' fn."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
@@ -121,7 +123,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
     def test_count_pixels_groups(self):
         """WaveEnergy: testing '_count_pixels_groups' function."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
@@ -147,7 +149,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
     def test_calculate_min_distances(self):
         """WaveEnergy: testing '_calculate_min_distances' function."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         origin = (443723.127327877911739, 4956546.905980412848294)
         pos_x = origin[0]
@@ -172,7 +174,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
     def test_clip_vector_by_vector_polygons(self):
         """WaveEnergy: testing clipping polygons from polygons."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
         from natcap.invest.utils import _assert_vectors_equal
 
         projection_wkt = osr.SRS_WKT_WGS84_LAT_LONG
@@ -229,7 +231,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
     def test_clip_vector_by_vector_points(self):
         """WaveEnergy: testing clipping points from polygons."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
@@ -311,7 +313,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
     def test_clip_vector_by_vector_no_intersection(self):
         """WaveEnergy: testing '_clip_vector_by_vector' w/ no intersection."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
@@ -361,7 +363,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
     def test_binary_wave_data_to_dict(self):
         """WaveEnergy: testing '_binary_wave_data_to_dict' function."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         wave_file_path = os.path.join(
             REGRESSION_DATA, 'example_ww3_binary.bin')
@@ -407,7 +409,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """Generate an args list that is consistent across regression tests."""
         args = {
             'workspace_dir': workspace_dir,
-            'wave_base_data_path': os.path.join(SAMPLE_DATA, 'WaveData'),
+            'wave_base_data_table': os.path.join(SAMPLE_DATA, 'WaveData', 'wave_data.csv'),
             'analysis_area': 'westcoast',
             'machine_perf_path': os.path.join(
                 SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
@@ -420,7 +422,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     def test_valuation(self):
         """WaveEnergy: testing valuation component."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
@@ -434,7 +436,13 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         # Testing if intermediate/output were overwritten
         _make_empty_files(args['workspace_dir'])
 
-        wave_energy.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(wave_energy.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        wave_energy.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, wave_energy.MODEL_SPEC, **execute_kwargs)
 
         raster_results = [
             'wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif', 'capwe_mwh.tif',
@@ -466,7 +474,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     def test_aoi_no_val(self):
         """WaveEnergy: test Biophysical component w AOI but w/o valuation."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
@@ -495,7 +503,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     def test_no_aoi_or_val(self):
         """WaveEnergy: testing Biophysical component w/o AOI or valuation."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
         wave_energy.execute(args)
@@ -522,7 +530,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     def test_valuation_suffix(self):
         """WaveEnergy: testing suffix through Valuation."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
@@ -621,7 +629,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
         self.base_required_keys = [
             'workspace_dir',
             'machine_param_path',
-            'wave_base_data_path',
+            'wave_base_data_table',
             'analysis_area',
             'machine_perf_path',
             'dem_path',
@@ -629,7 +637,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
 
     def test_missing_required_keys(self):
         """WaveEnergy: testing missing required keys from args."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
         from natcap.invest import validation
 
         args = {}
@@ -640,7 +648,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
 
     def test_missing_required_keys_if_valuation(self):
         """WaveEnergy: testing missing required keys given valuation."""
-        from natcap.invest import wave_energy
+        from natcap.invest.wave_energy import wave_energy
         from natcap.invest import validation
 
         args = {'valuation_container': True}
@@ -653,12 +661,13 @@ class WaveEnergyValidateTests(unittest.TestCase):
 
     def test_incorrect_analysis_area_value(self):
         """WaveEnergy: testing incorrect analysis_area value."""
-        from natcap.invest import wave_energy, validation
+        from natcap.invest.wave_energy import wave_energy
+        from natcap.invest import validation_messages
 
         args = {}
         args['analysis_area'] = 'Incorrect Analysis Area'
         validation_error_list = wave_energy.validate(args)
-        expected_message = validation.MESSAGES['INVALID_OPTION'].format(
+        expected_message = validation_messages.INVALID_OPTION.format(
             option_list=sorted([
                 "westcoast", "eastcoast", "northsea4", "northsea10",
                 "australia", "global"]))
@@ -669,13 +678,14 @@ class WaveEnergyValidateTests(unittest.TestCase):
 
     def test_validate_keys_missing_values(self):
         """WaveEnergy: testing validate when keys are missing values."""
-        from natcap.invest import wave_energy, validation
+        from natcap.invest.wave_energy import wave_energy
+        from natcap.invest import validation_messages
 
         args = {}
-        args['wave_base_data_path'] = None
+        args['wave_base_data_table'] = None
         args['dem_path'] = None
 
         validation_error_list = wave_energy.validate(args)
         expected_error = (
-            ['dem_path', 'wave_base_data_path'], validation.MESSAGES['MISSING_VALUE'])
+            ['dem_path', 'wave_base_data_table'], validation_messages.MISSING_VALUE)
         self.assertTrue(expected_error in validation_error_list)

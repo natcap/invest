@@ -1,0 +1,7 @@
+{% macro embed_vega(chart_spec_id_list) -%}
+  {% for chart_spec, el_id in chart_spec_id_list %}
+    <script type="text/javascript">
+      embedVega({{ chart_spec|safe }}, "{{ el_id }}")
+    </script>
+  {% endfor %}
+{%- endmacro %}

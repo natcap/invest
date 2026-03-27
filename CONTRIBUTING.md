@@ -1,7 +1,7 @@
 # Contributing to InVEST
 
 ## Asking Questions
-Do you have a question about using InVEST or need help troubleshooting a specific issue? Please visit the [NatCap Community Forum](https://community.naturalcapitalproject.org/).
+Do you have a question about using InVEST or need help troubleshooting a specific issue? Please visit the [NatCap Community Forum](https://community.naturalcapitalalliance.org/).
 
 ## Reporting Bugs
 Did you find a bug in the InVEST software?

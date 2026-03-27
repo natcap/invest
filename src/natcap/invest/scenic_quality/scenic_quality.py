@@ -10,18 +10,15 @@ import numpy
 import pygeoprocessing
 import rtree
 import shapely.geometry
-import taskgraph
 from natcap.invest.scenic_quality.viewshed import viewshed
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 
-from .. import gettext
-from .. import spec_utils
-from .. import utils
-from .. import validation
-from ..model_metadata import MODEL_METADATA
-from ..unit_registry import u
+from natcap.invest import gettext
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
@@ -32,190 +29,233 @@ BYTE_GTIFF_CREATION_OPTIONS = (
 FLOAT_GTIFF_CREATION_OPTIONS = (
     'GTIFF', ('PREDICTOR=3',) + BYTE_GTIFF_CREATION_OPTIONS[1])
 
-_OUTPUT_BASE_FILES = {
-    'viewshed_value': 'vshed_value.tif',
-    'n_visible_structures': 'vshed.tif',
-    'viewshed_quality': 'vshed_qual.tif',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'aoi_reprojected': 'aoi_reprojected.shp',
-    'clipped_dem': 'dem_clipped.tif',
-    'structures_clipped': 'structures_clipped.shp',
-    'structures_reprojected': 'structures_reprojected.shp',
-    'visibility_pattern': 'visibility_{id}.tif',
-    'value_pattern': 'value_{id}.tif',
-}
-
-MODEL_SPEC = {
-    "model_id": "scenic_quality",
-    "model_name": MODEL_METADATA["scenic_quality"].model_title,
-    "pyname": MODEL_METADATA["scenic_quality"].pyname,
-    "userguide": MODEL_METADATA["scenic_quality"].userguide,
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["aoi_path", "structure_path", "dem_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "aoi_path": {
-            **spec_utils.AOI,
-        },
-        "structure_path": {
-            "name": gettext("features impacting scenic quality"),
-            "type": "vector",
-            "geometries": spec_utils.POINT,
-            "fields": {
-                "radius": {
-                    "type": "number",
-                    "units": u.meter,
-                    "required": False,
-                    "about": gettext(
-                        "Maximum length of the line of sight originating from "
-                        "a viewpoint. The value can either be positive "
-                        "(preferred) or negative (kept for backwards "
-                        "compatibility), but is converted to a positive "
-                        "number. If this field is not provided, the model "
-                        "will include all pixels in the DEM in the visibility "
-                        "analysis. RADIUS preferred, but may also be called "
-                        "RADIUS2 for backwards compatibility.")},
-                "weight": {
-                    "type": "number",
-                    "units": u.none,
-                    "required": False,
-                    "about": gettext(
-                        "Viewshed importance coefficient. If this field is "
-                        "provided, the values are used to weight each "
-                        "feature's viewshed impacts. If not provided, all "
-                        "viewsheds are equally weighted with a weight of 1.")},
-                "height": {
-                    "type": "number",
-                    "units": u.meter,
-                    "required": False,
-                    "about": gettext(
-                        "Viewpoint height, the elevation above the ground of "
-                        "each feature. If this field is not provided, "
-                        "defaults to 0.")}
-            },
-            "about": gettext(
-                "Map of locations of objects that negatively affect scenic "
-                "quality. This must have the same projection as the DEM.")
-        },
-        "dem_path": {
-            **spec_utils.DEM,
-            "projected": True,
-            "projection_units": u.meter
-        },
-        "refraction": {
-            "name": gettext("refractivity coefficient"),
-            "type": "ratio",
-            "about": gettext(
-                "The refractivity coefficient corrects for the curvature of "
-                "the earth and refraction of visible light in air.")
-        },
-        "do_valuation": {
-            "name": gettext("run valuation"),
-            "type": "boolean",
-            "required": False,
-            "about": gettext("Run the valuation model.")
-        },
-        "valuation_function": {
-            "name": gettext("Valuation function"),
-            "type": "option_string",
-            "required": "do_valuation",
-            "options": {
-                "linear": {"display_name": gettext("linear: a + bx")},
-                "logarithmic": {"display_name": gettext(
-                    "logarithmic: a + b log(x+1)")},
-                "exponential": {"display_name": gettext("exponential: a * e^(-bx)")}
-            },
-            "about": gettext(
-                "Valuation function used to calculate the visual impact of "
-                "each feature, given distance from the feature 'x' and "
-                "parameters 'a' and 'b'."),
-        },
-        "a_coef": {
-            "name": gettext("coefficient a"),
-            "type": "number",
-            "units": u.none,
-            "required": "do_valuation",
-            "about": gettext("First coefficient ('a') used by the valuation function"),
-        },
-        "b_coef": {
-            "name": gettext("coefficient b"),
-            "type": "number",
-            "units": u.none,
-            "required": "do_valuation",
-            "about": gettext("Second coefficient ('b') used by the valuation function"),
-        },
-        "max_valuation_radius": {
-            "name": gettext("maximum valuation radius"),
-            "type": "number",
-            "units": u.meter,
-            "required": False,
-            "expression": "value > 0",
-            "about": gettext(
-                "Valuation will only be computed for cells that fall within "
-                "this radius of a feature impacting scenic quality."),
-        },
-    },
-    "outputs": {
-        "output": {
-            "type": "directory",
-            "contents": {
-                "vshed_qual.tif": {
-                    "about": gettext(
-                        "Map of visual quality classified into quartiles."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "vshed.tif": {
-                    "about": gettext("This raster layer contains the weighted sum of all visibility rasters. If no weight column is provided in the structures point vector, this raster will represent a count of the number of structure points that are visible from each pixel."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "vshed_value.tif": {
-                    "about": gettext("This raster layer contains the weighted sum of the valuation rasters created for each point."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                }
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aoi_reprojected.shp": {
-                    "about": gettext("This vector is the AOI, reprojected to the DEM’s spatial reference and projection."),
-                    "geometries": spec_utils.POLYGONS,
-                    "fields": {}
-                },
-                "dem_clipped.tif": {
-                    "about": gettext("This raster layer is a version of the DEM that has been clipped and masked to the AOI and tiled. This is the DEM file that is used for the viewshed analysis."),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "structures_clipped.shp": {
-                    "about": gettext(
-                        "Copy of the structures vector, clipped to the AOI extent."),
-                    "geometries": spec_utils.POINT,
-                    "fields": {}
-                },
-                "structures_reprojected.shp": {
-                    "about": gettext("Copy of the structures vector, reprojected to the DEM’s spatial reference and projection."),
-                    "geometries": spec_utils.POINT,
-                    "fields": {}
-                },
-                "value_[FEATURE_ID].tif": {
-                    "about": gettext("The calculated value of the viewshed amenity/disamenity given the distances of pixels from the structure's viewpoint, the weight of the viewpoint, the valuation function, and the a and b coefficients. The viewshed’s value is only evaluated for visible pixels."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "visibility_[FEATURE_ID].tif": {
-                    "about": gettext("Map of visibility for a given structure's viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."),
-                    "bands": {1: {"type": "integer"}}
-                }
-            }
-        },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
-    }
-}
+MODEL_SPEC = spec.ModelSpec(
+    model_id="scenic_quality",
+    model_title=gettext("Scenic Quality"),
+    userguide="scenic_quality.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("sq",),
+    module_name=__name__,
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["aoi_path", "structure_path", "dem_path", "refraction"],
+        ["do_valuation", "valuation_function", "a_coef", "b_coef",
+         "max_valuation_radius"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.AOI.model_copy(update=dict(id="aoi_path")),
+        spec.VectorInput(
+            id="structure_path",
+            name=gettext("features impacting scenic quality"),
+            about=gettext(
+                "Map of locations of objects that negatively affect scenic quality. This"
+                " must have the same projection as the DEM."
+            ),
+            geometry_types={"POINT"},
+            fields=[
+                spec.NumberInput(
+                    id="radius",
+                    about=gettext(
+                        "Maximum length of the line of sight originating from a"
+                        " viewpoint. The value can either be positive (preferred) or"
+                        " negative (kept for backwards compatibility), but is converted"
+                        " to a positive number. If this field is not provided, the model"
+                        " will include all pixels in the DEM in the visibility analysis."
+                        " RADIUS preferred, but may also be called RADIUS2 for backwards"
+                        " compatibility."
+                    ),
+                    required=False,
+                    units=u.meter
+                ),
+                spec.NumberInput(
+                    id="weight",
+                    about=(
+                        "Viewshed importance coefficient. If this field is provided, the"
+                        " values are used to weight each feature's viewshed impacts. If"
+                        " not provided, all viewsheds are equally weighted with a weight"
+                        " of 1."
+                    ),
+                    required=False,
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="height",
+                    about=gettext(
+                        "Viewpoint height, the elevation above the ground of each"
+                        " feature. If this field is not provided, defaults to 0."
+                    ),
+                    required=False,
+                    units=u.meter
+                )
+            ],
+            projected=None
+        ),
+        spec.PROJECTED_DEM.model_copy(update=dict(
+            id="dem_path",
+            projection_units=u.meter
+        )),
+        spec.RatioInput(
+            id="refraction",
+            name=gettext("refractivity coefficient"),
+            about=gettext(
+                "The refractivity coefficient corrects for the curvature of the earth and"
+                " refraction of visible light in air."
+            ),
+            units=None
+        ),
+        spec.BooleanInput(
+            id="do_valuation",
+            name=gettext("run valuation"),
+            about=gettext("Run the valuation model."),
+            required=False
+        ),
+        spec.OptionStringInput(
+            id="valuation_function",
+            name=gettext("Valuation function"),
+            about=(
+                "Valuation function used to calculate the visual impact of each feature,"
+                " given distance from the feature 'x' and parameters 'a' and 'b'."
+            ),
+            required="do_valuation",
+            allowed="do_valuation",
+            options=[
+                spec.Option(key="linear", display_name="linear: a + bx"),
+                spec.Option(key="logarithmic", display_name="logarithmic: a + b log(x+1)"),
+                spec.Option(key="exponential", display_name="exponential: a * e^(-bx)"),
+            ]
+        ),
+        spec.NumberInput(
+            id="a_coef",
+            name=gettext("coefficient a"),
+            about="First coefficient ('a') used by the valuation function",
+            required="do_valuation",
+            allowed="do_valuation",
+            units=u.none
+        ),
+        spec.NumberInput(
+            id="b_coef",
+            name=gettext("coefficient b"),
+            about="Second coefficient ('b') used by the valuation function",
+            required="do_valuation",
+            allowed="do_valuation",
+            units=u.none
+        ),
+        spec.NumberInput(
+            id="max_valuation_radius",
+            name=gettext("maximum valuation radius"),
+            about=gettext(
+                "Valuation will only be computed for cells that fall within this radius"
+                " of a feature impacting scenic quality."
+            ),
+            required=False,
+            allowed="do_valuation",
+            units=u.meter,
+            expression="value > 0"
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="vshed_qual",
+            path="output/vshed_qual.tif",
+            about=gettext("Map of visual quality classified into quartiles."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="vshed",
+            path="output/vshed.tif",
+            about=gettext(
+                "This raster layer contains the weighted sum of all visibility"
+                " rasters. If no weight column is provided in the structures"
+                " point vector, this raster will represent a count of the number"
+                " of structure points that are visible from each pixel."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="vshed_value",
+            path="output/vshed_value.tif",
+            about=gettext(
+                "This raster layer contains the weighted sum of the valuation"
+                " rasters created for each point."
+            ),
+            created_if="do_valuation",
+            data_type=float,
+            units=u.none
+        ),
+        spec.VectorOutput(
+            id="aoi_reprojected",
+            path="intermediate/aoi_reprojected.shp",
+            about=gettext(
+                "This vector is the AOI, reprojected to the DEM’s spatial"
+                " reference and projection."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="dem_clipped",
+            path="intermediate/dem_clipped.tif",
+            about=gettext(
+                "This raster layer is a version of the DEM that has been clipped"
+                " and masked to the AOI and tiled. This is the DEM file that is"
+                " used for the viewshed analysis."
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.VectorOutput(
+            id="structures_clipped",
+            path="intermediate/structures_clipped.shp",
+            about=gettext(
+                "Copy of the structures vector, clipped to the AOI extent."
+            ),
+            geometry_types={"POINT"},
+            fields=[]
+        ),
+        spec.VectorOutput(
+            id="structures_reprojected",
+            path="intermediate/structures_reprojected.shp",
+            about=gettext(
+                "Copy of the structures vector, reprojected to the DEM’s spatial"
+                " reference and projection."
+            ),
+            geometry_types={"POINT"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="value_[FEATURE_ID]",
+            path="intermediate/value_[FEATURE_ID].tif",
+            about=(
+                "The calculated value of the viewshed amenity/disamenity given"
+                " the distances of pixels from the structure's viewpoint, the"
+                " weight of the viewpoint, the valuation function, and the a and"
+                " b coefficients. The viewshed’s value is only evaluated for"
+                " visible pixels."
+            ),
+            created_if="do_valuation",
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="visibility_[FEATURE_ID]",
+            path="intermediate/visibility_[FEATURE_ID].tif",
+            about=(
+                "Map of visibility for a given structure's viewpoint. This raster"
+                " has pixel values of 0 (not visible), 1 (visible), or nodata"
+                " (where the DEM is nodata)."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.TASKGRAPH_CACHE
+    ]
+)
 
 
 def execute(args):
@@ -255,51 +295,12 @@ def execute(args):
             place in the current process.
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     LOGGER.info("Starting Scenic Quality Model")
+    args, file_registry, graph = MODEL_SPEC.setup(args)
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
-
-    try:
-        do_valuation = bool(args['do_valuation'])
-    except KeyError:
-        do_valuation = False
-
-    if do_valuation:
-        valuation_coefficients = {
-            'a': float(args['a_coef']),
-            'b': float(args['b_coef']),
-        }
-        if (args['valuation_function'] not in
-                MODEL_SPEC['args']['valuation_function']['options']):
-            raise ValueError('Valuation function type %s not recognized' %
-                             args['valuation_function'])
-        max_valuation_radius = float(args['max_valuation_radius'])
-
-    # Create output and intermediate directory
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    utils.make_directories([output_dir, intermediate_dir])
-
-    file_suffix = utils.make_suffix_string(
-        args, 'results_suffix')
-
-    LOGGER.info('Building file registry')
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
-        file_suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous execution
-    graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     reprojected_aoi_task = graph.add_task(
         pygeoprocessing.reproject_vector,
@@ -331,9 +332,9 @@ def execute(args):
         _clip_and_mask_dem,
         args=(args['dem_path'],
               file_registry['aoi_reprojected'],
-              file_registry['clipped_dem'],
-              intermediate_dir),
-        target_path_list=[file_registry['clipped_dem']],
+              file_registry['dem_clipped'],
+              args['workspace_dir']),
+        target_path_list=[file_registry['dem_clipped']],
         dependent_task_list=[reprojected_aoi_task],
         task_name='clip_dem_to_aoi')
 
@@ -346,7 +347,7 @@ def execute(args):
     # phase 2: calculate viewsheds.
     valid_viewpoints_task = graph.add_task(
         _determine_valid_viewpoints,
-        args=(file_registry['clipped_dem'],
+        args=(file_registry['dem_clipped'],
               file_registry['structures_clipped']),
         store_result=True,
         dependent_task_list=[clipped_viewpoints_task, clipped_dem_task],
@@ -371,37 +372,35 @@ def execute(args):
     for viewpoint, max_radius, weight, viewpoint_height in sorted(
             viewpoint_tuples, key=lambda x: x[0]):
         weights.append(weight)
-        visibility_filepath = file_registry['visibility_pattern'].format(
-            id=feature_index)
-        viewshed_files.append(visibility_filepath)
+        viewshed_files.append(file_registry['visibility_[FEATURE_ID]', feature_index])
         viewshed_task = graph.add_task(
             viewshed,
-            args=((file_registry['clipped_dem'], 1),  # DEM
+            args=((file_registry['dem_clipped'], 1),  # DEM
                   viewpoint,
-                  visibility_filepath),
+                  file_registry['visibility_[FEATURE_ID]', feature_index]),
             kwargs={'curved_earth': True,  # SQ model always assumes this.
-                    'refraction_coeff': float(args['refraction']),
+                    'refraction_coeff': args['refraction'],
                     'max_distance': max_radius,
                     'viewpoint_height': viewpoint_height,
                     'aux_filepath': None},  # Remove aux filepath after run
-            target_path_list=[visibility_filepath],
+            target_path_list=[file_registry['visibility_[FEATURE_ID]', feature_index]],
             dependent_task_list=[clipped_dem_task,
                                  clipped_viewpoints_task],
             task_name='calculate_visibility_%s' % feature_index)
         viewshed_tasks.append(viewshed_task)
 
-        if do_valuation:
+        if args['do_valuation']:
             # calculate valuation
-            viewshed_valuation_path = file_registry['value_pattern'].format(
-                id=feature_index)
+            viewshed_valuation_path = file_registry['value_[FEATURE_ID]', feature_index]
             valuation_task = graph.add_task(
                 _calculate_valuation,
-                args=(visibility_filepath,
+                args=(file_registry['visibility_[FEATURE_ID]', feature_index],
                       viewpoint,
                       weight,  # user defined, from WEIGHT field in vector
                       args['valuation_function'],
-                      valuation_coefficients,  # a, b from args, a dict.
-                      max_valuation_radius,
+                      args['a_coef'],
+                      args['b_coef'],
+                      args['max_valuation_radius'],
                       viewshed_valuation_path),
                 target_path_list=[viewshed_valuation_path],
                 dependent_task_list=[viewshed_task],
@@ -416,43 +415,43 @@ def execute(args):
         _count_and_weight_visible_structures,
         args=(viewshed_files,
               weights,
-              file_registry['clipped_dem'],
-              file_registry['n_visible_structures']),
-        target_path_list=[file_registry['n_visible_structures']],
+              file_registry['dem_clipped'],
+              file_registry['vshed']),
+        target_path_list=[file_registry['vshed']],
         dependent_task_list=sorted(viewshed_tasks),
         task_name='sum_visibility_for_all_structures')
 
     # If we're not doing valuation, we can still compute visual quality,
     # we'll just use the weighted visible structures raster instead of the
     # sum of the valuation rasters.
-    if not do_valuation:
+    if not args['do_valuation']:
         parent_visual_quality_task = weighted_visible_structures_task
-        parent_visual_quality_raster_path = (
-            file_registry['n_visible_structures'])
+        parent_visual_quality_raster_path = file_registry['vshed']
     else:
         parent_visual_quality_task = graph.add_task(
             _sum_valuation_rasters,
-            args=(file_registry['clipped_dem'],
+            args=(file_registry['dem_clipped'],
                   valuation_filepaths,
-                  file_registry['viewshed_value']),
-            target_path_list=[file_registry['viewshed_value']],
+                  file_registry['vshed_value']),
+            target_path_list=[file_registry['vshed_value']],
             dependent_task_list=sorted(valuation_tasks),
             task_name='add_up_valuation_rasters')
-        parent_visual_quality_raster_path = file_registry['viewshed_value']
+        parent_visual_quality_raster_path = file_registry['vshed_value']
 
     # visual quality is one of the leaf nodes on the task graph.
     graph.add_task(
         _calculate_visual_quality,
         args=(parent_visual_quality_raster_path,
-              intermediate_dir,
-              file_registry['viewshed_quality']),
+              args['workspace_dir'],
+              file_registry['vshed_qual']),
         dependent_task_list=[parent_visual_quality_task],
-        target_path_list=[file_registry['viewshed_quality']],
+        target_path_list=[file_registry['vshed_qual']],
         task_name='calculate_visual_quality'
     )
 
     LOGGER.info('Waiting for Scenic Quality tasks to complete.')
     graph.join()
+    return file_registry.registry
 
 
 def _determine_valid_viewpoints(dem_path, structures_path):
@@ -732,7 +731,7 @@ def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
 
 
 def _calculate_valuation(visibility_path, viewpoint, weight,
-                         valuation_method, valuation_coefficients,
+                         valuation_method, a, b,
                          max_valuation_radius,
                          valuation_raster_path):
     """Calculate valuation with one of the defined methods.
@@ -746,9 +745,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         weight (number): The numeric weight of the visibility.
         valuation_method (string): The valuation method to use, one of
             ('linear', 'logarithmic', 'exponential').
-        valuation_coefficients (dict): A dictionary mapping string coefficient
-            letters to numeric coefficient values. Keys 'a' and 'b' are
-            required.
+        a (float): the A valuation coefficient
+        b (float): the B valuation coefficient
         max_valuation_radius (number): Past this distance (in meters),
             valuation values will be set to 0.
         valuation_raster_path (string): The path to where the valuation raster
@@ -758,14 +756,9 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         ``None``
 
     """
-    LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
-                valuation_method,
-                ' '.join(['%s=%g' % (k, v) for (k, v) in
-                          sorted(valuation_coefficients.items())]))
-
-    # All valuation functions use coefficients a, b
-    a = valuation_coefficients['a']
-    b = valuation_coefficients['b']
+    LOGGER.info(
+        f'Calculating valuation with {valuation_method} method. '
+        f'Coefficients: a={a} b={b}')
 
     if valuation_method == 'linear':
 
@@ -1109,5 +1102,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)
