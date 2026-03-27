@@ -73,8 +73,9 @@ Then follow the "Process to update translations" instructions above, starting fr
 * Model titles
 * `MODEL_SPEC` `name` and `about` text
 * Validation messages
-* Strings that appear in the Workbench UI, such as button labels and tooltip text
 * Strings that appear in HTML reports, such as section headings, figure captions, and table column headers
+
+Strings that appear exclusively in the Workbench UI, such as button labels and tooltip text, are also translated, but they are handled separately. See the [Workbench README](../../../../workbench/readme.md#internationalization) for details.
 
 We are not translating:
 
