@@ -1,23 +1,41 @@
 from pydantic import BaseModel
 
 
-class GCMDKeyword(BaseModel):
+class Keyword(BaseModel):
+    value: str
+    vocabulary: str
+
+
+class GCMDKeyword(Keyword):
     value: str
     uuid: str
     full_path: str
     vocabulary: str = 'Global Change Master Directory (GCMD) Keywords'
 
 
-class InvestKeyword(BaseModel):
+class InvestKeyword(Keyword):
     value: str
     vocabulary: str = 'InVEST Keywords'
 
 
 BIOPHYSICAL_TABLE = InvestKeyword(value='BIOPHYSICAL TABLE')
 
-CROP_COEFFICIENT = InvestKeyword(value='CROP COEFFICIENT')
+CARBON = GCMDKeyword(
+    value='CARBON',
+    uuid='6f6537f5-773f-4df1-862b-d9ab80eb5e04',
+    full_path='EARTH SCIENCE > BIOSPHERE > VEGETATION > CARBON')
 
-REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(value='REFERENCE_EVAPOTRANSPIRATION')
+CARBON_SEQUESTRATION = GCMDKeyword(
+    value='CARBON SEQUESTRATION',
+    uuid='e58872a8-6104-4ff8-bbca-4b00ba4b38e8',
+    full_path='EARTH SCIENCE > BIOSPHERE > ECOLOGICAL DYNAMICS > ECOSYSTEM FUNCTIONS > CARBON SEQUESTRATION')
+
+CARBON_SOIL = GCMDKeyword(
+    value='CARBON',
+    uuid='a7ae5843-479c-4055-b8fc-ba651e485750',
+    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > CARBON')
+
+CROP_COEFFICIENT = InvestKeyword(value='CROP COEFFICIENT')
 
 EVAPOTRANSPIRATION = GCMDKeyword(
     value='EVAPOTRANSPIRATION',
@@ -45,6 +63,13 @@ PRECIPITATION = GCMDKeyword(
     value='PRECIPITATION',
     uuid='1532e590-a62d-46e3-8d03-2351bc48166a',
     full_path='EARTH SCIENCE > ATMOSPHERE > PRECIPITATION')
+
+PRECIPITATION_RATE = GCMDKeyword(
+    value='PRECIPITATION_RATE',
+    uuid='ac50c468-df2f-429c-8394-9d63efcc6f9d',
+    full_path='EARTH SCIENCE > ATMOSPHERE > PRECIPITATION > PRECIPITATION_RATE')
+
+REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(value='REFERENCE_EVAPOTRANSPIRATION')
 
 SOIL_ROOTING_DEPTH = GCMDKeyword(
     value='SOIL ROOTING DEPTH',

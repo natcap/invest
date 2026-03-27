@@ -11,6 +11,7 @@ from natcap.invest import utils
 from natcap.invest import spec
 from natcap.invest.unit_registry import u
 from natcap.invest import gettext
+from natcap.invest import keywords
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " alternate scenario. All values in this raster must have corresponding"
                 " entries in the Carbon Pools table."
             ),
+            keywords=[keywords.LULC],
             data_type=int,
             units=None,
             projected=True,
@@ -78,6 +80,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " entries in the Carbon Pools table. This raster must align with the"
                 " Baseline LULC raster. Required if Calculate Sequestration is selected."
             ),
+            keywords=[keywords.LULC],
             required="calc_sequestration",
             allowed="calc_sequestration",
             data_type=int,
@@ -91,6 +94,9 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "A table that maps each LULC code to carbon pool data for that LULC type."
             ),
+            keywords=[
+                keywords.BIOPHYSICAL_TABLE,
+                keywords.CARBON, keywords.CARBON_SOIL],  # TODO: Could place on columns instead
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(

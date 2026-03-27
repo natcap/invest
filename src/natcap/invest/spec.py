@@ -27,6 +27,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, \
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
+from natcap.invest import keywords
 from natcap.invest import utils
 from . import gettext
 from .unit_registry import u
@@ -208,6 +209,13 @@ class Input(BaseModel):
 
     about: typing.Union[str, None] = None
     """User-facing description of the input"""
+
+    keywords: typing.Union[list[natcap.invest.keywords.Keyword], None] = None
+    """A list of keywords from a controlled vocabulary.
+
+    Keywords can be used to identify possible data sources that satisfy input
+    requirements.
+    """
 
     required: typing.Union[bool, str] = True
     """Whether the input is required to be provided. Defaults to True. Set to
