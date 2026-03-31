@@ -40,12 +40,12 @@ LOCALE_NAME_MAP = {
 # track the current locale setting,
 # this can be changed during runtime by the set_locale function
 # the gettext function below uses this to set the translation language
-LOCALE_CODE = 'en'
+_LOCALE_CODE = 'en'
 
 
 def get_locale():
     """Get the current locale code."""
-    return LOCALE_CODE
+    return _LOCALE_CODE
 
 
 def set_locale(locale_code):
@@ -71,7 +71,7 @@ def set_locale(locale_code):
             f"Locale '{locale_code}' is not supported by InVEST. "
             f"Supported locale codes are: {LOCALES}")
     this_module = sys.modules[__name__]
-    setattr(this_module, 'LOCALE_CODE', locale_code)
+    setattr(this_module, '_LOCALE_CODE', locale_code)
 
 
 def gettext(msg):
@@ -85,7 +85,7 @@ def gettext(msg):
     """
     return translation(
         'messages',
-        languages=[LOCALE_CODE],
+        languages=[_LOCALE_CODE],
         localedir=LOCALE_DIR,
         # fall back to a NullTranslation, which returns the English messages
         fallback=True).gettext(msg)
