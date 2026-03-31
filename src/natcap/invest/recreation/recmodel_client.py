@@ -34,7 +34,7 @@ from natcap.invest.unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 # NatCap Rec Server URLs. This is a GCS bucket.
-SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_3_15_0/index.html'  # pylint: disable=line-too-long
+SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_3_19_0/index.html'  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro5.config.SERIALIZER = 'marshal'
