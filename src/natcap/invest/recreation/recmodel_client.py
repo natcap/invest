@@ -43,6 +43,9 @@ Pyro5.config.SERIALIZER = 'marshal'
 MIN_YEAR = 2012
 MAX_YEAR = 2017
 POLYGON_ID_FIELD = 'poly_id'
+USERDAY_FIELD_SUFFIX_LIST = [
+    'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
+    'SEP', 'OCT', 'NOV', 'DEC']
 
 PREDICTOR_TABLE_COLUMNS = [
     spec.StringInput(
@@ -683,7 +686,9 @@ def _retrieve_user_days(
 
     All of the client-server communication happens in this scope. The local AOI
     is sent to the server for aggregations. Results are sent back when
-    complete.
+    complete. To avoid unnecessarily large file transfers, tabular results are
+    sent from server to client without the original geometries. Results are
+    joined back to the AOI geometries on the client.
 
     Args:
         local_aoi_path (string): path to polygon vector for UD aggregation
@@ -809,6 +814,46 @@ def _retrieve_user_days(
         temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
         zipfile.ZipFile(compressed_userdays_path, 'r').extractall(
             temporary_output_dir)
+
+        # Copy the input AOI into the designated output folder
+        LOGGER.info('Joining results to AOI polygons')
+        driver = gdal.GetDriverByName('GPKG')
+        aoi_vector = gdal.OpenEx(local_aoi_path, gdal.OF_VECTOR)
+        ud_aoi_vector = driver.CreateCopy(
+            os.path.join(temporary_output_dir, f'{result_key}_results.gpkg'),
+            aoi_vector)
+        ud_aoi_layer = ud_aoi_vector.GetLayer()
+
+        csv_name = os.path.join(temporary_output_dir, f'{result_key}_results.csv')
+        csv_dataset = gdal.OpenEx(csv_name)
+        csv_layer = csv_dataset.GetLayer()
+
+        for field_suffix in USERDAY_FIELD_SUFFIX_LIST:
+            field_id = f'{result_key}_{field_suffix}'
+            # delete the field if it already exists
+            field_index = ud_aoi_layer.FindFieldIndex(str(field_id), 1)
+            if field_index >= 0:
+                ud_aoi_layer.DeleteField(field_index)
+            field_defn = ogr.FieldDefn(field_id, ogr.OFTReal)
+            ud_aoi_layer.CreateField(field_defn)
+
+        ud_aoi_layer.StartTransaction()
+        # 'id' in the CSV is the FID from the AOI feature on the server,
+        # which is a direct copy of the local AOI used here.
+        for feature in csv_layer:
+            fid = int(feature.GetField('id'))
+            aoi_feature = ud_aoi_layer.GetFeature(fid)
+            for field in csv_layer.schema:
+                if field.name == 'id':
+                    continue
+                aoi_feature.SetField(
+                    field.name, float(feature.GetField(field.name)))
+            ud_aoi_layer.SetFeature(aoi_feature)
+        ud_aoi_layer.CommitTransaction()
+        csv_layer = None
+        csv_dataset = None
+        ud_aoi_layer = None
+        ud_aoi_vector = None
 
         for filename in os.listdir(temporary_output_dir):
             # Results are returned from the server without a results_suffix.
