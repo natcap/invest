@@ -1496,10 +1496,27 @@ class RecreationProductionServerHealth(unittest.TestCase):
     """Health check for the production server."""
 
     def test_production_server(self):
+        """Ping the server that is compatible with latest client."""
         from natcap.invest.recreation import recmodel_client
         import requests
 
         server_url = requests.get(recmodel_client.SERVER_URL).text.rstrip()
+        try:
+            proxy = Pyro5.api.Proxy(server_url)
+            # _pyroBind() forces the client-server handshake and
+            # seems like a good way to check if the remote object is ready
+            proxy._pyroBind()
+        except Exception as exc:
+            self.fail(exc)
+        finally:
+            proxy._pyroRelease()
+
+    def test_production_server_3_15_0(self):
+        """Ping server supporting invest clients prior to 3.19.0."""
+        import requests
+
+        registry = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_3_15_0/index.html'
+        server_url = requests.get(registry).text.rstrip()
         try:
             proxy = Pyro5.api.Proxy(server_url)
             # _pyroBind() forces the client-server handshake and
