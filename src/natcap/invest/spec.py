@@ -2334,6 +2334,7 @@ DEM = SingleBandRasterInput(
     id="dem_path",
     name=gettext("digital elevation model"),
     about=gettext("Map of elevation above sea level."),
+    keywords=[keywords.DEM],
     data_type=float,
     units=u.meter
 )

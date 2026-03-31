@@ -103,6 +103,7 @@ import taskgraph
 from osgeo import gdal
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
@@ -317,6 +318,7 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="lucode"
         ),
         spec.CSVInput(
+            # TODO: do not query DataHub? This table is initialized by the CBC preprocessor
             id="landcover_transitions_table",
             name=gettext("landcover transitions table"),
             about=gettext(
