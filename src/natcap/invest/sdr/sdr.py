@@ -17,6 +17,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest.urban_nature_access import urban_nature_access
 from natcap.invest import utils
@@ -67,6 +68,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of rainfall erosivity, reflecting the intensity and duration of"
                 " rainfall in the area of interest."
             ),
+            keywords=[keywords.RAINFALL_EROSIVITY],
             data_type=float,
             units=u.megajoule * u.millimeter / (u.hectare * u.hour * u.year),
             projected=True
@@ -78,22 +80,14 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of soil erodibility, the susceptibility of soil particles to"
                 " detachment and transport by rainfall and runoff."
             ),
+            keywords=[keywords.SOIL_EROSION, keywords.SOI_ERODIBILITY],
             data_type=float,
             units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter),
             projected=True
         ),
-        spec.SingleBandRasterInput(
-            id="lulc_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of land use/land cover codes. Each land use/land cover type must be"
-                " assigned a unique integer code. All values in this raster must have"
-                " corresponding entries in the Biophysical Table."
-            ),
-            data_type=int,
-            units=u.none,
+        spec.LULC.model_copy(update=dict(
             projected=True
-        ),
+        )),
         spec.VectorInput(
             id="watersheds_path",
             name=gettext("Watersheds"),
@@ -102,6 +96,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " results. Each watershed should contribute to a point of interest where"
                 " water quality will be analyzed."
             ),
+            keywords=[keywords.WATERSHED_BOUNDARIES],
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[],
             projected=True
@@ -119,11 +114,13 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.RatioInput(
                     id="usle_c",
                     about=gettext("Cover-management factor for the USLE"),
+                    keywords=[keywords.USLE_C_FACTOR],
                     units=u.none
                 ),
                 spec.RatioInput(
                     id="usle_p",
                     about=gettext("Support practice factor for the USLE"),
+                    keywords=[keywords.USLE_P_FACTOR],
                     units=u.none
                 )
             ],
@@ -166,6 +163,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " Pixels with 1 are drainages and are treated like streams. Pixels with 0"
                 " are not drainages."
             ),
+            keywords=[keywords.DRAINAGE],
             required=False,
             data_type=int,
             units=u.none,
