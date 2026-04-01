@@ -671,9 +671,10 @@ class RecModel(object):
                 poly_feat = aoi_layer.GetFeature(fid)
                 poly_id = poly_feat.GetField(poly_id_field)
 
-                monthly_line = (f'{poly_id},{",".join(
+                monthly_values_str = ",".join(
                     [str(len(ud_monthly_set[header])) for header in table_headers]
-                )}\n')
+                )
+                monthly_line = (f'{poly_id},{monthly_values_str}\n')
                 monthly_table.write(monthly_line)
 
                 averages_line = f'{fid},{",".join([str(x) for x in ud_list])}\n'
