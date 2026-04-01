@@ -787,6 +787,9 @@ def _retrieve_user_days(
                 LOGGER.handle(logging.makeLogRecord(record_dict))
         result_dict = future.result()
 
+    LOGGER.info('connection release')
+    recmodel_manager._pyroRelease()
+
     for dataset, result_key, compressed_userdays_path in dataset_tuples:
         result = result_dict[result_key]
 
@@ -808,26 +811,28 @@ def _retrieve_user_days(
                     'server_version': server_version,
                     'workspace_id': workspace_id}}, f)
 
-        # unpack result
+        # Unpack result to a temp directory because not all extracted files
+        # need to be saved to the user's output workspace. The zip file will
+        # remain as an intermediate output.
         with open(compressed_userdays_path, 'wb') as pud_file:
             pud_file.write(result_zip_file_binary)
         temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
         zipfile.ZipFile(compressed_userdays_path, 'r').extractall(
             temporary_output_dir)
 
-        # Copy the input AOI into the designated output folder
         LOGGER.info('Joining results to AOI polygons')
         driver = gdal.GetDriverByName('GPKG')
         aoi_vector = gdal.OpenEx(local_aoi_path, gdal.OF_VECTOR)
+        # Copy the input AOI into the designated output folder
+        # Results are returned from the server without a results_suffix.
+        target_filepath = os.path.join(
+            output_dir, f'{result_key}_results{file_suffix}.gpkg')
         ud_aoi_vector = driver.CreateCopy(
-            os.path.join(temporary_output_dir, f'{result_key}_results.gpkg'),
-            aoi_vector)
+            target_filepath, aoi_vector)
         ud_aoi_layer = ud_aoi_vector.GetLayer()
+        _rename_layer_from_parent(ud_aoi_layer)
 
-        csv_name = os.path.join(temporary_output_dir, f'{result_key}_results.csv')
-        csv_dataset = gdal.OpenEx(csv_name)
-        csv_layer = csv_dataset.GetLayer()
-
+        # Create new fields in the target vector
         for field_suffix in USERDAY_FIELD_SUFFIX_LIST:
             field_id = f'{result_key}_{field_suffix}'
             # delete the field if it already exists
@@ -836,6 +841,11 @@ def _retrieve_user_days(
                 ud_aoi_layer.DeleteField(field_index)
             field_defn = ogr.FieldDefn(field_id, ogr.OFTReal)
             ud_aoi_layer.CreateField(field_defn)
+
+        csv_name = os.path.join(
+            temporary_output_dir, f'{result_key}_results.csv')
+        csv_dataset = gdal.OpenEx(csv_name)
+        csv_layer = csv_dataset.GetLayer()
 
         ud_aoi_layer.StartTransaction()
         # 'id' in the CSV is the FID from the AOI feature on the server,
@@ -855,24 +865,16 @@ def _retrieve_user_days(
         ud_aoi_layer = None
         ud_aoi_vector = None
 
-        for filename in os.listdir(temporary_output_dir):
-            # Results are returned from the server without a results_suffix.
-            pre, post = os.path.splitext(filename)
-            target_filepath = os.path.join(
-                output_dir, f'{pre}{file_suffix}{post}')
-            shutil.copy(
-                os.path.join(temporary_output_dir, filename),
-                target_filepath)
-            # Get the suffix attached to the layername too
-            if target_filepath.endswith('gpkg'):
-                vector = gdal.OpenEx(target_filepath, gdal.OF_UPDATE)
-                layer = vector.GetLayer()
-                _rename_layer_from_parent(layer)
-                layer = vector = None
+        # Copy the monthly results table to the output workspace
+        # Results are returned from the server without a results_suffix.
+        monthly_filename = f'{result_key}_monthly_table.csv'
+        pre, post = os.path.splitext(monthly_filename)
+        target_filepath = os.path.join(
+            output_dir, f'{pre}{file_suffix}{post}')
+        shutil.copy(
+            os.path.join(temporary_output_dir, monthly_filename),
+            target_filepath)
         shutil.rmtree(temporary_output_dir)
-
-    LOGGER.info('connection release')
-    recmodel_manager._pyroRelease()
 
 
 def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
