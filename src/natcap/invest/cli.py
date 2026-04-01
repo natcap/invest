@@ -14,9 +14,10 @@ import textwrap
 import warnings
 
 import natcap.invest
+import natcap.invest.reports.report_constants
 from natcap.invest import datastack
-from natcap.invest import ui_server
 from natcap.invest import models
+from natcap.invest import ui_server
 from pygeoprocessing.utils import GDALUseExceptions
 
 DEFAULT_EXIT_CODE = 1
@@ -465,6 +466,9 @@ def main(user_args=None):
 
             generate_report = bool(model_module.MODEL_SPEC.reporter)
             if generate_report:
+                # Reload report_constants to ensure text is localized before
+                # it is passed to the report template.
+                importlib.reload(natcap.invest.reports.report_constants)
                 # Reload model module to ensure text defined in model spec is
                 # localized before it is passed to the report.
                 importlib.reload(model_module)

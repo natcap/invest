@@ -231,10 +231,10 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
             intermediate_raster_sections=intermediate_raster_sections,
-            raster_group_caption=report_constants.raster_group_caption(),
+            raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
-            stats_table_note=report_constants.stats_table_note(),
+            stats_table_note=report_constants.STATS_TABLE_NOTE,
             model_spec_outputs=model_spec.outputs,
         ))
 
