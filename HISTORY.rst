@@ -64,6 +64,13 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* Refactored ``make deploy`` into artifact-specific targets (``deploy_dist``,
+  ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
+  these targets to fail on missing artifacts instead of silently ignoring
+  errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
+
 Seasonal Water Yield
 ====================
 * The model now generates a report, a visual summary of results, available in
@@ -83,13 +90,13 @@ Seasonal Water Yield
   the model, where 1=January and 12=December.
   (`#2451 <https://github.com/natcap/invest/issues/2451>`_)
 
-
-General
-=======
-* Refactored ``make deploy`` into artifact-specific targets (``deploy_dist``,
-  ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
-  these targets to fail on missing artifacts instead of silently ignoring
-  errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
+Visitation: Recreation and Tourism
+==================================
+* Fixed a bug where AOIs with very many polygons could require file transfers
+  exceeding 1GB, from server to client, and the server process could crash.
+  Now, file transfers from server to client avoid sending redundant copies of
+  AOI geoemtries, drastically reducing the size of file transfers.
+  (`#1950 <https://github.com/natcap/invest/issues/1950>`_)
 
 
 3.18.0 (2026-02-25)
