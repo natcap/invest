@@ -95,8 +95,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "increase in NDVI. If the user has an effect size value "
                 "as an odds ratio, see User's Guide."
             ),
-            units=None, #todo: check
-            expression="value > 0"
+            units=None,
+            expression="value > 0 and value <= 1"
         ),
         spec.VectorInput(
             id="baseline_prevalence_vector",
@@ -250,7 +250,9 @@ MODEL_SPEC = spec.ModelSpec(
             spec.SingleBandRasterOutput(
                 id="preventable_cases",
                 path="output/preventable_cases.tif",
-                about=gettext("Preventable cases at pixel level."),
+                about=gettext(
+                    'Preventable cases at pixel level. A negative value '
+                    'indicates "excess" or "additional" cases.'),
                 data_type=float,
                 units=u.count,
             ),
@@ -259,7 +261,8 @@ MODEL_SPEC = spec.ModelSpec(
                 path="output/preventable_cost.tif",
                 about=gettext(
                     "Preventable cost at pixel level. The currency unit will "
-                    "be the same as that in the health cost rate input."),
+                    "be the same as that in the health cost rate input. A "
+                    "negative value indicates an additional cost."),
                 data_type=float,
                 units=u.currency,
                 created_if="health_cost_rate"
@@ -900,7 +903,7 @@ def execute(args):
     )
 
     zonal_stats_inputs = [
-        args['aoi_path'],
+        args['aoi_path'], args['scenario'],
         file_registry['preventable_cases_cost_sum_table'],
         file_registry['preventable_cases_cost_sum_vector'],
         file_registry['preventable_cases']]
@@ -1403,13 +1406,15 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
 
 
 def zonal_stats_preventable_cases_cost(
-        base_vector_path, target_stats_csv, target_aggregate_vector_path,
+        base_vector_path, scenario, target_stats_csv, target_aggregate_vector_path,
         preventable_cases_raster, preventable_cost_raster=None):
     """Calculate zonal statistics for each polygon in the AOI
     and write results to a csv and vector file.
 
     Args:
         base_vector_path (string): path to the AOI vector.
+        scenario (string): either 'baseline' or 'alternate', used to label
+            output gpkg layer
         target_stats_csv (string): path to csv file to store dictionary
             returned by zonal stats.
         target_aggregate_vector_path (string): path to vector to store zonal
@@ -1429,7 +1434,9 @@ def zonal_stats_preventable_cases_cost(
 
     if os.path.exists(target_aggregate_vector_path):
         driver.Delete(target_aggregate_vector_path)
-    driver.CreateCopy(target_aggregate_vector_path, aoi_vector)
+    custom_layer_name = f"preventable_cases_{scenario}"
+    driver.CreateCopy(target_aggregate_vector_path, aoi_vector, options=[
+        f'LAYER_NAME={custom_layer_name}', 'OVERWRITE=YES'])
     aoi_vector = None
 
     cases_sum_field = ogr.FieldDefn('sum_cases', ogr.OFTReal)
