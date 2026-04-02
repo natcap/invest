@@ -61,10 +61,36 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
+Unreleased Changes
+------------------
 
-..
-  Unreleased Changes
-  ------------------
+Seasonal Water Yield
+====================
+* The model now generates a report, a visual summary of results, available in
+  the output workspace and also viewable from the Workbench after the model run
+  completes. (`#2321 <https://github.com/natcap/invest/issues/2321>`_)
+* The model now generates an additional output, a CSV containing average monthly
+  quickflow, baseflow, and precipitation values, in cubic meters per month, for
+  each feature in the AOI. This output is used by the report to generate some
+  plots. Note that this CSV is only created when the model is run without
+  inputting a Local Recharge raster.
+  (`#2321 <https://github.com/natcap/invest/issues/2321>`_)
+* Various updates to model output data metadata, including correcting the
+  units of some outputs.
+  (`#2450 <https://github.com/natcap/invest/issues/2450>`_)
+* Updated the naming convention of several monthly intermediate outputs to be
+  1-indexed rather than 0-indexed. This makes filenames consistent throughout
+  the model, where 1=January and 12=December.
+  (`#2451 <https://github.com/natcap/invest/issues/2451>`_)
+
+
+General
+=======
+* Refactored ``make deploy`` into artifact-specific targets (``deploy_dist``,
+  ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
+  these targets to fail on missing artifacts instead of silently ignoring
+  errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
+
 
 3.18.0 (2026-02-25)
 -------------------

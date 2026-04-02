@@ -185,7 +185,7 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
-        run: make deploy
+        run: make deploy_dist
 
   test-source-distribution:
     name: Check sdist
@@ -270,7 +270,7 @@ jobs:
         if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         env:
           CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
-        run: make deploy
+        run: make deploy_dist
 
   validate-resources:
     name: Validate Sampledata & User Guide
@@ -461,11 +461,6 @@ jobs:
           yarn run build
           yarn run dist
 
-      - name: Test electron app with puppeteer
-        continue-on-error: true  # test is flaky on GHA
-        working-directory: workbench
-        run: npx cross-env CI=true yarn run test-electron-app
-
       # gsutil (part of make deploy) never seems to support the latest python version.
       - name: Set up python for gsutil
         uses: actions/setup-python@v6
@@ -473,11 +468,11 @@ jobs:
           python-version: ${{ env.GSUTIL_PYTHON_VERSION }}
         id: python-gsutil-task
 
-      - name: Deploy artifacts to GCS
+      - name: Deploy binaries and user guide to GCS
         if: github.event_name != 'pull_request'
         env:
           CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
-        run: make deploy
+        run: make deploy_dist deploy_userguide deploy_workbench
 
       # This relies on the file existing on GCP, so it must be run after `make
       # deploy` is called.
@@ -502,13 +497,6 @@ jobs:
           name: InVEST-user-guide
           path: dist/InVEST_*_userguide.zip
 
-      - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ${{ runner.os }}_puppeteer_log.zip'
-          path: ${{ matrix.puppeteer-log }}
-
       - name: Run invest-autotest with binaries
         id: invest-autotest
         if : |
@@ -531,6 +519,17 @@ jobs:
         run: |
           DEST=gs://releases.naturalcapitalproject.org/invest-reports/latest
           gsutil -m rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
+
+      - name: Test electron app with puppeteer
+        working-directory: workbench
+        run: npx cross-env CI=true yarn run test-electron-app
+
+      - name: Upload workbench logging from puppeteer
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ runner.os }}_puppeteer_log.zip'
+          path: ${{ matrix.puppeteer-log }}
 
       - name: Tar the workspace to preserve permissions
         if: failure()
@@ -579,8 +578,8 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v3
 
-      - name: Deploy artifacts to GCS
+      - name: Deploy sample data to GCS
         if: github.event_name != 'pull_request'
         env:
           CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
-        run: make deploy
+        run: make deploy_data

@@ -13,16 +13,18 @@ import numpy
 import pygeoprocessing
 import matplotlib
 import matplotlib.colors
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import Colormap, ListedColormap
 import matplotlib.patches
 import matplotlib.pyplot as plt
 import pandas
 import yaml
 from osgeo import gdal
+from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
 from natcap.invest import gettext
-from natcap.invest.spec import ModelSpec, Input, Output
+from natcap.invest.spec import ModelSpec, Input, Output, \
+    CSVInput, SingleBandRasterInput
 
 LOGGER = logging.getLogger(__name__)
 
@@ -143,7 +145,7 @@ class RasterTransform(str, Enum):
     log = 'log'
 
 
-@dataclass
+@dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class RasterPlotConfig:
     """A definition for how to plot a raster."""
 
@@ -157,11 +159,16 @@ class RasterPlotConfig:
     """For highly skewed data, a transformation can help reveal variation."""
     title: str | None = None
     """An optional plot title. If ``None``, the filename is used."""
+    colormap: str | Colormap | None = None
+    """The string name of a registered matplotlib colormap or a colormap object."""
 
     def __post_init__(self):
         if self.title is None:
             self.title = os.path.basename(self.raster_path)
         self.caption = f'{self.title}:{self.spec.about}'
+
+        self.colormap = plt.get_cmap(self.colormap if self.colormap
+                                     else COLORMAPS[self.datatype])
 
 
 def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
@@ -256,7 +263,7 @@ def _extra_wide_aoi(xy_ratio):
     return xy_ratio > EX_WIDE_AOI_THRESHOLD
 
 
-def _choose_n_rows_n_cols(xy_ratio, n_plots):
+def _choose_n_rows_n_cols(xy_ratio, n_plots, small_plots):
     if _extra_wide_aoi(xy_ratio):
         n_cols = 1
     elif _wide_aoi(xy_ratio):
@@ -264,14 +271,17 @@ def _choose_n_rows_n_cols(xy_ratio, n_plots):
     else:
         n_cols = 3
 
+    if small_plots:
+        n_cols += 1
+
     if n_cols > n_plots:
         n_cols = n_plots
     n_rows = int(math.ceil(n_plots / n_cols))
     return n_rows, n_cols
 
 
-def _figure_subplots(xy_ratio, n_plots):
-    n_rows, n_cols = _choose_n_rows_n_cols(xy_ratio, n_plots)
+def _figure_subplots(xy_ratio, n_plots, small_plots=False):
+    n_rows, n_cols = _choose_n_rows_n_cols(xy_ratio, n_plots, small_plots)
 
     figure_width = MAX_FIGURE_WIDTH_DEFAULT
     if (n_cols == 2) and (_wide_aoi(xy_ratio)):
@@ -306,16 +316,21 @@ def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
         return 31  # 3-column layout
 
 
-def _get_title_kwargs(title: str, resampled: bool, line_width: int):
+def _get_title_kwargs(title: str, resampled: bool, line_width: int, facets=False):
     label = f"{title}{' (resampled)' if resampled else ''}"
     label = textwrap.fill(label, width=line_width)
+    padding = 1.5
+    if not facets:
+        # Faceted plots don't need extra padding for title because their units
+        # label appears with the legend instead of under the title
+        padding *= SUBTITLE_FONT_SIZE
     return {
         'fontfamily': 'monospace',
         'fontsize': TITLE_FONT_SIZE,
         'fontweight': 700,
         'label': label,
         'loc': 'left',
-        'pad': 1.5 * SUBTITLE_FONT_SIZE,
+        'pad': padding,
         'verticalalignment': 'bottom',
     }
 
@@ -390,7 +405,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         colorbar_kwargs = {}
         imshow_kwargs['norm'] = transform
         imshow_kwargs['interpolation'] = 'none'
-        cmap = COLORMAPS[dtype]
+        cmap = config.colormap
         if dtype == 'divergent':
             if transform == 'log':
                 transform = matplotlib.colors.SymLogNorm(linthresh=0.03)
@@ -501,7 +516,8 @@ def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
     return base64_encode(figure)
 
 
-def plot_raster_facets(tif_list, datatype, transform=None, title_list=None):
+def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
+                       small_plots=False, colormap=None, supertitle=None):
     """Plot a list of rasters that will all share a fixed colorscale.
 
     When all the rasters have the same shape and represent the same variable,
@@ -517,15 +533,22 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None):
             to the colormap. Either 'linear' or 'log'.
         title_list (list): Optional list of strings to use as subplot titles.
             If ``None``, the raster filename is used as the title.
+        small_plots (bool): Defaults to False. If True, the typical number of
+            columns calculated for plotting facets will be increased by 1,
+            making the plots smaller so more can be viewed side-by-side.
+        colormap (str): Optional string name of a registered matplotlib
+            colormap or a colormap object to use in place of the default
+            derived from the raster datatype.
+        supertitle (str): Optional title to use for the entire group of
+            raster facets.
 
     """
     raster_info = pygeoprocessing.get_raster_info(tif_list[0])
     bbox = raster_info['bounding_box']
     n_plots = len(tif_list)
     xy_ratio = _get_aspect_ratio(bbox)
-    fig, axes = _figure_subplots(xy_ratio, n_plots)
+    fig, axes = _figure_subplots(xy_ratio, n_plots, small_plots=small_plots)
 
-    cmap_str = COLORMAPS[datatype]
     if transform is None:
         transform = 'linear'
     if title_list is None:
@@ -549,7 +572,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None):
     # instead of storing all arrays in memory
     vmin = numpy.nanmin(ndarray)
     vmax = numpy.nanmax(ndarray)
-    cmap = plt.get_cmap(cmap_str)
+    cmap = plt.get_cmap(colormap if colormap else COLORMAPS[datatype])
     if datatype == 'divergent':
         if transform == 'log':
             normalizer = matplotlib.colors.SymLogNorm(linthresh=0.03, vmin=vmin, vmax=vmax)
@@ -559,7 +582,6 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None):
         if numpy.isclose(vmin, 0.0):
             vmin = 1e-6
         normalizer = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
-        cmap.set_under(cmap.colors[0])  # values below vmin (0s) get this color
     else:
         normalizer = plt.Normalize(vmin=vmin, vmax=vmax)
     for arr, ax, raster_path, title in zip(
@@ -567,14 +589,15 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None):
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
         # all rasters are identical size; `resampled` will be the same for all
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
-        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width))
-        units = _get_raster_units(raster_path)
-        if units:
-            (ylim_kwargs,
-             text_kwargs) = _get_units_text_kwargs(units, len(arr))
-            ax.set_ylim(**ylim_kwargs)
-            ax.text(**text_kwargs)
-        fig.colorbar(mappable, ax=ax)
+        ax.set_title(**_get_title_kwargs(title, resampled, title_line_width, facets=True))
+
+    units = _get_raster_units(tif_list[0])
+    legend_label = f"{UNITS_TEXT}: {units}" if units else None
+    fig.colorbar(mappable, ax=axes.ravel().tolist(), label=legend_label)
+
+    if supertitle:
+        fig.suptitle(supertitle, fontsize=TITLE_FONT_SIZE)
+
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
 
@@ -615,17 +638,13 @@ def _build_stats_table_row(resource, band):
 
 
 def _get_raster_metadata(filepath):
-    if isinstance(filepath, collections.abc.Mapping):
-        for path in filepath.values():
-            return _get_raster_metadata(path)
-    else:
-        try:
-            resource = geometamaker_load(f'{filepath}.yml')
-        except (FileNotFoundError, ValueError) as err:
-            LOGGER.debug(err)
-            return None
-        if isinstance(resource, geometamaker.models.RasterResource):
-            return resource
+    try:
+        resource = geometamaker_load(f'{filepath}.yml')
+    except (FileNotFoundError, ValueError) as err:
+        LOGGER.debug(err)
+        return None
+    if isinstance(resource, geometamaker.models.RasterResource):
+        return resource
 
 
 def _get_raster_units(filepath):
@@ -636,30 +655,64 @@ def _get_raster_units(filepath):
 def raster_workspace_summary(file_registry):
     """Create a table of stats for all rasters in a file_registry."""
     raster_summary = {}
-    for path in file_registry.values():
-        resource = _get_raster_metadata(path)
-        band = resource.get_band_description(1) if resource else None
-        if band:
-            filename = os.path.basename(resource.path)
-            raster_summary[filename] = _build_stats_table_row(
-                resource, band)
 
-    return pandas.DataFrame(raster_summary).T
-
-
-def raster_inputs_summary(args_dict):
-    """Create a table of stats for all rasters in an args_dict."""
-    raster_summary = {}
-    for v in args_dict.values():
-        if isinstance(v, str) and os.path.isfile(v):
-            resource = geometamaker.describe(v, compute_stats=True)
-            if isinstance(resource, geometamaker.models.RasterResource):
+    def _summarize_output(item):
+        if isinstance(item, collections.abc.Mapping):
+            for path in item.values():
+                _summarize_output(path)
+        else:
+            resource = _get_raster_metadata(item)
+            band = resource.get_band_description(1) if resource else None
+            if band:
                 filename = os.path.basename(resource.path)
-                band = resource.get_band_description(1)
                 raster_summary[filename] = _build_stats_table_row(
                     resource, band)
-                # Remove 'Units' column if all units are blank
-                if not any(raster_summary[filename][UNITS_COL_NAME]):
-                    del raster_summary[filename][UNITS_COL_NAME]
+
+    for item in file_registry.values():
+        _summarize_output(item)
 
     return pandas.DataFrame(raster_summary).T
+
+
+def raster_inputs_summary(args_dict, model_spec):
+    """Create a table of stats for all rasters in an args_dict."""
+    raster_summary = {}
+
+    paths_to_check = [v for v in args_dict.values()
+                      if isinstance(v, str) and os.path.isfile(v)]
+
+    paths_to_check.extend(_parse_csv_paths_from_spec(args_dict, model_spec))
+
+    for v in paths_to_check:
+        resource = geometamaker.describe(v, compute_stats=True)
+        if isinstance(resource, geometamaker.models.RasterResource):
+            filename = os.path.basename(resource.path)
+            band = resource.get_band_description(1)
+            raster_summary[filename] = _build_stats_table_row(
+                resource, band)
+            # Remove 'Units' column if all units are blank
+            if not any(raster_summary[filename][UNITS_COL_NAME]):
+                del raster_summary[filename][UNITS_COL_NAME]
+
+    return pandas.DataFrame(raster_summary).T
+
+
+def _parse_csv_paths_from_spec(args_dict, spec):
+    table_map_inputs = []
+    for input_ in spec.inputs:
+        if isinstance(input_, CSVInput):
+            table_map_inputs.extend([
+                (input_.id, col.id) for col in input_.columns
+                if isinstance(col, SingleBandRasterInput)])
+
+    paths_to_check = []
+    for input_id, col_name in table_map_inputs:
+        if args_dict.get(input_id):
+            df = CSVInput.get_validated_dataframe(
+                    spec.get_input(input_id),
+                    csv_path=args_dict.get(input_id))
+            paths_to_check.extend([
+                v for v in df[col_name]
+                if isinstance(v, str) and os.path.isfile(v)])
+
+    return paths_to_check
