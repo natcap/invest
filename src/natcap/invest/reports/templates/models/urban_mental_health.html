@@ -34,13 +34,6 @@
     ])
   )}}
 
-  <!-- {{ accordion_section(
-    'Preventable Cases by AOI Vector',
-    content_grid([
-      ('<div style="display:flex; justify-content:center;"><div id="cases_map"></div></div>', 100),
-      (caption(cases_map_caption, aggregate_map_source_list), 100)
-    ]), 100)
-   }} -->
    {{ accordion_section(
     'Preventable Cases by AOI Vector',
     content_grid(
@@ -94,13 +87,24 @@
     )}}
   {% endif %}
 
+  {% set input_items = [
+    (caption(raster_group_caption, pre_caption=True), 100)
+  ] %}
+  
+  {% if args_dict['lulc_base'] %}
+    {% set input_items = input_items + [
+      (caption(lulc_pre_caption, pre_caption=True), 100)
+    ] %}
+  {% endif %}
+  
+  {% set input_items = input_items + [
+    (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+    (caption(inputs_caption, definition_list=True), 100)
+  ] %}
+  
   {{ accordion_section(
     'Input Maps',
-    content_grid([
-      (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
-      (caption(inputs_caption, definition_list=True), 100)
-    ])
+    content_grid(input_items)
   )}}
 
   {{ accordion_section(
