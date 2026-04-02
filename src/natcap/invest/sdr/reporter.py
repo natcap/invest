@@ -1,5 +1,4 @@
 from natcap.invest.reports import sdr_ndr_report_generator
-from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
 from natcap.invest.reports.raster_utils import RasterDatatype
 from natcap.invest.reports.raster_utils import RasterTransform

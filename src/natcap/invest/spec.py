@@ -1,4 +1,4 @@
-import collections
+import collections.abc
 import contextlib
 import copy
 import importlib
@@ -17,7 +17,6 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import geometamaker
-import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
@@ -26,14 +25,14 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, \
     field_validator, model_validator
 import taskgraph
 
+from natcap.invest import gettext, reports, utils, validation_messages
+from natcap.invest import __version__ as invest_version
 from natcap.invest.file_registry import FileRegistry
-from natcap.invest import utils
-from . import gettext
-from .unit_registry import u
-from . import validation_messages
+from natcap.invest.unit_registry import u
 
 
 LOGGER = logging.getLogger(__name__)
+
 
 # accessing a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
@@ -2091,7 +2090,7 @@ class ModelSpec(BaseModel):
         formatted_args = pprint.pformat(args_dict)
         lineage_statement = (
             f'Created by {self.model_id} execute('
-            f'\n{formatted_args})\nVersion {natcap.invest.__version__}')
+            f'\n{formatted_args})\nVersion {invest_version}')
         keywords = [self.model_id, 'InVEST']
 
         def _generate_metadata(root_key, value):
@@ -2274,13 +2273,13 @@ class ModelSpec(BaseModel):
 
             if generate_report:
                 LOGGER.info('Generating report for results')
-                reporter_module = importlib.import_module(self.reporter)
                 target_html_filepath = os.path.join(
                     preprocessed_args['workspace_dir'],
                     (f'{self.model_id}_report'
                      f'{preprocessed_args.get("results_suffix", "")}.html'))
 
-                with natcap.invest.reports.configure_libraries():
+                with reports.configure_libraries():
+                    reporter_module = importlib.import_module(self.reporter)
                     reporter_module.report(
                         registry, preprocessed_args, self, target_html_filepath)
 

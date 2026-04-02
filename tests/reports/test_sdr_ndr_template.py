@@ -10,6 +10,7 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
+    locale = 'en'
     report_filepath = 'sdr_ndr_report_test.html'
     invest_version = '987.65.0'
     timestamp = '1970-01-01'
@@ -27,6 +28,7 @@ def _get_render_args(model_spec):
     raster_group_caption = 'This is another test!'
 
     return {
+        'locale': locale,
         'report_script': model_spec.reporter,
         'invest_version': invest_version,
         'report_filepath': report_filepath,
@@ -91,6 +93,7 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
         ws_vector_totals_table = '<table class="test__totals-table"></table>'
 
         html = TEMPLATE.render(
+            locale='en',
             report_script='natcap.invest.test.reporter',
             invest_version='987.65.0',
             report_filepath='sdr_ndr_report_test.html',
@@ -130,6 +133,7 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
         ws_vector_totals_table = None
 
         html = TEMPLATE.render(
+            locale='en',
             report_script='natcap.invest.test.reporter',
             invest_version='987.65.0',
             report_filepath='sdr_ndr_report_test.html',

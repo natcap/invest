@@ -6,6 +6,9 @@ None of the translations files (.pot, .po, .mo) should be manually edited by us.
 ### `messages.pot`
 Message catalog template file. This contains all the strings ("messages") that are translated, without any translations. All the PO files are derived from this.
 
+### `babel_config.ini`
+Mappings file that tells pybabel where to look when extracting messages into the message catalog. By default, pybabel will extract messages from Python source files; we need this mappings file to ensure it also extracts messages from the Jinja templates that are used for HTML reports.
+
 ### `locales/`
 Locale directory. The contents of this directory are organized in a specific structure that `gettext` expects. `locales/` contains one subdirectory for each language for which there are any translations (not including the default English). The subdirectories are named after the corresponding ISO 639-1 language code. Each language subdirectory contains a directory `LC_MESSAGES`, which then contains the message catalog files for that language.
 
@@ -22,7 +25,7 @@ No changes are immediately needed when we add, remove, or edit strings that are 
 When we are ready to get a new batch of translations, here is the process. These instructions assume you have defined the two-letter locale code in an environment variable `$LL`.
 
 
-1. Run the following from the root invest directory, replacing `<LANG>` with the language code:
+1. Run the following from the root invest directory, replacing `$LL` with the language code:
 ```
 pybabel extract \
    --no-wrap \
@@ -30,6 +33,7 @@ pybabel extract \
    --version $(python -m setuptools_scm) \
    --msgid-bugs-address natcap-software@lists.stanford.edu \
    --copyright-holder "Natural Capital Alliance" \
+   --mapping src/natcap/invest/internationalization/babel_config.ini \
    --output src/natcap/invest/internationalization/messages.pot \
    src/
 
@@ -39,7 +43,7 @@ pybabel update \
    --input-file src/natcap/invest/internationalization/messages.pot \
    --output-file src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po
 ```
-This looks through the source code for strings wrapped in the `gettext(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
+This looks through the source code for strings wrapped in the `gettext(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specified language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
 
 2. Check that the changes look correct, then commit:
 ```
@@ -69,7 +73,9 @@ Then follow the "Process to update translations" instructions above, starting fr
 * Model titles
 * `MODEL_SPEC` `name` and `about` text
 * Validation messages
-* Strings that appear in the UI, such as button labels and tooltip text
+* Strings that appear in HTML reports, such as section headings, figure captions, and table column headers
+
+Strings that appear exclusively in the Workbench UI, such as button labels and tooltip text, are also translated, but they are handled separately. See the [Workbench README](../../../../workbench/readme.md#internationalization) for details.
 
 We are not translating:
 

@@ -55,9 +55,11 @@ class CLIHeadlessTests(unittest.TestCase):
             parameter_set_file.write(
                 json.dumps(datastack_dict, indent=4, sort_keys=True))
 
-        with unittest.mock.patch(
-                'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute',
-                return_value=None) as patched_model:
+        target = (
+            'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute')
+
+        with (unittest.mock.patch(target, return_value=None) as patched_model,
+              unittest.mock.patch('importlib.reload')):
             cli.main([
                 'run',
                 'coastal_blue_carbon',  # uses an exact modelname
@@ -72,9 +74,11 @@ class CLIHeadlessTests(unittest.TestCase):
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
-        with unittest.mock.patch(
-                'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute',
-                return_value=None) as patched_model:
+        target = (
+            'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute')
+
+        with (unittest.mock.patch(target, return_value=None) as patched_model,
+              unittest.mock.patch('importlib.reload')):
             cli.main([
                 'run',
                 'coastal_blue_carbon',  # uses an exact modelname
@@ -193,7 +197,9 @@ class CLIHeadlessTests(unittest.TestCase):
 
         target = (
             'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute')
-        with unittest.mock.patch(target, return_value=None) as patched_model:
+
+        with (unittest.mock.patch(target, return_value=None) as patched_model,
+              unittest.mock.patch('importlib.reload')):
             cli.main([
                 'run',
                 'cbc',  # uses an alias

@@ -30,7 +30,7 @@
       {% endfor %}
       {% if source_list %}
         <p class="sources">
-          Sources: {{ source_list | join('; ') }}
+          {% trans %}Sources:{% endtrans %} {{ source_list | join('; ') }}
         </p>
       {% endif %}
     {% endif %}

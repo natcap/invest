@@ -8,19 +8,16 @@ import importlib
 import json
 import logging
 import multiprocessing
-import os
 import pprint
 import sys
 import textwrap
 import warnings
 
 import natcap.invest
+import natcap.invest.reports.report_constants
 from natcap.invest import datastack
-from natcap.invest import set_locale
-from natcap.invest import spec
-from natcap.invest import ui_server
-from natcap.invest import utils
 from natcap.invest import models
+from natcap.invest import ui_server
 from pygeoprocessing.utils import GDALUseExceptions
 
 DEFAULT_EXIT_CODE = 1
@@ -463,8 +460,18 @@ def main(user_args=None):
 
             target_model = models.model_id_to_pyname[args.model]
             model_module = importlib.import_module(name=target_model)
-            LOGGER.info('Imported target %s from %s',
-                        model_module.__name__, model_module)
+
+            LOGGER.info(
+                f'Imported target {model_module.__name__} from {model_module}')
+
+            generate_report = bool(model_module.MODEL_SPEC.reporter)
+            if generate_report:
+                # Reload report_constants to ensure text is localized before
+                # it is passed to the report template.
+                importlib.reload(natcap.invest.reports.report_constants)
+                # Reload model module to ensure text defined in model spec is
+                # localized before it is passed to the report.
+                importlib.reload(model_module)
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
@@ -479,7 +486,7 @@ def main(user_args=None):
                 generate_metadata=True,
                 save_file_registry=True,
                 check_outputs=False,
-                generate_report=bool(model_module.MODEL_SPEC.reporter))
+                generate_report=generate_report)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)
