@@ -3,9 +3,13 @@ import time
 
 import altair
 import geopandas
+import matplotlib
 import numpy
 import pandas
 import pygeoprocessing
+from pydantic import ConfigDict
+from pydantic.dataclasses import dataclass
+from osgeo import gdal
 
 from natcap.invest import __version__
 from natcap.invest import gettext
@@ -22,12 +26,70 @@ TEMPLATE = jinja_env.get_template('models/urban_mental_health.html')
 
 MAP_WIDTH = 450  # pixels
 
+NEAR_ZERO_RANGE = (-0.01, 0.01)
+
+@dataclass(config=ConfigDict(arbitrary_types_allowed=True))
+class SpecialRangeRasterPlotConfig(RasterPlotConfig):
+    """RasterPlotConfig to allow for special handling of near-zero pixels."""
+    special_value_range: tuple[float, float] | None = None
+    special_value_color: str | None = None
+    special_value_label: str | None = None
+
+    def plot_on_axis(self, fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs):
+        if self.special_value_range is None:
+            LOGGER.info(
+                "No special value range for %s, using default plotting",
+                self.raster_path
+            )
+            super().plot_on_axis(
+                fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs)
+            return
+
+        low, high = self.special_value_range
+
+        special_mask = (
+            ~numpy.isnan(arr) &
+            (arr >= low) &
+            (arr <= high)
+        )
+
+        main_arr = numpy.array(arr, copy=True)
+        main_arr[special_mask] = numpy.nan
+
+        mappable = ax.imshow(main_arr, cmap=cmap, **imshow_kwargs)
+        cbar = fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
+
+        special_arr = numpy.full(arr.shape, numpy.nan)
+        special_arr[special_mask] = 1
+
+        ax.imshow(
+            special_arr,
+            cmap=matplotlib.colors.ListedColormap([self.special_value_color]),
+            interpolation='none',
+            vmin=1,
+            vmax=1
+        )
+
+        patch = matplotlib.patches.Patch(
+            color=self.special_value_color,
+            label=self.special_value_label or f'{low} - {high}'
+        )
+
+        cbar_ax = cbar.ax
+        cbar_ax.legend(
+            handles=[patch],
+            loc='upper center',
+            bbox_to_anchor=(0.5, -0.05),
+            frameon=False,
+            ncol=1
+        )
+
 
 def infer_continuous_or_divergent(raster_path: str) -> str:
     """Infer if raster should have a 'continuous' or 'divergent' color ramp.
 
     Rules:
-        - If min value < 0 --> 'divergent'
+        - If min value < ~0 --> 'divergent'
         - Else --> 'continuous'
 
     Args:
@@ -38,24 +100,29 @@ def infer_continuous_or_divergent(raster_path: str) -> str:
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path)
     nodata = raster_info['nodata'][0]
+    ds = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+    band = ds.GetRasterBand(1)
 
-    arr = pygeoprocessing.raster_to_numpy_array(raster_path)
+    stats = band.GetStatistics(True, True)  # (approx_ok, force)
+    min_val = stats[0]
+    LOGGER.info("Stats for %s: min=%s, nodata=%s", raster_path, min_val, nodata)
 
-    if nodata is not None:
-        valid_mask = ~numpy.isclose(arr, nodata, equal_nan=True)
-        valid_values = arr[valid_mask]
-    else:
-        valid_values = arr[~numpy.isnan(arr)]
+    if min_val is None:
+        arr = pygeoprocessing.raster_to_numpy_array(raster_path)
+        if nodata is not None:
+            valid_mask = ~numpy.isclose(arr, nodata, equal_nan=True)
+            valid_values = arr[valid_mask]
+        else:
+            valid_values = arr[~numpy.isnan(arr)]
 
-    if valid_values.size == 0:
-        LOGGER.warning(f"No valid pixels found in {raster_path}, defaulting to continuous")
-        return RasterDatatype.continuous
+        if valid_values.size == 0:
+            LOGGER.warning(f"No valid pixels found in {raster_path}, "
+                           "defaulting to continuous")
+            return RasterDatatype.continuous
 
-    min_val = round(numpy.nanmin(valid_values), 4)
-    LOGGER.info(f"actual min: {numpy.nanmin(valid_values)}")
-    LOGGER.info("calculated min val: %s for %s", min_val, raster_path)
+        min_val = round(numpy.nanmin(valid_values), 4)
 
-    return RasterDatatype.divergent if min_val < 0 else RasterDatatype.continuous
+    return RasterDatatype.divergent if min_val < NEAR_ZERO_RANGE[0] else RasterDatatype.continuous
 
 
 def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
@@ -103,40 +170,36 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
 
 
     """
-    # if args_dict['scenario'] == 'ndvi':
-    #     delta_ndvi_colorramp = matplotlib.colors.LinearSegmentedColormap.from_list(
-    #         'truncated_PuOr', matplotlib.cm.PuOr(numpy.linspace(0.20, 0.80, 256)))
-    # else:
-    #     delta_ndvi_colorramp = None
-    # LOGGER.info("custom color: %s", delta_ndvi_colorramp)
+    ndvi_colorramp = 'viridis_r'
 
     input_raster_config_list = []
     intermediate_raster_config_lists = [[
         RasterPlotConfig(
             raster_path=file_registry['ndvi_base_buffer_mean_clipped'],
             datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('ndvi_base_buffer_mean_clipped')
+            spec=model_spec.get_output('ndvi_base_buffer_mean_clipped'),
+            colormap=ndvi_colorramp
         ),
         RasterPlotConfig(
             raster_path=file_registry['ndvi_alt_buffer_mean_clipped'],
             datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('ndvi_alt_buffer_mean_clipped')
+            spec=model_spec.get_output('ndvi_alt_buffer_mean_clipped'),
+            colormap=ndvi_colorramp
         ),
         RasterPlotConfig(
-            raster_path=file_registry['delta_ndvi'], #TODO: if scenario is NDVI, contrain the colorramp by another 10%
+            raster_path=file_registry['delta_ndvi'],
             datatype=RasterDatatype.divergent,
-            spec=model_spec.get_output('delta_ndvi')
-            # custom_colormap=delta_ndvi_colorramp
+            spec=model_spec.get_output('delta_ndvi'),
         )],
         [RasterPlotConfig(
-            raster_path=file_registry['baseline_cases'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('baseline_cases')
-        ),
-        RasterPlotConfig(
             raster_path=file_registry['baseline_prevalence_raster'],
             datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('baseline_prevalence_raster')
+        ),
+        RasterPlotConfig(
+            raster_path=file_registry['baseline_cases'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('baseline_cases')
         )
     ]]
 
@@ -162,14 +225,16 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
             RasterPlotConfig(
                 raster_path=args_dict['ndvi_base'],
                 datatype=RasterDatatype.continuous,
-                spec=model_spec.get_input('ndvi_base')
+                spec=model_spec.get_input('ndvi_base'),
+                colormap=ndvi_colorramp
             )
         )
         input_raster_config_list.insert(1,
             RasterPlotConfig(
                 raster_path=args_dict['ndvi_alt'],
                 datatype=RasterDatatype.continuous,
-                spec=model_spec.get_input('ndvi_alt')
+                spec=model_spec.get_input('ndvi_alt'),
+                colormap=ndvi_colorramp
             )
         )
 
@@ -178,13 +243,15 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
             RasterPlotConfig(
                 raster_path=file_registry['ndvi_base_aligned_masked'],
                 datatype=RasterDatatype.continuous,
-                spec=model_spec.get_output('ndvi_base_aligned_masked')
+                spec=model_spec.get_output('ndvi_base_aligned_masked'),
+                colormap=ndvi_colorramp
             ),
             # reclassified baseline lulc to ndvi values based on means
             RasterPlotConfig(
                 raster_path=file_registry['ndvi_alt_aligned_masked'],
                 datatype=RasterDatatype.continuous,
-                spec=model_spec.get_output('ndvi_alt_aligned_masked')
+                spec=model_spec.get_output('ndvi_alt_aligned_masked'),
+                colormap=ndvi_colorramp
             )
         ])
     input_raster_config_list.append(
@@ -195,21 +262,28 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
         )
     )
 
+    datatype = infer_continuous_or_divergent(file_registry['preventable_cases'])
+    is_continuous = datatype == RasterDatatype.continuous
+    common_kwargs = {
+        "datatype": datatype,
+        "colormap": 'Purples' if is_continuous else None,
+        "transform": RasterTransform.linear if is_continuous else RasterTransform.log,
+        "special_value_range": NEAR_ZERO_RANGE if is_continuous else None,
+        "special_value_color": '#FEE0B6' if is_continuous else None
+    }
     output_raster_config_list = [
-        RasterPlotConfig(
+        SpecialRangeRasterPlotConfig(
             raster_path=file_registry['preventable_cases'],
-            datatype=infer_continuous_or_divergent(file_registry['preventable_cases']), #RasterDatatype.divergent, #TODO - should this be continuous?
             spec=model_spec.get_output('preventable_cases'),
-            transform=RasterTransform.log
+            **common_kwargs
         )
         ]
     if args_dict['health_cost_rate']:
         output_raster_config_list.append(
-            RasterPlotConfig(
+            SpecialRangeRasterPlotConfig(
                 raster_path=file_registry['preventable_cost'],
-                datatype=infer_continuous_or_divergent(file_registry['preventable_cost']),
                 spec=model_spec.get_output('preventable_cost'),
-                transform=RasterTransform.log
+                **common_kwargs
             )
         )
 
@@ -228,14 +302,14 @@ def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
     Returns:
         A list containing exactly two strings or exactly three strings.
         If the model was run with ``scenario==ndvi``, the report will display
-        delta ndvi, baseline cases, and baseline prevalence as three separate
-        sections with the headings "Change in NDVI", "Baseline Cases", and "Baseline Prevalence". 
-        If the model was run with ``scenario==lulc``, the report will also show the reclassified
+        a section with delta ndvi map and its inputs, and a second section
+        with baseline prevalence and cases. If the model was run with
+        ``scenario==lulc``, the report will also show the reclassified
         LULC-to-NDVI rasters as intermediate outputs.
     """
     intermediate_captions = [
-        gettext('Difference in NDVI between Baseline and Alternate'),
-        gettext('Baseline Cases & Prevalence')
+        gettext('Difference in NDVI between Alternate and Baseline'),
+        gettext('Baseline Prevalence & Cases')
     ]
     if args_dict['scenario'] == 'lulc':
         intermediate_captions.insert(0,
@@ -267,7 +341,7 @@ def _create_aggregate_map(
     # if the attribute has any negative values, use a divergent color
     # scale; otherwise, use a continuous color scale
     if (geodataframe[attribute] < 0).any():
-        scale = altair.Scale(scheme='purpleorange', reverse=True)
+        scale = altair.Scale(scheme='purpleorange', reverse=True, domainMid=0)
     else:
         scale = altair.Scale(scheme='purples')
 
@@ -316,7 +390,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     input_raster_config_list, \
         intermediate_raster_config_lists, \
-            output_raster_config_list = _get_conditional_raster_plot_tuples(model_spec, args_dict, file_registry)
+            output_raster_config_list = _get_conditional_raster_plot_tuples(
+                model_spec, args_dict, file_registry)
 
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         input_raster_config_list)
@@ -345,7 +420,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     ]
 
     input_raster_stats_table = raster_utils.raster_inputs_summary(
-        args_dict).to_html(na_rep='')
+        args_dict, model_spec).to_html(na_rep='')
 
     output_raster_stats_table = raster_utils.raster_workspace_summary(
         file_registry).to_html(na_rep='')
@@ -410,6 +485,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             outputs_caption=output_raster_caption,
             intermediate_raster_sections=intermediate_raster_sections,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
+            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
             stats_table_note=report_constants.STATS_TABLE_NOTE,
