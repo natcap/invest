@@ -72,7 +72,10 @@ General
   ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
   these targets to fail on missing artifacts instead of silently ignoring
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
-
+* Added keyword annotations to model inputs to facilitate data discovery.
+  Keywords come from the NASA Global Change Master Directory (GCMD) or
+  are defined within ``natcap.invest.keywords``.
+  (`#2467 <https://github.com/natcap/invest/issues/2467>`_)
 
 Workbench
 =========
