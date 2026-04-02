@@ -74,6 +74,13 @@ General
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
 
 
+Workbench
+=========
+* The Workbench now filters model args to include only those whose
+  corresponding form fields are enabled at the time a model is run.
+  (`#2436 <https://github.com/natcap/invest/issues/2436>`_)
+
+
 3.18.0 (2026-02-25)
 -------------------
 

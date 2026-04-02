@@ -299,9 +299,20 @@ class SetupTab extends React.Component {
     }
   }
 
+  /** Invoke `investExecute` with prepared model args.
+   *
+   * Args are filtered to include only those whose corresponding form
+   * fields are enabled, then converted to an InVEST args dict-like object.
+   */
   wrapInvestExecute() {
+    const modelArgs = {};
+    for (const key in this.state.argsEnabled) {
+      if (this.state.argsEnabled[key] === true) {
+        modelArgs[key] = {...this.state.argsValues[key]};
+      }
+    }
     this.props.investExecute(
-      argsDictFromObject(this.state.argsValues)
+      argsDictFromObject(modelArgs)
     );
   }
 
