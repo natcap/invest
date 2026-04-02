@@ -80,7 +80,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of soil erodibility, the susceptibility of soil particles to"
                 " detachment and transport by rainfall and runoff."
             ),
-            keywords=[keywords.SOIL_EROSION, keywords.SOI_ERODIBILITY],
+            keywords=[keywords.SOIL_EROSION, keywords.SOIL_ERODIBILITY],
             data_type=float,
             units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter),
             projected=True

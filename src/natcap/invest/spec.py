@@ -2356,6 +2356,7 @@ SOIL_GROUP = SingleBandRasterInput(
         "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4,"
         " corresponding to soil hydrologic groups A, B, C, or D, respectively."
     ),
+    keywords=[keywords.HYDROLOGIC_SOIL_GROUPS],
     data_type=int,
     units=None
 )

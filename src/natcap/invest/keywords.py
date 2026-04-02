@@ -26,6 +26,11 @@ BATHYMETRY = GCMDKeyword(
 
 BIOPHYSICAL_TABLE = InvestKeyword(value='BIOPHYSICAL TABLE')
 
+BUILDINGS = GCMDKeyword(
+    value='BUILDINGS',
+    uuid='d7742082-5461-4610-9ced-e0ec3bb64697',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > INFRASTRUCTURE > BUILDINGS')
+
 CARBON = GCMDKeyword(
     value='CARBON',
     uuid='6f6537f5-773f-4df1-862b-d9ab80eb5e04',
@@ -73,10 +78,18 @@ EVAPOTRANSPIRATION = GCMDKeyword(
     uuid='26fc4850-7ba9-44d8-a156-5c623e17b72f',
     full_path='EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC WATER VAPOR > WATER VAPOR PROCESSES > EVAPOTRANSPIRATION')
 
+FLOOD_DAMAGE_VALUE = InvestKeyword(
+    value='FLOOD DAMAGE VALUE',
+    definition='The economic value of flood damage to a property.')
+
 HYDROELECTRIC_ENERGY = GCMDKeyword(
     value='HYDROELECTRIC ENERGY PRODUCTION/USE',
     uuid='7eba0eef-3a30-4282-a162-1f483370ddc4',
     full_path='EARTH SCIENCE > HUMAN DIMENSIONS > ECONOMIC RESOURCES > ENERGY PRODUCTION/USE > HYDROELECTRIC ENERGY PRODUCTION/USE')
+
+HYDROLOGIC_SOIL_GROUPS = InvestKeyword(
+    value='HYDROLOGIC SOIL GROUPS',
+    definition='Groups representing rainfall runoff potential. A component of the USDA curve number method.')
 
 LANDMASS = InvestKeyword(
     value='LANDMASS',
@@ -114,6 +127,10 @@ RAINFALL_EROSIVITY = InvestKeyword(
     definition='The capacity of rainfall to cause soil erosion.')
 
 REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(value='REFERENCE_EVAPOTRANSPIRATION')
+
+RUNOFF_CURVE_NUMBER = InvestKeyword(
+    value='RUNOFF CURVE NUMBER (CN)',
+    definition='An index representing runoff as a function of soil, cover type, and hydrologic and antecedent conditions.')
 
 SEA_LEVEL_RISE = GCMDKeyword(
     value='SEA LEVEL RISE',
