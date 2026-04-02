@@ -170,6 +170,10 @@ class RasterPlotConfig:
         self.colormap = plt.get_cmap(self.colormap if self.colormap
                                      else COLORMAPS[self.datatype])
 
+    def plot_on_axis(self, fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs):
+        mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
+        fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
+
 
 def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
     """Build RasterPlotConfigs for use in plotting input or output rasters.
@@ -462,8 +466,9 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 len(patches), n_plots, xy_ratio))
             leg.set_in_layout(True)
         else:
-            mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
-            fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
+            config.plot_on_axis(
+                fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs)
+
     [ax.set_axis_off() for ax in axs.flatten()]
     return fig
 
