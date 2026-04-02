@@ -6,7 +6,7 @@ import unittest
 import geometamaker
 import numpy
 import pygeoprocessing
-from natcap.invest import spec, models
+from natcap.invest import spec, models, keywords
 from natcap.invest.unit_registry import u
 from osgeo import gdal
 from osgeo import osr
@@ -366,8 +366,8 @@ class MissingResultsSuffixTests(unittest.TestCase):
         }
 
         # Create LULC raster and pools csv in workspace and add them to args.
-        args['lulc_bas_path'] = os.path.join(args['workspace_dir'],
-                                       'lulc_bas_path.tif')
+        args['lulc_bas_path'] = os.path.join(
+            args['workspace_dir'], 'lulc_bas_path.tif')
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)  # UTM Zone 10N
         projection_wkt = srs.ExportToWkt()
@@ -491,6 +491,60 @@ class InputTests(unittest.TestCase):
         self.assertEqual(option_string_input.preprocess('Foo'), 'foo')
         self.assertEqual(option_string_input.preprocess(''), None)
         self.assertEqual(option_string_input.preprocess(None), None)
+
+    def test_get_keywords_csv_input(self):
+        """Test that CSVInput.get_keywords returns correct keywords."""
+        csv_input = spec.CSVInput(
+            id="foo",
+            about="Description.",
+            keywords=[keywords.LULC],
+            name="foo",
+            columns=[
+                spec.LULC_TABLE_COLUMN,
+                spec.NumberInput(
+                    id='carbon', units=None, keywords=[keywords.CARBON]),
+            ]
+        )
+        expected_keywords = [keywords.LULC.value, keywords.CARBON.value]
+        self.assertCountEqual(csv_input.get_keywords(), expected_keywords)
+        self.assertCountEqual(
+            csv_input.get_keywords(incldue_children=False), [keywords.LULC.value])
+
+    def test_get_keywords_vector_input(self):
+        """Test that VectorInput.get_keywords returns correct keywords."""
+        vector_input = spec.VectorInput(
+            id="foo",
+            about="Description.",
+            keywords=[keywords.LULC],
+            name="foo",
+            geometry_types={"POLYGON"},
+            fields=[
+                spec.LULC_TABLE_COLUMN,
+                spec.NumberInput(
+                    id='carbon', units=None, keywords=[keywords.CARBON]),
+            ]
+        )
+        expected_keywords = [keywords.LULC.value, keywords.CARBON.value]
+        self.assertCountEqual(vector_input.get_keywords(), expected_keywords)
+        self.assertCountEqual(
+            vector_input.get_keywords(incldue_children=False), [keywords.LULC.value])
+
+    def test_get_keywords_directory_input(self):
+        """Test that DirectoryInput.get_keywords returns correct keywords."""
+        directory_input = spec.DirectoryInput(
+            id="foo",
+            about="Description.",
+            keywords=[keywords.LULC],
+            name="foo",
+            contents=[spec.DEM, spec.SOIL_GROUP]
+        )
+        expected_keywords = [
+            keywords.LULC.value, keywords.DEM.value,
+            keywords.HYDROLOGIC_SOIL_GROUPS.value]
+        self.assertCountEqual(directory_input.get_keywords(), expected_keywords)
+        self.assertCountEqual(
+            directory_input.get_keywords(incldue_children=False),
+            [keywords.LULC.value])
 
 
 class ModelSpecTests(unittest.TestCase):

@@ -244,7 +244,6 @@ class Input(BaseModel):
             # assume that the about text will describe the conditional
             return gettext('conditionally required')
 
-
     def capitalize_name(self) -> str:
         """Capitalize a self.name into title case.
 
@@ -300,6 +299,27 @@ class Input(BaseModel):
             rst_line += f': {sanitized_about_string}'
 
         return [rst_line]
+
+    def get_child_inputs(self):
+        """Get list of child Inputs."""
+        if hasattr(self, 'fields'):
+            return self.fields
+        if hasattr(self, 'columns'):
+            return self.columns
+        if hasattr(self, 'contents'):
+            return self.contents
+        return []
+
+    def get_keywords(self, incldue_children=True):
+        """Get a list of unique keyword strings for this input and children."""
+        keywords = []
+        if self.keywords:
+            keywords += [keyword.value for keyword in self.keywords]
+        if incldue_children:
+            for child in self.get_child_inputs():
+                if child.keywords:
+                    keywords += child.get_keywords()
+        return list(set(keywords))
 
 
 class Output(BaseModel):
@@ -774,7 +794,7 @@ class RasterOrVectorInput(SpatialFileInput):
     geometry_types: set
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[list[Input]]
+    fields: list[Input] | None = None
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
