@@ -46,6 +46,10 @@
           - logwatch
           - fwlogwatch
           - sendmail
+          - pcscd
+          - pcsc-tools
+          - libpcsclite1
+          - libu2f-udev
 
     - name: Configure logwatch
       ansible.builtin.copy:

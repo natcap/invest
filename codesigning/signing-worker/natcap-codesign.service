@@ -1,4 +1,4 @@
-# Systemd service for debian:bookworm for signing InVEST windows binaries.
+# Systemd service for debian:trixie for signing InVEST windows and mac binaries.
 #
 # To install this service, copy this onto the host as /etc/systemd/system/natcap-codesign.service
 #
@@ -32,6 +32,8 @@ After=network.target
 Type=simple
 Restart=always
 ExecStart=python3 /opt/natcap-codesign/natcap-codesign.py /opt/natcap-codesign/codesign-cert-chain.pem
-User=natcap-codesign
+# At least as of debian:trixie, must be run as root to be able to acess the
+# installed yubikey.
+User=root
 Group=natcap-codesign
 WorkingDirectory=/tmp

@@ -1,45 +1,9 @@
-from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
 from natcap.invest.reports import sdr_ndr_report_generator
 from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 
 CALC_N = 'calc_n'
 CALC_P = 'calc_p'
-
-RESULTS_VECTOR_COL_NAMES = {
-    CALC_N: [
-        'n_surface_load',
-        'n_surface_export',
-        'n_subsurface_export',
-        'n_total_export',
-        'n_subsurface_load',
-    ],
-    CALC_P: [
-        'p_surface_load',
-        'p_surface_export',
-    ]
-}
-
-
-def _get_nutrient_dependent_list(args_dict, reference_dict):
-    """Build a list of items based on which nutrients were calculated.
-
-    Args:
-        args_dict (dict): The arguments that were passed to the model's
-            ``execute`` method.
-        reference_dict (dict[str, list[any]): The reference dict to copy items
-            from. Must contain keys ``CALC_N`` and ``CALC_P``.
-
-    Returns:
-        A list of the items found in ``reference_dict[CALC_N]``,
-            ``reference_dict[CALC_P]``, or both, depending on the values in
-            ``args_dict``.
-    """
-    item_list = []
-    for key in [CALC_N, CALC_P]:
-        if args_dict[key]:
-            item_list.extend(reference_dict[key])
-    return item_list
 
 
 def report(file_registry, args_dict, model_spec, target_html_filepath):
@@ -72,30 +36,29 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         spec=model_spec.get_input('lulc_path'))
     input_raster_plot_configs = [dem_config, runoff_proxy_config, lulc_config]
 
-    n_surface_export_config = RasterPlotConfig(
-        raster_path=file_registry['n_surface_export'],
-        datatype=RasterDatatype.continuous,
-        spec=model_spec.get_output('n_surface_export'))
-    n_subsurface_export_config = RasterPlotConfig(
-        raster_path=file_registry['n_subsurface_export'],
-        datatype=RasterDatatype.continuous,
-        spec=model_spec.get_output('n_subsurface_export'))
-    n_total_export_config = RasterPlotConfig(
-        raster_path=file_registry['n_total_export'],
-        datatype=RasterDatatype.continuous,
-        spec=model_spec.get_output('n_total_export'))
-    p_surface_export_config = RasterPlotConfig(
-        raster_path=file_registry['p_surface_export'],
-        datatype=RasterDatatype.continuous,
-        spec=model_spec.get_output('p_surface_export'))
-
     output_raster_plot_configs = []
     if args_dict[CALC_N]:
+        n_surface_export_config = RasterPlotConfig(
+            raster_path=file_registry['n_surface_export'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('n_surface_export'))
+        n_subsurface_export_config = RasterPlotConfig(
+            raster_path=file_registry['n_subsurface_export'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('n_subsurface_export'))
+        n_total_export_config = RasterPlotConfig(
+            raster_path=file_registry['n_total_export'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('n_total_export'))
         output_raster_plot_configs.extend(
             [n_surface_export_config,
              n_subsurface_export_config,
              n_total_export_config])
     if args_dict[CALC_P]:
+        p_surface_export_config = RasterPlotConfig(
+            raster_path=file_registry['p_surface_export'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('p_surface_export'))
         output_raster_plot_configs.extend([p_surface_export_config])
 
     masked_dem_config = RasterPlotConfig(
@@ -115,8 +78,20 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         masked_dem_config, what_drains_config, stream_config]
 
     results_vector_id = 'watershed_results_ndr'
-    results_vector_cols_to_sum = _get_nutrient_dependent_list(
-        args_dict, RESULTS_VECTOR_COL_NAMES)
+    results_vector_cols_to_sum = []
+    if args_dict[CALC_N]:
+        results_vector_cols_to_sum.extend([
+            'n_surface_load',
+            'n_surface_export',
+            'n_subsurface_export',
+            'n_total_export',
+            'n_subsurface_load',
+        ])
+    if args_dict[CALC_P]:
+        results_vector_cols_to_sum.extend([
+            'p_surface_load',
+            'p_surface_export',
+        ])
 
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
