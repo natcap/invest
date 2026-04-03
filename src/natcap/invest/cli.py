@@ -8,18 +8,16 @@ import importlib
 import json
 import logging
 import multiprocessing
-import os
 import pprint
 import sys
 import textwrap
 import warnings
 
 import natcap.invest
+import natcap.invest.spec
+import natcap.invest.validation_messages
 from natcap.invest import datastack
-from natcap.invest import set_locale
-from natcap.invest import spec
 from natcap.invest import ui_server
-from natcap.invest import utils
 from natcap.invest import models
 from pygeoprocessing.utils import GDALUseExceptions
 
@@ -393,7 +391,7 @@ def main(user_args=None):
                     1, "Error when parsing JSON datastack:\n    " + str(error))
 
             # reload validation module first so it's also in the correct language
-            importlib.reload(importlib.import_module('natcap.invest.validation_messages'))
+            importlib.reload(natcap.invest.validation_messages)
             model_module = importlib.reload(importlib.import_module(
                 name=models.model_id_to_pyname[parsed_datastack.model_id]))
 
@@ -429,6 +427,7 @@ def main(user_args=None):
 
         if args.subcommand == 'getspec':
             target_model = models.model_id_to_pyname[args.model]
+            importlib.reload(natcap.invest.spec)
             model_module = importlib.reload(
                 importlib.import_module(name=target_model))
             model_spec = model_module.MODEL_SPEC
