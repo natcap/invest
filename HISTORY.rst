@@ -81,6 +81,13 @@ Workbench
   (`#2436 <https://github.com/natcap/invest/issues/2436>`_)
 
 
+NDR
+===
+* Fixed a bug that caused the NDR report to fail when the model was run with
+  ``calc_n=False`` and ``calc_p=True``, or vice versa.
+  (`#2472 <https://github.com/natcap/invest/issues/2472>`_)
+
+
 3.18.0 (2026-02-25)
 -------------------
 
