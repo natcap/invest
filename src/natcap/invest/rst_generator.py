@@ -3,8 +3,9 @@ import importlib
 from docutils import frontend
 from docutils import utils
 from docutils.parsers import rst
+
+import natcap.invest.spec
 from natcap.invest import set_locale
-from natcap.invest import spec
 
 
 def parse_rst(text):
@@ -164,6 +165,7 @@ def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     # access the 'language' setting
     language = inliner.document.settings.env.app.config.language or 'en'
     set_locale(language)
+    importlib.reload(natcap.invest.spec)
     importlib.reload(importlib.import_module(name=module_name))
     return parse_rst(describe_input(module_name, keys)), []
 
