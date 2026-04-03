@@ -1435,10 +1435,23 @@ def zonal_stats_preventable_cases_cost(
 
     if os.path.exists(target_aggregate_vector_path):
         driver.Delete(target_aggregate_vector_path)
-    custom_layer_name = f"preventable_cases_{scenario}"
-    driver.CreateCopy(target_aggregate_vector_path, aoi_vector, options=[
-        f'LAYER_NAME={custom_layer_name}', 'OVERWRITE=YES'])
+    driver.CreateCopy(target_aggregate_vector_path, aoi_vector)
     aoi_vector = None
+
+    # rename gpkg layer
+    custom_layer_name = f"preventable_cases_{scenario}"
+
+    target_aggregate_vector = gdal.OpenEx(
+        target_aggregate_vector_path, gdal.OF_UPDATE)
+
+    layer = target_aggregate_vector.GetLayer()
+    old_layer_name = layer.GetName()
+    layer = None
+
+    target_aggregate_vector.ExecuteSQL(
+        f'ALTER TABLE "{old_layer_name}" RENAME TO "{custom_layer_name}"'
+    )
+    target_aggregate_vector = None
 
     cases_sum_field = ogr.FieldDefn('sum_cases', ogr.OFTReal)
     cases_sum_field.SetWidth(24)

@@ -732,7 +732,7 @@ class UMHTests(unittest.TestCase):
         target_agg_vector_path = os.path.join(self.workspace_dir, "stats.gpkg")
 
         urban_mental_health.zonal_stats_preventable_cases_cost(
-            aoi_vector, target_stats_csv, target_agg_vector_path,
+            aoi_vector, 'ndvi', target_stats_csv, target_agg_vector_path,
             preventable_cases, preventable_cost)
 
         # Check CSV
