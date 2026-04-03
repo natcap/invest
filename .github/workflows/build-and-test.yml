@@ -481,6 +481,7 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
         run: |
+          git status  # which tracked file has been modified?
           make codesign
 
       - name: Upload workbench binary artifact
