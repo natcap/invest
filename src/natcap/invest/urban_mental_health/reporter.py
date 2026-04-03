@@ -103,7 +103,7 @@ def infer_continuous_or_divergent(raster_path: str) -> str:
     ds = gdal.OpenEx(raster_path, gdal.OF_RASTER)
     band = ds.GetRasterBand(1)
 
-    stats = band.GetStatistics(True, True)  # (approx_ok, force)
+    stats = band.GetStatistics(False, True)  # (approx_ok, force)
     min_val = stats[0]
     LOGGER.info("Stats for %s: min=%s, nodata=%s", raster_path, min_val, nodata)
 

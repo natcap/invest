@@ -1406,14 +1406,15 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
 
 
 def zonal_stats_preventable_cases_cost(
-        base_vector_path, scenario, target_stats_csv, target_aggregate_vector_path,
-        preventable_cases_raster, preventable_cost_raster=None):
+        base_vector_path, scenario, target_stats_csv,
+        target_aggregate_vector_path, preventable_cases_raster,
+        preventable_cost_raster=None):
     """Calculate zonal statistics for each polygon in the AOI
     and write results to a csv and vector file.
 
     Args:
         base_vector_path (string): path to the AOI vector.
-        scenario (string): either 'baseline' or 'alternate', used to label
+        scenario (string): either 'ndvi' or 'lulc', used to label
             output gpkg layer
         target_stats_csv (string): path to csv file to store dictionary
             returned by zonal stats.
