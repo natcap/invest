@@ -315,8 +315,8 @@ describe('Completed Run status responds to interactions', () => {
     const input = await findByLabelText(
       (content) => content.startsWith(SAMPLE_SPEC.args.workspace_dir.name)
     );
-    userEvent.type(input, 'foo');
-    await waitForElementToBeRemoved(alert);
+    await userEvent.type(input, 'foo');
+    await expect(alert).not.toBeInTheDocument();
   });
 
   test('Loading parameters from file clears a completed run status', async () => {
@@ -354,8 +354,8 @@ describe('Completed Run status responds to interactions', () => {
 
     // Load new parameters
     const loadButton = await findByText('Load parameters from file');
-    userEvent.click(loadButton);
-    await waitForElementToBeRemoved(alert);
+    await userEvent.click(loadButton);
+    expect(alert).not.toBeInTheDocument();
   });
 });
 

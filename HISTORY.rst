@@ -79,6 +79,9 @@ Workbench
 * The Workbench now filters model args to include only those whose
   corresponding form fields are enabled at the time a model is run.
   (`#2436 <https://github.com/natcap/invest/issues/2436>`_)
+* Fixed a bug where loading new parameters into a model input form
+  where the model had previously been run would not update the 'Model Complete'
+  status indicator. (`#1655 <https://github.com/natcap/invest/issues/1655>`_)
 
 
 NDR
