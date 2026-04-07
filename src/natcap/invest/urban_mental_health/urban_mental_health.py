@@ -1431,27 +1431,20 @@ def zonal_stats_preventable_cases_cost(
 
     # write zonal stats to new vector
     aoi_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('GPKG')
+    src_layer = aoi_vector.GetLayer(0)
 
+    driver = gdal.GetDriverByName('GPKG')
     if os.path.exists(target_aggregate_vector_path):
         driver.Delete(target_aggregate_vector_path)
-    driver.CreateCopy(target_aggregate_vector_path, aoi_vector)
-    aoi_vector = None
 
-    # rename gpkg layer
+    # rename gpkg layer to include scenario in name
+    out_ds = driver.CreateDataSource(target_aggregate_vector_path)
     custom_layer_name = f"preventable_cases_{scenario}"
+    out_ds.CopyLayer(src_layer, custom_layer_name)
 
-    target_aggregate_vector = gdal.OpenEx(
-        target_aggregate_vector_path, gdal.OF_UPDATE)
-
-    layer = target_aggregate_vector.GetLayer()
-    old_layer_name = layer.GetName()
-    layer = None
-
-    target_aggregate_vector.ExecuteSQL(
-        f'ALTER TABLE "{old_layer_name}" RENAME TO "{custom_layer_name}"'
-    )
-    target_aggregate_vector = None
+    out_ds = None
+    src_layer = None
+    aoi_vector = None
 
     cases_sum_field = ogr.FieldDefn('sum_cases', ogr.OFTReal)
     cases_sum_field.SetWidth(24)
