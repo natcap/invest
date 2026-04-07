@@ -481,6 +481,8 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
         run: |
+          make print-VERSION
+          git status
           make codesign
 
       - name: Upload workbench binary artifact
