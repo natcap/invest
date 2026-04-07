@@ -1,7 +1,7 @@
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
-  render, waitFor, within
+  render, waitFor, waitForElementToBeRemoved, within
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -13,7 +13,7 @@ import {
   fetchValidation,
   fetchDatastackFromFile,
   fetchArgsEnabled,
-  getGeoMetaMakerProfile,
+  getDynamicDropdowns,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
@@ -262,6 +262,100 @@ describe('Various ways to open and close InVEST models', () => {
     expect(modelTabs).toHaveLength(0);
     // No more model tabs, so it should switch back to the home tab.
     expect(homeTab.classList.contains('active')).toBeTruthy();
+  });
+});
+
+describe('Completed Run status responds to interactions', () => {
+  const workspacePath = 'my_workspace';
+
+  beforeEach(async () => {
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
+    getSpec.mockResolvedValue(SAMPLE_SPEC);
+    fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+    fetchArgsEnabled.mockResolvedValue({
+      workspace_dir: true, carbon_pools_path: true
+    });
+    getDynamicDropdowns.mockResolvedValue({});
+
+    // Setup a successful recent run
+    const argsValues = {
+      workspace_dir: workspacePath,
+    };
+    const mockJob = new InvestJob({
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'Carbon Sequestration',
+      argsValues: argsValues,
+      status: 'success',
+      type: 'core',
+    });
+    await InvestJob.saveJob(mockJob);
+  });
+
+  afterEach(async () => {
+    await InvestJob.clearStore();
+  });
+
+  test('Modifying an arg clears a completed run status', async () => {
+    const {
+      findByText,
+      findByLabelText,
+      findByRole,
+    } = render(
+      <App />
+    );
+
+    const recentJobCard = await findByText(
+      workspacePath
+    );
+    await userEvent.click(recentJobCard);
+    const alert = await findByRole('alert');
+    expect(alert).toHaveTextContent('Model Complete');
+
+    // Modify an arg
+    const input = await findByLabelText(
+      (content) => content.startsWith(SAMPLE_SPEC.args.workspace_dir.name)
+    );
+    userEvent.type(input, 'foo');
+    await waitForElementToBeRemoved(alert);
+  });
+
+  test('Loading parameters from file clears a completed run status', async () => {
+    const mockDatastack = {
+      model_id: MOCK_MODEL_ID,
+      args: {
+        workspace: 'my_different_workspace',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    const mockDialogData = {
+      canceled: false,
+      filePaths: ['foo.json'],
+    };
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve(mockDialogData);
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const {
+      findByText,
+      findByRole,
+    } = render(
+      <App />
+    );
+
+    const recentJobCard = await findByText(
+      workspacePath
+    );
+    await userEvent.click(recentJobCard);
+    const alert = await findByRole('alert');
+    expect(alert).toHaveTextContent('Model Complete');
+
+    // Load new parameters
+    const loadButton = await findByText('Load parameters from file');
+    userEvent.click(loadButton);
+    await waitForElementToBeRemoved(alert);
   });
 });
 
