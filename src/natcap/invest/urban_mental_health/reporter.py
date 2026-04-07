@@ -3,6 +3,7 @@ import time
 
 import altair
 import geopandas
+import geometamaker
 import matplotlib
 import numpy
 import pandas
@@ -36,6 +37,30 @@ class SpecialRangeRasterPlotConfig(RasterPlotConfig):
     special_value_label: str | None = None
 
     def plot_on_axis(self, fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs):
+        """
+        Plot the raster on the given axis, with special handling for ~0 values
+
+        If `special_value_range` is set, pixels with values within that range
+        (inclusive) will be plotted with `special_value_color` and labeled
+        with `special_value_label` in the colorbar legend. The rest of the
+        pixels will be plotted with the given colormap and imshow_kwargs.
+        If `special_value_range` is not set, this method will just call the
+        parent method to plot the raster normally.
+
+        Args:
+            fig (matplotlib.figure.Figure): the matplotlib figure to plot on
+            ax (matplotlib.axes.Axes): the axis to plot on
+            arr (numpy.ndarray): raster array to plot
+            cmap (matplotlib.colors.Colormap): the colormap to use for
+                non-special values
+            imshow_kwargs (dict): additional kwargs to pass to ax.imshow
+                for non-special values
+            colorbar_kwargs (dict): additional kwargs to pass to fig.colorbar
+
+        Returns:
+            None.
+        """
+
         if self.special_value_range is None:
             LOGGER.info(
                 "No special value range for %s, using default plotting",
@@ -89,7 +114,7 @@ def infer_continuous_or_divergent(raster_path: str) -> str:
     """Infer if raster should have a 'continuous' or 'divergent' color ramp.
 
     Rules:
-        - If min value < ~0 --> 'divergent'
+        - If min value < ~0 and max value > ~0--> 'divergent'
         - Else --> 'continuous'
 
     Args:
@@ -98,31 +123,17 @@ def infer_continuous_or_divergent(raster_path: str) -> str:
     Returns:
         str: 'continuous' or 'divergent'
     """
-    raster_info = pygeoprocessing.get_raster_info(raster_path)
-    nodata = raster_info['nodata'][0]
-    ds = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-    band = ds.GetRasterBand(1)
+    # read raster's geometamaker metadata to get min value
+    resource = geometamaker.describe(raster_path)
+    min_val = float(
+        resource.data_model.bands[0].gdal_metadata['STATISTICS_MINIMUM'])
+    max_val = float(
+        resource.data_model.bands[0].gdal_metadata['STATISTICS_MAXIMUM'])
 
-    stats = band.GetStatistics(False, True)  # (approx_ok, force)
-    min_val = stats[0]
-    LOGGER.info("Stats for %s: min=%s, nodata=%s", raster_path, min_val, nodata)
-
-    if min_val is None:
-        arr = pygeoprocessing.raster_to_numpy_array(raster_path)
-        if nodata is not None:
-            valid_mask = ~numpy.isclose(arr, nodata, equal_nan=True)
-            valid_values = arr[valid_mask]
-        else:
-            valid_values = arr[~numpy.isnan(arr)]
-
-        if valid_values.size == 0:
-            LOGGER.warning(f"No valid pixels found in {raster_path}, "
-                           "defaulting to continuous")
-            return RasterDatatype.continuous
-
-        min_val = round(numpy.nanmin(valid_values), 4)
-
-    return RasterDatatype.divergent if min_val < NEAR_ZERO_RANGE[0] else RasterDatatype.continuous
+    if min_val < NEAR_ZERO_RANGE[0] and max_val > NEAR_ZERO_RANGE[1]:
+        return RasterDatatype.divergent
+    else:
+        return RasterDatatype.continuous
 
 
 def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
@@ -155,7 +166,6 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
             - LULC baseline reclassified to NDVI
             - if lulc_alt: LULC alternate reclassified to NDVI
 
-
     intermediates:
         - ndvi_delta
         - baseline cases
@@ -167,7 +177,6 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
         - preventable cases cost sum table (just total cases and total cost)
         - vector symbolized with field 'sum_cost'
         - vector symbolized with field 'sum_cases'
-
 
     """
     ndvi_colorramp = 'viridis_r'
