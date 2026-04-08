@@ -143,7 +143,7 @@ jobs:
           pip install auditwheel
           WHEEL=$(find dist -name "natcap[._-]invest*.whl")
           auditwheel -v show $WHEEL
-          auditwheel -v repair --exclude * $WHEEL --plat manylinux_2_39_x86_64 -w dist
+          auditwheel -v repair --exclude "*" $WHEEL --plat manylinux_2_39_x86_64 -w dist
 
           grep '"license":' $CONDA_PREFIX/conda-meta/*.json
 
