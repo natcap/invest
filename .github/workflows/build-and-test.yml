@@ -142,8 +142,8 @@ jobs:
           ldd --version
           pip install auditwheel
           WHEEL=$(find dist -name "natcap[._-]invest*.whl")
-          auditwheel show $WHEEL
-          auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
+          auditwheel show -vvv $WHEEL
+          auditwheel repair -vvv $WHEEL --plat manylinux_2_39_x86_64 -w dist
           rm $WHEEL  # remove the original wheel
 
       - name: Install wheel and run model tests
