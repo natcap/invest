@@ -32,26 +32,29 @@
     ])
   )}}
 
-   {{ accordion_section(
-    'Preventable Cases by AOI Vector',
-    content_grid(
-      [
-        (content_grid([
-          ('<div style="display:flex; justify-content:center;"><div id="cases_map"></div></div>', 100),
-          (caption(cases_map_caption, aggregate_map_source_list), 100)
-        ]), 50),
+  {% set cases_map_block = content_grid([
+    ('<div style="display:flex; justify-content:center;"><div id="cases_map"></div></div>', 100),
+    (caption(cases_map_caption, aggregate_map_source_list), 100)
+  ]) %}
   
-        (content_grid([
-          ('<div style="display:flex; justify-content:center;"><div id="cost_map"></div></div>', 100),
-          (caption(cost_map_caption, aggregate_map_source_list), 100)
-        ]), 50)
-      ] if cost_map_json else [
-        (content_grid([
-          ('<div style="display:flex; justify-content:center;"><div id="cases_map"></div></div>', 100),
-          (caption(cases_map_caption, aggregate_map_source_list), 100)
-        ]), 100)
-      ]
-    )
+  {% set cases_cost_items = [
+    (cases_map_block, 100 if not cost_map_json else 50)
+  ] %}
+  
+  {% if cost_map_json %}
+    {% set cost_map_block = content_grid([
+      ('<div style="display:flex; justify-content:center;"><div id="cost_map"></div></div>', 100),
+      (caption(cost_map_caption, aggregate_map_source_list), 100)
+    ]) %}
+  
+    {% set cases_cost_items = cases_cost_items + [
+      (cost_map_block, 50)
+    ] %}
+  {% endif %}
+  
+  {{ accordion_section(
+    'Preventable Cases by AOI Vector',
+    content_grid(cases_cost_items)
   ) }}
 
   {% for section in intermediate_raster_sections %}
