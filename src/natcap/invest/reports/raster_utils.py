@@ -21,6 +21,7 @@ import yaml
 from osgeo import gdal
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
+from typing import Literal
 
 from natcap.invest import gettext
 from natcap.invest.spec import ModelSpec, Input, Output, \
@@ -145,6 +146,23 @@ class RasterTransform(str, Enum):
     log = 'log'
 
 
+@dataclass
+class SpecialValueConfig:
+    """Configuration for customizing color and labeling of special value range.
+
+    The colorbar will be extended on the side specified by `extend`, and
+    values beyond the `threshold` will be colored with `color` and the end
+    of the colorbar will be labeled with `label`.
+    """
+    extend: Literal["min", "max"]
+    """Which side of the colorbar to extend"""
+    threshold: float
+    """Boundary value for the special range"""
+    label: str
+    """Label to show on the colorbar for the special region"""
+    color: str
+    """Color used for the special values"""
+
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class RasterPlotConfig:
     """A definition for how to plot a raster."""
@@ -161,6 +179,8 @@ class RasterPlotConfig:
     """An optional plot title. If ``None``, the filename is used."""
     colormap: str | Colormap | None = None
     """The string name of a registered matplotlib colormap or a colormap object."""
+    special_values: SpecialValueConfig | None = None
+    """Will customize the color and labeling of a special range of values"""
 
     def __post_init__(self):
         if self.title is None:
@@ -169,10 +189,6 @@ class RasterPlotConfig:
 
         self.colormap = plt.get_cmap(self.colormap if self.colormap
                                      else COLORMAPS[self.datatype])
-
-    def plot_on_axis(self, fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs):
-        mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
-        fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
 
 
 def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
@@ -466,8 +482,49 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 len(patches), n_plots, xy_ratio))
             leg.set_in_layout(True)
         else:
-            config.plot_on_axis(
-                fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs)
+            if not config.special_values:
+                mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
+                fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
+            else:
+                cmap.set_under(config.special_values.color)
+
+                if config.special_values.extend == 'min':
+                    mappable = ax.imshow(
+                        arr, cmap=cmap, vmin=config.special_values.threshold,
+                        **imshow_kwargs)
+                else:
+                    mappable = ax.imshow(
+                        arr, cmap=cmap, vmax=config.special_values.threshold,
+                        **imshow_kwargs)
+
+                cbar = fig.colorbar(
+                    mappable, ax=ax, extend=config.special_values.extend,
+                    **colorbar_kwargs)
+                vmin, vmax = mappable.get_clim()
+                ticks = cbar.get_ticks()
+                # Only keep ticks that are (1) within a tolerance of the data
+                # range to avoid showing ticks that are outside range, (2) not
+                # close to special value (to avoid overlap between special
+                # value and regular tick)
+                tick_dif = (ticks[1] - ticks[0])/2 if len(ticks) > 1 else 0.1
+                tol = tick_dif/100
+                ticks = [t for t in ticks if
+                         (vmin - tol) <= t <= (vmax + tol) and abs(
+                             t-config.special_values.threshold) >= tick_dif]
+                ticks.append(config.special_values.threshold)
+                cbar.set_ticks(sorted(ticks))
+                cbar.ax.text(
+                    0, -0.05, str(config.special_values.label),
+                    transform=cbar.ax.transAxes, va='top', ha='left'
+                ) #TODO fix positioning if extend=max
+
+                cbar_ax = cbar.ax
+                cbar_ax.legend(
+                    loc='upper center',
+                    bbox_to_anchor=(0.5, -0.05),
+                    frameon=False,
+                    ncol=1
+                )
 
     [ax.set_axis_off() for ax in axs.flatten()]
     return fig

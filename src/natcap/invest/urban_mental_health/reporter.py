@@ -19,7 +19,7 @@ from natcap.invest.reports import jinja_env, raster_utils, report_constants, \
 from natcap.invest.spec import ModelSpec, FileRegistry
 
 from natcap.invest.reports.raster_utils import RasterDatatype, \
-    RasterPlotConfig, RasterTransform
+    RasterPlotConfig, RasterTransform, SpecialValueConfig
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,86 +28,6 @@ TEMPLATE = jinja_env.get_template('models/urban_mental_health.html')
 MAP_WIDTH = 450  # pixels
 
 NEAR_ZERO_RANGE = (-0.01, 0.01)
-
-@dataclass(config=ConfigDict(arbitrary_types_allowed=True))
-class SpecialRangeRasterPlotConfig(RasterPlotConfig):
-    """RasterPlotConfig to allow for special handling of near-zero pixels."""
-    special_value_range: tuple[float, float] | None = None
-    special_value_color: str | None = None
-    special_value_label: str | None = None
-
-    def plot_on_axis(self, fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs):
-        """
-        Plot the raster on the given axis, with special handling for ~0 values
-
-        If `special_value_range` is set, pixels with values within that range
-        (inclusive) will be plotted with `special_value_color` and labeled
-        with `special_value_label` in the colorbar legend. The rest of the
-        pixels will be plotted with the given colormap and imshow_kwargs.
-        If `special_value_range` is not set, this method will just call the
-        parent method to plot the raster normally.
-
-        Args:
-            fig (matplotlib.figure.Figure): the matplotlib figure to plot on
-            ax (matplotlib.axes.Axes): the axis to plot on
-            arr (numpy.ndarray): raster array to plot
-            cmap (matplotlib.colors.Colormap): the colormap to use for
-                non-special values
-            imshow_kwargs (dict): additional kwargs to pass to ax.imshow
-                for non-special values
-            colorbar_kwargs (dict): additional kwargs to pass to fig.colorbar
-
-        Returns:
-            None.
-        """
-
-        if self.special_value_range is None:
-            LOGGER.info(
-                "No special value range for %s, using default plotting",
-                self.raster_path
-            )
-            super().plot_on_axis(
-                fig, ax, arr, cmap, imshow_kwargs, colorbar_kwargs)
-            return
-
-        low, high = self.special_value_range
-
-        special_mask = (
-            ~numpy.isnan(arr) &
-            (arr >= low) &
-            (arr <= high)
-        )
-
-        main_arr = numpy.array(arr, copy=True)
-        main_arr[special_mask] = numpy.nan
-
-        mappable = ax.imshow(main_arr, cmap=cmap, **imshow_kwargs)
-        cbar = fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
-
-        special_arr = numpy.full(arr.shape, numpy.nan)
-        special_arr[special_mask] = 1
-
-        ax.imshow(
-            special_arr,
-            cmap=matplotlib.colors.ListedColormap([self.special_value_color]),
-            interpolation='none',
-            vmin=1,
-            vmax=1
-        )
-
-        patch = matplotlib.patches.Patch(
-            color=self.special_value_color,
-            label=self.special_value_label or f'{low} - {high}'
-        )
-
-        cbar_ax = cbar.ax
-        cbar_ax.legend(
-            handles=[patch],
-            loc='upper center',
-            bbox_to_anchor=(0.5, -0.05),
-            frameon=False,
-            ncol=1
-        )
 
 
 def infer_continuous_or_divergent(raster_path: str) -> str:
@@ -229,7 +149,7 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
             )
         )
 
-    if args_dict["scenario"] == 'ndvi':
+    if args_dict["model_option"] == 'ndvi':
         input_raster_config_list.insert(0,
             RasterPlotConfig(
                 raster_path=args_dict['ndvi_base'],
@@ -275,13 +195,19 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
     is_continuous = datatype == RasterDatatype.continuous
     common_kwargs = {
         "datatype": datatype,
-        "colormap": 'Purples' if is_continuous else None,
         "transform": RasterTransform.linear if is_continuous else RasterTransform.log,
-        "special_value_range": NEAR_ZERO_RANGE if is_continuous else None,
-        "special_value_color": '#FEE0B6' if is_continuous else None
     }
+    if is_continuous:
+        common_kwargs["special_values"] = SpecialValueConfig(
+            extend="min",
+            threshold=NEAR_ZERO_RANGE[1],
+            label=str(NEAR_ZERO_RANGE[0]),
+            color='#FEE0B6'  # light orange
+        )
+        common_kwargs["colormap"] = 'Purples'
+
     output_raster_config_list = [
-        SpecialRangeRasterPlotConfig(
+        RasterPlotConfig(
             raster_path=file_registry['preventable_cases'],
             spec=model_spec.get_output('preventable_cases'),
             **common_kwargs
@@ -289,7 +215,7 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
         ]
     if args_dict['health_cost_rate']:
         output_raster_config_list.append(
-            SpecialRangeRasterPlotConfig(
+            RasterPlotConfig(
                 raster_path=file_registry['preventable_cost'],
                 spec=model_spec.get_output('preventable_cost'),
                 **common_kwargs
@@ -310,17 +236,17 @@ def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
 
     Returns:
         A list containing exactly two strings or exactly three strings.
-        If the model was run with ``scenario==ndvi``, the report will display
+        If the model was run with ``model_option==ndvi``, the report will display
         a section with delta ndvi map and its inputs, and a second section
         with baseline prevalence and cases. If the model was run with
-        ``scenario==lulc``, the report will also show the reclassified
+        ``model_option==lulc``, the report will also show the reclassified
         LULC-to-NDVI rasters as intermediate outputs.
     """
     intermediate_captions = [
         gettext('Difference in NDVI between Alternate and Baseline'),
         gettext('Baseline Prevalence & Cases')
     ]
-    if args_dict['scenario'] == 'lulc':
+    if args_dict['model_option'] == 'lulc':
         intermediate_captions.insert(0,
             gettext('Reclassified Baseline & Alternate LULC (to NDVI)'))
 
