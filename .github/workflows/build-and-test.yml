@@ -103,7 +103,7 @@ jobs:
       # Users who need a different GDAL version can use the conda-forge package or 
       # build their own wheel from source.
       - name: Add gdal constraint for wheel
-        run: echo "gdal=${{ env.GDAL_MINOR_VERSION_FOR_WHEEL }}" >> requirements.txt
+        run: echo "gdal~=${{ env.GDAL_MINOR_VERSION_FOR_WHEEL }}" >> requirements.txt
 
       - name: Set up python environment
         uses: ./.github/actions/setup_env
