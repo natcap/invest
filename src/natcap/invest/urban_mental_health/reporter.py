@@ -102,8 +102,18 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
     ndvi_colorramp = 'viridis_r'
 
     input_raster_config_list = []
-    intermediate_raster_config_lists = [[
+    intermediate_raster_config_lists = [
+        [RasterPlotConfig(
+            raster_path=file_registry['baseline_prevalence_raster'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('baseline_prevalence_raster')
+        ),
         RasterPlotConfig(
+            raster_path=file_registry['baseline_cases'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('baseline_cases')
+        )],
+        [RasterPlotConfig(
             raster_path=file_registry['ndvi_base_buffer_mean_clipped'],
             datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('ndvi_base_buffer_mean_clipped'),
@@ -119,18 +129,8 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
             raster_path=file_registry['delta_ndvi'],
             datatype=RasterDatatype.divergent,
             spec=model_spec.get_output('delta_ndvi'),
-        )],
-        [RasterPlotConfig(
-            raster_path=file_registry['baseline_prevalence_raster'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('baseline_prevalence_raster')
-        ),
-        RasterPlotConfig(
-            raster_path=file_registry['baseline_cases'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('baseline_cases')
-        )
-    ]]
+        )]
+    ]
 
     if args_dict['lulc_base']:
         input_raster_config_list.append(
@@ -168,7 +168,7 @@ def _get_conditional_raster_plot_tuples(model_spec: ModelSpec,
         )
 
     else:
-        intermediate_raster_config_lists.insert(0, [
+        intermediate_raster_config_lists.append([
             RasterPlotConfig(
                 raster_path=file_registry['ndvi_base_aligned_masked'],
                 datatype=RasterDatatype.continuous,
@@ -243,11 +243,11 @@ def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
         LULC-to-NDVI rasters as intermediate outputs.
     """
     intermediate_captions = [
-        gettext('Difference in NDVI between Alternate and Baseline'),
-        gettext('Baseline Prevalence & Cases')
+        gettext('Baseline Prevalence & Cases'),
+        gettext('Difference in NDVI between Alternate and Baseline')
     ]
     if args_dict['model_option'] == 'lulc':
-        intermediate_captions.insert(0,
+        intermediate_captions.append(
             gettext('Reclassified Baseline & Alternate LULC (to NDVI)'))
 
     return intermediate_captions
