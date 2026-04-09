@@ -23,6 +23,7 @@ env:
   LATEST_SUPPORTED_PYTHON_VERSION: "3.14"
   # gsutil never seems to support the latest python
   GSUTIL_PYTHON_VERSION: "3.13"
+  GDAL_MINOR_VERSION_FOR_WHEEL: "3.12"
 
 jobs:
   check-syntax-errors:
@@ -93,6 +94,16 @@ jobs:
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
+
+      # The C++ extensions will be compiled and linked against the libgdal version 
+      # that's in the build environment, and so that same libgdal version has to be 
+      # available in the target environment. Each libgdal version corresponds to a 
+      # minor version of GDAL itself. Adding this requirement to the package metadata
+      # should prevent it from being installed in an env without the necessary libgdal.
+      # Users who need a different GDAL version can use the conda-forge package or 
+      # build their own wheel from source.
+      - name: Add gdal constraint for wheel
+        run: echo "gdal=${{ env.GDAL_MINOR_VERSION_FOR_WHEEL }}" >> requirements.txt
 
       - name: Set up python environment
         uses: ./.github/actions/setup_env
