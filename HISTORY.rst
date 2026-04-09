@@ -73,7 +73,6 @@ General
   these targets to fail on missing artifacts instead of silently ignoring
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
 
-
 Workbench
 =========
 * The Workbench now filters model args to include only those whose
@@ -83,6 +82,11 @@ Workbench
   where the model had previously been run would not update the 'Model Complete'
   status indicator. (`#1655 <https://github.com/natcap/invest/issues/1655>`_)
 
+HRA
+===
+* Updated a log message that refers to a URL where users can upload
+  and visualize model results. The previous URL was broken.
+  (`#2443 <https://github.com/natcap/invest/issues/2443>`_)
 
 NDR
 ===
