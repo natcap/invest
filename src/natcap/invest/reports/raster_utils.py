@@ -486,16 +486,20 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
                 fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
             else:
-                cmap.set_under(config.special_values.color)
-
                 if config.special_values.extend == 'min':
+                    cmap.set_under(config.special_values.color)
                     mappable = ax.imshow(
                         arr, cmap=cmap, vmin=config.special_values.threshold,
                         **imshow_kwargs)
+                    y_pos = -0.05  # position for label just below the colorbar
+                    va = "top"
                 else:
+                    cmap.set_over(config.special_values.color)
                     mappable = ax.imshow(
                         arr, cmap=cmap, vmax=config.special_values.threshold,
                         **imshow_kwargs)
+                    y_pos = 1.05  # position for label just above the colorbar
+                    va = "bottom"
 
                 cbar = fig.colorbar(
                     mappable, ax=ax, extend=config.special_values.extend,
@@ -514,10 +518,9 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 ticks.append(config.special_values.threshold)
                 cbar.set_ticks(sorted(ticks))
                 cbar.ax.text(
-                    0, -0.05, str(config.special_values.label),
-                    transform=cbar.ax.transAxes, va='top', ha='left'
-                ) #TODO fix positioning if extend=max
-
+                    0, y_pos, str(config.special_values.label),
+                    transform=cbar.ax.transAxes, va=va, ha='left'
+                )
                 cbar_ax = cbar.ax
                 cbar_ax.legend(
                     loc='upper center',
