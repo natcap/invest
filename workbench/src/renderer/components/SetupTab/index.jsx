@@ -353,7 +353,7 @@ class SetupTab extends React.Component {
       argsValues: argsValues,
     }, () => {
       this.props.updateJobProperties(this.props.tabID, {
-        status: undefined,  // Clear job status to hide model status indicator.
+        status: undefined, // Clear job status to hide model status indicator.
       });
       this.debouncedValidate();
       this.debouncedArgsEnabled();
@@ -366,7 +366,12 @@ class SetupTab extends React.Component {
    * @param {object} argsDict - key: value pairs of InVEST arguments.
    */
   batchUpdateArgs(argsDict) {
-    const { argsSpec, inputFieldOrder } = this.props;
+    const {
+      argsSpec,
+      inputFieldOrder,
+      updateJobProperties,
+      tabID,
+    } = this.props;
     const {
       argsValues,
       argsDropdownOptions,
@@ -376,6 +381,9 @@ class SetupTab extends React.Component {
       argsValues: argsValues,
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
+      updateJobProperties(tabID, {
+        status: undefined, // Clear job status to hide model status indicator.
+      });
       this.investValidate();
       this.investArgsEnabled();
     });
