@@ -27,9 +27,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS"
 ]
 # the version is provided dynamically by setuptools_scm
-# `dependencies` and `optional-dependencies` are provided by setuptools
-# using the corresponding setup args `install_requires` and `extras_require`
-dynamic = ["version", "dependencies", "optional-dependencies"]
+# dependencies are provided by setuptools reading from the requirements file
+dynamic = ["version", "dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
 homepage = "http://github.com/natcap/invest"
