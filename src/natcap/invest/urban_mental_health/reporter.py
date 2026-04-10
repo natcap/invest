@@ -57,7 +57,7 @@ def infer_continuous_or_divergent(raster_path: str) -> str:
 
 
 def _generate_agg_results_table(preventable_cases_cost_sum_table_path: str,
-                                cost: str | None) -> str:
+                                cost: float | None) -> str:
     full_table_df = pandas.read_csv(preventable_cases_cost_sum_table_path)
     total_cases = list(full_table_df['total_cases'])[-1]
     table_df = pandas.DataFrame({'Total Preventable Cases': [total_cases]})
@@ -70,7 +70,6 @@ def _generate_agg_results_table(preventable_cases_cost_sum_table_path: str,
 
 def _create_aggregate_map(
         geodataframe,
-        extent_feature,
         xy_ratio,
         attribute,
         title):
@@ -88,8 +87,7 @@ def _create_aggregate_map(
         strokeWidth=0.5
     ).project(
         type='identity',
-        reflectY=True,
-        fit=extent_feature
+        reflectY=True
     ).encode(
         color=altair.Color(
             f'{attribute}:Q',
@@ -290,11 +288,10 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     # Vector maps
     aggregate_vector_path = file_registry['preventable_cases_cost_sum_vector']
     aggregate_gdf = geopandas.read_file(aggregate_vector_path)
-    extent_feature, xy_ratio = vector_utils.get_geojson_bbox(aggregate_gdf)
+    _, xy_ratio = vector_utils.get_geojson_bbox(aggregate_gdf)
 
     cases_map_json = _create_aggregate_map(
         aggregate_gdf,
-        extent_feature,
         xy_ratio,
         'sum_cases',
         gettext('Preventable Cases by AOI Feature')
@@ -313,7 +310,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         if nonnull_cost and nonzero_cost:
             cost_map_json = _create_aggregate_map(
                 aggregate_gdf,
-                extent_feature,
                 xy_ratio,
                 'sum_cost',
                 gettext('Preventable Cost by AOI Feature')
