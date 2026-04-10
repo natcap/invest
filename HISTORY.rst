@@ -71,6 +71,27 @@ General
   these targets to fail on missing artifacts instead of silently ignoring
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
 
+Workbench
+=========
+* The Workbench now filters model args to include only those whose
+  corresponding form fields are enabled at the time a model is run.
+  (`#2436 <https://github.com/natcap/invest/issues/2436>`_)
+* Fixed a bug where loading new parameters into a model input form
+  where the model had previously been run would not update the 'Model Complete'
+  status indicator. (`#1655 <https://github.com/natcap/invest/issues/1655>`_)
+
+HRA
+===
+* Updated a log message that refers to a URL where users can upload
+  and visualize model results. The previous URL was broken.
+  (`#2443 <https://github.com/natcap/invest/issues/2443>`_)
+
+NDR
+===
+* Fixed a bug that caused the NDR report to fail when the model was run with
+  ``calc_n=False`` and ``calc_p=True``, or vice versa.
+  (`#2472 <https://github.com/natcap/invest/issues/2472>`_)
+
 Seasonal Water Yield
 ====================
 * The model now generates a report, a visual summary of results, available in
@@ -97,20 +118,6 @@ Visitation: Recreation and Tourism
   Now, file transfers from server to client avoid sending redundant copies of
   AOI geoemtries, drastically reducing the size of file transfers.
   (`#1950 <https://github.com/natcap/invest/issues/1950>`_)
-
-
-Workbench
-=========
-* The Workbench now filters model args to include only those whose
-  corresponding form fields are enabled at the time a model is run.
-  (`#2436 <https://github.com/natcap/invest/issues/2436>`_)
-
-
-NDR
-===
-* Fixed a bug that caused the NDR report to fail when the model was run with
-  ``calc_n=False`` and ``calc_p=True``, or vice versa.
-  (`#2472 <https://github.com/natcap/invest/issues/2472>`_)
 
 
 3.18.0 (2026-02-25)
