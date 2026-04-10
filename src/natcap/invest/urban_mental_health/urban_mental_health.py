@@ -604,6 +604,7 @@ def execute(args):
             a CSV table that maps LULC codes to corresponding NDVI values and
             specifies whether to exclude the LULC class from analysis.
             The table should contain the following fields:
+
             - ``lucode`` (int): (required) Unique LULC class identifier.
             - ``ndvi`` (float): Required if ``args['model_option'] == 'lulc'``
                 and not ``args['ndvi_base']``. NDVI value of the LULC class.
