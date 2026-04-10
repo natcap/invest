@@ -585,25 +585,24 @@ def execute(args):
             national, regional, or local levels depending on data availability.
         args['model_option'] (str): (required) Which of the two land use
             options to model.
-        args['ndvi_base'] (str): Required if ``args['model_option'] != 'lulc' or
-            not args['lulc_attr_csv']``. A path to a Normalized Difference
+        args['ndvi_base'] (str): Required if ``args['model_option'] != 'lulc'
+            or not args['lulc_attr_csv']``. A path to a Normalized Difference
             Vegetation Index raster representing current or baseline
             conditions, which gives the greenness of vegetation in a given
             cell.
-        args['ndvi_alt'] (str): Required if ``args['model_option'] == 'ndvi'``. A
-            path to an NDVI raster under future or counterfactual conditions.
-        args['lulc_base'] (str): Required if ``args['model_option'] == 'lulc'``. A
-            path to a Land Use/Land Cover raster showing current or baseline
+        args['ndvi_alt'] (str): Required if ``args['model_option'] == 'ndvi'``.
+            A path to an NDVI raster under future or counterfactual conditions.
+        args['lulc_base'] (str): Required if ``args['model_option'] == 'lulc'``.
+            A path to a Land Use/Land Cover raster showing current or baseline
             conditions.
-        args['lulc_alt'] (str): Required if ``args['model_option'] == 'lulc'``. A
-            path to a Land Use/Land Cover raster showing a future or
+        args['lulc_alt'] (str): Required if ``args['model_option'] == 'lulc'``.
+            A path to a Land Use/Land Cover raster showing a future or
             counterfactual scenario.
         args['lulc_attr_csv'] (str): Required if
-            (``args['model_option'] == 'lulc'`` and not ``args['ndvi_base']``) or
-            (``args[model_option] != 'lulc'`` and ``lulc_base``). A path to a CSV
-            table that maps LULC codes to corresponding NDVI values and
+            (``args['model_option'] == 'lulc'`` and not ``args['ndvi_base']``)
+            or (``args[model_option] != 'lulc'`` and ``lulc_base``). A path to
+            a CSV table that maps LULC codes to corresponding NDVI values and
             specifies whether to exclude the LULC class from analysis.
-
             The table should contain the following fields:
             - ``lucode`` (int): (required) Unique LULC class identifier.
             - ``ndvi`` (float): Required if ``args['model_option'] == 'lulc'``
@@ -614,7 +613,6 @@ def execute(args):
     Returns:
         dict: File registry dictionary mapping ``MODEL_SPEC`` output ids to
         absolute paths.
-
     """
     LOGGER.info("Starting Urban Mental Health Model")
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
@@ -1014,8 +1012,7 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
         raster (str): path to raster
 
     Returns:
-        None
-
+        None.
     """
 
     raster_info = pygeoprocessing.get_raster_info(
@@ -1329,9 +1326,9 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
     RR: relative risk or risk ratio
     NE: nature exposure, as approximated by NDVI
     RR0.1NE: RR per 0.1 NE increase.
-        The model uses the relative risk associated with a 0.1 increase
-        in NDVI-based nature exposure. This value is provided by users as
-        the effect size value.
+    Note: The model uses the relative risk associated with a 0.1 increase
+    in NDVI-based nature exposure. This value is provided by users as
+    the effect size value.
 
     Args:
         delta_ndvi (str): path to raster representing change in NDVI from
@@ -1409,8 +1406,9 @@ def zonal_stats_preventable_cases_cost(
         base_vector_path, model_option, target_stats_csv,
         target_aggregate_vector_path, preventable_cases_raster,
         preventable_cost_raster=None):
-    """Calculate zonal statistics for each polygon in the AOI
-    and write results to a csv and vector file.
+    """Calculate zonal statistics for each polygon in the AOI.
+
+    Write results to a csv and vector file.
 
     Args:
         base_vector_path (string): path to the AOI vector.
