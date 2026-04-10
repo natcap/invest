@@ -115,9 +115,7 @@
 {% from 'vegalite-plot.html' import embed_vega %}
 {% block scripts %}
   {{ super() }}
-  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.20.1"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  {% include "vega-dependencies.html" %}
   {% include 'vega-embed-js.html' %}
   {% set chart_spec_id_list = [
     (qb_map_json, 'qb_map'),

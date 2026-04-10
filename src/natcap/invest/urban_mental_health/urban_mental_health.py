@@ -34,7 +34,7 @@ MODEL_SPEC = spec.ModelSpec(
     model_id="urban_mental_health",
     model_title=gettext("Urban Mental Health"),
     userguide="",  # TODO - add this model to UG
-    reporter="", # TODO - add "natcap.invest.urban_mental_health.reporter",
+    reporter="natcap.invest.urban_mental_health.reporter",
     about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
@@ -45,7 +45,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["aoi_path", "population_raster", "search_radius"],
         ["effect_size", "baseline_prevalence_vector",
          "health_cost_rate"],
-        ["scenario"],
+        ["model_option"],
         ["ndvi_base", "ndvi_alt"],
         ["lulc_base", "lulc_alt", "lulc_attr_csv"]
     ],
@@ -95,8 +95,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "increase in NDVI. If the user has an effect size value "
                 "as an odds ratio, see User's Guide."
             ),
-            units=None, #todo: check
-            expression="value > 0"
+            units=None,
+            expression="value > 0 and value <= 1"
         ),
         spec.VectorInput(
             id="baseline_prevalence_vector",
@@ -131,8 +131,8 @@ MODEL_SPEC = spec.ModelSpec(
             required=False
         ),
         spec.OptionStringInput(
-            id="scenario",
-            name=gettext("scenario"),
+            id="model_option",
+            name=gettext("Option"),
             about=gettext(
                 "Land use scenario options which incorporate the following "
                 "rasters as inputs: (1) baseline and alternate Land "
@@ -156,9 +156,9 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=float,
             units=None,
-            # require ndvi_base unless scenario is `lulc` and user enters
+            # require ndvi_base unless model_option is `lulc` and user enters
             # an attribute table with column 'ndvi'
-            required="scenario!='lulc'",
+            required="model_option!='lulc'",
         ),
         spec.SingleBandRasterInput(
             id="ndvi_alt",
@@ -170,23 +170,24 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=float,
             units=None,
-            required="scenario=='ndvi'",
-            allowed="scenario=='ndvi'"
+            required="model_option=='ndvi'",
+            allowed="model_option=='ndvi'"
         ),
         spec.SingleBandRasterInput(
             id="lulc_base",
             name=gettext("baseline land use/land cover"),
             about=gettext(
                 "Map of land use/land cover codes under current or baseline "
-                "conditions. If scenario is not 'lulc', this is used only for "
-                "water masking. If an LULC attribute table is used, "
-                "all values in this raster must have corresponding entries. "
-                "This raster should extend beyond the AOI by at least the "
-                "search radius distance."
-            ),
+                "conditions. This raster should extend beyond the AOI by at "
+                "least the search radius distance. If an LULC attribute table "
+                "is provided, all values in this raster must have "
+                "corresponding entries. When using the NDVI option, this "
+                "raster may be used to mask out excluded land cover types "
+                "(such as water) based on an accompanying LULC attribute "
+                "table."),
             data_type=int,
             units=None,
-            required="scenario=='lulc' or lulc_attr_csv",
+            required="model_option=='lulc' or lulc_attr_csv",
         ),
         spec.SingleBandRasterInput(
             id="lulc_alt",
@@ -201,9 +202,9 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=int,
             units=None,
-            required="scenario=='lulc'",
-            # Allow lulc_alt for masking if using NDVI inputs (scenario = ndvi)
-            allowed="scenario=='lulc' or lulc_base"
+            required="model_option=='lulc'",
+            # Allow lulc_alt for masking if using NDVI inputs (model_option = ndvi)
+            allowed="model_option=='lulc' or lulc_base"
         ),
         spec.CSVInput(
             id="lulc_attr_csv",
@@ -213,7 +214,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "whether the LULC class should be excluded (0 for keeping, "
                 "and 1 for excluding). Typically, water is excluded and other "
                 "land cover types are kept. NDVI values are only required if "
-                "scenario is 'lulc' and a base NDVI raster is not provided."
+                "model_option is 'lulc' and a base NDVI raster is not provided."
             ),
             columns=[
                 spec.IntegerInput(
@@ -233,23 +234,25 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext("NDVI value."),
                     units=None,
                     required=False
-                    # required if "scenario=='lulc' and not ndvi_base"
+                    # required if "model_option=='lulc' and not ndvi_base"
                     # This is checked in `validate` function below
                 )
             ],
-            # Attr table required if scenario is lulc (used for masking and
+            # Attr table required if model_option is lulc (used for masking and
             # potentially also for mapping LULC classes to NDVI if not
-            # base_ndvi) or if scenario is not lulc but baseline lulc raster
-            # is provided so attribute table is needed for water masking
-            required="scenario=='lulc' or (scenario!='lulc' and lulc_base)",
-            allowed="scenario=='lulc' or lulc_base"
+            # base_ndvi) or if model_option is not lulc but baseline lulc
+            # raster is provided so attribute table is needed for water masking
+            required="model_option=='lulc' or (model_option!='lulc' and lulc_base)",
+            allowed="model_option=='lulc' or lulc_base"
         )
         ],
     outputs=[
             spec.SingleBandRasterOutput(
                 id="preventable_cases",
                 path="output/preventable_cases.tif",
-                about=gettext("Preventable cases at pixel level."),
+                about=gettext(
+                    'Preventable cases at pixel level. A negative value '
+                    'indicates "excess" or "additional" cases.'),
                 data_type=float,
                 units=u.count,
             ),
@@ -258,7 +261,8 @@ MODEL_SPEC = spec.ModelSpec(
                 path="output/preventable_cost.tif",
                 about=gettext(
                     "Preventable cost at pixel level. The currency unit will "
-                    "be the same as that in the health cost rate input."),
+                    "be the same as that in the health cost rate input. A "
+                    "negative value indicates an additional cost."),
                 data_type=float,
                 units=u.currency,
                 created_if="health_cost_rate"
@@ -328,14 +332,26 @@ MODEL_SPEC = spec.ModelSpec(
             spec.SingleBandRasterOutput(
                 id="baseline_cases",
                 path="intermediate/baseline_cases.tif",
-                about=gettext("Baseline cases raster."),
+                about=gettext(
+                    "Baseline number of cases of the mental health outcome "
+                    "per pixel, calculated as the rasterized baseline "
+                    "prevalence rate multiplied by the population in each "
+                    "pixel. This raster represents the expected number of "
+                    "cases under baseline conditions and is used to estimate"
+                    "preventable cases under the alternate/counterfactual "
+                    "scenario."),
                 data_type=float,
                 units=u.count
             ),
             spec.SingleBandRasterOutput(
                 id="baseline_prevalence_raster",
                 path="intermediate/baseline_prevalence.tif",
-                about=gettext("Baseline prevalence raster."),
+                about=gettext(
+                    "Rasterized baseline prevalence (or incidence) rate of "
+                    "the mental health outcome. Pixel values are taken from "
+                    "the `risk_rate` field of the baseline prevalence vector, "
+                    "so each pixel within a polygon is assigned that "
+                    "polygon's baseline rate."),
                 data_type=float,
                 units=None
             ),
@@ -343,7 +359,7 @@ MODEL_SPEC = spec.ModelSpec(
                 id="delta_ndvi",
                 path="intermediate/delta_ndvi.tif",
                 about=gettext(
-                    "Difference between baseline and alternate NDVI raster."),
+                    "Difference between alternate and baseline NDVI raster."),
                 data_type=float,
                 units=None
             ),
@@ -435,7 +451,7 @@ MODEL_SPEC = spec.ModelSpec(
                     "Preprocessed alternate NDVI raster. If using LULC "
                     "inputs, this raster is created by masking, aligning, and "
                     "resampling the alternate LULC and mapping it to mean "
-                    "NDVI (with excluded lucodes set to NODATA)."
+                    "NDVI (with excluded lucodes set to NODATA). "
                     "If using NDVI inputs, this is simply the masked aligned "
                     "and resampled alternate NDVI raster."),
                 data_type=float,
@@ -457,7 +473,7 @@ MODEL_SPEC = spec.ModelSpec(
                     "Preprocessed baseline NDVI raster. If using LULC inputs, "
                     "this raster is created by masking, aligning, and "
                     "resampling the baseline LULC and mapping it to mean "
-                    "NDVI (with excluded lucodes set to NODATA)."
+                    "NDVI (with excluded lucodes set to NODATA). "
                     "If using NDVI inputs, this is simply the masked aligned "
                     "and resampled baseline NDVI raster."),
                 data_type=float,
@@ -567,30 +583,30 @@ def execute(args):
             to estimate the economic value of preventable cases under
             different urban nature scenarios. Costs can be specified at
             national, regional, or local levels depending on data availability.
-        args['scenario'] (str): (required) Which of the two land use
-            scenarios to model.
-        args['ndvi_base'] (str): Required if ``args['scenario'] != 'lulc' or
-            not args['lulc_attr_csv']``. A path to a Normalized Difference
+        args['model_option'] (str): (required) Which of the two land use
+            options to model.
+        args['ndvi_base'] (str): Required if ``args['model_option'] != 'lulc'
+            or not args['lulc_attr_csv']``. A path to a Normalized Difference
             Vegetation Index raster representing current or baseline
             conditions, which gives the greenness of vegetation in a given
             cell.
-        args['ndvi_alt'] (str): Required if ``args['scenario'] == 'ndvi'``. A
-            path to an NDVI raster under future or counterfactual conditions.
-        args['lulc_base'] (str): Required if ``args['scenario'] == 'lulc'``. A
-            path to a Land Use/Land Cover raster showing current or baseline
+        args['ndvi_alt'] (str): Required if ``args['model_option'] == 'ndvi'``.
+            A path to an NDVI raster under future or counterfactual conditions.
+        args['lulc_base'] (str): Required if ``args['model_option'] == 'lulc'``.
+            A path to a Land Use/Land Cover raster showing current or baseline
             conditions.
-        args['lulc_alt'] (str): Required if ``args['scenario'] == 'lulc'``. A
-            path to a Land Use/Land Cover raster showing a future or
+        args['lulc_alt'] (str): Required if ``args['model_option'] == 'lulc'``.
+            A path to a Land Use/Land Cover raster showing a future or
             counterfactual scenario.
         args['lulc_attr_csv'] (str): Required if
-            (``args['scenario'] == 'lulc'`` and not ``args['ndvi_base']``) or
-            (``args[scenario] != 'lulc'`` and ``lulc_base``). A path to a CSV
-            table that maps LULC codes to corresponding NDVI values and
+            (``args['model_option'] == 'lulc'`` and not ``args['ndvi_base']``)
+            or (``args[model_option] != 'lulc'`` and ``lulc_base``). A path to
+            a CSV table that maps LULC codes to corresponding NDVI values and
             specifies whether to exclude the LULC class from analysis.
-
             The table should contain the following fields:
+
             - ``lucode`` (int): (required) Unique LULC class identifier.
-            - ``ndvi`` (float): Required if ``args['scenario'] == 'lulc'``
+            - ``ndvi`` (float): Required if ``args['model_option'] == 'lulc'``
                 and not ``args['ndvi_base']``. NDVI value of the LULC class.
             - ``exclude`` (bool): (required) Specifies whether to keep (0)
                 or mask out (1) the LULC class.
@@ -598,7 +614,6 @@ def execute(args):
     Returns:
         dict: File registry dictionary mapping ``MODEL_SPEC`` output ids to
         absolute paths.
-
     """
     LOGGER.info("Starting Urban Mental Health Model")
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
@@ -606,7 +621,7 @@ def execute(args):
     LOGGER.info("Start preprocessing")
 
     # get target pixel size for outputs
-    if args['scenario'] == 'ndvi':
+    if args['model_option'] == 'ndvi':
         pixel_size = _get_raster_pixel_size_in_meters(args['ndvi_base'],
                                                       args['aoi_path'])
     else:
@@ -661,7 +676,7 @@ def execute(args):
         # which seems straighforward enough to not require checking bounds
 
     align_index = input_align_list.index(
-        args['lulc_base'] if args['scenario'] == 'lulc' else args['ndvi_base'])
+        args['lulc_base'] if args['model_option'] == 'lulc' else args['ndvi_base'])
     LOGGER.info(f"Aligning input rasters to {input_align_list[align_index]}")
 
     align_task = task_graph.add_task(
@@ -707,7 +722,7 @@ def execute(args):
         dependent_task_list=[population_align_task],
         task_name='Clip population to AOI')
 
-    if args['scenario'] == 'lulc':
+    if args['model_option'] == 'lulc':
         LOGGER.info("Using LULC inputs")
 
         create_lulc_ndvi_csv_task = task_graph.add_task(
@@ -743,7 +758,7 @@ def execute(args):
             task_name="reclassify alt lulc to ndvi and mask"
         )
 
-    else:  # if scenario is ndvi
+    else:  # if model_option is ndvi
         LOGGER.info("Using NDVI inputs directly")
         base_mask_outputs = [file_registry['ndvi_base_aligned_masked']]
         alt_mask_outputs = [file_registry['ndvi_alt_aligned_masked']]
@@ -887,7 +902,7 @@ def execute(args):
     )
 
     zonal_stats_inputs = [
-        args['aoi_path'],
+        args['aoi_path'], args['model_option'],
         file_registry['preventable_cases_cost_sum_table'],
         file_registry['preventable_cases_cost_sum_vector'],
         file_registry['preventable_cases']]
@@ -998,8 +1013,7 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
         raster (str): path to raster
 
     Returns:
-        None
-
+        None.
     """
 
     raster_info = pygeoprocessing.get_raster_info(
@@ -1313,9 +1327,9 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
     RR: relative risk or risk ratio
     NE: nature exposure, as approximated by NDVI
     RR0.1NE: RR per 0.1 NE increase.
-        The model uses the relative risk associated with a 0.1 increase
-        in NDVI-based nature exposure. This value is provided by users as
-        the effect size value.
+    Note: The model uses the relative risk associated with a 0.1 increase
+    in NDVI-based nature exposure. This value is provided by users as
+    the effect size value.
 
     Args:
         delta_ndvi (str): path to raster representing change in NDVI from
@@ -1390,13 +1404,17 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
 
 
 def zonal_stats_preventable_cases_cost(
-        base_vector_path, target_stats_csv, target_aggregate_vector_path,
-        preventable_cases_raster, preventable_cost_raster=None):
-    """Calculate zonal statistics for each polygon in the AOI
-    and write results to a csv and vector file.
+        base_vector_path, model_option, target_stats_csv,
+        target_aggregate_vector_path, preventable_cases_raster,
+        preventable_cost_raster=None):
+    """Calculate zonal statistics for each polygon in the AOI.
+
+    Write results to a csv and vector file.
 
     Args:
         base_vector_path (string): path to the AOI vector.
+        model_option (string): either 'ndvi' or 'lulc', used to label
+            output gpkg layer
         target_stats_csv (string): path to csv file to store dictionary
             returned by zonal stats.
         target_aggregate_vector_path (string): path to vector to store zonal
@@ -1412,11 +1430,19 @@ def zonal_stats_preventable_cases_cost(
 
     # write zonal stats to new vector
     aoi_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('GPKG')
+    src_layer = aoi_vector.GetLayer(0)
 
+    driver = gdal.GetDriverByName('GPKG')
     if os.path.exists(target_aggregate_vector_path):
         driver.Delete(target_aggregate_vector_path)
-    driver.CreateCopy(target_aggregate_vector_path, aoi_vector)
+
+    # rename gpkg layer to include model_option in name
+    out_ds = driver.CreateDataSource(target_aggregate_vector_path)
+    custom_layer_name = f"preventable_cases_{model_option}"
+    out_ds.CopyLayer(src_layer, custom_layer_name)
+
+    out_ds = None
+    src_layer = None
     aoi_vector = None
 
     cases_sum_field = ogr.FieldDefn('sum_cases', ogr.OFTReal)
@@ -1504,7 +1530,7 @@ def validate(args, limit_to=None):
 
     # raise error if user enters lulc_attr_csv without 'ndvi' column and also
     # doesn't provide base_ndvi raster
-    if args['scenario'] == 'lulc' and args.get('lulc_attr_csv'):
+    if args['model_option'] == 'lulc' and args.get('lulc_attr_csv'):
         lulc_df = MODEL_SPEC.get_input(
             'lulc_attr_csv').get_validated_dataframe(
                 args['lulc_attr_csv'])

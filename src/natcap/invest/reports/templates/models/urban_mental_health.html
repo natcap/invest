@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+  {{ super() }}
+{% endblock styles %}
+
+{% block content %}
+
+  {{ super() }}
+
+  {% from 'args-table.html' import args_table %}
+  {% from 'caption.html' import caption %}
+  {% from 'content-grid.html' import content_grid %}
+  {% from 'metadata.html' import list_metadata %}
+  {% from 'raster-plot-img.html' import raster_plot_img %}
+  {% from 'wide-table.html' import wide_table %}
+
+  <h2 class="section-header">Results</h2>
+
+  {{ accordion_section(
+    'Aggregate Results',
+    agg_results_table | safe
+  )}}
+
+  {{ accordion_section(
+    'Primary Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (caption(outputs_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {% set cases_map_block = content_grid([
+    ('<div class="vega-fit-horizontal"><div id="cases_map"></div></div>', 100),
+    (caption(cases_map_caption, aggregate_map_source_list), 100)
+  ]) %}
+  
+  {% set cases_cost_items = [
+    (cases_map_block, 100 if not cost_map_json else 50)
+  ] %}
+  
+  {% if cost_map_json %}
+    {% set cost_map_block = content_grid([
+      ('<div class="vega-fit-horizontal"><div id="cost_map"></div></div>', 100),
+      (caption(cost_map_caption, aggregate_map_source_list), 100)
+    ]) %}
+  
+    {% set cases_cost_items = cases_cost_items + [
+      (cost_map_block, 50)
+    ] %}
+  {% endif %}
+  
+  {{ accordion_section(
+    'Preventable Cases by AOI Feature',
+    content_grid(cases_cost_items)
+  ) }}
+
+  {{ accordion_section(
+    'Baseline Prevalence & Cases',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(intermediate_baseline_img_src, 'Baseline Prevalence & Cases'), 100),
+      (caption(intermediate_baseline_img_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Difference in Nature Exposure between Alternate and Baseline',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(intermediate_delta_ndvi_img_src, 'Difference in NDVI between Alternate and Baseline'), 100),
+      (caption(intermediate_delta_ndvi_img_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {% if args_dict['model_option'] == 'lulc' %}
+    {{ accordion_section(
+      'Reclassified Baseline & Alternate LULC (to NDVI)',
+      content_grid([
+        (caption(lulc_pre_caption, pre_caption=True), 100),
+        (raster_plot_img(intermediate_reclass_lulc_img_src, 'Reclassified Baseline & Alternate LULC (to NDVI)'), 100),
+        (caption(intermediate_reclass_lulc_img_caption, definition_list=True), 100)
+      ])
+    )}}
+  {% endif %}
+
+  {{ accordion_section(
+    'Output Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Inputs</h2>
+
+  {% if args_dict != None %}
+    {{ accordion_section(
+      'Arguments',
+      args_table(args_dict)
+    )}}
+  {% endif %}
+
+  {% set input_items = [
+    (caption(raster_group_caption, pre_caption=True), 100)
+  ] %}
+  
+  {% if args_dict['lulc_base'] %}
+    {% set input_items = input_items + [
+      (caption(lulc_pre_caption, pre_caption=True), 100)
+    ] %}
+  {% endif %}
+  
+  {% set input_items = input_items + [
+    (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+    (caption(inputs_caption, definition_list=True), 100)
+  ] %}
+  
+  {{ accordion_section(
+    'Input Maps',
+    content_grid(input_items)
+  )}}
+
+  {{ accordion_section(
+    'Input Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Metadata</h2>
+
+  {{
+    accordion_section(
+      'Output Filenames and Descriptions',
+      list_metadata(model_spec_outputs),
+      expanded=False
+    )
+  }}
+
+{% endblock content %}
+
+
+{% from 'vegalite-plot.html' import embed_vega %}
+
+{% block scripts %}
+  {{ super() }}
+  {% include "vega-dependencies.html" %}
+  {% include 'vega-embed-js.html' %}
+
+  {% set chart_spec_id_list = [(cases_map_json, 'cases_map')] %}
+  {% if cost_map_json %}
+    {% set chart_spec_id_list = chart_spec_id_list + [(cost_map_json, 'cost_map')] %}
+  {% endif %}
+  {{ embed_vega(chart_spec_id_list) }}
+{% endblock scripts %}

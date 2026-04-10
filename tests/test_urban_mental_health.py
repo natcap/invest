@@ -91,7 +91,7 @@ def make_synthetic_data_and_params(workspace_dir, model_option):
 
     Args:
         workspace_dir (str): path to workspace directory
-        model_option (int): Which scenario option to create input data for,
+        model_option (int): Which model option to create input data for,
             either 'lulc' or 'ndvi'
 
     """
@@ -138,7 +138,7 @@ def make_synthetic_data_and_params(workspace_dir, model_option):
     }
 
     if model_option == 'lulc':
-        args['scenario'] = 'lulc'
+        args['model_option'] = 'lulc'
         # make lulc arrays
         lulc_base_array = numpy.array(
             [[FLOAT32_NODATA, 2, 3], [1, 2, 2], [2, 1, 2], [1, 3, 1]])
@@ -161,7 +161,7 @@ def make_synthetic_data_and_params(workspace_dir, model_option):
         args['lulc_attr_csv'] = lulc_attr_path
 
     elif model_option == 'ndvi':
-        args['scenario'] = 'ndvi'
+        args['model_option'] = 'ndvi'
         ndvi_alt_array = numpy.array(
             [[.12, .22, .1], [.2, .3, .8], [.9, .14, .14], [.16, .17, .3]])
         ndvi_alt_path = os.path.join(workspace_dir, "ndvi_alt.tif")
@@ -237,8 +237,8 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_delta_ndvi, expected_delta_ndvi,
                                       atol=1e-6)
 
-    def test_ndvi_scenario(self):
-        "Test UMH NDVI scenario runs and has correct nodata and values"
+    def test_ndvi_option(self):
+        "Test UMH NDVI option runs and has correct nodata and values"
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
@@ -282,7 +282,7 @@ class UMHTests(unittest.TestCase):
                                       expected_preventable_cases, atol=1e-5)
 
     def test_diff_prj_inputs(self):
-        """Test NDVI scenario option given inputs of different projections.
+        """Test NDVI option given inputs of different projections.
 
         Check that output preventable cases geotiff is clipped
         correctly given inputs of different projections
@@ -483,7 +483,7 @@ class UMHTests(unittest.TestCase):
         # processing bbox should be the buffered bbox snapped outward to grid
         numpy.testing.assert_allclose(pop_bbox, snapped_bbox)
 
-    def test_AOI_larger_than_lulc_base_ndvi_scenario(self):
+    def test_AOI_larger_than_lulc_base_ndvi_option(self):
         """Test warning raised but model runs if LULC raster too small"""
         from natcap.invest.urban_mental_health import urban_mental_health
 
@@ -732,7 +732,7 @@ class UMHTests(unittest.TestCase):
         target_agg_vector_path = os.path.join(self.workspace_dir, "stats.gpkg")
 
         urban_mental_health.zonal_stats_preventable_cases_cost(
-            aoi_vector, target_stats_csv, target_agg_vector_path,
+            aoi_vector, 'ndvi', target_stats_csv, target_agg_vector_path,
             preventable_cases, preventable_cost)
 
         # Check CSV
@@ -777,7 +777,7 @@ class UMHTests(unittest.TestCase):
         self.assertEqual(actual_attributes, expected_attributes)
 
     def test_execute_without_health_cost_skips_cost_outputs(self):
-        """Test NDVI scenario option without health input
+        """Test NDVI option without health input
 
         Test that `execute` runs without health cost input and produces CSV
         without cost column.
@@ -791,8 +791,8 @@ class UMHTests(unittest.TestCase):
         self.assertIn("sum_cases", df.columns)
         self.assertNotIn("sum_cost", df.columns)
 
-    def test_lulc_scenario_with_basic_inputs(self):
-        """Test UMH LULC inputs scenario with basic LULC and attr table inputs
+    def test_lulc_option_with_basic_inputs(self):
+        """Test UMH LULC inputs option with basic LULC and attr table inputs
 
         Test that LULC rasters are reclassified to NDVI based on attribute
         table values. Then test that delta NDVI is calculated correctly.
@@ -840,8 +840,8 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_delta_ndvi,
                                       expected_delta_ndvi, atol=1e-6)
 
-    def test_lulc_scenario_with_lulc_reclassified_by_ndvi_raster(self):
-        """Test UMH LULC inputs scenario if reclassifying with NDVI raster
+    def test_lulc_option_with_lulc_reclassified_by_ndvi_raster(self):
+        """Test UMH LULC inputs option if reclassifying with NDVI raster
 
         Test that UMH falls back to reclassifying LULC based on NDVI raster
         if ``ndvi`` column not provided in attribute table.
@@ -1051,7 +1051,7 @@ class UMHTests(unittest.TestCase):
             f'ndvi_base_aligned_masked_{args["results_suffix"]}.tif')
         actual_masked_lulc = pygeoprocessing.raster_to_numpy_array(
             actual_masked_lulc_path)
-        # ndvi_base_aligned_masked is output of reclassify_lulc_raster if scenario=lulc
+        # ndvi_base_aligned_masked is output of reclassify_lulc_raster if model_option=lulc
 
         numpy.testing.assert_allclose(actual_masked_lulc[2, 0],
                                       [urban_mental_health.FLOAT32_NODATA])
