@@ -21,6 +21,7 @@
   - Seasonal Water Yield
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Mental Health
   - Urban Nature Access
   - Urban Stormwater Retention
   - Visitation: Recreation and Tourism
@@ -91,6 +92,13 @@ General
   these targets to fail on missing artifacts instead of silently ignoring
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
 
+Urban Mental Health
+===================
+* Added the Urban Mental Health model to InVEST. This model evaluates
+  differences between baseline and a future/counterfactual scenario to quantify
+  preventable cases of mental health conditions (and optionally, related costs)
+  associated with changes in nature exposure, using NDVI as a proxy.
+  (`#2140 <https://github.com/natcap/invest/issues/2140>`_)
 
 3.18.0 (2026-02-25)
 -------------------
