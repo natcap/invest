@@ -521,13 +521,6 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                     0, y_pos, str(config.special_values.label),
                     transform=cbar.ax.transAxes, va=va, ha='left'
                 )
-                cbar_ax = cbar.ax
-                cbar_ax.legend(
-                    loc='upper center',
-                    bbox_to_anchor=(0.5, -0.05),
-                    frameon=False,
-                    ncol=1
-                )
 
     [ax.set_axis_off() for ax in axs.flatten()]
     return fig
