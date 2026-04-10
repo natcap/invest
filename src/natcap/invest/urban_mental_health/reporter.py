@@ -56,32 +56,6 @@ def infer_continuous_or_divergent(raster_path: str) -> str:
         return RasterDatatype.continuous
 
 
-def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
-    """Get headings for Intermediate Outputs sections of the report.
-
-    Args:
-        args_dict (dict): the arguments passed to the model's ``execute``
-            function.
-
-    Returns:
-        A list containing exactly two strings or exactly three strings.
-        If the model was run with ``model_option==ndvi``, the report will display
-        a section with delta ndvi map and its inputs, and a second section
-        with baseline prevalence and cases. If the model was run with
-        ``model_option==lulc``, the report will also show the reclassified
-        LULC-to-NDVI rasters as intermediate outputs.
-    """
-    intermediate_captions = [
-        gettext('Baseline Prevalence & Cases'),
-        gettext('Difference in NDVI between Alternate and Baseline')
-    ]
-    if args_dict['model_option'] == 'lulc':
-        intermediate_captions.append(
-            gettext('Reclassified Baseline & Alternate LULC (to NDVI)'))
-
-    return intermediate_captions
-
-
 def _generate_agg_results_table(preventable_cases_cost_sum_table_path: str,
                                 cost: str | None) -> str:
     full_table_df = pandas.read_csv(preventable_cases_cost_sum_table_path)
@@ -153,36 +127,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     ndvi_colorramp = 'viridis_r'
 
     input_raster_config_list = []
-    intermediate_raster_config_lists = [
-        [RasterPlotConfig(
-            raster_path=file_registry['baseline_prevalence_raster'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('baseline_prevalence_raster')
-        ),
-        RasterPlotConfig(
-            raster_path=file_registry['baseline_cases'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('baseline_cases')
-        )],
-        [RasterPlotConfig(
-            raster_path=file_registry['ndvi_base_buffer_mean_clipped'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('ndvi_base_buffer_mean_clipped'),
-            colormap=ndvi_colorramp
-        ),
-        RasterPlotConfig(
-            raster_path=file_registry['ndvi_alt_buffer_mean_clipped'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('ndvi_alt_buffer_mean_clipped'),
-            colormap=ndvi_colorramp
-        ),
-        RasterPlotConfig(
-            raster_path=file_registry['delta_ndvi'],
-            datatype=RasterDatatype.divergent,
-            spec=model_spec.get_output('delta_ndvi'),
-        )]
-    ]
-
     if args_dict['lulc_base']:
         input_raster_config_list.append(
             RasterPlotConfig(
@@ -191,6 +135,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                 spec=model_spec.get_input('lulc_base')
             )
         )
+
     if args_dict['lulc_alt']:
         input_raster_config_list.append(
             RasterPlotConfig(
@@ -218,7 +163,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             )
         )
     else:
-        intermediate_raster_config_lists.append([
+        intermediate_reclass_lulc_list = [
             RasterPlotConfig(
                 raster_path=file_registry['ndvi_base_aligned_masked'],
                 datatype=RasterDatatype.continuous,
@@ -232,7 +177,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                 spec=model_spec.get_output('ndvi_alt_aligned_masked'),
                 colormap=ndvi_colorramp
             )
-        ])
+        ]
     input_raster_config_list.append(
         RasterPlotConfig(
             raster_path=args_dict['population_raster'],
@@ -240,6 +185,37 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             spec=model_spec.get_input('population_raster')
         )
     )
+
+    intermediate_baseline_list = [
+        RasterPlotConfig(
+            raster_path=file_registry['baseline_prevalence_raster'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('baseline_prevalence_raster')
+        ),
+        RasterPlotConfig(
+            raster_path=file_registry['baseline_cases'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('baseline_cases')
+        )]
+
+    intermediate_delta_ndvi_list = [
+        RasterPlotConfig(
+            raster_path=file_registry['ndvi_base_buffer_mean_clipped'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('ndvi_base_buffer_mean_clipped'),
+            colormap=ndvi_colorramp
+        ),
+        RasterPlotConfig(
+            raster_path=file_registry['ndvi_alt_buffer_mean_clipped'],
+            datatype=RasterDatatype.continuous,
+            spec=model_spec.get_output('ndvi_alt_buffer_mean_clipped'),
+            colormap=ndvi_colorramp
+        ),
+        RasterPlotConfig(
+            raster_path=file_registry['delta_ndvi'],
+            datatype=RasterDatatype.divergent,
+            spec=model_spec.get_output('delta_ndvi'),
+        )]
 
     datatype = infer_continuous_or_divergent(file_registry['preventable_cases'])
     is_continuous = datatype == RasterDatatype.continuous
@@ -282,21 +258,24 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     output_raster_caption = raster_utils.caption_raster_list(
         output_raster_config_list)
 
-    # There can be multiple sections for intermediate rasters
-    intermediate_img_srcs = [raster_utils.plot_and_base64_encode_rasters(
-        config_list) for config_list in intermediate_raster_config_lists]
-    intermediate_raster_captions = [raster_utils.caption_raster_list(
-        config_list) for config_list in intermediate_raster_config_lists]
+    intermediate_baseline_img_src = raster_utils.plot_and_base64_encode_rasters(
+        intermediate_baseline_list)
+    intermediate_baseline_img_caption = raster_utils.caption_raster_list(
+        intermediate_baseline_list)
 
-    intermediate_headings = _get_intermediate_output_headings(args_dict)
+    intermediate_delta_ndvi_img_src = raster_utils.plot_and_base64_encode_rasters(
+        intermediate_delta_ndvi_list)
+    intermediate_delta_ndvi_img_caption = raster_utils.caption_raster_list(
+        intermediate_delta_ndvi_list)
 
-    intermediate_raster_sections = [
-        {'heading': heading, 'img_src': img_src, 'caption': caption}
-        for (heading, img_src, caption)
-        in zip(intermediate_headings,
-               intermediate_img_srcs,
-               intermediate_raster_captions)
-    ]
+    if args_dict["model_option"] == 'lulc':
+        intermediate_reclass_lulc_img_src = raster_utils.plot_and_base64_encode_rasters(
+            intermediate_reclass_lulc_list)
+        intermediate_reclass_lulc_img_caption = raster_utils.caption_raster_list(
+            intermediate_reclass_lulc_list)
+    else:
+        intermediate_reclass_lulc_img_src = None
+        intermediate_reclass_lulc_img_caption = None
 
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict, model_spec).to_html(na_rep='')
@@ -364,7 +343,12 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             inputs_caption=input_raster_caption,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
-            intermediate_raster_sections=intermediate_raster_sections,
+            intermediate_baseline_img_src=intermediate_baseline_img_src,
+            intermediate_baseline_img_caption=intermediate_baseline_img_caption,
+            intermediate_delta_ndvi_img_src=intermediate_delta_ndvi_img_src,
+            intermediate_delta_ndvi_img_caption=intermediate_delta_ndvi_img_caption,
+            intermediate_reclass_lulc_img_src=intermediate_reclass_lulc_img_src,
+            intermediate_reclass_lulc_img_caption=intermediate_reclass_lulc_img_caption,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
             lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
             output_raster_stats_table=output_raster_stats_table,

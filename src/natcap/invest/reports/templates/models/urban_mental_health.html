@@ -56,16 +56,34 @@
     content_grid(cases_cost_items)
   ) }}
 
-  {% for section in intermediate_raster_sections %}
   {{ accordion_section(
-    section['heading'],
+    'Baseline Prevalence & Cases',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(section['img_src'], section['heading']), 100),
-      (caption(section['caption'], definition_list=True), 100)
+      (raster_plot_img(intermediate_baseline_img_src, 'Baseline Prevalence & Cases'), 100),
+      (caption(intermediate_baseline_img_caption, definition_list=True), 100)
     ])
   )}}
-  {% endfor %}
+
+  {{ accordion_section(
+    'Difference in NDVI between Alternate and Baseline',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(intermediate_delta_ndvi_img_src, 'Difference in NDVI between Alternate and Baseline'), 100),
+      (caption(intermediate_delta_ndvi_img_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {% if args_dict['model_option'] == 'lulc' %}
+    {{ accordion_section(
+      'Reclassified Baseline & Alternate LULC (to NDVI)',
+      content_grid([
+        (caption(lulc_pre_caption, pre_caption=True), 100),
+        (raster_plot_img(intermediate_reclass_lulc_img_src, 'Reclassified Baseline & Alternate LULC (to NDVI)'), 100),
+        (caption(intermediate_reclass_lulc_img_caption, definition_list=True), 100)
+      ])
+    )}}
+  {% endif %}
 
   {{ accordion_section(
     'Output Raster Stats',
