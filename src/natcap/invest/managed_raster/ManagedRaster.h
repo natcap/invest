@@ -515,6 +515,10 @@ public:
     m_ptr = new NeighborTuple(i, xj, yj, static_cast<float>(flow));
     i++;
   }
+
+  ~NeighborIterator() {
+    delete m_ptr;
+  }
 };
 
 // Iterates over neighbor pixels that are downslope of a given pixel,
