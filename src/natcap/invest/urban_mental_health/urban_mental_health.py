@@ -55,11 +55,13 @@ MODEL_SPEC = spec.ModelSpec(
         spec.N_WORKERS,
         spec.AOI.model_copy(update=dict(
             about=gettext(
-                "Map of the area over which to run the model. The AOI must be "
-                "smaller than the raster inputs by at least the search radius "
-                "to ensure correct edge pixel calculation, as InVEST will "
-                "buffer your AOI by the `search_radius` to determine the "
-                "processing area. Final outputs will be clipped to this AOI."),
+                "Map of the area over which to run the model. Ideally, this "
+                "vector should contain non-overlapping administrative units. "
+                "The AOI must be smaller than the raster inputs by at least "
+                "the search radius to ensure correct edge pixel calculation, "
+                "as InVEST will buffer your AOI by the `search_radius` to "
+                "determine the processing area. Final outputs will be clipped "
+                "to this AOI."),
             projected=True,
             projection_units=u.meter
         )),
@@ -81,7 +83,8 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "Distance used to define the surrounding area of a person's "
                 "residence that best represents daily exposure to nearby "
-                "nature."),
+                "nature. A population pixel serves as a spatial proxy for "
+                "a residential location."),
             units=u.meter,
             expression="value > 0"
         ),
