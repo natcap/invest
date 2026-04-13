@@ -33,7 +33,7 @@ def make_simple_vector(path_to_shp, fields={"id": ogr.OFTReal},
                                 (ORIGIN_X, ORIGIN_Y-100),
                                 (ORIGIN_X, ORIGIN_Y-254)])]):
     """
-    Generate shapefile with one rectangular polygon
+    Generate shapefile with one rectangular polygon.
 
     This shapefile covers just over 1/2 of a pixel in the default raster
     created via ``make_raster_from_array``. This is to allow for the smallest
@@ -87,7 +87,7 @@ def make_raster_from_array(base_raster_path, array):
 
 
 def make_synthetic_data_and_params(workspace_dir, model_option):
-    """Make all data needed to run UMH model
+    """Make all data needed to run UMH model.
 
     Args:
         workspace_dir (str): path to workspace directory
@@ -188,7 +188,7 @@ class UMHTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_ndvi_preprocessing_and_delta_calc(self):
-        """Test NDVI preprocessing and calculation with correct nodata
+        """Test NDVI preprocessing and calculation with correct nodata.
 
         Test that preprocessing of NDVI rasters works as expected and delta
         NDVI calculation is correct. Also test nodata propagates correctly,
@@ -238,7 +238,7 @@ class UMHTests(unittest.TestCase):
                                       atol=1e-6)
 
     def test_ndvi_option(self):
-        "Test UMH NDVI option runs and has correct nodata and values"
+        "Test UMH NDVI option runs and has correct nodata and values."
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
@@ -316,7 +316,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
     def test_NDVI_extent_too_small(self):
-        """Test that NDVI smaller than buffered AOI extent raises warning
+        """Test that NDVI smaller than buffered AOI extent raises warning.
 
         Test that if AOI is larger than the input NDVI extent by search_radius
         distance, the model raises a warning.
@@ -349,7 +349,7 @@ class UMHTests(unittest.TestCase):
         )
 
     def test_search_radius_smaller_than_resolution(self):
-        """Test search_radius < pixelsize/2 of NDVI raises error on NDVI scn"""
+        """Test search_radius < half of NDVI pixel size raises error."""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
@@ -361,7 +361,7 @@ class UMHTests(unittest.TestCase):
             str(context.exception))
 
     def test_population_raster_too_small(self):
-        """Test if pop raster is smaller than AOI, model runs
+        """Test if pop raster is smaller than AOI, model runs.
 
         Model will run, but output extent will have nodata where
         population raster is nodata. That is, valid extent of outputs match
@@ -484,7 +484,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(pop_bbox, snapped_bbox)
 
     def test_AOI_larger_than_lulc_base_ndvi_option(self):
-        """Test warning raised but model runs if LULC raster too small"""
+        """Test warning raised but model runs if LULC raster too small."""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
@@ -510,7 +510,7 @@ class UMHTests(unittest.TestCase):
         self.assertTrue(os.path.isfile(file_reg["preventable_cases"]))
 
     def test_masking_without_lulc(self):
-        """Test NDVI threshold masking (given no lulc input for mask)"""
+        """Test NDVI threshold masking (given no lulc input for mask)."""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         array = numpy.array(([.1, -.3, -6], [.1, .2, .9],
@@ -534,7 +534,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_ndvi_masked, expected_ndvi_masked)
 
     def test_lulc_masking(self):
-        """Test that lulc masks correctly"""
+        """Test that lulc masks correctly."""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         array = numpy.array(([.1, .3, .1], [.1, .2, .9],
@@ -570,7 +570,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_ndvi_masked, expected_ndvi_masked)
 
     def test_calc_baseline_cases(self):
-        """Test `calc_baseline_cases` equals prevalence * population
+        """Test `calc_baseline_cases` equals prevalence * population.
 
         baseline_cases = rasterized prevalence * population per pixel
         for valid pixels. Ensure that nodata propagates correctly
@@ -625,7 +625,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_cases, expected_cases)
 
     def test_calc_preventable_cases(self):
-        """Test `calc_preventable_cases` correct and handles zeros and nodata
+        """Test `calc_preventable_cases` correct and handles zeros and nodata.
 
         Test that pixels outside of AOI are nodata and nodata pixels in either
         baseline_cases or delta_ndvi raster become nodata in the output.
@@ -667,7 +667,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
     def test_calc_preventable_cost(self):
-        """ Test `calc_preventable_cost`
+        """ Test `calc_preventable_cost`.
 
         prev cost = equals preventable_cases * health_cost_rate for valid
         pixels; nodata preserved."""
@@ -690,7 +690,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_cost, expected_cost)
 
     def test_zonal_stats_preventable_cases_cost(self):
-        """Test `zonal_stats_preventable_cases_cost`
+        """Test `zonal_stats_preventable_cases_cost`.
 
           Test that function writes CSV and vector with `sum_cases` and
           `sum_cost` fields calculated correctly per polygon and calculates
@@ -777,7 +777,7 @@ class UMHTests(unittest.TestCase):
         self.assertEqual(actual_attributes, expected_attributes)
 
     def test_execute_without_health_cost_skips_cost_outputs(self):
-        """Test NDVI option without health input
+        """Test NDVI option without health input.
 
         Test that `execute` runs without health cost input and produces CSV
         without cost column.
@@ -792,7 +792,7 @@ class UMHTests(unittest.TestCase):
         self.assertNotIn("sum_cost", df.columns)
 
     def test_lulc_option_with_basic_inputs(self):
-        """Test UMH LULC inputs option with basic LULC and attr table inputs
+        """Test UMH LULC inputs option with basic LULC and attr table inputs.
 
         Test that LULC rasters are reclassified to NDVI based on attribute
         table values. Then test that delta NDVI is calculated correctly.
@@ -841,7 +841,7 @@ class UMHTests(unittest.TestCase):
                                       expected_delta_ndvi, atol=1e-6)
 
     def test_lulc_option_with_lulc_reclassified_by_ndvi_raster(self):
-        """Test UMH LULC inputs option if reclassifying with NDVI raster
+        """Test UMH LULC inputs option if reclassifying with NDVI raster.
 
         Test that UMH falls back to reclassifying LULC based on NDVI raster
         if ``ndvi`` column not provided in attribute table.
@@ -889,7 +889,7 @@ class UMHTests(unittest.TestCase):
                                       atol=1e-6)
 
     def test_calculate_mean_ndvi_by_lulc_class(self):
-        """Test `_calculate_mean_ndvi_by_lulc_class`
+        """Test `_calculate_mean_ndvi_by_lulc_class`.
 
         Test that mean NDVI is calculated per LULC class correctly.
         """
@@ -926,6 +926,7 @@ class UMHTests(unittest.TestCase):
                 actual_mean_ndvi[key], expected_mean_ndvi[key], atol=1e-6)
 
     def test_get_raster_pixel_size_in_meters_if_raster_prj_in_m(self):
+        """Test `_get_raster_pixel_size_in_meters`."""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         raster_array = numpy.array(
@@ -944,7 +945,7 @@ class UMHTests(unittest.TestCase):
         self.assertEqual(actual_pixel_size, (100, -100))
 
     def test_get_raster_pixel_size_in_meters_if_raster_prj_in_ft(self):
-        """Test helper transforms pixel size when raster is not projected in m."""
+        """Test helper transforms pixel size when raster not projected in m."""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
@@ -983,7 +984,7 @@ class UMHTests(unittest.TestCase):
                                       atol=1e-5)
 
     def test_ndvi_raster_with_no_nodata_value_set(self):
-        """Test UMH if NDVI raster has no nodata value set"""
+        """Test UMH if NDVI raster has no nodata value set."""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
@@ -1017,7 +1018,7 @@ class UMHTests(unittest.TestCase):
         self.assertAlmostEqual(actual_buffer_mean[2, 2], .6)
 
     def test_lulc_raster_with_no_nodata_value_set(self):
-        """Test UMH if base_LULC has no nodata value set but is large enough"""
+        """Test UMH if base_LULC has no NoData value but is large enough."""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
@@ -1060,7 +1061,7 @@ class UMHTests(unittest.TestCase):
         self.assertAlmostEqual(actual_masked_lulc[0, 0], .1)
 
     def test_error_if_lulc_raster_too_small_and_no_nodata_value_set(self):
-        """Test custom error msg if LULC has no NoData and is too small"""
+        """Test custom error msg if LULC has no NoData and is too small."""
 
         from natcap.invest.urban_mental_health import urban_mental_health
 
