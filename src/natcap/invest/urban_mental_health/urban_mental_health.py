@@ -132,7 +132,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.OptionStringInput(
             id="model_option",
-            name=gettext("Option"),
+            name=gettext("option"),
             about=gettext(
                 "Land use scenario options which incorporate the following "
                 "rasters as inputs: (1) baseline and alternate Land "
@@ -208,7 +208,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.CSVInput(
             id="lulc_attr_csv",
-            name=gettext("LULC Attribute Table"),
+            name=gettext("LULC attribute table"),
             about=gettext(
                 "A table mapping unique LULC codes to NDVI values and stating "
                 "whether the LULC class should be excluded (0 for keeping, "
@@ -1379,7 +1379,7 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
 
     Args:
         preventable_cases (str): path to preventable cases raster
-        health_cost_rate (float): health cost
+        health_cost_rate (float): cost per case of the mental health outcome
         target_preventable_cost (str): path to output preventable cost raster
 
     Returns:
