@@ -50,7 +50,8 @@ requires = [
     'setuptools>=64', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
     'numpy>=2'
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "backend"
+backend-path = ["custom_build_backend"]
 
 [tool.setuptools_scm]
 # Use default configuration. A warning is issued if this section is absent.
