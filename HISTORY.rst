@@ -64,6 +64,19 @@
 Unreleased Changes
 ------------------
 
+Highlights
+==========
+* InVEST introduces a new model: Urban Mental Health. This model estimates
+  the number of preventable cases (and optionally, associated costs) of
+  mental health conditions linked to changes in urban nature exposure. Using
+  NDVI as a proxy, it applies an exposure-response relationship to quantify
+  how increases in nearby vegetation can reduce risk of mental health
+  outcomes. Users can analyze scenarios using either LULC or NDVI inputs.
+* The Seasonal Water Yield model now generates a report containing visual
+  summaries of model inputs and outputs. This report is designed to help
+  users more easily interpret results, validate data and model behavior,
+  and explore visualizations of key outputs.
+
 General
 =======
 * Refactored ``make deploy`` into artifact-specific targets (``deploy_dist``,
