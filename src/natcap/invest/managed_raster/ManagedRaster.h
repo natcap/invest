@@ -517,7 +517,9 @@ public:
   }
 
   ~NeighborIterator() {
-    delete m_ptr;
+    if (this->m_ptr != &endVal) {
+      delete this->m_ptr;
+    }
   }
 };
 
