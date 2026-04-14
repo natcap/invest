@@ -310,12 +310,12 @@ class Input(BaseModel):
             return self.contents
         return []
 
-    def get_keywords(self, incldue_children=True):
+    def get_keywords(self, include_children=True):
         """Get a list of unique keyword strings for this input and children."""
         keywords = []
         if self.keywords:
             keywords += [keyword.value for keyword in self.keywords]
-        if incldue_children:
+        if include_children:
             for child in self.get_child_inputs():
                 if child.keywords:
                     keywords += child.get_keywords()
