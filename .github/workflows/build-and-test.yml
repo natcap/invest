@@ -102,6 +102,7 @@ jobs:
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             ${{ matrix.platform-specific-dependencies }}
             python=${{ matrix.python-version }}
+            tomli
 
       - name: Download previous conda environment.yml
         continue-on-error: true
