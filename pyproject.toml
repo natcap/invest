@@ -48,7 +48,7 @@ invest = "natcap.invest.cli:main"
 # the C++ extensions.
 requires = [
     'setuptools>=64', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
-    'numpy>=2', 'pygeoprocessing'
+    'numpy>=2', 'pygeoprocessing', 'gdal==3.10.*'
 ]
 build-backend = "setuptools.build_meta"
 
