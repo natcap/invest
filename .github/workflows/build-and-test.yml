@@ -219,6 +219,9 @@ jobs:
 
       - name: Build source distribution
         run: |
+          python ./scripts/build_requirements_to_conda_yml.py
+          micromamba create -n build -f requirements-build.yml
+          micromamba activate build
           # Because we're using PEP518 build requirements, the user's
           # computer is guaranteed to have cython available at build
           # time.  Thus, it is no longer necessary to distribute the
