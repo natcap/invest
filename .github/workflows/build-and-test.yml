@@ -127,7 +127,7 @@ jobs:
         run: |
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
-          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel --no-isolation
           ls -la dist
 
       # This produces a wheel that should work on any distro with glibc>=2.39.
