@@ -106,7 +106,7 @@ LULC_CLASSES = GCMDKeyword(
 
 PAWC = InvestKeyword(
     value='PLANT AVAILABLE WATER CONTENT',
-    definition='')
+    definition='The quantity of water in the soil that is available to plants.')
 
 POPULATION_SIZE = GCMDKeyword(
     value='POPULATION SIZE',
@@ -129,7 +129,7 @@ RAINFALL_EROSIVITY = InvestKeyword(
 
 REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(
     value='REFERENCE EVAPOTRANSPIRATION',
-    definition='')
+    definition='Evapotranspiration of a reference vegetation such as grass or alfalfa.')
 
 RUNOFF_CURVE_NUMBER = InvestKeyword(
     value='RUNOFF CURVE NUMBER (CN)',
@@ -200,4 +200,3 @@ WIND_SPEED = GCMDKeyword(
     value='WIND SPEED',
     uuid='a7ce84a3-8329-4eb7-b5de-72d2dea8c6bf',
     full_path='EARTH SCIENCE > OCEANS > OCEAN WINDS > SURFACE WINDS > WIND SPEED')
-

@@ -202,9 +202,7 @@ MODEL_SPEC = spec.ModelSpec(
             projected=True,
             name=gettext("reference evapotranspiration"),
             about=gettext("Map of reference evapotranspiration values."),
-            keywords=[
-                keywords.REFERENCE_EVAPOTRANSPIRATION,
-                keywords.EVAPOTRANSPIRATION],
+            keywords=[keywords.REFERENCE_EVAPOTRANSPIRATION],
             data_type=float,
             units=u.millimeter
         ),
