@@ -192,7 +192,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("biophysical table"),
             about=gettext("Table of biophysical properties for each LULC class."),
             keywords=[
-                keywords.CARBON, keywords.CARBON_SOIL,
+                keywords.CARBON,
                 keywords.CARBON_SEQUESTRATION],
             columns=[
                 spec.LULC_TABLE_COLUMN,

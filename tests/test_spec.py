@@ -508,7 +508,7 @@ class InputTests(unittest.TestCase):
         expected_keywords = [keywords.LULC.value, keywords.CARBON.value]
         self.assertCountEqual(csv_input.get_keywords(), expected_keywords)
         self.assertCountEqual(
-            csv_input.get_keywords(incldue_children=False), [keywords.LULC.value])
+            csv_input.get_keywords(include_children=False), [keywords.LULC.value])
 
     def test_get_keywords_vector_input(self):
         """Test that VectorInput.get_keywords returns correct keywords."""
@@ -527,7 +527,7 @@ class InputTests(unittest.TestCase):
         expected_keywords = [keywords.LULC.value, keywords.CARBON.value]
         self.assertCountEqual(vector_input.get_keywords(), expected_keywords)
         self.assertCountEqual(
-            vector_input.get_keywords(incldue_children=False), [keywords.LULC.value])
+            vector_input.get_keywords(include_children=False), [keywords.LULC.value])
 
     def test_get_keywords_directory_input(self):
         """Test that DirectoryInput.get_keywords returns correct keywords."""
@@ -543,7 +543,7 @@ class InputTests(unittest.TestCase):
             keywords.HYDROLOGIC_SOIL_GROUPS.value]
         self.assertCountEqual(directory_input.get_keywords(), expected_keywords)
         self.assertCountEqual(
-            directory_input.get_keywords(incldue_children=False),
+            directory_input.get_keywords(include_children=False),
             [keywords.LULC.value])
 
 

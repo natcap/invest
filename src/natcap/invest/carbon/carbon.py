@@ -96,7 +96,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             keywords=[
                 keywords.BIOPHYSICAL_TABLE,
-                keywords.CARBON, keywords.CARBON_SOIL],  # TODO: Could place on columns instead
+                keywords.CARBON],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(

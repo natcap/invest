@@ -24,7 +24,11 @@ BATHYMETRY = GCMDKeyword(
     uuid='80d79c7e-6c64-4ada-bfcc-4093969758a5',
     full_path='EARTH SCIENCE > OCEANS > BATHYMETRY/SEAFLOOR TOPOGRAPHY > BATHYMETRY')
 
-BIOPHYSICAL_TABLE = InvestKeyword(value='BIOPHYSICAL TABLE')
+BIOPHYSICAL_TABLE = InvestKeyword(
+    value='BIOPHYSICAL TABLE',
+    definition=(
+        'A table used by InVEST models typically used to define relationships'
+        ' between land cover classes and biophysical properties.'))
 
 BUILDINGS = GCMDKeyword(
     value='BUILDINGS',
@@ -40,11 +44,6 @@ CARBON_SEQUESTRATION = GCMDKeyword(
     value='CARBON SEQUESTRATION',
     uuid='e58872a8-6104-4ff8-bbca-4b00ba4b38e8',
     full_path='EARTH SCIENCE > BIOSPHERE > ECOLOGICAL DYNAMICS > ECOSYSTEM FUNCTIONS > CARBON SEQUESTRATION')
-
-CARBON_SOIL = GCMDKeyword(
-    value='CARBON',  # Note this value is not unique in this module
-    uuid='a7ae5843-479c-4055-b8fc-ba651e485750',
-    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > CARBON')
 
 COASTAL_LANDFORMS = GCMDKeyword(
     value='COASTAL LANDFORMS',
@@ -105,7 +104,9 @@ LULC_CLASSES = GCMDKeyword(
     uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
     full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES')   
 
-PAWC = InvestKeyword(value='PLANT AVAILABLE WATER CONTENT')
+PAWC = InvestKeyword(
+    value='PLANT AVAILABLE WATER CONTENT',
+    definition='')
 
 POPULATION_SIZE = GCMDKeyword(
     value='POPULATION SIZE',
@@ -126,7 +127,9 @@ RAINFALL_EROSIVITY = InvestKeyword(
     value='RAINFALL EROSIVITY',
     definition='The capacity of rainfall to cause soil erosion.')
 
-REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(value='REFERENCE EVAPOTRANSPIRATION')
+REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(
+    value='REFERENCE EVAPOTRANSPIRATION',
+    definition='')
 
 RUNOFF_CURVE_NUMBER = InvestKeyword(
     value='RUNOFF CURVE NUMBER (CN)',
