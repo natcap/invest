@@ -255,7 +255,7 @@ install: $(DIST_DIR)/natcap.invest%.whl
 # Build python packages and put them in dist/
 python_packages: $(DIST_DIR)/natcap.invest%.whl $(DIST_DIR)/natcap.invest%.tar.gz
 $(DIST_DIR)/natcap.invest%.whl: | $(DIST_DIR)
-	$(PYTHON) -m build --wheel
+	$(PYTHON) -m build --wheel --no-isolation
 
 $(DIST_DIR)/natcap.invest%.tar.gz: | $(DIST_DIR)
 	$(PYTHON) -m build --sdist
