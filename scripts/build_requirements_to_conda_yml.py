@@ -13,4 +13,4 @@ with open('requires-build.yml', 'w') as f:
   dependencies:
   """))
   for requirement in pyproject_toml['build-system']['requires']:
-    f.write(f'  - {req}')
+    f.write(f'  - {requirement}')
