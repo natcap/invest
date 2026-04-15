@@ -379,6 +379,7 @@ class ManagedRaster {
       GDALClose( (GDALDatasetH) dataset );
       delete lru_cache;
       free(actualBlockWidths);
+      free(geotransform);
     }
 };
 
@@ -514,6 +515,12 @@ public:
     flow = (pixel.val >> (i * 4)) & 0xF;
     m_ptr = new NeighborTuple(i, xj, yj, static_cast<float>(flow));
     i++;
+  }
+
+  ~NeighborIterator() {
+    if (this->m_ptr != &endVal) {
+      delete this->m_ptr;
+    }
   }
 };
 
