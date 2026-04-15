@@ -125,14 +125,6 @@ Seasonal Water Yield
   the model, where 1=January and 12=December.
   (`#2451 <https://github.com/natcap/invest/issues/2451>`_)
 
-Visitation: Recreation and Tourism
-==================================
-* Fixed a bug where AOIs with very many polygons could require file transfers
-  exceeding 1GB, from server to client, and the server process could crash.
-  Now, file transfers from server to client avoid sending redundant copies of
-  AOI geoemtries, drastically reducing the size of file transfers.
-  (`#1950 <https://github.com/natcap/invest/issues/1950>`_)
-
 Urban Mental Health
 ===================
 * Added the Urban Mental Health model to InVEST. This model evaluates
@@ -140,6 +132,14 @@ Urban Mental Health
   preventable cases of mental health conditions (and optionally, related costs)
   associated with changes in nature exposure, using NDVI as a proxy.
   (`#2140 <https://github.com/natcap/invest/issues/2140>`_)
+
+Visitation: Recreation and Tourism
+==================================
+* Fixed a bug where AOIs with very many polygons could require file transfers
+  exceeding 1GB, from server to client, and the server process could crash.
+  Now, file transfers from server to client avoid sending redundant copies of
+  AOI geoemtries, drastically reducing the size of file transfers.
+  (`#1950 <https://github.com/natcap/invest/issues/1950>`_)
 
 3.18.0 (2026-02-25)
 -------------------
