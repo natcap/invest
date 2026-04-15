@@ -11,6 +11,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
@@ -35,7 +36,10 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.AOI.model_copy(update=dict(id="aoi_watersheds_path")),
+        spec.AOI.model_copy(update=dict(
+            id="aoi_watersheds_path",
+            keywords=[keywords.WATERSHED_BOUNDARIES],
+        )),
         spec.NumberInput(
             id="rainfall_depth",
             name=gettext("rainfall depth"),
@@ -43,17 +47,9 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter,
             expression="value > 0"
         ),
-        spec.SingleBandRasterInput(
-            id="lulc_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of LULC. All values in this raster must have corresponding entries"
-                " in the Biophysical Table."
-            ),
-            data_type=int,
-            units=None,
+        spec.LULC.model_copy(update=dict(
             projected=True
-        ),
+        )),
         spec.SOIL_GROUP.model_copy(update=dict(
             id="soils_hydrological_group_raster_path",
             projected=True
@@ -66,14 +62,9 @@ MODEL_SPEC = spec.ModelSpec(
                 " LULC raster must have corresponding entries in this table for each soil"
                 " group."
             ),
+            keywords=[keywords.RUNOFF_CURVE_NUMBER, keywords.HYDROLOGIC_SOIL_GROUPS],
             columns=[
-                spec.IntegerInput(
-                    id="lucode",
-                    about=gettext(
-                        "LULC codes from the LULC raster. Each code must be a unique"
-                        " integer."
-                    )
-                ),
+                spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(
                     id="cn_a",
                     about=gettext(
@@ -121,6 +112,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="built_infrastructure_vector_path",
             name=gettext("built infrastructure"),
             about=gettext("Map of building footprints."),
+            keywords=[keywords.BUILDINGS],
             required=False,
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
@@ -143,6 +135,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " entries in this table. Required if the Built Infrastructure vector is"
                 " provided."
             ),
+            keywords=[keywords.BUILDINGS, keywords.FLOOD_DAMAGE_VALUE],
             required="built_infrastructure_vector_path",
             columns=[
                 spec.IntegerInput(id="type", about=gettext("Building type code.")),

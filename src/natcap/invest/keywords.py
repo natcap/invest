@@ -1,0 +1,202 @@
+from pydantic import BaseModel
+
+
+class Keyword(BaseModel):
+    value: str
+    vocabulary: str
+
+
+class GCMDKeyword(Keyword):
+    value: str
+    uuid: str
+    full_path: str
+    vocabulary: str = 'Global Change Master Directory (GCMD) Keywords'
+
+
+class InvestKeyword(Keyword):
+    value: str
+    definition: str = ''
+    vocabulary: str = 'InVEST Keywords'
+
+
+BATHYMETRY = GCMDKeyword(
+    value='BATHYMETRY',
+    uuid='80d79c7e-6c64-4ada-bfcc-4093969758a5',
+    full_path='EARTH SCIENCE > OCEANS > BATHYMETRY/SEAFLOOR TOPOGRAPHY > BATHYMETRY')
+
+BIOPHYSICAL_TABLE = InvestKeyword(
+    value='BIOPHYSICAL TABLE',
+    definition=(
+        'A table used by InVEST models typically used to define relationships'
+        ' between land cover classes and biophysical properties.'))
+
+BUILDINGS = GCMDKeyword(
+    value='BUILDINGS',
+    uuid='d7742082-5461-4610-9ced-e0ec3bb64697',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > INFRASTRUCTURE > BUILDINGS')
+
+CARBON = GCMDKeyword(
+    value='CARBON',
+    uuid='6f6537f5-773f-4df1-862b-d9ab80eb5e04',
+    full_path='EARTH SCIENCE > BIOSPHERE > VEGETATION > CARBON')
+
+CARBON_SEQUESTRATION = GCMDKeyword(
+    value='CARBON SEQUESTRATION',
+    uuid='e58872a8-6104-4ff8-bbca-4b00ba4b38e8',
+    full_path='EARTH SCIENCE > BIOSPHERE > ECOLOGICAL DYNAMICS > ECOSYSTEM FUNCTIONS > CARBON SEQUESTRATION')
+
+COASTAL_LANDFORMS = GCMDKeyword(
+    value='COASTAL LANDFORMS',
+    uuid='c58320e6-3f1d-4c36-9bee-6bad73404c21',
+    full_path='EARTH SCIENCE > SOLID EARTH > GEOMORPHIC LANDFORMS/PROCESSES > COASTAL LANDFORMS')
+
+CONTOUR_MAPS = GCMDKeyword(
+    value='CONTOUR MAPS',
+    uuid='120f9132-a756-4f6f-a74c-78e94dfcd2a1',
+    full_path='EARTH SCIENCE > LAND SURFACE > TOPOGRAPHY > TERRAIN ELEVATION > CONTOUR MAPS')
+
+CONTINENTAL_MARGINS = GCMDKeyword(
+    value='CONTINENTAL MARGINS',
+    uuid='a91a00f7-05ed-4633-9fac-1772a48b6342',
+    full_path='EARTH SCIENCE > OCEANS > BATHYMETRY/SEAFLOOR TOPOGRAPHY > CONTINENTAL MARGINS')
+
+CROP_COEFFICIENT = InvestKeyword(value='CROP COEFFICIENT')
+
+DEM = GCMDKeyword(
+    value='DIGITAL ELEVATION/TERRAIN MODEL (DEM)',
+    uuid='395372ad-2883-4b6a-a481-6383a310ca47',
+    full_path='EARTH SCIENCE > LAND SURFACE > TOPOGRAPHY > TERRAIN ELEVATION > DIGITAL ELEVATION/TERRAIN MODEL (DEM)')
+
+DRAINAGE = GCMDKeyword(
+    value='DRAINAGE',
+    uuid='269c7277-fa8f-4c1c-bd8b-ab772c1df4e5',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > DRAINAGE')
+
+EVAPOTRANSPIRATION = GCMDKeyword(
+    value='EVAPOTRANSPIRATION',
+    uuid='26fc4850-7ba9-44d8-a156-5c623e17b72f',
+    full_path='EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC WATER VAPOR > WATER VAPOR PROCESSES > EVAPOTRANSPIRATION')
+
+FLOOD_DAMAGE_VALUE = InvestKeyword(
+    value='FLOOD DAMAGE VALUE',
+    definition='The economic value of flood damage to a property.')
+
+HYDROELECTRIC_ENERGY = GCMDKeyword(
+    value='HYDROELECTRIC ENERGY PRODUCTION/USE',
+    uuid='7eba0eef-3a30-4282-a162-1f483370ddc4',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > ECONOMIC RESOURCES > ENERGY PRODUCTION/USE > HYDROELECTRIC ENERGY PRODUCTION/USE')
+
+HYDROLOGIC_SOIL_GROUPS = InvestKeyword(
+    value='HYDROLOGIC SOIL GROUPS',
+    definition='Groups representing rainfall runoff potential. A component of the USDA curve number method.')
+
+LANDMASS = InvestKeyword(
+    value='LANDMASS',
+    definition='Polygonal area of land surface above sea level.')
+
+LULC = GCMDKeyword(
+    value='LAND USE/LAND COVER',
+    uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER')
+
+LULC_CLASSES = GCMDKeyword(
+    value='LAND USE/LAND COVER CLASSES',
+    uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES')   
+
+PAWC = InvestKeyword(
+    value='PLANT AVAILABLE WATER CONTENT',
+    definition='The quantity of water in the soil that is available to plants.')
+
+POPULATION_SIZE = GCMDKeyword(
+    value='POPULATION SIZE',
+    uuid='dd0b8bc9-90b3-4e7d-a021-e91dc676d622',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > POPULATION > POPULATION SIZE')
+
+PRECIPITATION = GCMDKeyword(
+    value='PRECIPITATION',
+    uuid='1532e590-a62d-46e3-8d03-2351bc48166a',
+    full_path='EARTH SCIENCE > ATMOSPHERE > PRECIPITATION')
+
+PRECIPITATION_RATE = GCMDKeyword(
+    value='PRECIPITATION RATE',
+    uuid='ac50c468-df2f-429c-8394-9d63efcc6f9d',
+    full_path='EARTH SCIENCE > ATMOSPHERE > PRECIPITATION > PRECIPITATION_RATE')
+
+RAINFALL_EROSIVITY = InvestKeyword(
+    value='RAINFALL EROSIVITY',
+    definition='The capacity of rainfall to cause soil erosion.')
+
+REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(
+    value='REFERENCE EVAPOTRANSPIRATION',
+    definition='Evapotranspiration of a reference vegetation such as grass or alfalfa.')
+
+RUNOFF_CURVE_NUMBER = InvestKeyword(
+    value='RUNOFF CURVE NUMBER (CN)',
+    definition='An index representing runoff as a function of soil, cover type, and hydrologic and antecedent conditions.')
+
+SEA_LEVEL_RISE = GCMDKeyword(
+    value='SEA LEVEL RISE',
+    uuid='536a86bd-3dd1-4f4a-9b4a-222a12746db5',
+    full_path='EARTH SCIENCE > CLIMATE INDICATORS > ATMOSPHERIC/OCEAN INDICATORS > SEA LEVEL RISE')
+
+SHORELINES = GCMDKeyword(
+    value='SHORELINES',
+    uuid='1d3b4eb7-9931-44bf-8457-26847051b7a8',
+    full_path='EARTH SCIENCE > OCEANS > COASTAL PROCESSES > SHORELINES')
+
+SOIL_ERODIBILITY = InvestKeyword(
+    value='SOIL ERODIBILITY',
+    definition='The susceptibility of soil to erosion as a function of soil properties.')
+
+SOIL_EROSION = GCMDKeyword(
+    value='SOIL EROSION',
+    uuid='6eef914d-ff9f-44b0-a3a6-3dcf911023d4',
+    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL EROSION')
+
+SOIL_ROOTING_DEPTH = GCMDKeyword(
+    value='SOIL ROOTING DEPTH',
+    uuid='1b475201-a032-4a66-a3aa-a35605affaee',
+    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL ROOTING DEPTH')
+
+USLE_C_FACTOR = InvestKeyword(
+    value='USLE C FACTOR',
+    definition='Cover-management factor for the Universal Soil Loss Equation')
+
+USLE_P_FACTOR = InvestKeyword(
+    value='USLE P FACTOR',
+    definition='Support-practice factor for the Universal Soil Loss Equation')
+
+WATERSHED_BOUNDARIES = GCMDKeyword(
+    value='WATERSHED BOUNDARIES',
+    uuid='b98123fc-6a87-4396-8e1a-ae7406e76ff6',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > WATERSHED CHARACTERISTICS > WATERSHED BOUNDARIES')
+
+WATER_BUDGET = GCMDKeyword(
+    value='WATER BUDGET',
+    uuid='f8702aed-a0ae-46f0-89eb-abde858bc6ac',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > WATER BUDGET')
+
+WAVE_DIRECTION = GCMDKeyword(
+    value='WAVE DIRECTION',
+    uuid='037ce518-b71f-4599-b37f-feab9cc9809d',
+    full_path='EARTH SCIENCE > OCEANS > OCEAN WAVES > WAVE DIRECTION')
+
+WAVE_FETCH = GCMDKeyword(
+    value='WAVE FETCH',
+    uuid='09b326df-79b3-41b8-8998-e06344b0fe0d',
+    full_path='EARTH SCIENCE > OCEANS > OCEAN WAVES > WAVE FETCH')
+
+WAVE_POWER = InvestKeyword(
+    value='WAVE POWER',
+    definition='The power of surface ocean waves.')
+
+WIND_DIRECTION = GCMDKeyword(
+    value='WIND DIRECTION',
+    uuid='d78e5503-d78e-466d-97bb-e68d6e768a9d',
+    full_path='EARTH SCIENCE > OCEANS > OCEAN WINDS > SURFACE WINDS > WIND DIRECTION')
+
+WIND_SPEED = GCMDKeyword(
+    value='WIND SPEED',
+    uuid='a7ce84a3-8329-4eb7-b5de-72d2dea8c6bf',
+    full_path='EARTH SCIENCE > OCEANS > OCEAN WINDS > SURFACE WINDS > WIND SPEED')
