@@ -47,7 +47,7 @@ invest = "natcap.invest.cli:main"
 # pygeoprocessing is required because it provides header files needed to build
 # the C++ extensions.
 requires = [
-    'setuptools>=64', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
+    'setuptools==68', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
     'numpy>=2', 'pygeoprocessing', 'gdal==3.10.*'
 ]
 build-backend = "setuptools.build_meta"
