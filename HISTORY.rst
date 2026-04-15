@@ -21,6 +21,7 @@
   - Seasonal Water Yield
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Mental Health
   - Urban Nature Access
   - Urban Stormwater Retention
   - Visitation: Recreation and Tourism
@@ -61,10 +62,21 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
+Unreleased Changes
+------------------
 
-..
-  Unreleased Changes
-  ------------------
+Highlights
+==========
+* InVEST introduces a new model: Urban Mental Health. This model estimates
+  the number of preventable cases (and optionally, associated costs) of
+  mental health conditions linked to changes in urban nature exposure. Using
+  NDVI as a proxy, it applies an exposure-response relationship to quantify
+  how increases in nearby vegetation can reduce risk of mental health
+  outcomes. Users can analyze scenarios using either LULC or NDVI inputs.
+* The Seasonal Water Yield model now generates a report containing visual
+  summaries of model inputs and outputs. This report is designed to help
+  users more easily interpret results, validate data and model behavior,
+  and explore visualizations of key outputs.
 
 General
 =======
@@ -94,6 +106,40 @@ NDR
   ``calc_n=False`` and ``calc_p=True``, or vice versa.
   (`#2472 <https://github.com/natcap/invest/issues/2472>`_)
 
+Seasonal Water Yield
+====================
+* The model now generates a report, a visual summary of results, available in
+  the output workspace and also viewable from the Workbench after the model run
+  completes. (`#2321 <https://github.com/natcap/invest/issues/2321>`_)
+* The model now generates an additional output, a CSV containing average monthly
+  quickflow, baseflow, and precipitation values, in cubic meters per month, for
+  each feature in the AOI. This output is used by the report to generate some
+  plots. Note that this CSV is only created when the model is run without
+  inputting a Local Recharge raster.
+  (`#2321 <https://github.com/natcap/invest/issues/2321>`_)
+* Various updates to model output data metadata, including correcting the
+  units of some outputs.
+  (`#2450 <https://github.com/natcap/invest/issues/2450>`_)
+* Updated the naming convention of several monthly intermediate outputs to be
+  1-indexed rather than 0-indexed. This makes filenames consistent throughout
+  the model, where 1=January and 12=December.
+  (`#2451 <https://github.com/natcap/invest/issues/2451>`_)
+
+Urban Mental Health
+===================
+* Added the Urban Mental Health model to InVEST. This model evaluates
+  differences between baseline and a future/counterfactual scenario to quantify
+  preventable cases of mental health conditions (and optionally, related costs)
+  associated with changes in nature exposure, using NDVI as a proxy.
+  (`#2140 <https://github.com/natcap/invest/issues/2140>`_)
+
+Visitation: Recreation and Tourism
+==================================
+* Fixed a bug where AOIs with very many polygons could require file transfers
+  exceeding 1GB, from server to client, and the server process could crash.
+  Now, file transfers from server to client avoid sending redundant copies of
+  AOI geoemtries, drastically reducing the size of file transfers.
+  (`#1950 <https://github.com/natcap/invest/issues/1950>`_)
 
 3.18.0 (2026-02-25)
 -------------------
