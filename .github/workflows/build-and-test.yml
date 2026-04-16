@@ -108,7 +108,10 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           requirements-files: requirements-build.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            ${{ matrix.platform-specific-dependencies }}
+            python=${{ matrix.python-version }}
           env-name: build_env
 
       - name: Set up test environment
