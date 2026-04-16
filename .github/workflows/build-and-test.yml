@@ -94,9 +94,27 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      - name: Set up python environment
+      - name: Create build requirements file
+        shell: python
+        run: |
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              pyproject_toml = tomllib.load(f)
+          with open('requirements-build.txt', 'w') as f:
+            for requirement in pyproject_toml['build-system']['requires']:
+              f.write(requirement)
+
+      - name: Set up build environment
         uses: ./.github/actions/setup_env
         with:
+          requirements-files: requirements-build.txt
+          requirements: CONDA_DEFAULT_DEPENDENCIES
+          env-name: build_env
+
+      - name: Set up test environment
+        uses: ./.github/actions/setup_env
+        with:
+          env-name: test_env
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
@@ -125,12 +143,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          python ./scripts/convert-requirements-to-conda-yml.py --pyproject-toml-build-system-requires \
-            pyproject.toml > requirements-build.yml
-          echo "- python-build" >> requirements-build.yml
-          cat requirements-build.yml
-          micromamba create -n build -f requirements-build.yml
-          micromamba activate build
+          micromamba activate build_env
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
           NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel --no-isolation
@@ -154,6 +167,7 @@ jobs:
 
       - name: Install wheel and run model tests
         run: |
+          micromamba activate test_env
           pip install $(find dist -name "natcap[._-]invest*.whl")
           make test
 

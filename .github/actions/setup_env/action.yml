@@ -7,6 +7,10 @@ description:
   requirements, and the number of the week in the year, so that the cache
   refreshes weekly."
 inputs:
+  env-name:
+    description: "Name to give the conda environment"
+    required: false
+    default: 'env'
   python:
     description:
       "Path to python executable to use to run convert-requirements-to-conda-yml.py"
@@ -58,7 +62,7 @@ runs:
       with:
         micromamba-version: '1.5.12-0'
         environment-file: environment.yml
-        environment-name: env
+        environment-name: ${{ inputs.env-name }}
         condarc: |
           channels:
             - conda-forge
