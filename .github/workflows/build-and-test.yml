@@ -102,7 +102,7 @@ jobs:
               pyproject_toml = tomllib.load(f)
           with open('requirements-build.txt', 'w') as f:
             for requirement in pyproject_toml['build-system']['requires']:
-              f.write(requirement)
+              f.write(f'- {requirement}\n')
 
       - name: Set up build environment
         uses: ./.github/actions/setup_env
