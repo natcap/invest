@@ -4,7 +4,7 @@
 import argparse
 import platform
 import sys
-import tomllib
+import tomli
 
 YML_TEMPLATE = """channels:
 - conda-forge
