@@ -125,7 +125,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          python ./scripts/convert-requirements-to-conda-yml --pyproject-toml-build-system-requires \
+          python ./scripts/convert-requirements-to-conda-yml.py --pyproject-toml-build-system-requires \
             pyproject.toml > requirements-build.yml
           micromamba create -n build -f requirements-build.yml
           micromamba activate build
@@ -219,7 +219,7 @@ jobs:
 
       - name: Build source distribution
         run: |
-          python ./scripts/convert-requirements-to-conda-yml --pyproject-toml-build-system-requires \
+          python ./scripts/convert-requirements-to-conda-yml.py --pyproject-toml-build-system-requires \
             pyproject.toml > requirements-build.yml
           micromamba create -n build -f requirements-build.yml
           micromamba activate build
