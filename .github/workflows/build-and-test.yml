@@ -19,7 +19,9 @@ concurrency:
 env:
   # build: dependency of make install
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: python-build setuptools_scm
+  # tomli: needed for convert-requirements-to-conda-yml script
+  # once we drop support for python 3.10, we can switch to the standard library's tomllib
+  CONDA_DEFAULT_DEPENDENCIES: python-build setuptools_scm tomli
   LATEST_SUPPORTED_PYTHON_VERSION: "3.14"
   # gsutil never seems to support the latest python
   GSUTIL_PYTHON_VERSION: "3.13"
@@ -102,7 +104,6 @@ jobs:
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             ${{ matrix.platform-specific-dependencies }}
             python=${{ matrix.python-version }}
-            tomli
 
       - name: Download previous conda environment.yml
         continue-on-error: true
