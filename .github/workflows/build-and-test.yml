@@ -128,6 +128,7 @@ jobs:
           python ./scripts/convert-requirements-to-conda-yml.py --pyproject-toml-build-system-requires \
             pyproject.toml > requirements-build.yml
           echo "  - python-build" >> requirements-build.yml
+          cat requirements-build.yml
           micromamba create -n build -f requirements-build.yml
           micromamba activate build
           # uninstall InVEST if it was already in the restored cache
@@ -223,6 +224,7 @@ jobs:
           python ./scripts/convert-requirements-to-conda-yml.py --pyproject-toml-build-system-requires \
             pyproject.toml > requirements-build.yml
           echo "  - python-build" >> requirements-build.yml
+          cat requirements-build.yml
           micromamba create -n build -f requirements-build.yml
           micromamba activate build
           # Because we're using PEP518 build requirements, the user's
