@@ -4,8 +4,7 @@
 import argparse
 import platform
 import sys
-
-import tomli
+import tomllib
 
 YML_TEMPLATE = """channels:
 - conda-forge
@@ -56,7 +55,7 @@ def build_environment_from_requirements(cli_args):
 
     if args.pyproject_toml_build_system_requires:
         with open('pyproject.toml', 'rb') as f:
-            pyproject_toml = tomli.load(f)
+            pyproject_toml = tomllib.load(f)
         for requirement in pyproject_toml['build-system']['requires']:
             conda_requirements.add(requirement)
     else:
