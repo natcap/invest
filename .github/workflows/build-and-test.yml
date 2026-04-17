@@ -312,9 +312,19 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+      - name: Create build requirements file
+        shell: python
+        run: |
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              pyproject_toml = tomllib.load(f)
+          with open('requirements-build.txt', 'w') as f:
+            for requirement in pyproject_toml['build-system']['requires']:
+              f.write(f'{requirement}\n')
+
       - uses: ./.github/actions/setup_env
         with:
-          requirements-files: requirements.txt
+          requirements-files: requirements.txt requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
@@ -345,10 +355,20 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+      - name: Create build requirements file
+        shell: python
+        run: |
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              pyproject_toml = tomllib.load(f)
+          with open('requirements-build.txt', 'w') as f:
+            for requirement in pyproject_toml['build-system']['requires']:
+              f.write(f'{requirement}\n')
+
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
+          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
@@ -403,6 +423,16 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+      - name: Create build requirements file
+        shell: python
+        run: |
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              pyproject_toml = tomllib.load(f)
+          with open('requirements-build.txt', 'w') as f:
+            for requirement in pyproject_toml['build-system']['requires']:
+              f.write(f'{requirement}\n')
+
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
@@ -411,6 +441,7 @@ jobs:
             requirements-dev.txt
             requirements-docs.txt
             constraints_tests.txt
+            requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
