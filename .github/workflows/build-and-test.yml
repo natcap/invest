@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 defaults:
   run:
-    shell: bash -l {0}
+    shell: bash -e -l {0}
 
 concurrency:
   # make sure only one run of this workflow for a given PR or a given branch
@@ -244,7 +244,7 @@ jobs:
 
       - name: Build source distribution
         run: |
-          micromamba activate build
+          micromamba activate build_env
           # Because we're using PEP518 build requirements, the user's
           # computer is guaranteed to have cython available at build
           # time.  Thus, it is no longer necessary to distribute the
