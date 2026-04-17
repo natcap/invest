@@ -48,7 +48,6 @@ runs:
     - name: Combine all requirements into environment YML
       shell: bash
       run: |
-        pip install tomli
         # make sure each file is separated by a space
         REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | xargs | tr "\n" " ")
         ${{ inputs.python }} ./scripts/convert-requirements-to-conda-yml.py \
