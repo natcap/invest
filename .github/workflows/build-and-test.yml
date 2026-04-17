@@ -257,7 +257,7 @@ jobs:
         run : |
           micromamba activate test_env
           # Install natcap.invest from the sdist in dist/
-          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" pip install $(find dist -name "natcap[._-]invest*")
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" pip install --no-build-isolation $(find dist -name "natcap[._-]invest*")
 
           # Model tests should cover model functionality, we just want
           # to be sure that we can import `natcap.invest` here.
