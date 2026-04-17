@@ -12,7 +12,6 @@ ADD requirements.txt /invest/requirements.txt
 ADD LICENSE.txt /invest/LICENSE.txt
 ADD NOTICE.txt /invest/NOTICE.txt
 ADD .git /invest/.git
-RUN cd /invest && python3 -m build --no-isolation
 
 # Create the container for distribution that has runtime dependencies.
 FROM mambaorg/micromamba:2.5-debian13-slim
@@ -34,5 +33,7 @@ RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/env
         /opt/conda/bin/python -m pip install /tmp/*.whl && \
         /opt/conda/bin/python -m pip cache purge && \
         micromamba remove -y -n base cxx-compiler git
+
+RUN cd /invest && python3 -m build --no-isolation
 
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh"]
