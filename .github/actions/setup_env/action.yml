@@ -69,6 +69,9 @@ runs:
         init-shell: bash
         cache-environment: true
         cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
+        # we use this action multiple times in one job, and repeating the cleanup step
+        # multiple times will raise an error. cleanup seems unnecessary since everything
+        # is discarded at the end of the job anyway.
         post-cleanup: 'none'
 
     - name: List conda environment
