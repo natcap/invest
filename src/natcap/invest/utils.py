@@ -2,8 +2,6 @@
 import ast
 import codecs
 import contextlib
-import functools
-import json
 import logging
 import os
 import platform
@@ -321,7 +319,7 @@ def read_csv_to_dataframe(path, **kwargs):
                 'encoding': 'utf-8-sig',
                 **kwargs
             })
-    except UnicodeDecodeError as error:
+    except UnicodeDecodeError:
         raise ValueError(
             f'The file {path} must be encoded as UTF-8 or ASCII')
 
@@ -711,7 +709,7 @@ class _GDALPath:
     scheme : str
         URI scheme such as "https" or "zip+s3".
     """
-    
+
     def __init__(self, path, archive, scheme):
         self.path = path
         self.archive = archive

@@ -3,19 +3,20 @@ import importlib
 import json
 import logging
 
-from osgeo import gdal
 from flask import Flask
 from flask import request
 from flask_cors import CORS
 import geometamaker
 import natcap.invest
+import natcap.invest.spec
+import natcap.invest.validation_messages
 from natcap.invest import cli
 from natcap.invest import datastack
 from natcap.invest import set_locale
 from natcap.invest import models
-from natcap.invest import spec
 from natcap.invest import usage
 from natcap.invest import validation
+from natcap.invest.spec import OptionStringInput
 
 LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ def get_invest_getspec():
     target_model = request.get_json()
     target_module = models.model_id_to_pyname[target_model]
     importlib.reload(natcap.invest.validation_messages)
+    importlib.reload(natcap.invest.spec)
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
     return model_module.MODEL_SPEC.to_json()
@@ -88,7 +90,7 @@ def get_dynamic_dropdown_options():
     model_module = importlib.import_module(
         name=models.model_id_to_pyname[payload['model_id']])
     for arg_spec in model_module.MODEL_SPEC.inputs:
-        if (isinstance(arg_spec, spec.OptionStringInput) and
+        if (isinstance(arg_spec, OptionStringInput) and
                 arg_spec.dropdown_function):
             results[arg_spec.id] = [
                 option.model_dump() for option in
