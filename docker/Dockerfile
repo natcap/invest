@@ -4,15 +4,6 @@
 FROM debian:13 AS build
 RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.13-venv libgdal-dev
 
-# only copy in the files needed for building the wheel
-ADD src /invest/src
-ADD pyproject.toml /invest/pyproject.toml
-ADD setup.py /invest/setup.py
-ADD requirements.txt /invest/requirements.txt
-ADD LICENSE.txt /invest/LICENSE.txt
-ADD NOTICE.txt /invest/NOTICE.txt
-ADD .git /invest/.git
-
 # Create the container for distribution that has runtime dependencies.
 FROM mambaorg/micromamba:2.5-debian13-slim
 # Python version should match the version used in stage 1.
@@ -23,6 +14,15 @@ ARG PYTHON_VERSION="3.13"
 # Check the debian package repo for the debian release above to confirm the version.
 # Debian's GDAL version will undoubtedly be earlier than what's available in conda-forge.
 ARG DEBIAN_GDAL_VERSION="3.10"
+
+# only copy in the files needed for building the wheel
+ADD src /invest/src
+ADD pyproject.toml /invest/pyproject.toml
+ADD setup.py /invest/setup.py
+ADD requirements.txt /invest/requirements.txt
+ADD LICENSE.txt /invest/LICENSE.txt
+ADD NOTICE.txt /invest/NOTICE.txt
+ADD .git /invest/.git
 
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
