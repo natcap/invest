@@ -39,8 +39,8 @@ from libcpp.queue cimport queue
 from libc cimport math
 cimport numpy
 cimport cython
-from ..managed_raster.managed_raster cimport ManagedRaster
-from ..managed_raster.managed_raster cimport is_close
+from pygeoprocessing.extensions cimport ManagedRaster
+from pygeoprocessing.extensions cimport is_close
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
