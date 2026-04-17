@@ -235,7 +235,7 @@ jobs:
       - name: Set up test environment
         uses: ./.github/actions/setup_env
         with:
-          requirements-files: requirements.txt constraints_tests.txt
+          requirements-files: requirements.txt constraints_tests.txt requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ matrix.python-version }}
