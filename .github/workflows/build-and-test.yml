@@ -212,21 +212,38 @@ jobs:
         with:
           fetch-depth: 0  # Fetch complete history for accurate versioning
 
-      - uses: ./.github/actions/setup_env
+      - name: Create build requirements file
+        shell: python
+        run: |
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              pyproject_toml = tomllib.load(f)
+          with open('requirements-build.txt', 'w') as f:
+            for requirement in pyproject_toml['build-system']['requires']:
+              f.write(f'{requirement}\n')
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup_env
+        with:
+          requirements-files: requirements-build.txt
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            ${{ matrix.platform-specific-dependencies }}
+            python=${{ matrix.python-version }}
+          env-name: build_env
+
+      - name: Set up test environment
+        uses: ./.github/actions/setup_env
         with:
           requirements-files: requirements.txt constraints_tests.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ matrix.python-version }}
             twine ${{ matrix.platform-specific-dependencies }}
+          env-name: test_env
 
       - name: Build source distribution
         run: |
-          python ./scripts/convert-requirements-to-conda-yml.py --pyproject-toml-build-system-requires \
-            pyproject.toml > requirements-build.yml
-          echo "- python-build" >> requirements-build.yml
-          cat requirements-build.yml
-          micromamba create -n build -f requirements-build.yml
           micromamba activate build
           # Because we're using PEP518 build requirements, the user's
           # computer is guaranteed to have cython available at build
@@ -238,11 +255,7 @@ jobs:
 
       - name: Install from source distribution
         run : |
-          echo $CONDA_PREFIX
-          micromamba deactivate
-          echo $CONDA_PREFIX
-          micromamba activate env
-          echo $CONDA_PREFIX
+          micromamba activate test_env
           # Install natcap.invest from the sdist in dist/
           NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" pip install $(find dist -name "natcap[._-]invest*")
 
