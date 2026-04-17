@@ -28,4 +28,3 @@ xlwt
 build  # pip-only
 rst2html5
 beautifulsoup4
-cython
