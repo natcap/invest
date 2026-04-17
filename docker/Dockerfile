@@ -28,10 +28,10 @@ ARG DEBIAN_GDAL_VERSION="3.10"
 COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} && \
         micromamba clean --all --yes && \
-        /opt/conda/bin/python -m pip install /tmp/*.whl && \
+        cd /invest && \
+        /opt/conda/bin/python -m build --no-isolation && \
+        /opt/conda/bin/python -m pip install *.whl && \
         /opt/conda/bin/python -m pip cache purge && \
         micromamba remove -y -n base cxx-compiler git
-
-RUN cd /invest && python3 -m build --no-isolation
 
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh"]
