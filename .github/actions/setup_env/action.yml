@@ -70,6 +70,7 @@ runs:
         init-shell: bash
         cache-environment: true
         cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
+        post-cleanup: 'none'
 
     - name: List conda environment
       shell: bash -l {0}
