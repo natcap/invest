@@ -110,7 +110,6 @@ jobs:
           requirements-files: requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            ${{ matrix.platform-specific-dependencies }}
             python=${{ matrix.python-version }}
           env-name: build_env
 
@@ -228,7 +227,6 @@ jobs:
           requirements-files: requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            ${{ matrix.platform-specific-dependencies }}
             python=${{ matrix.python-version }}
           env-name: build_env
 
