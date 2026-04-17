@@ -12,7 +12,7 @@ ADD requirements.txt /invest/requirements.txt
 ADD LICENSE.txt /invest/LICENSE.txt
 ADD NOTICE.txt /invest/NOTICE.txt
 ADD .git /invest/.git
-RUN cd /invest && python3 -m build
+RUN cd /invest && python3 -m build --no-isolation
 
 # Create the container for distribution that has runtime dependencies.
 FROM mambaorg/micromamba:2.5-debian13-slim
