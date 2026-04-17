@@ -18,8 +18,6 @@ FROM mambaorg/micromamba:2.5-debian13-slim
 # Python version should match the version used in stage 1.
 # If we update the stage 1 debian version, also update this python version
 ARG PYTHON_VERSION="3.13"
-COPY --from=build /tmp/
-
 
 # Define this to be the GDAL version used to build the InVEST wheel in the debian step.
 # Check the debian package repo for the debian release above to confirm the version.
