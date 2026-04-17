@@ -19,7 +19,7 @@ concurrency:
 env:
   # build: dependency of make install
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: python-build setuptools_scm tomli
+  CONDA_DEFAULT_DEPENDENCIES: python-build setuptools_scm gdal==3.10.3
   LATEST_SUPPORTED_PYTHON_VERSION: "3.14"
   # gsutil never seems to support the latest python
   GSUTIL_PYTHON_VERSION: "3.13"
