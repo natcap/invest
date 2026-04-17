@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 defaults:
   run:
-    shell: bash -el {0}
+    shell: bash -l {0}
 
 concurrency:
   # make sure only one run of this workflow for a given PR or a given branch
@@ -152,12 +152,12 @@ jobs:
           NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel --no-isolation
           ls -la dist
 
-      # # This produces a wheel that should work on any distro with glibc>=2.39.
-      # # This is a very recent version. If we want to support older versions, I
-      # # suspect we would need to build GDAL from source on an appropriate
-      # # system (such as a manylinux docker container) to ensure compatibility.
-      # # Symbols used in libgdal are the cause of the high minimum version,
-      # # possibly because of installing with conda.
+      # This produces a wheel that should work on any distro with glibc>=2.39.
+      # This is a very recent version. If we want to support older versions, I
+      # suspect we would need to build GDAL from source on an appropriate
+      # system (such as a manylinux docker container) to ensure compatibility.
+      # Symbols used in libgdal are the cause of the high minimum version,
+      # possibly because of installing with conda.
       # - name: Audit and repair wheel for manylinux
       #   if: matrix.os == 'ubuntu-latest'
       #   run: |
