@@ -2,7 +2,6 @@
 
 # Build the InVEST wheel in a separate container stage
 FROM debian:13 AS build
-RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.13-venv libgdal-dev
 
 # Create the container for distribution that has runtime dependencies.
 FROM mambaorg/micromamba:2.5-debian13-slim
@@ -14,6 +13,8 @@ ARG PYTHON_VERSION="3.13"
 # Check the debian package repo for the debian release above to confirm the version.
 # Debian's GDAL version will undoubtedly be earlier than what's available in conda-forge.
 ARG DEBIAN_GDAL_VERSION="3.10"
+
+RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.13-venv libgdal-dev
 
 # only copy in the files needed for building the wheel
 COPY --chown=$MAMBA_USER:$MAMBA_USER src /invest/src
