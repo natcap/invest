@@ -14,6 +14,12 @@ ARG PYTHON_VERSION="3.13"
 # Debian's GDAL version will undoubtedly be earlier than what's available in conda-forge.
 ARG DEBIAN_GDAL_VERSION="3.10"
 
+USER root
+RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.13-venv libgdal-dev
+
+USER $MAMBA_USER
+ARG MAMBA_DOCKERFILE_ACTIVATE=1
+
 # only copy in the files needed for building the wheel
 COPY --chown=$MAMBA_USER:$MAMBA_USER src /invest/src
 ADD pyproject.toml /invest/pyproject.toml
@@ -26,11 +32,6 @@ ADD .git /invest/.git
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
 
-USER root
-RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.13-venv libgdal-dev
-
-USER $MAMBA_USER
-ARG MAMBA_DOCKERFILE_ACTIVATE=1
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} python-build git && \
         micromamba clean --all --yes && \
         cd /invest && \
