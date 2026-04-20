@@ -29,7 +29,7 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} python-build && \
         micromamba clean --all --yes && \
         cd /invest && \
-        /opt/conda/bin/python -m build --no-isolation && \
+        micromamba run -n base /opt/conda/bin/python -m build --no-isolation && \
         /opt/conda/bin/python -m pip install *.whl && \
         /opt/conda/bin/python -m pip cache purge && \
         micromamba remove -y -n base cxx-compiler git
