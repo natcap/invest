@@ -28,11 +28,16 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
 
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
+USER root
+RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.13-venv libgdal-dev
+
+USER $MAMBA_USER
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} python-build git && \
         micromamba clean --all --yes && \
         cd /invest && \
+        pwd && ls && \
         /opt/conda/bin/python -m build --no-isolation && \
-        /opt/conda/bin/python -m pip install *.whl && \
+        /opt/conda/bin/python -m pip install dist/*.whl && \
         /opt/conda/bin/python -m pip cache purge && \
         micromamba remove -y -n base cxx-compiler git
 
