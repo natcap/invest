@@ -16,7 +16,7 @@ ARG PYTHON_VERSION="3.13"
 ARG DEBIAN_GDAL_VERSION="3.10"
 
 # only copy in the files needed for building the wheel
-ADD src /invest/src
+COPY --chown=$MAMBA_USER:$MAMBA_USER src /invest/src
 ADD pyproject.toml /invest/pyproject.toml
 ADD setup.py /invest/setup.py
 ADD requirements.txt /invest/requirements.txt
