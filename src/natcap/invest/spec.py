@@ -27,6 +27,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, \
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
+from natcap.invest import keywords
 from natcap.invest import utils
 from . import gettext
 from .unit_registry import u
@@ -209,6 +210,13 @@ class Input(BaseModel):
     about: typing.Union[str, None] = None
     """User-facing description of the input"""
 
+    keywords: typing.Union[list[natcap.invest.keywords.Keyword], None] = None
+    """A list of keywords from a controlled vocabulary.
+
+    Keywords can be used to identify possible data sources that satisfy input
+    requirements.
+    """
+
     required: typing.Union[bool, str] = True
     """Whether the input is required to be provided. Defaults to True. Set to
     False if the input is always optional. If the input is conditionally
@@ -235,7 +243,6 @@ class Input(BaseModel):
         else:
             # assume that the about text will describe the conditional
             return gettext('conditionally required')
-
 
     def capitalize_name(self) -> str:
         """Capitalize a self.name into title case.
@@ -292,6 +299,27 @@ class Input(BaseModel):
             rst_line += f': {sanitized_about_string}'
 
         return [rst_line]
+
+    def get_child_inputs(self):
+        """Get list of child Inputs."""
+        if hasattr(self, 'fields'):
+            return self.fields
+        if hasattr(self, 'columns'):
+            return self.columns
+        if hasattr(self, 'contents'):
+            return self.contents
+        return []
+
+    def get_keywords(self, include_children=True):
+        """Get a list of unique keyword strings for this input and children."""
+        keywords = []
+        if self.keywords:
+            keywords += [keyword.value for keyword in self.keywords]
+        if include_children:
+            for child in self.get_child_inputs():
+                if child.keywords:
+                    keywords += child.get_keywords()
+        return list(set(keywords))
 
 
 class Output(BaseModel):
@@ -766,7 +794,7 @@ class RasterOrVectorInput(SpatialFileInput):
     geometry_types: set
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[list[Input]]
+    fields: list[Input] | None = None
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -2326,6 +2354,7 @@ DEM = SingleBandRasterInput(
     id="dem_path",
     name=gettext("digital elevation model"),
     about=gettext("Map of elevation above sea level."),
+    keywords=[keywords.DEM],
     data_type=float,
     units=u.meter
 )
@@ -2347,6 +2376,7 @@ SOIL_GROUP = SingleBandRasterInput(
         "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4,"
         " corresponding to soil hydrologic groups A, B, C, or D, respectively."
     ),
+    keywords=[keywords.HYDROLOGIC_SOIL_GROUPS],
     data_type=int,
     units=None
 )
@@ -2355,7 +2385,8 @@ LULC_TABLE_COLUMN = IntegerInput(
     about=gettext(
         "LULC codes from the LULC raster. Each code must be a unique"
         " integer."
-    )
+    ),
+    keywords=[keywords.LULC]
 )
 AOI = VectorInput(
     id="aoi_path",
@@ -2367,13 +2398,15 @@ AOI = VectorInput(
     fields=[]
 )
 LULC = SingleBandRasterInput(
-    id="lulc_bas_path",
-    name=gettext("baseline LULC"),
+    id="lulc_path",
+    name=gettext("land use/land cover"),
     about=gettext(
-        "A map of LULC for the baseline scenario, which must occur prior to the"
-        " alternate scenario. All values in this raster must have corresponding"
-        " entries in the Carbon Pools table."
+        "Map of land use/land cover codes. Each land use/land cover"
+        " type must be assigned a unique integer code. All values in"
+        " this raster must have corresponding entries in the"
+        " Biophysical Table."
     ),
+    keywords=[keywords.LULC],
     data_type=int,
     units=None
 )
