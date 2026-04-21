@@ -27,7 +27,7 @@ ADD setup.py /invest/setup.py
 ADD requirements.txt /invest/requirements.txt
 ADD LICENSE.txt /invest/LICENSE.txt
 ADD NOTICE.txt /invest/NOTICE.txt
-ADD .git /invest/.git
+COPY --chown=$MAMBA_USER:$MAMBA_USER .git /invest/.git
 
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
@@ -37,9 +37,7 @@ WORKDIR /invest
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} python-build && \
         micromamba clean --all --yes && \
         micromamba list && \
-        pwd && ls -a && \
         /opt/conda/bin/python -m build --no-isolation && \
-        echo "installing..." && \
         /opt/conda/bin/python -m pip install dist/*.whl && \
         /opt/conda/bin/python -m pip cache purge && \
         micromamba remove -y -n base cxx-compiler git
