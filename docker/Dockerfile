@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Build the InVEST wheel in a separate container stage
-FROM debian:13 AS build
+# FROM debian:13 AS build
 
 # Create the container for distribution that has runtime dependencies.
 FROM mambaorg/micromamba:2.5-debian13-slim
@@ -15,7 +15,7 @@ ARG PYTHON_VERSION="3.13"
 ARG DEBIAN_GDAL_VERSION="3.10"
 
 USER root
-RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.13-venv libgdal-dev
+RUN apt update && apt install -y build-essential git
 
 USER $MAMBA_USER
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
@@ -32,9 +32,11 @@ ADD .git /invest/.git
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
 
-RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} python-build git && \
+WORKDIR /invest
+
+RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} python-build && \
         micromamba clean --all --yes && \
-        cd /invest && \
+        micromamba list && \
         pwd && ls -a && \
         /opt/conda/bin/python -m build --no-isolation && \
         echo "installing..." && \
