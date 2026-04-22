@@ -3981,7 +3981,7 @@ ejs@^3.1.8:
   dependencies:
     jake "^10.8.5"
 
-electron-builder@^26.4.0:
+electron-builder@^26.8.1:
   version "26.8.1"
   resolved "https://registry.yarnpkg.com/electron-builder/-/electron-builder-26.8.1.tgz#d49056b2fe5d37f0f94aa2eb0e1db38f261fc8c0"
   integrity sha512-uWhx1r74NGpCagG0ULs/P9Nqv2nsoo+7eo4fLUOB8L8MdWltq9odW/uuLXMFCDGnPafknYLZgjNX0ZIFRzOQAw==
@@ -4052,10 +4052,10 @@ electron-to-chromium@^1.5.263:
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.286.tgz#142be1ab5e1cd5044954db0e5898f60a4960384e"
   integrity sha512-9tfDXhJ4RKFNerfjdCcZfufu49vg620741MNs26a9+bhLThdB+plgMeou98CAaHu/WATj2iHOOHTp1hWtABj2A==
 
-electron@^40.1.0:
-  version "40.7.0"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-40.7.0.tgz#ed57e7a1d400bb8a93ce70c39f2ca023d28792e7"
-  integrity sha512-oQe76S/3V1rcb0+i45hAxnCH8udkRZSaHUNwglzNAEKbB94LSJ1qwbFo8+uRc2UsYZgCqSIMRcyX40GyOkD+Xw==
+electron@^40.7.0:
+  version "40.8.5"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-40.8.5.tgz#a7e459a2eee35bd02c32da87170c920383656c4d"
+  integrity sha512-pgTY/VPQKaiU4sTjfU96iyxCXrFm4htVPCMRT4b7q9ijNTRgtLmLvcmzp2G4e7xDrq9p7OLHSmu1rBKFf6Y1/A==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^24.9.0"
@@ -5424,7 +5424,7 @@ i18next-conv@^15.1.1:
     gettext-parser "^8.0.0"
     p-from-callback "^2.0.0"
 
-i18next-parser@^9.0.1:
+i18next-parser@^9.4.0:
   version "9.4.0"
   resolved "https://registry.yarnpkg.com/i18next-parser/-/i18next-parser-9.4.0.tgz#fa3fbeea30a40ea4496050784c1003f258d39fec"
   integrity sha512-SLQJGDj/baBIB9ALmJVXSOXWh3Zn9+wH7J2IuQ4rvx8yuQYpUWitmt8cHFjj6FExjgr8dHfd1SGeQgkowXDO1Q==
@@ -7589,10 +7589,10 @@ pupa@^3.1.0:
   dependencies:
     escape-goat "^4.0.0"
 
-puppeteer-core@^24.36.1:
-  version "24.38.0"
-  resolved "https://registry.yarnpkg.com/puppeteer-core/-/puppeteer-core-24.38.0.tgz#456393366c84b9159f7f43aa1fcab4dc90116e11"
-  integrity sha512-zB3S/tksIhgi2gZRndUe07AudBz5SXOB7hqG0kEa9/YXWrGwlVlYm3tZtwKgfRftBzbmLQl5iwHkQQl04n/mWw==
+puppeteer-core@^24.38.0:
+  version "24.40.0"
+  resolved "https://registry.yarnpkg.com/puppeteer-core/-/puppeteer-core-24.40.0.tgz#1f389cd9432cb077f703ca2cb6758490cdccbc7e"
+  integrity sha512-MWL3XbUCfVgGR0gRsidzT6oKJT2QydPLhMITU6HoVWiiv4gkb6gJi3pcdAa8q4HwjBTbqISOWVP4aJiiyUJvag==
   dependencies:
     "@puppeteer/browsers" "2.13.0"
     chromium-bidi "14.0.0"

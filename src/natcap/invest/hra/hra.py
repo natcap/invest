@@ -1160,12 +1160,11 @@ def execute(args):
         )
 
     LOGGER.info(
-        'HRA model completed. Please visit http://marineapps.'
-        'naturalcapitalproject.org/ to visualize your outputs.')
+        'HRA model completed. You may visit'
+        ' https://joannalcy.github.io/hra-dashboard/ to visualize your outputs.')
 
     graph.close()
     graph.join()
-    LOGGER.info('HRA complete!')
     return file_registry.registry
 
 

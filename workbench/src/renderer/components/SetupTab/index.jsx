@@ -299,9 +299,20 @@ class SetupTab extends React.Component {
     }
   }
 
+  /** Invoke `investExecute` with prepared model args.
+   *
+   * Args are filtered to include only those whose corresponding form
+   * fields are enabled, then converted to an InVEST args dict-like object.
+   */
   wrapInvestExecute() {
+    const modelArgs = {};
+    for (const key in this.state.argsEnabled) {
+      if (this.state.argsEnabled[key] === true) {
+        modelArgs[key] = {...this.state.argsValues[key]};
+      }
+    }
     this.props.investExecute(
-      argsDictFromObject(this.state.argsValues)
+      argsDictFromObject(modelArgs)
     );
   }
 
@@ -342,7 +353,7 @@ class SetupTab extends React.Component {
       argsValues: argsValues,
     }, () => {
       this.props.updateJobProperties(this.props.tabID, {
-        status: undefined,  // Clear job status to hide model status indicator.
+        status: undefined, // Clear job status to hide model status indicator.
       });
       this.debouncedValidate();
       this.debouncedArgsEnabled();
@@ -355,7 +366,12 @@ class SetupTab extends React.Component {
    * @param {object} argsDict - key: value pairs of InVEST arguments.
    */
   batchUpdateArgs(argsDict) {
-    const { argsSpec, inputFieldOrder } = this.props;
+    const {
+      argsSpec,
+      inputFieldOrder,
+      updateJobProperties,
+      tabID,
+    } = this.props;
     const {
       argsValues,
       argsDropdownOptions,
@@ -365,6 +381,9 @@ class SetupTab extends React.Component {
       argsValues: argsValues,
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
+      updateJobProperties(tabID, {
+        status: undefined, // Clear job status to hide model status indicator.
+      });
       this.investValidate();
       this.investArgsEnabled();
     });

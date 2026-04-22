@@ -34,7 +34,7 @@ from natcap.invest.unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 # NatCap Rec Server URLs. This is a GCS bucket.
-SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_3_15_0/index.html'  # pylint: disable=line-too-long
+SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_3_19_0/index.html'  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro5.config.SERIALIZER = 'marshal'
@@ -43,6 +43,9 @@ Pyro5.config.SERIALIZER = 'marshal'
 MIN_YEAR = 2012
 MAX_YEAR = 2017
 POLYGON_ID_FIELD = 'poly_id'
+USERDAY_FIELD_SUFFIX_LIST = [
+    'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
+    'SEP', 'OCT', 'NOV', 'DEC']
 
 PREDICTOR_TABLE_COLUMNS = [
     spec.StringInput(
@@ -683,7 +686,9 @@ def _retrieve_user_days(
 
     All of the client-server communication happens in this scope. The local AOI
     is sent to the server for aggregations. Results are sent back when
-    complete.
+    complete. To avoid unnecessarily large file transfers, tabular results are
+    sent from server to client without the original geometries. Results are
+    joined back to the AOI geometries on the client.
 
     Args:
         local_aoi_path (string): path to polygon vector for UD aggregation
@@ -782,6 +787,9 @@ def _retrieve_user_days(
                 LOGGER.handle(logging.makeLogRecord(record_dict))
         result_dict = future.result()
 
+    LOGGER.info('connection release')
+    recmodel_manager._pyroRelease()
+
     for dataset, result_key, compressed_userdays_path in dataset_tuples:
         result = result_dict[result_key]
 
@@ -803,31 +811,70 @@ def _retrieve_user_days(
                     'server_version': server_version,
                     'workspace_id': workspace_id}}, f)
 
-        # unpack result
+        # Unpack result to a temp directory because not all extracted files
+        # need to be saved to the user's output workspace. The zip file will
+        # remain as an intermediate output.
         with open(compressed_userdays_path, 'wb') as pud_file:
             pud_file.write(result_zip_file_binary)
         temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
         zipfile.ZipFile(compressed_userdays_path, 'r').extractall(
             temporary_output_dir)
 
-        for filename in os.listdir(temporary_output_dir):
-            # Results are returned from the server without a results_suffix.
-            pre, post = os.path.splitext(filename)
-            target_filepath = os.path.join(
-                output_dir, f'{pre}{file_suffix}{post}')
-            shutil.copy(
-                os.path.join(temporary_output_dir, filename),
-                target_filepath)
-            # Get the suffix attached to the layername too
-            if target_filepath.endswith('gpkg'):
-                vector = gdal.OpenEx(target_filepath, gdal.OF_UPDATE)
-                layer = vector.GetLayer()
-                _rename_layer_from_parent(layer)
-                layer = vector = None
-        shutil.rmtree(temporary_output_dir)
+        LOGGER.info('Joining results to AOI polygons')
+        driver = gdal.GetDriverByName('GPKG')
+        aoi_vector = gdal.OpenEx(local_aoi_path, gdal.OF_VECTOR)
+        # Copy the input AOI into the designated output folder
+        # Results are returned from the server without a results_suffix.
+        target_filepath = os.path.join(
+            output_dir, f'{result_key}_results{file_suffix}.gpkg')
+        ud_aoi_vector = driver.CreateCopy(
+            target_filepath, aoi_vector)
+        ud_aoi_layer = ud_aoi_vector.GetLayer()
+        _rename_layer_from_parent(ud_aoi_layer)
 
-    LOGGER.info('connection release')
-    recmodel_manager._pyroRelease()
+        # Create new fields in the target vector
+        for field_suffix in USERDAY_FIELD_SUFFIX_LIST:
+            field_id = f'{result_key}_{field_suffix}'
+            # delete the field if it already exists
+            field_index = ud_aoi_layer.FindFieldIndex(str(field_id), 1)
+            if field_index >= 0:
+                ud_aoi_layer.DeleteField(field_index)
+            field_defn = ogr.FieldDefn(field_id, ogr.OFTReal)
+            ud_aoi_layer.CreateField(field_defn)
+
+        csv_name = os.path.join(
+            temporary_output_dir, f'{result_key}_results.csv')
+        csv_dataset = gdal.OpenEx(csv_name)
+        csv_layer = csv_dataset.GetLayer()
+
+        ud_aoi_layer.StartTransaction()
+        # 'id' in the CSV is the FID from the AOI feature on the server,
+        # which is a direct copy of the local AOI used here.
+        for feature in csv_layer:
+            fid = int(feature.GetField('id'))
+            aoi_feature = ud_aoi_layer.GetFeature(fid)
+            for field in csv_layer.schema:
+                if field.name == 'id':
+                    continue
+                aoi_feature.SetField(
+                    field.name, float(feature.GetField(field.name)))
+            ud_aoi_layer.SetFeature(aoi_feature)
+        ud_aoi_layer.CommitTransaction()
+        csv_layer = None
+        csv_dataset = None
+        ud_aoi_layer = None
+        ud_aoi_vector = None
+
+        # Copy the monthly results table to the output workspace
+        # Results are returned from the server without a results_suffix.
+        monthly_filename = f'{result_key}_monthly_table.csv'
+        pre, post = os.path.splitext(monthly_filename)
+        target_filepath = os.path.join(
+            output_dir, f'{pre}{file_suffix}{post}')
+        shutil.copy(
+            os.path.join(temporary_output_dir, monthly_filename),
+            target_filepath)
+        shutil.rmtree(temporary_output_dir)
 
 
 def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):

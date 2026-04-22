@@ -288,7 +288,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         SAMPLE_MODEL_SPEC.generate_metadata_for_outputs(file_registry, args_dict)
 
         files, messages = geometamaker.validate_dir(self.workspace_dir)
-        self.assertEqual(len(files), 4)
+        self.assertEqual(len(files), 5)
         self.assertFalse(any(messages))
 
         # Test some specific content of the metadata
