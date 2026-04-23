@@ -201,7 +201,7 @@ function storePluginMetadataSync(
 
   // Write plugin metadata to the workbench's config.json
   logger.info('writing plugin info to settings store');
-  // Uniquely identify plugin by a hash of its ID and version
+  // Uniquely identify plugin by its ID and version
   // Replace dots with underscores in the version, because dots are a
   // special character in keys for electron-store's set and get methods
   const pluginID = `${modelID}@${version}`;
