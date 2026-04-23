@@ -18,7 +18,6 @@ run.
 """
 
 import ast
-import codecs
 import collections
 import importlib
 import json
@@ -490,7 +489,7 @@ def build_parameter_set(args, model_id, paramset_path, relative=False):
         'model_id': model_id,
         'args': _recurse(args)
     }
-    with codecs.open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
+    with open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
         paramset_file.write(
             json.dumps(parameter_data,
                        indent=4,
@@ -515,7 +514,7 @@ def extract_parameter_set(paramset_path):
             model_id (string): the ID of the model that these parameters are for
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
-    with codecs.open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
+    with open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
         params_raw = paramset_file.read()
 
     read_params = json.loads(params_raw)
@@ -587,7 +586,7 @@ def extract_parameters_from_logfile(logfile_path):
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
     """
-    with codecs.open(logfile_path, 'r', encoding='utf-8') as logfile:
+    with open(logfile_path, 'r', encoding='utf-8') as logfile:
         detected_args = []
         args_started = False
         for line in logfile:
