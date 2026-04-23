@@ -2,11 +2,10 @@ import crypto from 'crypto';
 
 import fetch from 'node-fetch';
 
-import { getLogger } from './logger';
+import { logger } from './logger';
 import pkg from '../../package.json';
 import { settingsStore } from './settingsStore';
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const WORKBENCH_VERSION = pkg.version;
 const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';

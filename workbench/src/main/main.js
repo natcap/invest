@@ -33,7 +33,7 @@ import {
 } from './setupAddRemovePlugin';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
-import { getLogger } from './logger';
+import { logger, setupRendererLogger } from './logger';
 import menuTemplate from './menubar';
 import pkg from '../../package.json';
 import { settingsStore, setupSettingsHandlers } from './settingsStore';
@@ -43,9 +43,6 @@ import setupGetNCPUs from './setupGetNCPUs';
 import { setupIsNewVersion } from './setupIsNewVersion';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
-import setupRendererLogger from './setupRendererLogger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 process.on('uncaughtException', (err) => {
   logger.error(err);

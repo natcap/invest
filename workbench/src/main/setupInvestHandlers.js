@@ -5,7 +5,7 @@ import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
 
-import { getLogger } from './logger';
+import { logger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import investUsageLogger from './investUsageLogger';
@@ -13,8 +13,6 @@ import markupMessage from './investLogMarkup';
 import writeInvestParameters from './writeInvestParameters';
 import { settingsStore } from './settingsStore';
 import { createPluginServerProcess } from './createPythonFlaskProcess';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {

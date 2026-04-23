@@ -1,9 +1,13 @@
 import { ipcMain } from 'electron';
+import log from 'electron-log/main';
 
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from './logger';
 
-const logger = getLogger('renderer');
+const logger = log.create({ logId: 'renderer' });
+logger.variables.label = 'renderer';
+logger.transports.console.format = '[{h}:{i}:{s}.{ms}] [{label}] {text}';
+logger.transports.file.format = '[{h}:{i}:{s}.{ms}] [{label}] {text}';
+logger.transports.console.level = process.env.ELECTRON_LOG_LEVEL || 'debug';
 
 export default function setupRendererLogger() {
   ipcMain.on(ipcMainChannels.LOGGER, (event, level, message) => {

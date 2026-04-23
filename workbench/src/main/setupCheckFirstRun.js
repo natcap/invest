@@ -7,9 +7,7 @@ import {
 } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from './logger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+import { logger } from './logger';
 
 export const APP_HAS_RUN_TOKEN = 'app-has-run-token';
 
