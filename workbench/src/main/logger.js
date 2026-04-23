@@ -1,4 +1,4 @@
-import log from 'electron-log/main';
+import log from 'electron-log';
 import { ipcMain } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
