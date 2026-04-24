@@ -23,6 +23,7 @@ env:
   LATEST_SUPPORTED_PYTHON_VERSION: "3.14"
   # gsutil never seems to support the latest python
   GSUTIL_PYTHON_VERSION: "3.13"
+  GDAL_VERSION_SPECIFIER_FOR_WHEEL: "3.10.*"
 
 jobs:
   check-syntax-errors:
@@ -94,6 +95,16 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
+      # The C++ extensions will be compiled and linked against the libgdal version 
+      # that's in the build environment, and so that same libgdal version has to be 
+      # available in the target environment. Each libgdal version corresponds to a 
+      # minor version of GDAL itself. Adding this requirement to the package metadata
+      # should prevent it from being installed in an env without the necessary libgdal.
+      # Users who need a different GDAL version can use the conda-forge package or 
+      # build their own wheel from source.
+      - name: Add gdal constraint for wheel
+        run: echo "gdal==${{ env.GDAL_VERSION_SPECIFIER_FOR_WHEEL }}" >> requirements.txt
+
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
@@ -129,22 +140,6 @@ jobs:
           python -m pip uninstall -y natcap.invest
           NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
           ls -la dist
-
-      # This produces a wheel that should work on any distro with glibc>=2.39.
-      # This is a very recent version. If we want to support older versions, I
-      # suspect we would need to build GDAL from source on an appropriate
-      # system (such as a manylinux docker container) to ensure compatibility.
-      # Symbols used in libgdal are the cause of the high minimum version,
-      # possibly because of installing with conda.
-      - name: Audit and repair wheel for manylinux
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          ldd --version
-          pip install auditwheel
-          WHEEL=$(find dist -name "natcap[._-]invest*.whl")
-          auditwheel show $WHEEL
-          auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
-          rm $WHEEL  # remove the original wheel
 
       - name: Install wheel and run model tests
         run: |
