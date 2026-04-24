@@ -236,7 +236,6 @@ class Input(BaseModel):
             # assume that the about text will describe the conditional
             return gettext('conditionally required')
 
-
     def capitalize_name(self) -> str:
         """Capitalize a self.name into title case.
 
@@ -1317,7 +1316,6 @@ class IntegerInput(NumberInput):
         if not float(value).is_integer():
             return validation_messages.NOT_AN_INTEGER.format(value=value)
 
-
     @staticmethod
     def format_column(col, *args):
         """Format a column of a pandas dataframe that contains IntegerInput values.
@@ -1615,7 +1613,7 @@ class OptionStringInput(Input):
     @model_validator(mode='after')
     def check_options(self):
         if self.dropdown_function and self.options:
-            raise ValueError(f'Cannot have both dropdown_function and options')
+            raise ValueError('Cannot have both dropdown_function and options')
         return self
 
     @property
@@ -1636,7 +1634,7 @@ class OptionStringInput(Input):
 
         if self.options:
             option_keys = self.list_options()
-            if str(value).lower() not in option_keys:
+            if option_keys and str(value).lower() not in option_keys:
                 return validation_messages.INVALID_OPTION.format(option_list=option_keys)
 
     @staticmethod
@@ -2288,8 +2286,8 @@ class ModelSpec(BaseModel):
 # Specs for common arg types ##################################################
 WORKSPACE = DirectoryInput(
     id="workspace_dir",
-    name="workspace",
-    about=(
+    name=gettext("workspace"),
+    about=gettext(
         "The folder where all the model's output files will be written."
         " If this folder does not exist, it will be created. If data"
         " already exists in the folder, it will be overwritten."
@@ -2382,8 +2380,8 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
     name=gettext("flow direction algorithm"),
     about=gettext("Flow direction algorithm to use."),
     options=[
-        Option(key="D8", description="D8 flow direction"),
-        Option(key="MFD", description="Multiple flow direction")
+        Option(key="D8", about="D8 flow direction"),
+        Option(key="MFD", about="Multiple flow direction")
     ]
 )
 
