@@ -90,7 +90,8 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
         ['baseflow', 'quickflow']
     ).encode(
         altair.X("month", sort=[i for i in range(1, 13)]).title(gettext("Month")),
-        altair.Y("sum(value):Q").title(gettext("Quickflow + Baseflow (m3/month)")),
+        altair.Y("sum(value):Q").title(
+            gettext("Quickflow + Baseflow (cubic meters / month)")),
         altair.Order(field='key', sort='ascending'),
         color=altair.Color('key:N').scale(
             domain=['quickflow', "baseflow", "precipitation"],
@@ -106,7 +107,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
         altair.Y(
             "sum(precipitation)",
             axis=altair.Axis(orient="right")
-        ).title(gettext("Precipitation (m3/month)")),
+        ).title(gettext("Precipitation (cubic meters / month)")),
         color=altair.value('#0500a3')
     )
 
@@ -115,7 +116,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     ).transform_filter(
         feat_select
     ).properties(
-        title=altair.Title(gettext("Mean Quickflow + Baseflow for selected feature"))
+        title=altair.Title(gettext("Mean Quickflow + Baseflow for Selected Feature"))
     )
 
     legend_config = vector_utils.LEGEND_CONFIG.copy()
@@ -306,12 +307,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
         qf_raster_caption = [
                 gettext(
-                    'Map of Annual Quickflow: {fname}'
-                    ).format(fname=annual_qf_displayname),
+                    'Map of Annual Quickflow: {filename}'
+                    ).format(filename=annual_qf_displayname),
                 gettext(
-                    'Maps of Monthly Quickflow: {fname}'
+                    'Maps of Monthly Quickflow: {filename}'
                     ' (1 = January… 12 = December)'
-                    ).format(fname=monthly_qf_displayname)
+                    ).format(filename=monthly_qf_displayname)
         ]
 
         qf_rasters = {
@@ -326,8 +327,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             stream_raster_config_list)
     stream_outputs_heading = gettext(
             'Stream Network Maps (Flow Algorithm: {flow_dir_algo}, '
-            'Threshold Flow Accumulation value: {tfa_value})').format(
-            flow_dir_algo=args_dict["flow_dir_algorithm"],
+            'Threshold Flow Accumulation Value: {tfa_value})').format(
+            flow_dir_algo=args_dict["flow_dir_algorithm"].upper(),
             tfa_value=args_dict["threshold_flow_accumulation"])
 
 
