@@ -3,9 +3,7 @@ import path from 'path';
 
 import yauzl from 'yauzl';
 
-import { getLogger } from './logger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+import { logger } from './logger';
 
 /** Extract a zip archive to a directory with the same basename.
  *

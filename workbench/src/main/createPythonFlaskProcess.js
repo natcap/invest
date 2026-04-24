@@ -2,10 +2,9 @@ import { spawn, execSync } from 'child_process';
 import http from 'http';
 import fetch from 'node-fetch';
 
-import { getLogger } from './logger';
+import { logger } from './logger';
 import { settingsStore } from './settingsStore';
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://127.0.0.1';
 
 const pidToSubprocess = {};

@@ -7,5 +7,5 @@ const log = {
   silly: jest.fn(),
 };
 
-const getLogger = jest.fn().mockReturnValue(log);
-module.exports.getLogger = getLogger;
+module.exports.logger = log;
+module.exports.setupRendererLogger = jest.fn();
