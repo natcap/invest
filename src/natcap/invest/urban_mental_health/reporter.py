@@ -4,19 +4,13 @@ import time
 import altair
 import geopandas
 import geometamaker
-import matplotlib
-import numpy
 import pandas
-import pygeoprocessing
-from pydantic import ConfigDict
-from pydantic.dataclasses import dataclass
-from osgeo import gdal
 
 from natcap.invest import __version__
-from natcap.invest import gettext
+from natcap.invest import gettext, get_locale
 from natcap.invest.reports import jinja_env, raster_utils, report_constants, \
     vector_utils
-from natcap.invest.spec import ModelSpec, FileRegistry
+from natcap.invest.spec import ModelSpec
 
 from natcap.invest.reports.raster_utils import RasterDatatype, \
     RasterPlotConfig, RasterTransform, SpecialValueConfig
@@ -60,10 +54,11 @@ def _generate_agg_results_table(preventable_cases_cost_sum_table_path: str,
                                 cost: float | None) -> str:
     full_table_df = pandas.read_csv(preventable_cases_cost_sum_table_path)
     total_cases = list(full_table_df['total_cases'])[-1]
-    table_df = pandas.DataFrame({'Total Preventable Cases': [total_cases]})
+    table_df = pandas.DataFrame(
+        {gettext('Total Preventable Cases'): [total_cases]})
     if cost:
         total_cost = list(full_table_df['total_cost'])[-1]
-        table_df['Total Preventable Cost'] = [total_cost]
+        table_df[gettext('Total Preventable Cost')] = [total_cost]
 
     return table_df.to_html(index=False)
 
@@ -325,6 +320,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
+            locale=get_locale(),
             report_script=model_spec.reporter,
             invest_version=__version__,
             report_filepath=target_html_filepath,
