@@ -2,8 +2,6 @@
 import ast
 import codecs
 import contextlib
-import functools
-import json
 import logging
 import os
 import platform
@@ -321,7 +319,7 @@ def read_csv_to_dataframe(path, **kwargs):
                 'encoding': 'utf-8-sig',
                 **kwargs
             })
-    except UnicodeDecodeError as error:
+    except UnicodeDecodeError:
         raise ValueError(
             f'The file {path} must be encoded as UTF-8 or ASCII')
 
@@ -711,7 +709,7 @@ class _GDALPath:
     scheme : str
         URI scheme such as "https" or "zip+s3".
     """
-    
+
     def __init__(self, path, archive, scheme):
         self.path = path
         self.archive = archive
@@ -1006,3 +1004,17 @@ def resample_population_raster(
         target_path=target_population_raster_path)
 
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
+
+
+def base_model_id(model_id: str) -> str:
+    """Strip version info from an annotated model ID.
+
+    Useful for translating from a key in the Workbench's
+    ``settingsStore.plugins`` to a key in
+    ``natcap.invest.models.model_id_to_pyname``.
+
+    Returns the substring of ``model_id`` from position 0 up to, but not
+    including, the ``@``. If ``model_id`` contains no ``@``, ``model_id`` is
+    returned unchanged.
+    """
+    return model_id.split('@')[0]

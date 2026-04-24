@@ -26,8 +26,8 @@ export default function investUsageLogger() {
 
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelID)) {
-      const source = plugins[modelID].source;
       body.type = 'plugin';
+      const source = plugins[modelID].source;
       // don't log the path to a local plugin, just log that it's local
       body.source = source.startsWith('git+') ? source : 'local';
     } else {
