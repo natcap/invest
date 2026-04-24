@@ -9,14 +9,16 @@
   {% from 'raster-plot-img.html' import raster_plot_img %}
   {% from 'wide-table.html' import wide_table %}
 
-  <h2 class="section-header">Results</h2>
+  <h2 class="section-header">{% trans %}Results{% endtrans %}</h2>
   {% if qf_rasters %}
     {{ accordion_section(
-      'Annual and Monthly Quickflow (QF)',
+      gettext('Annual and Monthly Quickflow (QF)'),
       content_grid([
         (caption(raster_group_caption, pre_caption=True), 100),
-        (raster_plot_img(qf_rasters['annual_qf_img_src'], 'Annual Quickflow values'), 100),
-        (raster_plot_img(qf_rasters['monthly_qf_img_src'], 'Monthly Quickflow values'), 100),
+        (raster_plot_img(qf_rasters['annual_qf_img_src'],
+                         gettext('Annual Quickflow values')), 100),
+        (raster_plot_img(qf_rasters['monthly_qf_img_src'],
+                         gettext('Monthly Quickflow values')), 100),
         (caption(qf_rasters['qf_caption'], definition_list=True), 100)
       ])
     )}}
@@ -24,7 +26,7 @@
 
   {% if qf_b_charts %}
     {{ accordion_section(
-      'Average Quickflow and Baseflow by Month',
+      gettext('Average Quickflow and Baseflow by Month'),
       content_grid([
         ('<div id="qf_b_charts"></div>', 100),
         (caption(qf_b_charts['caption'], qf_b_charts['sources']), 100)
@@ -36,13 +38,13 @@
     outputs_heading,
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (raster_plot_img(outputs_img_src, gettext('Primary Outputs')), 100),
       (caption(outputs_caption, definition_list=True), 100)
     ])
   ) }}
 
   {{ accordion_section(
-    'Results Aggregated by AOI Feature',
+    gettext('Results Aggregated by AOI Feature'),
     content_grid([
       (content_grid([
         ('<div id="qb_map"></div>', 100),
@@ -65,7 +67,7 @@
   )}}
 
   {{ accordion_section(
-    'Output Raster Stats',
+    gettext('Output Raster Stats'),
     content_grid([
       (stats_table_note, 100),
       (wide_table(
@@ -75,23 +77,23 @@
     ])
   )}}
 
-  <h2 class="section-header">Inputs</h2>
+  <h2 class="section-header">{% trans %}Inputs{% endtrans %}</h2>
   {{ accordion_section(
-    'Arguments',
+    gettext('Arguments'),
     args_table(args_dict),
   )}}
 
   {{ accordion_section(
-    'Raster Inputs',
+    gettext('Raster Inputs'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (raster_plot_img(inputs_img_src, gettext('Raster Inputs')), 100),
       (caption(inputs_caption, definition_list=True), 100)
     ])
   ) }}
 
   {{ accordion_section(
-    'Input Raster Stats',
+    gettext('Input Raster Stats'),
     content_grid([
       (stats_table_note, 100),
       (wide_table(
@@ -101,10 +103,10 @@
     ])
   )}}
 
-  <h2 class="section-header">Metadata</h2>
+  <h2 class="section-header">{% trans %}Metadata{% endtrans %}</h2>
   {{
     accordion_section(
-      'Output Filenames and Descriptions',
+      gettext('Output Filenames and Descriptions'),
       list_metadata(model_spec_outputs),
       expanded=False
     )

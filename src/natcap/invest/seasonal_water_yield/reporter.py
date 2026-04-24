@@ -14,7 +14,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import __version__
-from natcap.invest import gettext
+from natcap.invest import gettext, get_locale
 import natcap.invest.spec
 from natcap.invest.reports import jinja_env
 from natcap.invest.reports import raster_utils
@@ -75,11 +75,11 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
             altair.value("seagreen"),
             altair.value("lightgray")
         ),
-        tooltip=[altair.Tooltip("geom_id", title="Feature")]
+        tooltip=[altair.Tooltip("geom_id", title=gettext("Feature"))]
     ).properties(
         width=MAP_WIDTH*1.25,
         height=MAP_WIDTH*1.25 / xy_ratio,
-        title="AOI"
+        title=gettext("AOI")
     ).add_params(
         feat_select
     )
@@ -89,8 +89,8 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     bar_chart = base_chart.mark_bar().transform_fold(
         ['baseflow', 'quickflow']
     ).encode(
-        altair.X("month", sort=[i for i in range(1, 13)]).title("Month"),
-        altair.Y("sum(value):Q").title("Quickflow + Baseflow (m3/month)"),
+        altair.X("month", sort=[i for i in range(1, 13)]).title(gettext("Month")),
+        altair.Y("sum(value):Q").title(gettext("Quickflow + Baseflow (m3/month)")),
         altair.Order(field='key', sort='ascending'),
         color=altair.Color('key:N').scale(
             domain=['quickflow', "baseflow", "precipitation"],
@@ -102,11 +102,11 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     )
 
     precip_chart = base_chart.mark_line().encode(
-            altair.X("month", sort=[i for i in range(1, 13)]).title("Month"),
+            altair.X("month", sort=[i for i in range(1, 13)]).title(gettext("Month")),
         altair.Y(
             "sum(precipitation)",
             axis=altair.Axis(orient="right")
-        ).title("Precipitation (m3/month)"),
+        ).title(gettext("Precipitation (m3/month)")),
         color=altair.value('#0500a3')
     )
 
@@ -159,8 +159,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     qb_map_json = _create_aggregate_map(
         aggregated_results, xy_ratio, 'qb',
-        gettext("Mean local recharge value within the watershed "
-                f"({model_spec.get_output('aggregate_vector').get_field('qb').units})"))
+        gettext("Mean local recharge value within the watershed ({units})").format(
+                units=model_spec.get_output('aggregate_vector').get_field('qb').units))
     qb_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('qb').about,
         gettext('Values are in millimeters, but should be interpreted as '
@@ -168,8 +168,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     vri_sum_map_json = _create_aggregate_map(
         aggregated_results, xy_ratio, 'vri_sum',
-        gettext("Total recharge contribution of the watershed "
-                f"({model_spec.get_output('aggregate_vector').get_field('vri_sum').units})"))
+        gettext("Total recharge contribution of the watershed ({units})").format(
+                units=model_spec.get_output('aggregate_vector').get_field('vri_sum').units))
     vri_sum_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('vri_sum').about,
         gettext('The sum of ``Vri_[suffix].tif`` pixel values within the watershed.')]
@@ -241,7 +241,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 spec=model_spec.get_input('l_path'),
                 colormap='BrBG'))
         qf_rasters = None
-        raster_outputs_heading = 'Annual Baseflow'
+        raster_outputs_heading = gettext('Annual Baseflow')
 
     else:
         output_raster_config_list.extend([
@@ -262,7 +262,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 datatype=RasterDatatype.divergent,
                 spec=model_spec.get_output('l'),
                 colormap='BrBG')])
-        raster_outputs_heading = 'Additional Raster Outputs'
+        raster_outputs_heading = gettext('Additional Raster Outputs')
 
         input_raster_config_list.append(
             RasterPlotConfig(
@@ -284,7 +284,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                 raster_path=file_registry['qf_[MONTH]'][str(month)],
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('qf_[MONTH]'),
-                title=gettext(f"Month #{month}"),
+                title=gettext("Month #{month}").format(month=month),
                 transform=RasterTransform.log,
                 colormap='Blues'
             ) for month in range(1, 13)]
@@ -307,9 +307,13 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         monthly_qf_displayname = os.path.basename(
                 monthly_qf_raster_config_list[0].raster_path).replace('1', '[MONTH]')
         qf_raster_caption = [
-                gettext(f'Map of Annual Quickflow: {annual_qf_displayname}'),
-                gettext(f'Maps of Monthly Quickflow: {monthly_qf_displayname}'
-                        ' (1 = January… 12 = December)')
+                gettext(
+                    'Map of Annual Quickflow: {fname}'
+                    ).format(fname=annual_qf_displayname),
+                gettext(
+                    'Maps of Monthly Quickflow: {fname}'
+                    ' (1 = January… 12 = December)'
+                    ).format(fname=monthly_qf_displayname)
         ]
 
         qf_rasters = {
@@ -323,10 +327,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     stream_raster_caption = raster_utils.caption_raster_list(
             stream_raster_config_list)
     stream_outputs_heading = gettext(
-            'Stream Network Maps (Flow Algorithm: '
-            f'{args_dict["flow_dir_algorithm"]}, '
-            'Threshold Flow Accumulation value: '
-            f'{args_dict["threshold_flow_accumulation"]})')
+            'Stream Network Maps (Flow Algorithm: {flow_dir_algo}, '
+            'Threshold Flow Accumulation value: {tfa_value})').format(
+            flow_dir_algo=args_dict["flow_dir_algorithm"],
+            tfa_value=args_dict["threshold_flow_accumulation"])
+
 
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
             output_raster_config_list)
@@ -346,6 +351,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
+            locale=get_locale(),
             report_script=model_spec.reporter,
             invest_version=__version__,
             report_filepath=target_html_filepath,
