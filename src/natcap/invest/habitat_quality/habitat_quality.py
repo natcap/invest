@@ -10,6 +10,7 @@ import pygeoprocessing
 from osgeo import gdal
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -50,6 +51,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of LULC at present. All values in this raster must have"
                 " corresponding entries in the Sensitivity table."
             ),
+            keywords=[keywords.LULC],
             data_type=int,
             units=None,
             projected=True
@@ -62,6 +64,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " corresponding entries in the Sensitivity Table. Must use the same"
                 " classification scheme and codes as in the Current LULC map."
             ),
+            keywords=[keywords.LULC],
             required=False,
             data_type=int,
             units=None,
@@ -76,6 +79,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " entries in the Sensitivity table. Must use the same classification"
                 " scheme and codes as in the Current LULC map."
             ),
+            keywords=[keywords.LULC],
             required=False,
             data_type=int,
             units=None,
@@ -88,6 +92,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Table mapping each threat of interest to its properties and distribution"
                 " maps. Paths are relative to the threats table path."
             ),
+            keywords=[keywords.HABITAT_THREATS],
             columns=[
                 spec.StringInput(
                     id="threat",
@@ -182,6 +187,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " physical barriers provide against threats. Any cells not covered by a"
                 " polygon will be set to 1."
             ),
+            keywords=[keywords.HABITAT_THREATS, keywords.PROTECTED_AREA],
             required=False,
             geometry_types={"MULTIPOLYGON", "POLYGON"},
             fields=[
@@ -204,6 +210,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Table mapping each LULC class to data about the species' habitat"
                 " preference and threat sensitivity in areas with that LULC."
             ),
+            keywords=[keywords.HABITAT_SENSITIVITY],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.StringInput(id="name", about=None, required=False, regexp=None),

@@ -40,6 +40,12 @@ CARBON = GCMDKeyword(
     uuid='6f6537f5-773f-4df1-862b-d9ab80eb5e04',
     full_path='EARTH SCIENCE > BIOSPHERE > VEGETATION > CARBON')
 
+CARBON_REGRESSION_PARAMETERS = InvestKeyword(
+    value='CARBON REGRESSION PARAMETERS',
+    definition=(
+        'Parameters used by the regression model in the InVEST Forest Carbon'
+        ' Edge Effects model.'))
+
 CARBON_SEQUESTRATION = GCMDKeyword(
     value='CARBON SEQUESTRATION',
     uuid='e58872a8-6104-4ff8-bbca-4b00ba4b38e8',
@@ -80,6 +86,14 @@ EVAPOTRANSPIRATION = GCMDKeyword(
 FLOOD_DAMAGE_VALUE = InvestKeyword(
     value='FLOOD DAMAGE VALUE',
     definition='The economic value of flood damage to a property.')
+
+HABITAT_SENSITIVITY = InvestKeyword(
+    value='HABITAT SENSITIVITY',
+    definition='Parameters related to the sensitivity of habitat to specific threats.')
+
+HABITAT_THREATS = InvestKeyword(
+    value='HABITAT THREATS',
+    definition='Geographic distribution and parameters related to threats to habitat.')
 
 HYDROELECTRIC_ENERGY = GCMDKeyword(
     value='HYDROELECTRIC ENERGY PRODUCTION/USE',
@@ -122,6 +136,10 @@ PRECIPITATION_RATE = GCMDKeyword(
     value='PRECIPITATION RATE',
     uuid='ac50c468-df2f-429c-8394-9d63efcc6f9d',
     full_path='EARTH SCIENCE > ATMOSPHERE > PRECIPITATION > PRECIPITATION_RATE')
+
+PROTECTED_AREA = InvestKeyword(
+    value='PROTECTED AREA',
+    definition='An area managed for preservation of natural resources.')
 
 RAINFALL_EROSIVITY = InvestKeyword(
     value='RAINFALL EROSIVITY',
