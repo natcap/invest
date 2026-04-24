@@ -11,7 +11,7 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 def _get_render_args(model_spec):
     locale = 'en'
-    report_filepath = 'carbon_report_test.html'
+    report_filepath = 'urban_mental_health_test.html'
     invest_version = '987.65.0'
     timestamp = '1970-01-01'
     args_dict = {'suffix': 'test', 'lulc_base': ''}
