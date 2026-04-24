@@ -54,10 +54,11 @@ def _generate_agg_results_table(preventable_cases_cost_sum_table_path: str,
                                 cost: float | None) -> str:
     full_table_df = pandas.read_csv(preventable_cases_cost_sum_table_path)
     total_cases = list(full_table_df['total_cases'])[-1]
-    table_df = pandas.DataFrame({'Total Preventable Cases': [total_cases]})
+    table_df = pandas.DataFrame(
+        {gettext('Total Preventable Cases'): [total_cases]})
     if cost:
         total_cost = list(full_table_df['total_cost'])[-1]
-        table_df['Total Preventable Cost'] = [total_cost]
+        table_df[gettext('Total Preventable Cost')] = [total_cost]
 
     return table_df.to_html(index=False)
 
