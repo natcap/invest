@@ -355,15 +355,8 @@ def _get_title_kwargs(title: str, resampled: bool, line_width: int, facets=False
     }
 
 
-def _get_units_text_kwargs(units: str, raster_height: int):
-    # This -0.1 multiplier is a bit of a 'magic number' but seems to work for now.
-    subtitle_offset = -0.1 * raster_height
-    # Set ylim top < 0 to add some padding above the plot.
-    ylim_args = {
-        'bottom': raster_height,
-        'top': subtitle_offset,
-    }
-    # Place subtitle text immediately above that padding.
+def _get_units_text_kwargs(units: str, subtitle_offset: int):
+    # Place subtitle text immediately above subtitle_offset padding.
     text_args = {
         'fontsize': SUBTITLE_FONT_SIZE,
         'horizontalalignment': 'left',
@@ -372,7 +365,7 @@ def _get_units_text_kwargs(units: str, raster_height: int):
         'x': -0.5,
         'y': subtitle_offset,
     }
-    return (ylim_args, text_args)
+    return text_args
 
 
 def _get_legend_kwargs(num_patches: int, n_plots: int, xy_ratio: float):
@@ -415,6 +408,11 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
     xy_ratio = _get_aspect_ratio(bbox)
     fig, axs = _figure_subplots(xy_ratio, n_plots)
 
+    # To ensure that plots in same group are the same size, subtitle_offset
+    # padding is needed if _any_ raster in list has units (see InVEST #2471)
+    any_raster_has_units = any(
+        [_get_raster_units(r.raster_path) for r in raster_list])
+
     for ax, config in zip(axs.flatten(), raster_list):
         raster_path = config.raster_path
         dtype = config.datatype
@@ -443,10 +441,17 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             config.title, resampled, title_line_width))
 
         units = _get_raster_units(raster_path)
+        if any_raster_has_units:
+            # This -0.1 multiplier is a bit of a 'magic number' but seems to work for now.
+            subtitle_offset = -0.1 * len(arr)
+            # Set ylim top < 0 to add some padding above the plot.
+            ylim_args = {
+                'bottom': len(arr),  # raster height
+                'top': subtitle_offset,
+            }
+            ax.set_ylim(**ylim_args)
         if units:
-            (ylim_kwargs,
-             text_kwargs) = _get_units_text_kwargs(units, len(arr))
-            ax.set_ylim(**ylim_kwargs)
+            text_kwargs = _get_units_text_kwargs(units, subtitle_offset)
             ax.text(**text_kwargs)
 
         if dtype == 'nominal':
