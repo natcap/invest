@@ -355,7 +355,7 @@ def _get_title_kwargs(title: str, resampled: bool, line_width: int, facets=False
     }
 
 
-def _get_units_text_kwargs(units: str, subtitle_offset: int):
+def _get_units_text_kwargs(units: str, subtitle_offset: float):
     # Place subtitle text immediately above subtitle_offset padding.
     text_args = {
         'fontsize': SUBTITLE_FONT_SIZE,
