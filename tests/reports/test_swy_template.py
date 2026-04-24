@@ -13,6 +13,7 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
+    locale = 'en'
     report_filepath = 'swy_report_test.html'
     invest_version = '987.65.0'
     timestamp = time.strftime('%Y-%m-%d %H:%M')
@@ -31,6 +32,7 @@ def _get_render_args(model_spec):
     agg_map_source_list = ['/source/file.shp']
 
     return {
+        'locale': locale,
         'report_script': model_spec.reporter,
         'invest_version': invest_version,
         'report_filepath': report_filepath,
