@@ -115,9 +115,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     ).transform_filter(
         feat_select
     ).properties(
-        title=altair.Title(altair.expr(
-            f'"Mean Quickflow + Baseflow for Feature " + {feat_select.name}.geom_id')
-        )
+        title=altair.Title(gettext("Mean Quickflow + Baseflow for selected feature"))
     )
 
     legend_config = vector_utils.LEGEND_CONFIG.copy()
