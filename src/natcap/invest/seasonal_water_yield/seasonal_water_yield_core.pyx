@@ -14,7 +14,8 @@ from osgeo import osr
 
 from libcpp.vector cimport vector
 
-from ..managed_raster.managed_raster cimport D8, MFD
+from pygeoprocessing.extensions cimport D8
+from pygeoprocessing.extensions cimport MFD
 from .swy cimport run_route_baseflow_sum, run_calculate_local_recharge
 
 LOGGER = logging.getLogger(__name__)
