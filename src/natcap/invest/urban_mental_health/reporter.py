@@ -77,6 +77,9 @@ def _create_aggregate_map(
     else:
         scale = altair.Scale(scheme='purples')
 
+    display_names = {'sum_cases': gettext('Total cases'),
+                     'sum_cost': gettext('Total cost')}
+
     chart = altair.Chart(geodataframe).mark_geoshape(
         stroke="white",
         strokeWidth=0.5
@@ -87,10 +90,11 @@ def _create_aggregate_map(
         color=altair.Color(
             f'{attribute}:Q',
             scale=scale,
-            legend=altair.Legend(title=attribute)
+            legend=altair.Legend(title=display_names[attribute])
         ),
         tooltip=[
-            altair.Tooltip(f'{attribute}:Q', title=attribute, format=',.2f')
+            altair.Tooltip(f'{attribute}:Q', title=display_names[attribute],
+                           format=',.2f')
         ]
     ).properties(
         width=MAP_WIDTH,
