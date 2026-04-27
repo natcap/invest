@@ -88,19 +88,13 @@ MODEL_SPEC = spec.ModelSpec(
         spec.LULC.model_copy(update=dict(
             projected=True
         )),
-        spec.VectorInput(
-            id="watersheds_path",
-            name=gettext("Watersheds"),
+        spec.PROJECTED_WATERSHED_VECTOR.model_copy(update=dict(
             about=gettext(
                 "Map of the boundaries of the watershed(s) over which to aggregate"
                 " results. Each watershed should contribute to a point of interest where"
                 " water quality will be analyzed."
-            ),
-            keywords=[keywords.WATERSHED_BOUNDARIES],
-            geometry_types={"POLYGON", "MULTIPOLYGON"},
-            fields=[],
-            projected=True
-        ),
+            )
+        )),
         spec.CSVInput(
             id="biophysical_table_path",
             name=gettext("biophysical table"),

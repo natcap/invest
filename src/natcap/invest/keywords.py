@@ -118,9 +118,19 @@ LULC_CLASSES = GCMDKeyword(
     uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
     full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES')   
 
+NITROGEN = GCMDKeyword(
+    value='NITROGEN',
+    uuid='bf03dba8-2881-44ac-abfc-ba3353f67a24',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > WATER QUALITY/WATER CHEMISTRY > NUTRIENTS > NITROGEN')
+
 PAWC = InvestKeyword(
     value='PLANT AVAILABLE WATER CONTENT',
     definition='The quantity of water in the soil that is available to plants.')
+
+PHOSPHOROUS = GCMDKeyword(
+    value='PHOSPHOROUS',
+    uuid='846d2db9-41cd-4ae8-b4ff-a34a9efb7428',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > WATER QUALITY/WATER CHEMISTRY > NUTRIENTS > PHOSPHOROUS')
 
 POPULATION_SIZE = GCMDKeyword(
     value='POPULATION SIZE',
@@ -148,6 +158,11 @@ RAINFALL_EROSIVITY = InvestKeyword(
 REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(
     value='REFERENCE EVAPOTRANSPIRATION',
     definition='Evapotranspiration of a reference vegetation such as grass or alfalfa.')
+
+RUNOFF = GCMDKeyword(
+    value='RUNOFF',
+    uuid='f6a54329-486b-4d5f-b105-c639cec42351',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > RUNOFF')
 
 RUNOFF_CURVE_NUMBER = InvestKeyword(
     value='RUNOFF CURVE NUMBER (CN)',
