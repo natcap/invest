@@ -61,7 +61,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
     # Note that passing an f-string to gettext will not work;
     # we must explicitly use .format() to populate variable values.
     intermediate_outputs_heading = gettext(
-        'Stream Network Maps (flow algorithm: {flow_dir_algorithm})'
+        'Stream Network Maps (Flow Algorithm: {flow_dir_algorithm})'
         ).format(flow_dir_algorithm=args_dict["flow_dir_algorithm"].upper())
 
     (ws_vector_table, ws_vector_totals_table) = (
