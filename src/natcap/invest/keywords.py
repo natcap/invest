@@ -19,6 +19,11 @@ class InvestKeyword(Keyword):
     vocabulary: str = 'InVEST Keywords'
 
 
+AGRICULTURE_PRODUCTION = GCMDKeyword(
+    value='AGRICULTURE PRODUCTION',
+    uuid='83741fb9-6f86-4670-abbb-c1f3b14a939d',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > ECONOMIC RESOURCES > AGRICULTURE PRODUCTION')
+
 BATHYMETRY = GCMDKeyword(
     value='BATHYMETRY',
     uuid='80d79c7e-6c64-4ada-bfcc-4093969758a5',
@@ -132,12 +137,28 @@ PHOSPHOROUS = GCMDKeyword(
     uuid='846d2db9-41cd-4ae8-b4ff-a34a9efb7428',
     full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > WATER QUALITY/WATER CHEMISTRY > NUTRIENTS > PHOSPHOROUS')
 
+PLANT_COMMODITIES = GCMDKeyword(
+    value='PLANT COMMODITIES',
+    uuid='d6560f20-3bef-41c6-8eec-9f913329b9ac',
+    full_path='EARTH SCIENCE > AGRICULTURE > PLANT COMMODITIES')
+
+POLLINATION_SEASON = InvestKeyword(
+    value='POLLINATION SEASON',
+    definition='The season in which a crop is pollinated.')
+
 POLLINATOR_ABUNDANCE = InvestKeyword(
     value='POLLINATOR ABUNDANCE',
     definition=(
         'The abundance of a population of a pollinator species/guild.'
         ' Sometimes expressed as a proportion of the total'
         ' amount of pollinators in the landscape.'))
+
+POLLINATOR_DEPENDENCE = InvestKeyword(
+    value='POLLINATOR DEPENDENCE',
+    definition=(
+        'Parameters related to the dependence of a crop on pollinators.'
+        ' For example, the proportion of farm output that is dependent on pollinators.'
+        ' Or the proportion of pollinators that are wild vs. managed.'))
 
 POLLINATOR_FLORAL_RESOURCES = InvestKeyword(
     value='POLLINATOR FLORAL RESOURCES',

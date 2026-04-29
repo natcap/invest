@@ -146,11 +146,14 @@ MODEL_SPEC = spec.ModelSpec(
                 " farm."
             ),
             keywords=[
+                keywords.AGRICULTURE_PRODUCTION,
+                keywords.PLANT_COMMODITIES,
+                keywords.POLLINATION_SEASON,
                 keywords.POLLINATOR_ABUNDANCE,
                 keywords.POLLINATOR_FLORAL_RESOURCES,
                 keywords.POLLINATOR_NESTING_SUITABILITY,
-
-                ],
+                keywords.POLLINATOR_DEPENDENCE,
+            ],
             required=False,
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
