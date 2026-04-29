@@ -94,15 +94,7 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      - name: Create build requirements file
-        shell: python
-        run: |
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
-              pyproject_toml = tomllib.load(f)
-          with open('requirements-build.txt', 'w') as f:
-            for requirement in pyproject_toml['build-system']['requires']:
-              f.write(f'{requirement}\n')
+      - uses: ./.github/actions/create_build_requirements_file
 
       - name: Set up build environment
         uses: ./.github/actions/setup_env
@@ -211,15 +203,7 @@ jobs:
         with:
           fetch-depth: 0  # Fetch complete history for accurate versioning
 
-      - name: Create build requirements file
-        shell: python
-        run: |
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
-              pyproject_toml = tomllib.load(f)
-          with open('requirements-build.txt', 'w') as f:
-            for requirement in pyproject_toml['build-system']['requires']:
-              f.write(f'{requirement}\n')
+      - uses: ./.github/actions/create_build_requirements_file
 
       - name: Set up build environment
         uses: ./.github/actions/setup_env
@@ -310,15 +294,7 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - name: Create build requirements file
-        shell: python
-        run: |
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
-              pyproject_toml = tomllib.load(f)
-          with open('requirements-build.txt', 'w') as f:
-            for requirement in pyproject_toml['build-system']['requires']:
-              f.write(f'{requirement}\n')
+      - uses: ./.github/actions/create_build_requirements_file
 
       - uses: ./.github/actions/setup_env
         with:
@@ -353,15 +329,7 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - name: Create build requirements file
-        shell: python
-        run: |
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
-              pyproject_toml = tomllib.load(f)
-          with open('requirements-build.txt', 'w') as f:
-            for requirement in pyproject_toml['build-system']['requires']:
-              f.write(f'{requirement}\n')
+      - uses: ./.github/actions/create_build_requirements_file
 
       - name: Set up python environment
         uses: ./.github/actions/setup_env
@@ -421,15 +389,7 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - name: Create build requirements file
-        shell: python
-        run: |
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
-              pyproject_toml = tomllib.load(f)
-          with open('requirements-build.txt', 'w') as f:
-            for requirement in pyproject_toml['build-system']['requires']:
-              f.write(f'{requirement}\n')
+      - uses: ./.github/actions/create_build_requirements_file
 
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
