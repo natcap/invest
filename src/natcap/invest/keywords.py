@@ -132,6 +132,39 @@ PHOSPHOROUS = GCMDKeyword(
     uuid='846d2db9-41cd-4ae8-b4ff-a34a9efb7428',
     full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > WATER QUALITY/WATER CHEMISTRY > NUTRIENTS > PHOSPHOROUS')
 
+POLLINATOR_ABUNDANCE = InvestKeyword(
+    value='POLLINATOR ABUNDANCE',
+    definition=(
+        'The abundance of a population of a pollinator species/guild.'
+        ' Sometimes expressed as a proportion of the total'
+        ' amount of pollinators in the landscape.'))
+
+POLLINATOR_FLORAL_RESOURCES = InvestKeyword(
+    value='POLLINATOR FLORAL RESOURCES',
+    definition=(
+        'Parameters related to the availability of floral resources for'
+        ' pollinators. This may refer to seasonality of floral resources and'
+        ' the abundance of floral resources across the landscape.'))
+
+POLLINATOR_FORAGE_ACTIVITY = InvestKeyword(
+    value='POLLINATOR FORAGE ACTIVITY',
+    definition=(
+        'Parameters related to the foraging activites of a pollinator species.'
+        ' This may refer to seasonality of foraging and distance travelled by'
+        ' foragers.'))
+
+POLLINATOR_NESTING_SUITABILITY = InvestKeyword(
+    value='POLLINATOR NESTING SUITABILITY',
+    definition=(
+        'Parameters related to the suitability of a habitat type for'
+        ' pollinator nesting. This may refer to land cover classes that provide'
+        ' suitable nesting substrate.'))
+
+POLLINATOR_SPECIES = GCMDKeyword(
+    value='POLLINATOR SPECIES',
+    uuid='45950ee6-adc2-4f39-96a7-c00bacd1ba9e',
+    full_path='EARTH SCIENCE > BIOSPHERE > ECOLOGICAL DYNAMICS > SPECIES/POPULATION INTERACTIONS > POLLINATOR SPECIES')
+
 POPULATION_SIZE = GCMDKeyword(
     value='POPULATION SIZE',
     uuid='dd0b8bc9-90b3-4e7d-a021-e91dc676d622',
