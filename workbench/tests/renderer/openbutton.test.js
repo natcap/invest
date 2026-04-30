@@ -97,6 +97,6 @@ test('Open File: presents error message on unrecognized model ID', async () => {
 
   await waitFor(() => {
     expect(window.alert).toHaveBeenCalledWith(
-      'Unrecognized model ID in datastack/logfile: (coastal_purple_carbon).');
+      'Unrecognized model ID in datastack/logfile: coastal_purple_carbon.');
   });
 });

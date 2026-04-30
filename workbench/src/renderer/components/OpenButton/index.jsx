@@ -49,7 +49,7 @@ class OpenButton extends React.Component {
         const { t } = this.props;
         alert( // eslint-disable-line no-alert
           t(
-            'Unrecognized model ID in datastack/logfile: ({{datastackModelId}}).',
+            'Unrecognized model ID in datastack/logfile: {{datastackModelId}}.',
             { datastackModelId: datastack.model_id }
           )
         );
