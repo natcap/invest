@@ -73,11 +73,14 @@ General
 
 Workbench
 =========
+* Fixed a bug in Workbench application logs where the label referring to the
+  origin of the log message was inaccurate. Messages are now labeled as from
+  either the "main" or "renderer" process.
+  (`#2522 <https://github.com/natcap/invest/issues/2522>`_)
 * Attempting to load a datastack or logfile with a model ID the Workbench
   doesn't recognize (such as the ID of a plugin that isn't installed, or an
   otherwise malformed model ID) now presents an error message instead of
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
-
 
 3.19.0 (2026-04-16)
 -------------------
