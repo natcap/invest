@@ -62,9 +62,16 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+
+Workbench
+=========
+* Fixed a bug in Workbench application logs where the label referring to the
+  origin of the log message was inaccurate. Messages are now labeled as from
+  either the "main" or "renderer" process.
+  (`#2522 <https://github.com/natcap/invest/issues/2522>`_)
 
 General
 =======
