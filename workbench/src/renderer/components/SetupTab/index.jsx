@@ -158,6 +158,7 @@ class SetupTab extends React.Component {
     }, () => {
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
@@ -386,6 +387,7 @@ class SetupTab extends React.Component {
       });
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
@@ -445,9 +447,21 @@ class SetupTab extends React.Component {
     };
     const results = await getDynamicDropdowns(payload);
     Object.keys(results).forEach((argkey) => {
+      // const options = results[argkey];
       argsDropdownOptions[argkey] = results[argkey];
+      // const currentValue = argsValues[argkey].value;
+      // const currentValueIsValid = options.some(
+      //   (option) => option.key === currentValue
+      // );
+      // if (options.length > 0 && !currentValueIsValid) {
+      //   argsValues[argkey].value = options[0].key;
+      // }
     });
-    this.setState({ argsDropdownOptions: argsDropdownOptions });
+    this.setState({ argsDropdownOptions: argsDropdownOptions }); // ,
+    //   argsValues: argsValues,
+    //  }, () => {
+    //   this.debouncedValidate();
+    //  });
   }
 
   /** Get a debounced version of investValidate.
