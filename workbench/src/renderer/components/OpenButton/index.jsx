@@ -37,13 +37,23 @@ class OpenButton extends React.Component {
       if (!datastack) {
         return; // the open dialog was cancelled
       }
-      const job = new InvestJob({
-        modelID: datastack.model_id,
-        modelTitle: investList[datastack.model_id].modelTitle,
-        argsValues: datastack.args,
-        type: investList[datastack.model_id].type,
-      });
-      openInvestModel(job);
+      if (investList[datastack.model_id]) {
+        const job = new InvestJob({
+          modelID: datastack.model_id,
+          modelTitle: investList[datastack.model_id].modelTitle,
+          argsValues: datastack.args,
+          type: investList[datastack.model_id].type,
+        });
+        openInvestModel(job);
+      } else {
+        const { t } = this.props;
+        alert( // eslint-disable-line no-alert
+          t(
+            'Unrecognized model ID in datastack/logfile: ({{datastackModelId}}).',
+            { datastackModelId: datastack.model_id }
+          )
+        );
+      }
     }
   }
 
