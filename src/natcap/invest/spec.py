@@ -971,7 +971,7 @@ class CSVInput(FileInput):
         columns = copy.deepcopy(self.columns)
         for col_spec in columns:
             if isinstance(col_spec.required, str):
-                col_spec.required = bool(utils.evaluate_expression(
+                col_spec.__dict__['required'] = bool(utils.evaluate_expression(
                     col_spec.required, args or {}))
 
         for col_spec, pattern in zip(columns, patterns):
