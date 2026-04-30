@@ -180,17 +180,28 @@ def validate_permissions_string(permissions):
     return permissions
 
 
-class Input(BaseModel):
+class Parent(BaseModel):
+    """BaseModel with frozen attributes."""
+
+    model_config = ConfigDict(frozen=True)
+    """Make models immutable so that they must be copied before modifying."""
+
+
+class IOModel(Parent):
+    """Base class for both `Input` and `Output`."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types that don't inherit from BaseModel
+    (needed for pint.Unit)."""
+
+
+class Input(IOModel):
     """A data input, or parameter, of an invest model.
 
     This represents an abstract input or parameter, which is rendered as an
     input field in the InVEST workbench. This does not store the value of the
     parameter for a specific run of the model.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
     id: str
     """Input identifier that should be unique within a model"""
 
@@ -235,7 +246,6 @@ class Input(BaseModel):
         else:
             # assume that the about text will describe the conditional
             return gettext('conditionally required')
-
 
     def capitalize_name(self) -> str:
         """Capitalize a self.name into title case.
@@ -294,17 +304,13 @@ class Input(BaseModel):
         return [rst_line]
 
 
-class Output(BaseModel):
+class Output(IOModel):
     """A data output, or result, of an invest model.
 
     This represents an abstract output which is produced as a result of running
     an invest model. This does not store the value of the output for a specific
     run of the model.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
     id: str
     """Output identifier that should be unique within a model"""
 
@@ -449,16 +455,8 @@ class SpatialFileInput(FileInput):
         return col.apply(format_path).astype(pandas.StringDtype())
 
 
-class RasterBand(BaseModel):
-    """A single-band raster input, or parameter, of an invest model.
-
-    This represents a raster file input (all GDAL-supported raster file types
-    are allowed), where only the first band is needed.
-    """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
+class RasterBand(IOModel):
+    """A representation of a single raster band."""
     band_id: typing.Union[int, str] = 1
     """band index used to access the raster band"""
 
@@ -1571,7 +1569,7 @@ class ResultsSuffixInput(StringInput):
         return value
 
 
-class Option(BaseModel):
+class Option(Parent):
     """An option in an OptionStringInput or OptionStringOutput."""
 
     key: str
@@ -1890,7 +1888,7 @@ class OptionStringOutput(Output):
     """A list of the values that this input may take"""
 
 
-class ModelSpec(BaseModel):
+class ModelSpec(Parent):
     """Specification of an invest model describing metadata, inputs, and outputs."""
 
     model_id: str
