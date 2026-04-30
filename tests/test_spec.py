@@ -523,6 +523,6 @@ class ModelSpecTests(unittest.TestCase):
 
     def test_immutable_model_spec(self):
         """Test that ModelSpec instance is immutable."""
+        from natcap.invest.carbon import MODEL_SPEC
         with self.assertRaises(ValidationError):
-            from natcap.invest.carbon import MODEL_SPEC
             MODEL_SPEC.model_id = 'foo'
