@@ -65,3 +65,38 @@ test('Open File: sends correct payload', async () => {
   expect(Object.keys(payload)).toEqual(['filepath']);
   expect(payload['filepath']).toEqual(filename);
 });
+
+test('Open File: presents error message on unrecognized model ID', async () => {
+  const mockDatastack = {
+    model_id: 'coastal_purple_carbon',
+    model_title: 'Coastal Purple Carbon',
+    args: {},
+  };
+  const filename = 'data.json';
+  const mockDialogData = { canceled: false, filePaths: [filename] };
+  ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+  fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+  jest.spyOn(window, 'alert').mockImplementation();
+  const { findByRole } = render(
+    <OpenButton
+      openInvestModel={() => {}}
+      batchUpdateArgs={() => {}}
+      className=''
+      investList={{
+        'coastal_blue_carbon': {
+          modelTitle: 'Coastal Blue Carbon',
+          type: 'core',
+        },
+      }}
+    />
+  );
+
+  const openButton = await findByRole(
+    'button', { name: /Browse to a datastack or InVEST logfile/i });
+  await userEvent.click(openButton);
+
+  await waitFor(() => {
+    expect(window.alert).toHaveBeenCalledWith(
+      'Unrecognized model ID in datastack/logfile: (coastal_purple_carbon).');
+  });
+});
