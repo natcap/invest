@@ -180,6 +180,90 @@ def validate_permissions_string(permissions):
     return permissions
 
 
+def _get_spatial_inputs(args, model_spec): # should this live in utils.py instead?
+    """Return spatial inputs as dropdown Options, default input first."""
+    valid_spatial_inputs = [
+        inp for inp in model_spec.inputs
+        if (isinstance(inp, SpatialFileInput) and args.get(inp.id))
+    ]
+    default_projection_input = [
+        inp for inp in model_spec.inputs
+        if (isinstance(inp, SpatialFileInput) and inp.is_default_projection)
+    ]
+    # Always set default_projection_input first even if user hasn't entered it
+    ordered_inputs = default_projection_input + [
+        input_spec for input_spec in valid_spatial_inputs if (
+            input_spec.id != default_projection_input[0].id)]
+
+    def get_display_name_and_check_prj(input_spec):
+        """Get display name, which is composed of the name and projection
+
+        Only return an input's display name and projection if the
+        spatial input is correctly projected or input has default projection.
+        """
+        # the only "empty" input that would be passed to this function is the
+        # default target projection input
+        if not args.get(input_spec.id):
+            return "(Default) " + input_spec.name.title()
+        with GDALUseExceptions():
+            gdal_path = utils._GDALPath.from_uri(args[input_spec.id])
+            # if gdal_path.is_local:
+            #     file_warning = super().validate(filepath)
+            #     if file_warning:
+            #         return file_warning
+
+            if isinstance(input_spec, VectorInput):
+                # try:
+                gdal_dataset = gdal.OpenEx(
+                    gdal_path.to_normalized_path(), gdal.OF_VECTOR)
+                # except RuntimeError:
+                #     return validation_messages.NOT_GDAL_VECTOR
+                layer = gdal_dataset.GetLayer()
+                srs = layer.GetSpatialRef()
+            else:
+                #try:
+                gdal_dataset = gdal.OpenEx(
+                    gdal_path.to_normalized_path(), gdal.OF_RASTER)
+                # except RuntimeError:
+                #     return validation_messages.NOT_GDAL_RASTER
+                srs = gdal_dataset.GetSpatialRef()
+
+        ### prev:
+        # if isinstance(input_spec, VectorInput):
+        #     spatial_info = pygeoprocessing.get_vector_info(filepath)
+        #     wkt_string = spatial_info['projection_wkt']
+        # else:
+        #     spatial_info = pygeoprocessing.get_raster_info(filepath)
+        #     wkt_string = spatial_info['projection_wkt']
+
+        # srs = osr.SpatialReference()
+        # srs.ImportFromWkt(wkt_string)
+
+        # check input is projected, not _just_ that it adheres to its
+        # own input spec contract
+        projection_warning = _check_projection(
+            srs, True, input_spec.projection_units)
+        if not projection_warning:
+            # Get the top-level name (Projected or Geographic)
+            prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
+            if input_spec.is_default_projection:
+                return "(Default) " + input_spec.name.title() + f" ({prj_name})"
+            return input_spec.name.title() + f" ({prj_name})"
+        else:
+            # return display name for default target proj input even if
+            # unprojected as inputs own validation will fail first.
+            if input_spec.is_default_projection:
+                return "(Default) " + input_spec.name.title()
+        return None
+
+    options = []
+    for inp in ordered_inputs:
+        display_name = get_display_name_and_check_prj(inp)
+        if display_name:
+            options.append(Option(key=inp.id, display_name=display_name))
+    return options
+
+
 class Input(BaseModel):
     """A data input, or parameter, of an invest model.
 
@@ -399,11 +483,26 @@ class SpatialFileInput(FileInput):
     """Defaults to None. If `projected` is `True`, and a specific unit of
     projection (such as meters) is required, indicate it here."""
 
+    is_default_projection: bool = False
+    """Whether the input has the projection and alignment to which other
+    inputs are reprojected and aligned by default. Only one input can have
+    `is_default_projection`=True, and that input must be linearly projected.
+    A user can select a different input to represent the target
+    projection, but this input will be selected by default.
+    Defaults to False."""
+
     @model_validator(mode='after')
     def check_projected_projection_units(self):
         if self.projection_units and not self.projected:
             raise ValueError(
                 'Cannot specify projection_units when projected is None')
+        return self
+
+    @model_validator(mode='after')
+    def check_projected_default_projection(self):
+        if self.is_default_projection and not self.projected:
+            raise ValueError(
+                'Cannot specify is_default_projection when projected is False')
         return self
 
     def preprocess(self, value):
@@ -2005,6 +2104,24 @@ class ModelSpec(BaseModel):
                 f'Mismatch between keys in inputs and input_field_order')
         return self
 
+    @model_validator(mode='after')
+    def check_one_default_projection(self):
+        default_proj_inputs = [
+            inp for inp in self.inputs
+            if isinstance(inp, SpatialFileInput) and inp.is_default_projection
+        ]
+
+        if len(default_proj_inputs) > 1:
+            ids = [inp.id for inp in default_proj_inputs]
+            raise ValueError(
+                'Exactly one spatial input must have '
+                f'is_default_projection=True, but found multiple: {ids}'
+            )
+        # fine if 0 inputs have is_default_projection=True becuase not all
+        # models are spatial?
+
+        return self
+
     def get_input(self, key: str) -> Input:
         """Get an Input of this model by its key."""
         return {_input.id: _input for _input in self.inputs}[key]
@@ -2385,6 +2502,17 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
         Option(key="D8", description="D8 flow direction"),
         Option(key="MFD", description="Multiple flow direction")
     ]
+)
+TARGET_PROJECTION = OptionStringInput(
+    id="target_projection",
+    name=gettext("target projection"),
+    about=gettext(
+        "Input with target projection to which all other spatial"
+        "inputs will be reprojected."),
+    required=True,
+    options=[],
+    #TODO add some function to evaluate at runtime that all the options have valid projections at runtime
+    dropdown_function=_get_spatial_inputs
 )
 
 # Specs for common outputs ####################################################
