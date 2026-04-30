@@ -1,20 +1,14 @@
 """Common validation utilities for InVEST models."""
-import copy
-import functools
 import importlib
 import inspect
 import logging
-import os
 import pprint
 
 import numpy
-import pint
 import pygeoprocessing
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 
-from . import gettext
 from . import utils
 from . import validation_messages
 
@@ -221,14 +215,15 @@ def validate(args, model_spec):
         # Extra args that don't exist in the MODEL_SPEC are okay
         # we don't need to try to validate them
         try:
-            # Using deepcopy to make sure we don't modify the original spec
-            parameter_spec = copy.deepcopy(model_spec.get_input(key))
+            # Using a deep copy to make sure we don't modify the original spec
+            # spec or original nested specs.
+            parameter_spec = model_spec.get_input(key).model_copy(deep=True)
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
 
         # rewrite parameter_spec for any nested, conditional validity
-        axis_keys = set(dir(parameter_spec)).intersection({'columns', 'rows', 'fields', 'contents'})
+        axis_keys = set(dir(parameter_spec)).intersection({'columns', 'fields', 'contents'})
 
         if axis_keys:
             for axis_key in axis_keys:
@@ -236,7 +231,9 @@ def validate(args, model_spec):
                     continue
                 for nested_spec in getattr(parameter_spec, axis_key):
                     if (isinstance(nested_spec.required, str)):
-                        nested_spec.required = (
+                        # attributes have faux immutability; we cannot assign
+                        # to them, but we can assign to the underlying dict.
+                        nested_spec.__dict__['required'] = (
                             bool(utils.evaluate_expression(
                                 nested_spec.required, expression_values)))
         try:
