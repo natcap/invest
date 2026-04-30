@@ -2193,6 +2193,33 @@ class ModelSpec(BaseModel):
                 input_values.get(_input.id, None))
         return values
 
+    def preprocess_spatial_reference_args(self, args):
+        """Preprocess optional `target_projection` input
+
+        The resulting dict will have set key `target_projection` to the id of
+        whichever arg has is_default_projection if that arg exists.
+
+        Args:
+            args (dict): argument dictionary mapping input keys to input values
+
+        Returns:
+            dictionary mapping input keys to preprocessed input values
+        """
+
+        if not args.get('target_projection'):
+            default_projection_inputs = [
+                input_spec for input_spec in self.inputs
+                if (
+                    isinstance(input_spec, SpatialFileInput)
+                    and input_spec.is_default_projection
+                )
+            ]
+
+            if default_projection_inputs:
+                args['target_projection'] = default_projection_inputs[0].id
+
+        return args
+
     def generate_metadata_for_outputs(self, file_registry, args_dict):
         """Create metadata for all items in an invest model output workspace.
 
@@ -2281,6 +2308,7 @@ class ModelSpec(BaseModel):
             and model specification.
         """
         args = self.preprocess_inputs(args)
+        args = self.preprocess_spatial_reference_args(args)
         self.create_output_directories(args)
         file_registry = FileRegistry(
             outputs=self.outputs,
@@ -2509,9 +2537,8 @@ TARGET_PROJECTION = OptionStringInput(
     about=gettext(
         "Input with target projection to which all other spatial"
         "inputs will be reprojected."),
-    required=True,
+    required=False, # models will fallback to using default target projections
     options=[],
-    #TODO add some function to evaluate at runtime that all the options have valid projections at runtime
     dropdown_function=_get_spatial_inputs
 )
 
