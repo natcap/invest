@@ -968,13 +968,16 @@ class CSVInput(FileInput):
 
         # Evaluate any conditional requirement strings to booleans
         # This will raise an error if any can't be evaluated
-        columns = copy.deepcopy(self.columns)
-        for col_spec in columns:
+        # Specs cannot be modified in place, so we copy with update
+        # to update the required attribute, and assemble a new list.
+        columns = []
+        for col_spec in self.columns:
             if isinstance(col_spec.required, str):
                 is_required = bool(utils.evaluate_expression(
                     col_spec.required, args or {}))
                 col_spec = col_spec.model_copy(update=dict(
                     required=is_required))
+            columns.append(col_spec)
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
@@ -1011,7 +1014,7 @@ class CSVInput(FileInput):
             duplicated_columns = df.columns[df.columns.duplicated()]
             raise ValueError(validation_messages.DUPLICATE_HEADER.format(
                 header=f'{self.orientation}(s)',
-                header_name=','.join(duplicated_columns),
+                header_name=', '.join(duplicated_columns),
                 number='multiple'))
 
         # set the index column, if specified
