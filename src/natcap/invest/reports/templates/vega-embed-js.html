@@ -16,6 +16,7 @@
     vegaEmbed('#'+elId, chart_spec, {
       // https://vega.github.io/vega-embed/#options
       mode: 'vega-lite',
+      renderer: 'svg',
       scaleFactor: { png: 2 }, // scale on export
       actions: {
         // These don't work in the electron browser context and are
