@@ -13,7 +13,7 @@
       throw error;
     }
     let el = document.getElementById(elId);
-    vegaEmbed('#'+elId, chart_spec, {
+    vegaEmbed(`#${elId}`, chart_spec, {
       // https://vega.github.io/vega-embed/#options
       mode: 'vega-lite',
       renderer: 'svg',
@@ -23,7 +23,8 @@
         // not necessarily useful to invest users.
         compiled: false,
         source: false,
-      }
+      },
+      downloadFileName: `InVEST-${elId}`,
     })
     .then(function (_result) {
       if (el.classList.contains('loading')) {
