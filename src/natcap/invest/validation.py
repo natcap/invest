@@ -216,7 +216,7 @@ def validate(args, model_spec):
         # we don't need to try to validate them
         try:
             # Using a deep copy to make sure we don't modify the original spec
-            # spec or original nested specs.
+            # or original nested specs.
             parameter_spec = model_spec.get_input(key).model_copy(deep=True)
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')

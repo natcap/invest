@@ -180,14 +180,14 @@ def validate_permissions_string(permissions):
     return permissions
 
 
-class Parent(BaseModel):
+class ImmutableBaseModel(BaseModel):
     """BaseModel with frozen attributes."""
 
     model_config = ConfigDict(frozen=True)
     """Make models immutable so that they must be copied before modifying."""
 
 
-class IOModel(Parent):
+class IOModel(ImmutableBaseModel):
     """Base class for both `Input` and `Output`."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -971,10 +971,10 @@ class CSVInput(FileInput):
         columns = copy.deepcopy(self.columns)
         for col_spec in columns:
             if isinstance(col_spec.required, str):
-                # attributes have faux immutability; we cannot assign
-                # to them, but we can assign to the underlying dict.
-                col_spec.__dict__['required'] = bool(utils.evaluate_expression(
+                is_required = bool(utils.evaluate_expression(
                     col_spec.required, args or {}))
+                col_spec = col_spec.model_copy(update=dict(
+                    required=is_required))
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
@@ -1571,7 +1571,7 @@ class ResultsSuffixInput(StringInput):
         return value
 
 
-class Option(Parent):
+class Option(ImmutableBaseModel):
     """An option in an OptionStringInput or OptionStringOutput."""
 
     key: str
@@ -1890,7 +1890,7 @@ class OptionStringOutput(Output):
     """A list of the values that this input may take"""
 
 
-class ModelSpec(Parent):
+class ModelSpec(ImmutableBaseModel):
     """Specification of an invest model describing metadata, inputs, and outputs."""
 
     model_id: str
