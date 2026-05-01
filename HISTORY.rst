@@ -78,6 +78,9 @@ General
 * To ensure consistent raster plot sizing in reports, padding is now added to
   the top of raster plots if an adjacent raster plot has a units subheading.
   (`#2471 <https://github.com/natcap/invest/issues/2471>`_)
+* Made some styling and usability improvements to the Vega-Lite visualizations
+  (e.g., vector plots, histograms) that appear in some InVEST reports.
+  (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
 
 3.19.0 (2026-04-16)
 -------------------
