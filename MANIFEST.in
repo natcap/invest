@@ -6,4 +6,3 @@ prune exe
 prune installer
 prune workbench
 include src/natcap/invest/internationalization/locales/*/LC_MESSAGES/messages.mo
-include custom_build_backend/backend.py

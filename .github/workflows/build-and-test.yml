@@ -23,7 +23,8 @@ env:
   LATEST_SUPPORTED_PYTHON_VERSION: "3.14"
   # gsutil never seems to support the latest python
   GSUTIL_PYTHON_VERSION: "3.13"
-  GDAL_VERSION_SPECIFIER_FOR_WHEEL: "3.10.*"
+  GDAL_VERSION_FOR_WHEEL_BUILD: "3.10.*"
+
 
 jobs:
   check-syntax-errors:
@@ -95,16 +96,6 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      # The C++ extensions will be compiled and linked against the libgdal version 
-      # that's in the build environment, and so that same libgdal version has to be 
-      # available in the target environment. Each libgdal version corresponds to a 
-      # minor version of GDAL itself. Adding this requirement to the package metadata
-      # should prevent it from being installed in an env without the necessary libgdal.
-      # Users who need a different GDAL version can use the conda-forge package or 
-      # build their own wheel from source.
-      - name: Add gdal constraint for wheel
-        run: echo "gdal==${{ env.GDAL_VERSION_SPECIFIER_FOR_WHEEL }}" >> requirements.txt
-
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
@@ -113,6 +104,8 @@ jobs:
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             ${{ matrix.platform-specific-dependencies }}
             python=${{ matrix.python-version }}
+            gdal==${{ env.GDAL_VERSION_FOR_WHEEL_BUILD }}
+            wheel
 
       - name: Download previous conda environment.yml
         continue-on-error: true
@@ -140,6 +133,21 @@ jobs:
           python -m pip uninstall -y natcap.invest
           NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
           ls -la dist
+
+      # Modify the wheel metadata to require the same minor version of gdal that we built against.
+      # The C++ extensions will be compiled and linked against the libgdal version
+      # that's in the build environment, and so that same libgdal version has to be
+      # available in the target environment. Each libgdal version corresponds to a
+      # minor version of GDAL itself. Adding this requirement to the package metadata
+      # should prevent it from being installed in an env without the necessary libgdal.
+      # Users who need a different GDAL version can use the conda-forge package or
+      # build their own wheel from source.
+      - name: Modify wheel to add gdal constraint
+        run: |
+          wheel unpack dist/*.whl --dest tmp
+          sed -i.bak 's/Requires-Dist: gdal.*/Requires-Dist: gdal==${{ env.GDAL_VERSION_FOR_WHEEL_BUILD }}/I' tmp/*/*.dist-info/METADATA
+          rm tmp/*/*.dist-info/*.bak
+          wheel pack tmp/* --dest-dir dist
 
       - name: Install wheel and run model tests
         run: |
