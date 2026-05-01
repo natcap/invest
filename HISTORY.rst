@@ -75,6 +75,13 @@ General
   Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
   (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
 
+Workbench
+=========
+* Fixed a bug in Workbench application logs where the label referring to the
+  origin of the log message was inaccurate. Messages are now labeled as from
+  either the "main" or "renderer" process.
+  (`#2522 <https://github.com/natcap/invest/issues/2522>`_)
+
 
 3.19.0 (2026-04-16)
 -------------------
