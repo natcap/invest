@@ -1008,11 +1008,11 @@ class CSVInput(FileInput):
                 df[col][df[col].notna()].apply(check_value)
 
         if any(df.columns.duplicated()):
-            duplicated_columns = df.columns[df.columns.duplicated]
+            duplicated_columns = df.columns[df.columns.duplicated()]
             raise ValueError(validation_messages.DUPLICATE_HEADER.format(
-                header=header_type,
-                header_name=expected,
-                number=count))
+                header=f'{self.orientation}(s)',
+                header_name=','.join(duplicated_columns),
+                number='multiple'))
 
         # set the index column, if specified
         if self.index_col is not None:
