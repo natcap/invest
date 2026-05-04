@@ -13,12 +13,10 @@ import tempfile
 import textwrap
 import threading
 import unittest
-import unittest.mock
 import warnings
 
 import numpy
 import numpy.testing
-import pandas as pd
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
@@ -437,8 +435,6 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['header2'][1], 'FOO')
         self.assertEqual(df['header3'][1], 'bar')
         self.assertEqual(df['header1'][0], 1)
-
-
 
 
 class CreateCoordinateTransformationTests(unittest.TestCase):
@@ -934,7 +930,8 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         origin = (1180000, 690000)
         raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
 
-        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]], dtype=numpy.int32)
+        array = numpy.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]],
+                            dtype=numpy.int32)
 
         pygeoprocessing.numpy_array_to_raster(
             array, -1, (1, -1), origin, projection_wkt, raster_path)
@@ -1003,6 +1000,7 @@ class ExpandPathTests(unittest.TestCase):
             self.assertEqual(
                 None, utils.expand_path(value, self.workspace_dir))
 
+
 class _GDALPathTests(unittest.TestCase):
 
     def test_local_path(self):
@@ -1029,11 +1027,13 @@ class _GDALPathTests(unittest.TestCase):
 
     def test_https_zip_path(self):
         from natcap.invest import utils
-        gdal_path = utils._GDALPath.from_uri('zip+https://example.com/foo.zip/foo/bar.tif')
+        gdal_path = utils._GDALPath.from_uri(
+            'zip+https://example.com/foo.zip/foo/bar.tif')
         self.assertTrue(gdal_path.is_remote)
         self.assertEqual(gdal_path.scheme, 'zip+https')
-        self.assertEqual(gdal_path.to_normalized_path(),
-                         '/vsizip/vsicurl/https://example.com/foo.zip/foo/bar.tif')
+        self.assertEqual(
+            gdal_path.to_normalized_path(),
+            '/vsizip/vsicurl/https://example.com/foo.zip/foo/bar.tif')
 
 
 class FormatArgsTest(unittest.TestCase):
@@ -1126,3 +1126,19 @@ class ResamplePopulationRasterTest(unittest.TestCase):
                 numpy.testing.assert_allclose(
                     population_array.sum(), resampled_population_array.sum(),
                     rtol=1e-3)
+
+
+class BaseModelIdTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.base_model_id."""
+
+    def test_annotated_model_id(self):
+        """Annotated model ID should be stripped of annotations."""
+        from natcap.invest.utils import base_model_id
+        self.assertEqual(base_model_id('sample_plugin@0_0_42'),
+                         'sample_plugin')
+
+    def test_unannotated_model_id(self):
+        """Unannotated model ID should be returned unchanged."""
+        from natcap.invest.utils import base_model_id
+        self.assertEqual(base_model_id('sample_core_model'),
+                         'sample_core_model')

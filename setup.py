@@ -3,12 +3,14 @@ import platform
 import subprocess
 
 import numpy
+import pygeoprocessing
 from Cython.Build import cythonize
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
 
-include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
+include_dirs = [numpy.get_include(),
+                os.path.join(pygeoprocessing.__path__[0], 'extensions')]
 if platform.system() == 'Windows':
     compiler_args = ['/std:c++20']
     compiler_and_linker_args = []

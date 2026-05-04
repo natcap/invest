@@ -69,7 +69,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
         file_registry).to_html(na_rep='')
 
     input_raster_stats_table = raster_utils.raster_inputs_summary(
-        args_dict).to_html(na_rep='')
+        args_dict, model_spec).to_html(na_rep='')
 
     model_description = model_spec.about
     model_description += gettext(

@@ -288,7 +288,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         SAMPLE_MODEL_SPEC.generate_metadata_for_outputs(file_registry, args_dict)
 
         files, messages = geometamaker.validate_dir(self.workspace_dir)
-        self.assertEqual(len(files), 4)
+        self.assertEqual(len(files), 5)
         self.assertFalse(any(messages))
 
         # Test some specific content of the metadata
@@ -366,8 +366,8 @@ class MissingResultsSuffixTests(unittest.TestCase):
         }
 
         # Create LULC raster and pools csv in workspace and add them to args.
-        args['lulc_bas_path'] = os.path.join(args['workspace_dir'],
-                                       'lulc_bas_path.tif')
+        args['lulc_bas_path'] = os.path.join(
+            args['workspace_dir'], 'lulc_bas_path.tif')
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)  # UTM Zone 10N
         projection_wkt = srs.ExportToWkt()
@@ -492,6 +492,11 @@ class InputTests(unittest.TestCase):
         self.assertEqual(option_string_input.preprocess(''), None)
         self.assertEqual(option_string_input.preprocess(None), None)
 
+    def test_immutable_input(self):
+        """Test that Input instances are immutable."""
+        with self.assertRaises(ValidationError):
+            spec.LULC.about = 'new description'
+
 
 class ModelSpecTests(unittest.TestCase):
     """Tests for natcap.invest.spec.ModelSpec."""
@@ -515,3 +520,9 @@ class ModelSpecTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             # This module is importable, but has no 'report' attribute
             spec.ModelSpec(**data, reporter='natcap.invest')
+
+    def test_immutable_model_spec(self):
+        """Test that ModelSpec instance is immutable."""
+        from natcap.invest.carbon import MODEL_SPEC
+        with self.assertRaises(ValidationError):
+            MODEL_SPEC.model_id = 'foo'

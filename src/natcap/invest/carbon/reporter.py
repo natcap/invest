@@ -201,16 +201,12 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     ]
 
     input_raster_stats_table = raster_utils.raster_inputs_summary(
-        args_dict).to_html(na_rep='')
+        args_dict, model_spec).to_html(na_rep='')
 
     output_raster_stats_table = raster_utils.raster_workspace_summary(
         file_registry).to_html(na_rep='')
 
     agg_results_table = _generate_agg_results_table(args_dict, file_registry)
-
-    lulc_pre_caption = gettext(
-        'Values in the legend are listed in order of frequency (most common '
-        'first).')
 
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
@@ -226,7 +222,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             agg_results_table=agg_results_table,
             inputs_img_src=inputs_img_src,
             inputs_caption=input_raster_caption,
-            lulc_pre_caption=lulc_pre_caption,
+            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
             intermediate_raster_sections=intermediate_raster_sections,

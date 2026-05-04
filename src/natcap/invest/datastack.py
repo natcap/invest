@@ -18,7 +18,6 @@ run.
 """
 
 import ast
-import codecs
 import collections
 import importlib
 import json
@@ -30,14 +29,11 @@ import re
 import shutil
 import tarfile
 import tempfile
-import warnings
 
-from osgeo import gdal
-
-from . import spec
-from . import utils
-from . import models
-
+from natcap.invest import models
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest.utils import base_model_id
 
 LOGGER = logging.getLogger(__name__)
 DATASTACK_EXTENSION = '.invest.tar.gz'
@@ -142,7 +138,7 @@ def build_datastack_archive(args, model_id, datastack_path):
     """
     module = importlib.import_module(
         # For plugins, use the model id before the '@'
-        name=models.model_id_to_pyname[model_id.split('@')[0]])
+        name=models.model_id_to_pyname[base_model_id(model_id)])
 
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')
@@ -163,7 +159,7 @@ def build_datastack_archive(args, model_id, datastack_path):
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
 
     spatial_types = {spec.SingleBandRasterInput, spec.VectorInput,
-        spec.RasterOrVectorInput}
+                     spec.RasterOrVectorInput}
     file_based_types = spatial_types.union({
         spec.CSVInput, spec.FileInput, spec.DirectoryInput})
     rewritten_args = {}
@@ -311,7 +307,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
-        elif type(input_spec)is spec.DirectoryInput:
+        elif type(input_spec) is spec.DirectoryInput:
             # copy the whole folder
             target_directory = os.path.join(data_dir, f'{key}_directory')
             os.makedirs(target_directory)
@@ -367,7 +363,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             subdir = os.path.dirname(parameter_set['args'][k])
             target_location = os.path.join(temp_workspace, subdir)
             spec.write_metadata_file(v, this_arg_spec, keywords,
-                                           out_workspace=target_location)
+                                     out_workspace=target_location)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
@@ -490,7 +486,7 @@ def build_parameter_set(args, model_id, paramset_path, relative=False):
         'model_id': model_id,
         'args': _recurse(args)
     }
-    with codecs.open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
+    with open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
         paramset_file.write(
             json.dumps(parameter_data,
                        indent=4,
@@ -515,7 +511,7 @@ def extract_parameter_set(paramset_path):
             model_id (string): the ID of the model that these parameters are for
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
-    with codecs.open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
+    with open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
         params_raw = paramset_file.read()
 
     read_params = json.loads(params_raw)
@@ -587,7 +583,7 @@ def extract_parameters_from_logfile(logfile_path):
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
     """
-    with codecs.open(logfile_path, 'r', encoding='utf-8') as logfile:
+    with open(logfile_path, 'r', encoding='utf-8') as logfile:
         detected_args = []
         args_started = False
         for line in logfile:

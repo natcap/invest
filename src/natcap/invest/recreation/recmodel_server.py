@@ -190,7 +190,7 @@ class RecManager(object):
                 server = self.servers[dataset]
                 server.log_queue_map[client_id] = log_queue
 
-                results_filename = f'{server.acronym}_results.gpkg'
+                results_filename = f'{server.acronym}_results.csv'
                 fut = executor.submit(
                     server.calc_user_days_in_aoi,
                     zip_file_binary, aoi_filename,
@@ -203,7 +203,8 @@ class RecManager(object):
                     # If an exception occurred in the worker, do not raise it
                     # here in the process running the Pyro daemon.
                     results[label] = future.result()
-                except Exception:
+                except Exception as error:
+                    LOGGER.exception(error)
                     # Exceptions are not pickle-able so return this instead:
                     trace_str = '.'.join(traceback.format_exception(
                         *sys.exc_info()))
@@ -394,7 +395,7 @@ class RecModel(object):
 
     def calc_user_days_in_aoi(
             self, zip_file_binary, aoi_filename, start_year, end_year,
-            out_vector_filename, client_id=None):
+            target_filename, client_id=None):
         """Calculate annual average and per monthly average user days.
 
         Args:
@@ -404,7 +405,7 @@ class RecModel(object):
                 extracted from ``zip_file_binary``.
             start_year (string | int): formatted as 'YYYY' or YYYY
             end_year (string | int): formatted as 'YYYY' or YYYY
-            out_vector_filename (string): base filename of output vector
+            target_filename (string): base filename of output CSV
             client_id (string): a unique id sent by the Pyro client.
 
         Returns:
@@ -453,7 +454,7 @@ class RecModel(object):
         base_ud_aoi_path, monthly_table_path = (
             self._calc_aggregated_points_in_aoi(
                 aoi_path, workspace_path, start_year, end_year,
-                out_vector_filename, logger))
+                target_filename, logger))
 
         # ZIP and stream the result back
         logger.info(f'finished {self.acronym}; zipping result')
@@ -472,7 +473,7 @@ class RecModel(object):
 
     def _calc_aggregated_points_in_aoi(
             self, aoi_path, workspace_path, start_year, end_year,
-            out_vector_filename, logger=None):
+            target_filename, logger=None):
         """Aggregate the userdays in the AOI.
 
         If a user wishes to query a RecModel quadtree locally, rather than
@@ -488,14 +489,15 @@ class RecModel(object):
             end_year (string | int): formatted as 'YYYY' or YYYY
             date_range (datetime 2-tuple): a tuple that contains the inclusive
                 start and end date
-            out_vector_filename (string): base filename of output vector
+            target_filename (string): base filename of output CSV
             logger (logging.Logger): a logger with a QueueHandler for messages
                 that are relevant to the client. Only use this if queries
                 are being made from a Pyro-connected client.
 
         Returns:
-            - a path to a GDAL vector copy of `aoi_path` updated with annual
-              userday counts per polygon, indexed by 'poly_id'
+            - a path to a CSV table containing annual and monthly averages of
+              userday counts per polygon, indexed by 'id', which is the FID of
+              the AOI vector.
             - a path to a CSV table containing monthly counts of userdays
               per polygon, indexed by 'poly_id'
 
@@ -525,7 +527,7 @@ class RecModel(object):
         date_range = (start_date, end_date)
 
         aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
-        out_aoi_ud_path = os.path.join(workspace_path, out_vector_filename)
+        out_aoi_ud_path = os.path.join(workspace_path, target_filename)
 
         # start the workers now, because they have to load a quadtree and
         # it will take some time
@@ -617,32 +619,15 @@ class RecModel(object):
             polytest_process.start()
             polytest_process_list.append(polytest_process)
 
-        # Copy the input shapefile into the designated output folder
-        LOGGER.info('Creating a copy of the input AOI')
-        driver = gdal.GetDriverByName('GPKG')
-        ud_aoi_vector = driver.CreateCopy(out_aoi_ud_path, aoi_vector)
-        ud_aoi_layer = ud_aoi_vector.GetLayer()
-
-        aoi_layer = None
-        aoi_vector = None
-
-        ud_id_suffix_list = [
-            'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
-            'SEP', 'OCT', 'NOV', 'DEC']
-        for field_suffix in ud_id_suffix_list:
-            field_id = f'{self.acronym}_{field_suffix}'
-            # delete the field if it already exists
-            field_index = ud_aoi_layer.FindFieldIndex(str(field_id), 1)
-            if field_index >= 0:
-                ud_aoi_layer.DeleteField(field_index)
-            field_defn = ogr.FieldDefn(field_id, ogr.OFTReal)
-            ud_aoi_layer.CreateField(field_defn)
+        averages_table_header = [
+            f'{self.acronym}_{suffix}' for suffix in
+            recmodel_client.USERDAY_FIELD_SUFFIX_LIST]
 
         last_time = time.time()
         logger.info('testing polygons against quadtree')
 
         # Load up the test queue with polygons
-        for poly_feat in ud_aoi_layer:
+        for poly_feat in aoi_layer:
             poly_test_queue.put(poly_feat.GetFID())
 
         # Fill the queue with STOPs for each process
@@ -661,8 +646,13 @@ class RecModel(object):
             '%s-%s' % (year, month) for year in range(
                 int(date_range_year[0]), int(date_range_year[1])+1)
             for month in range(1, 13)]
-        with open(monthly_table_path, 'w') as monthly_table:
-            monthly_table.write('poly_id,' + ','.join(table_headers) + '\n')
+        with open(monthly_table_path, 'w') as monthly_table, \
+             open(out_aoi_ud_path, 'w') as averages_table:
+            monthly_table.write(f'poly_id,{",".join(table_headers)}\n')
+            # averages table can be indexed by fid because it will be immediately
+            # joined back to the AOI, guaranteeting that FIDs have not changed.
+            # Whereas the monthly table will remain a standalone CSV.
+            averages_table.write(f'id,{",".join(averages_table_header)}\n')
 
             while True:
                 result_tuple = ud_poly_feature_queue.get()
@@ -675,24 +665,24 @@ class RecModel(object):
                 last_time = recmodel_client.delay_op(
                     last_time, LOGGER_TIME_DELAY, lambda: logger.info(
                         '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
-                        ud_aoi_layer.GetFeatureCount()))
-                fid, ud_list, ud_monthly_set = result_tuple
-                poly_feat = ud_aoi_layer.GetFeature(fid)
-                for ud_index, ud_id in enumerate(ud_id_suffix_list):
-                    poly_feat.SetField(f'{self.acronym}_{ud_id}', ud_list[ud_index])
-                ud_aoi_layer.SetFeature(poly_feat)
+                        aoi_layer.GetFeatureCount()))
 
-                line = '%s,' % poly_feat.GetField(poly_id_field)
-                line += (
-                    ",".join(['%s' % len(ud_monthly_set[header])
-                              for header in table_headers]))
-                line += '\n'  # final newline
-                monthly_table.write(line)
+                fid, ud_list, ud_monthly_set = result_tuple
+                poly_feat = aoi_layer.GetFeature(fid)
+                poly_id = poly_feat.GetField(poly_id_field)
+
+                monthly_values_str = ",".join(
+                    [str(len(ud_monthly_set[header])) for header in table_headers]
+                )
+                monthly_line = (f'{poly_id},{monthly_values_str}\n')
+                monthly_table.write(monthly_line)
+
+                averages_line = f'{fid},{",".join([str(x) for x in ud_list])}\n'
+                averages_table.write(averages_line)
 
         logger.info('done with polygon tests')
-        ud_aoi_layer = None
-        ud_aoi_vector.FlushCache()
-        ud_aoi_vector = None
+        aoi_layer = None
+        aoi_vector = None
 
         for polytest_process in polytest_process_list:
             polytest_process.join()

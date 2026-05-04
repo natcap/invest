@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 defaults:
   run:
-    shell: bash -l {0}
+    shell: bash -e -l {0}
 
 concurrency:
   # make sure only one run of this workflow for a given PR or a given branch
@@ -19,7 +19,7 @@ concurrency:
 env:
   # build: dependency of make install
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: python-build setuptools_scm
+  CONDA_DEFAULT_DEPENDENCIES: python-build setuptools_scm gdal==3.10.3
   LATEST_SUPPORTED_PYTHON_VERSION: "3.14"
   # gsutil never seems to support the latest python
   GSUTIL_PYTHON_VERSION: "3.13"
@@ -96,9 +96,21 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      - name: Set up python environment
+      - uses: ./.github/actions/create_build_requirements_file
+
+      - name: Set up build environment
         uses: ./.github/actions/setup_env
         with:
+          requirements-files: requirements-build.txt
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ matrix.python-version }}
+          env-name: build_env
+
+      - name: Set up test environment
+        uses: ./.github/actions/setup_env
+        with:
+          env-name: test_env
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
@@ -129,9 +141,10 @@ jobs:
 
       - name: Build wheel
         run: |
+          micromamba activate build_env
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
-          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel --no-isolation
           ls -la dist
 
       # Modify the wheel metadata to require the same minor version of gdal that we built against.
@@ -151,6 +164,7 @@ jobs:
 
       - name: Install wheel and run model tests
         run: |
+          micromamba activate test_env
           pip install $(find dist -name "natcap[._-]invest*.whl")
           make test
 
@@ -208,28 +222,43 @@ jobs:
         with:
           fetch-depth: 0  # Fetch complete history for accurate versioning
 
-      - uses: ./.github/actions/setup_env
+      - uses: ./.github/actions/create_build_requirements_file
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup_env
         with:
-          requirements-files: requirements.txt constraints_tests.txt
+          requirements-files: requirements-build.txt
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ matrix.python-version }}
+          env-name: build_env
+
+      - name: Set up test environment
+        uses: ./.github/actions/setup_env
+        with:
+          requirements-files: requirements.txt constraints_tests.txt requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ matrix.python-version }}
             twine ${{ matrix.platform-specific-dependencies }}
+          env-name: test_env
 
       - name: Build source distribution
         run: |
+          micromamba activate build_env
           # Because we're using PEP518 build requirements, the user's
           # computer is guaranteed to have cython available at build
           # time.  Thus, it is no longer necessary to distribute the
           # .cpp files in addition to the .pyx files.
           #
           # Elevating any python warnings to errors to catch build issues ASAP.
-          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -W error -m build --sdist
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -W error -m build --sdist --no-isolation
 
       - name: Install from source distribution
         run : |
+          micromamba activate test_env
           # Install natcap.invest from the sdist in dist/
-          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" pip install $(find dist -name "natcap[._-]invest*")
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" pip install --no-build-isolation $(find dist -name "natcap[._-]invest*")
 
           # Model tests should cover model functionality, we just want
           # to be sure that we can import `natcap.invest` here.
@@ -284,9 +313,11 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+      - uses: ./.github/actions/create_build_requirements_file
+
       - uses: ./.github/actions/setup_env
         with:
-          requirements-files: requirements.txt
+          requirements-files: requirements.txt requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
@@ -317,10 +348,12 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+      - uses: ./.github/actions/create_build_requirements_file
+
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
+          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
@@ -375,6 +408,8 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+      - uses: ./.github/actions/create_build_requirements_file
+
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
@@ -383,6 +418,7 @@ jobs:
             requirements-dev.txt
             requirements-docs.txt
             constraints_tests.txt
+            requirements-build.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
