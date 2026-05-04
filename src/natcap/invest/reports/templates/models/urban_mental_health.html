@@ -32,25 +32,25 @@
   )}}
 
   {% set cases_map_block = content_grid([
-    ('<div class="vega-fit-horizontal"><div id="cases_map"></div></div>', 100),
+    ('<div id="cases_map"></div>', 100),
     (caption(cases_map_caption, aggregate_map_source_list), 100)
   ]) %}
-  
+
   {% set cases_cost_items = [
     (cases_map_block, 100 if not cost_map_json else 50)
   ] %}
-  
+
   {% if cost_map_json %}
     {% set cost_map_block = content_grid([
-      ('<div class="vega-fit-horizontal"><div id="cost_map"></div></div>', 100),
+      ('<div id="cost_map"></div>', 100),
       (caption(cost_map_caption, aggregate_map_source_list), 100)
     ]) %}
-  
+
     {% set cases_cost_items = cases_cost_items + [
       (cost_map_block, 50)
     ] %}
   {% endif %}
-  
+
   {{ accordion_section(
     gettext('Preventable Cases by AOI Feature'),
     content_grid(cases_cost_items)
@@ -108,18 +108,18 @@
   {% set input_items = [
     (caption(raster_group_caption, pre_caption=True), 100)
   ] %}
-  
+
   {% if args_dict['lulc_base'] %}
     {% set input_items = input_items + [
       (caption(lulc_pre_caption, pre_caption=True), 100)
     ] %}
   {% endif %}
-  
+
   {% set input_items = input_items + [
     (raster_plot_img(inputs_img_src, gettext('Raster Inputs')), 100),
     (caption(inputs_caption, definition_list=True), 100)
   ] %}
-  
+
   {{ accordion_section(
     gettext('Input Maps'),
     content_grid(input_items)

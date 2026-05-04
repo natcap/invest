@@ -44,9 +44,11 @@ invest = "natcap.invest.cli:main"
 # will dynamically import GDAL via python's import system.  This behavior means
 # that we can provide a much easier build experience so long as GDAL is
 # available at runtime.
+# pygeoprocessing is required because it provides header files needed to build
+# the C++ extensions.
 requires = [
     'setuptools>=64', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
-    'numpy>=2'
+    'numpy>=2', 'pygeoprocessing'
 ]
 build-backend = "setuptools.build_meta"
 

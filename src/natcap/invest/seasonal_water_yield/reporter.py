@@ -89,7 +89,9 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     bar_chart = base_chart.mark_bar().transform_fold(
         ['baseflow', 'quickflow']
     ).encode(
-        altair.X("month", sort=[i for i in range(1, 13)]).title(gettext("Month")),
+        altair.X(
+            "month", sort=[i for i in range(1, 13)], axis=altair.Axis(labelAngle=0)
+        ).title(gettext(gettext("Month"))),
         altair.Y("sum(value):Q").title(
             gettext("Quickflow + Baseflow (cubic meters / month)")),
         altair.Order(field='key', sort='ascending'),

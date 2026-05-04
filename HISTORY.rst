@@ -62,9 +62,31 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+General
+=======
+* To ensure consistent raster plot sizing in reports, padding is now added to
+  the top of raster plots if an adjacent raster plot has a units subheading.
+  (`#2471 <https://github.com/natcap/invest/issues/2471>`_)
+* ``Input, Output, and ModelSpec`` classes now create immutable objects.
+  Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
+  (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
+* Made some styling and usability improvements to the Vega-Lite visualizations
+  (e.g., vector plots, histograms) that appear in some InVEST reports.
+  (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
+
+Workbench
+=========
+* Fixed a bug in Workbench application logs where the label referring to the
+  origin of the log message was inaccurate. Messages are now labeled as from
+  either the "main" or "renderer" process.
+  (`#2522 <https://github.com/natcap/invest/issues/2522>`_)
+* Attempting to load a datastack or logfile with a model ID the Workbench
+  doesn't recognize (such as the ID of a plugin that isn't installed, or an
+  otherwise malformed model ID) now presents an error message instead of
+  failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 
 3.19.0 (2026-04-16)
 -------------------
