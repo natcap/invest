@@ -147,7 +147,8 @@ class EndpointFunctionTests(unittest.TestCase):
                 'workspace_dir': 'foo'
             }),
         }
-        response = test_client.post(f'{ROUTE_PREFIX}/save_to_python', json=payload)
+        response = test_client.post(
+            f'{ROUTE_PREFIX}/save_to_python', json=payload)
         self.assertEqual(response.status_code, 200)
         # test_cli.py asserts the actual contents of the file
         self.assertTrue(os.path.exists(filepath))
@@ -204,11 +205,11 @@ class EndpointFunctionTests(unittest.TestCase):
             self.assertEqual(
                 response.json,
                 {'message': error_message, 'error': True})
-    
+
     @patch('natcap.invest.ui_server.usage.requests.post')
     @patch('natcap.invest.ui_server.usage.requests.get')
-    def test_log_model_start(self, mock_get, mock_post):
-        """UI server: log_model_start endpoint."""
+    def test_log_model_start_core_model(self, mock_get, mock_post):
+        """UI server: log_model_start endpoint with core model."""
         mock_response = Mock()
         mock_url = 'http://foo.org/bar.html'
         mock_response.json.return_value = {'START': mock_url}
@@ -239,6 +240,51 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(
             mock_post.call_args.kwargs['data']['session_id'],
             payload['session_id'])
+
+    @patch('natcap.invest.ui_server.usage.requests.post')
+    @patch('natcap.invest.ui_server.usage.requests.get')
+    @patch.dict(models.model_id_to_pyname,
+                {'sample_plugin': 'sample_plugin'}, clear=True)
+    def test_log_model_start_plugin(self, mock_get, mock_post):
+        """UI server: log_model_start endpoint with plugin."""
+        import importlib
+
+        mock_response = Mock()
+        mock_url = 'https://example.com'
+        mock_response.json.return_value = {'START': mock_url}
+        mock_get.return_value = mock_response
+        test_client = ui_server.app.test_client()
+        payload = {
+            # Plugin ID tracked by Workbench includes version info.
+            'model_id': 'sample_plugin@0_0_42',
+            'model_args': json.dumps({
+                'workspace_dir': 'sample_workspace'
+            }),
+            'invest_interface': 'Workbench',
+            'session_id': '12345',
+            'type': 'plugin'
+        }
+
+        # Mock ``importlib.import_module`` because ``usage._log_model`` will
+        # try to import 'sample_plugin' to access its ``MODEL_SPEC``, but
+        # 'sample_plugin' isn't a real importable module.
+        with patch.object(importlib, 'import_module', Mock(MODEL_SPEC={})):
+            response = test_client.post(
+                f'{ROUTE_PREFIX}/log_model_start', json=payload)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.get_data(as_text=True), 'OK')
+            mock_get.assert_called_once()
+            mock_post.assert_called_once()
+            self.assertEqual(mock_post.call_args.args[0], mock_url)
+            self.assertEqual(
+                mock_post.call_args.kwargs['data']['model_name'],
+                'sample_plugin')
+            self.assertEqual(
+                mock_post.call_args.kwargs['data']['invest_interface'],
+                payload['invest_interface'])
+            self.assertEqual(
+                mock_post.call_args.kwargs['data']['session_id'],
+                payload['session_id'])
 
     @patch('natcap.invest.ui_server.usage.requests.post')
     @patch('natcap.invest.ui_server.usage.requests.get')

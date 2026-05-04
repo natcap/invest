@@ -2,11 +2,10 @@ import crypto from 'crypto';
 
 import fetch from 'node-fetch';
 
-import { getLogger } from './logger';
+import { logger } from './logger';
 import pkg from '../../package.json';
 import { settingsStore } from './settingsStore';
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const WORKBENCH_VERSION = pkg.version;
 const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
@@ -26,8 +25,8 @@ export default function investUsageLogger() {
 
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelID)) {
-      const source = plugins[modelID].source;
       body.type = 'plugin';
+      const source = plugins[modelID].source;
       // don't log the path to a local plugin, just log that it's local
       body.source = source.startsWith('git+') ? source : 'local';
     } else {

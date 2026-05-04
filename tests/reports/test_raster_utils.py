@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import geometamaker
 import matplotlib
 import matplotlib.testing.compare
 from matplotlib.testing import set_font_settings_for_testing
@@ -170,6 +171,39 @@ class RasterPlotLayoutTests(unittest.TestCase):
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_units_subtitle_padding(self):
+        """Test subtitle offset for plots of rasters with and without units"""
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        # check that no subtitle offset because no units
+        fig = raster_utils.plot_raster_list([self.raster_config])
+        raster_axes = [ax for ax in fig.axes if ax.get_label() != '<colorbar>']
+        for ax in raster_axes:
+            ylim = ax.get_ylim()
+            expected_ylim = (3.5, -0.5)
+            self.assertEqual(ylim, expected_ylim)
+
+        # Test plot ylims if one raster has units and other does not
+        raster_path_with_units = os.path.join(self.workspace_dir, 'foo.tif')
+        make_simple_raster(raster_path_with_units, shape)
+        # units determined by checking metadata
+        metadata = geometamaker.describe(raster_path_with_units)
+        metadata.set_band_description(1, units="meters")
+        metadata.write()
+        raster_config_with_units = RasterPlotConfig(
+            raster_path_with_units,
+            RasterDatatype.continuous,
+            spec.Output(id='foo', units="meter"))
+
+        config_list = [self.raster_config, raster_config_with_units]
+        fig = raster_utils.plot_raster_list(config_list)
+        raster_axes = [ax for ax in fig.axes if ax.get_label() != '<colorbar>']
+        for ax in raster_axes:
+            bottom, top = ax.get_ylim()
+            expected_ylim = (shape[0], -0.1 * shape[0])
+            self.assertEqual((bottom, top), expected_ylim)
 
 
 class RasterPlotDatatypeAndTransformTests(unittest.TestCase):

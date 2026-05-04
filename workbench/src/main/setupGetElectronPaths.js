@@ -1,15 +1,13 @@
-import path from 'path';
-
-import { app, ipcMain } from 'electron';
+import { ipcMain } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from './logger';
+import { logger } from './logger';
 
 export default function setupGetElectronPaths() {
   ipcMain.on(ipcMainChannels.GET_ELECTRON_PATHS, (event) => {
     event.returnValue = {
       resourcesPath: process.resourcesPath,
-      logfilePath: getLogger().transports.file.getFile().path
+      logfilePath: logger.transports.file.getFile().path
     };
   });
 }

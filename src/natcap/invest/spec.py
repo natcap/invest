@@ -180,17 +180,28 @@ def validate_permissions_string(permissions):
     return permissions
 
 
-class Input(BaseModel):
+class ImmutableBaseModel(BaseModel):
+    """BaseModel with frozen attributes."""
+
+    model_config = ConfigDict(frozen=True)
+    """Make models immutable so that they must be copied before modifying."""
+
+
+class IOModel(ImmutableBaseModel):
+    """Base class for both `Input` and `Output`."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types that don't inherit from BaseModel
+    (needed for pint.Unit)."""
+
+
+class Input(IOModel):
     """A data input, or parameter, of an invest model.
 
     This represents an abstract input or parameter, which is rendered as an
     input field in the InVEST workbench. This does not store the value of the
     parameter for a specific run of the model.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
     id: str
     """Input identifier that should be unique within a model"""
 
@@ -235,7 +246,6 @@ class Input(BaseModel):
         else:
             # assume that the about text will describe the conditional
             return gettext('conditionally required')
-
 
     def capitalize_name(self) -> str:
         """Capitalize a self.name into title case.
@@ -294,17 +304,13 @@ class Input(BaseModel):
         return [rst_line]
 
 
-class Output(BaseModel):
+class Output(IOModel):
     """A data output, or result, of an invest model.
 
     This represents an abstract output which is produced as a result of running
     an invest model. This does not store the value of the output for a specific
     run of the model.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
     id: str
     """Output identifier that should be unique within a model"""
 
@@ -449,16 +455,8 @@ class SpatialFileInput(FileInput):
         return col.apply(format_path).astype(pandas.StringDtype())
 
 
-class RasterBand(BaseModel):
-    """A single-band raster input, or parameter, of an invest model.
-
-    This represents a raster file input (all GDAL-supported raster file types
-    are allowed), where only the first band is needed.
-    """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
+class RasterBand(IOModel):
+    """A representation of a single raster band."""
     band_id: typing.Union[int, str] = 1
     """band index used to access the raster band"""
 
@@ -970,11 +968,16 @@ class CSVInput(FileInput):
 
         # Evaluate any conditional requirement strings to booleans
         # This will raise an error if any can't be evaluated
-        columns = copy.deepcopy(self.columns)
-        for col_spec in columns:
+        # Specs cannot be modified in place, so we copy with update
+        # to update the required attribute, and assemble a new list.
+        columns = []
+        for col_spec in self.columns:
             if isinstance(col_spec.required, str):
-                col_spec.required = bool(utils.evaluate_expression(
+                is_required = bool(utils.evaluate_expression(
                     col_spec.required, args or {}))
+                col_spec = col_spec.model_copy(update=dict(
+                    required=is_required))
+            columns.append(col_spec)
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
@@ -1008,11 +1011,11 @@ class CSVInput(FileInput):
                 df[col][df[col].notna()].apply(check_value)
 
         if any(df.columns.duplicated()):
-            first_duplicated_column = df.columns[df.columns.duplicated][0]
+            duplicated_columns = df.columns[df.columns.duplicated()]
             raise ValueError(validation_messages.DUPLICATE_HEADER.format(
-                header=self.orientation,
-                header_name=first_duplicated_column,
-                number=df.columns.value_counts()[first_duplicated_column]))
+                header=f'{self.orientation}(s)',
+                header_name=', '.join(duplicated_columns),
+                number='multiple'))
 
         # set the index column, if specified
         if self.index_col is not None:
@@ -1571,7 +1574,7 @@ class ResultsSuffixInput(StringInput):
         return value
 
 
-class Option(BaseModel):
+class Option(ImmutableBaseModel):
     """An option in an OptionStringInput or OptionStringOutput."""
 
     key: str
@@ -1890,7 +1893,7 @@ class OptionStringOutput(Output):
     """A list of the values that this input may take"""
 
 
-class ModelSpec(BaseModel):
+class ModelSpec(ImmutableBaseModel):
     """Specification of an invest model describing metadata, inputs, and outputs."""
 
     model_id: str

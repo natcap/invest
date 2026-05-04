@@ -1,7 +1,6 @@
 # coding=UTF-8
 """Single entry point for all InVEST applications."""
 import argparse
-import codecs
 import datetime
 import gettext
 import importlib
@@ -148,7 +147,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
         cast_args = dict((str(key), value) for (key, value)
                          in args_dict.items())
 
-    with codecs.open(target_filepath, 'w', encoding='utf-8') as py_file:
+    with open(target_filepath, 'w', encoding='utf-8') as py_file:
         args = pprint.pformat(cast_args, indent=4)  # 4 spaces
         # Tweak formatting from pprint:
         # * Bump parameter inline with starting { to next line
