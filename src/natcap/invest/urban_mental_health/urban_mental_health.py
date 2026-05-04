@@ -945,11 +945,10 @@ def execute(args):
 def _get_raster_pixel_size_in_meters(raster_path, vector_path):
     """Get square pixel size in meters; if not projected in m, use vector CRS.
 
-    Use gdal to auto calculate the target pixel size in meters if transforming
-    the raster to the CRS of the input vector AOI. This is necessary because
-    we do not want to force users to initially project their input rasters
-    in meters, however align_and_resize requires a target pixel size.
-    The pixels will be square with the same value for width and height.
+    This is necessary because we do not want to force users to initially
+    project their input rasters in meters, however align_and_resize requires
+    a target pixel size. The pixels will be square with the same value for
+    width and height.
 
     Args:
         raster_path (str): Path to baseline LULC or baseline NDVI raster,
@@ -982,22 +981,12 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
                     "which is the native resolution of the raster (transformed"
                     "to have square pixels if it doesn't already).")
         return (tgt_pixel_size, -tgt_pixel_size)
-    else:
-        vector_info = pygeoprocessing.get_vector_info(vector_path)
-        vector_wkt = vector_info["projection_wkt"]
-
-        src_ds = gdal.Open(raster_path)
-        transformer = gdal.Transformer(src_ds, None, [f'DST_SRS={vector_wkt}'])
-        target_warp = gdal.SuggestedWarpOutput(src_ds, transformer)
-        pixel_width = target_warp.geotransform[1]
-        pixel_height = target_warp.geotransform[5]
-        LOGGER.info("Baseline raster is not projected in meters; will use "
-                    f"transformed pixel size {pixel_width, pixel_height} as "
-                    "target in align_and_resize")
-        src_ds = None
-
-        tgt_pixel_size = numpy.mean([abs(pixel_width), abs(pixel_height)])
-        return (tgt_pixel_size, -tgt_pixel_size)
+    pixel_width, pixel_height = utils.get_raster_pixel_size_in_target_units(
+        raster_path, vector_path)
+    LOGGER.info("Baseline raster is not projected in meters; will use "
+                f"transformed pixel size {pixel_width, pixel_height} as "
+                "target in align_and_resize")
+    return (pixel_width, pixel_height)
 
 
 def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
