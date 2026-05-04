@@ -73,6 +73,9 @@ General
 * ``Input, Output, and ModelSpec`` classes now create immutable objects.
   Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
   (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
+* Made some styling and usability improvements to the Vega-Lite visualizations
+  (e.g., vector plots, histograms) that appear in some InVEST reports.
+  (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
 
 Workbench
 =========
