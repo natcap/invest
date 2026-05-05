@@ -9,13 +9,6 @@ from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
 
-# Read in requirements.txt and populate the python readme with the
-# non-comment, non-environment-specifier contents.
-_REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
-                 open('requirements.txt').readlines()
-                 if (not req.startswith(('#', 'hg+', 'git+'))
-                     and len(req.strip()) > 0)]
-
 include_dirs = [numpy.get_include(),
                 os.path.join(pygeoprocessing.__path__[0], 'extensions')]
 if platform.system() == 'Windows':
@@ -62,7 +55,6 @@ class build_py(_build_py):
 
 
 setup(
-    install_requires=_REQUIREMENTS,
     ext_modules=cythonize([
         Extension(
             name=f'natcap.invest.{package}.{module}',
