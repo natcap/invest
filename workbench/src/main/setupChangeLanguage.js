@@ -1,9 +1,7 @@
 import Store from 'electron-store';
 import { app, ipcMain } from 'electron';
-import { getLogger } from './logger';
+import { logger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const store = new Store();
 

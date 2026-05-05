@@ -62,9 +62,8 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
 
 General
 =======
@@ -73,6 +72,23 @@ General
   (`#2471 <https://github.com/natcap/invest/issues/2471>`_)
 * The ``deploy_dist`` Makefile target was split into ``deploy_wheel`` and
   ``deploy_sdist``.
+* ``Input, Output, and ModelSpec`` classes now create immutable objects.
+  Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
+  (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
+* Made some styling and usability improvements to the Vega-Lite visualizations
+  (e.g., vector plots, histograms) that appear in some InVEST reports.
+  (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
+
+Workbench
+=========
+* Fixed a bug in Workbench application logs where the label referring to the
+  origin of the log message was inaccurate. Messages are now labeled as from
+  either the "main" or "renderer" process.
+  (`#2522 <https://github.com/natcap/invest/issues/2522>`_)
+* Attempting to load a datastack or logfile with a model ID the Workbench
+  doesn't recognize (such as the ID of a plugin that isn't installed, or an
+  otherwise malformed model ID) now presents an error message instead of
+  failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 
 3.19.0 (2026-04-16)
 -------------------
@@ -96,6 +112,15 @@ General
   ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
   these targets to fail on missing artifacts instead of silently ignoring
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
+* Pre-built wheels are now constrained to require one specific minor version of
+  GDAL in an attempt to ensure compatibility of the compiled extensions with
+  the version of ``libgdal`` available. Users who need a different GDAL version
+  may install ``natcap.invest`` from conda-forge or build their own wheel from
+  source. (`#2206 <https://github.com/natcap/invest/issues/2206>`_)
+* The ``manylinux_2_39`` wheels have been replaced with ``linux`` wheels built
+  on Ubuntu. This reduces the size of the wheels and avoids licensing concerns
+  around redistributing libraries.
+  (`#2483 <https://github.com/natcap/invest/issues/2483>`_)
 
 Workbench
 =========

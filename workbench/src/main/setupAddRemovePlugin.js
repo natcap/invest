@@ -7,12 +7,10 @@ import { promisify } from 'util';
 import { app, ipcMain } from 'electron';
 import { Downloader } from 'nodejs-file-downloader';
 
-import { getLogger } from './logger';
+import { logger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import { settingsStore } from './settingsStore';
 import { shutdownPythonProcess } from './createPythonFlaskProcess';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 /**
  * Spawn a child process and log its stdout, stderr, and any error in spawning.
