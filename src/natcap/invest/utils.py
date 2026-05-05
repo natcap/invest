@@ -1020,19 +1020,24 @@ def base_model_id(model_id: str) -> str:
     return model_id.split('@')[0]
 
 
-def get_raster_pixel_size_in_tgt_projection_units(raster_path,
-                                                  target_projection_wkt):
+def get_raster_pixel_size_in_tgt_projection_units(
+        raster_path, target_file_or_projection_wkt):
     """Get square pixel size of a raster in units of `target_projection_wkt`.
 
     Use gdal to auto calculate the target pixel size if transforming
-    the raster to the target_projection_wkt. This is useful for getting the
+    the raster to a target projection. This is useful for getting the
     `target_pixel_size` for `pygeoprocessing.align_and_resize_raster_stack` in
-    the same units as the `target_projection_wkt`.
+    the same units as a target projection or spatial file with that projection.
 
     Args:
         raster_path (str): Path to projected raster
-        target_projection_wkt (str): Well-Known Text projection with the units
-            into which to translate the original pixel size of ``raster_path``
+        target_file_or_projection_wkt (str): Either a Well-Known Text
+            projection with the units into which to translate the original
+            pixel size of ``raster_path``, or a path to raster or vector
+            containing the target projection.
+
+    Raises:
+        ValueError if target projection is not projected.
 
     Returns:
         tuple[float, float]: (pixel_width, pixel_height)
@@ -1043,8 +1048,14 @@ def get_raster_pixel_size_in_tgt_projection_units(raster_path,
     raster_srs = osr.SpatialReference()
     raster_srs.ImportFromWkt(raster_wkt)
 
-    target_srs = osr.SpatialReference()
-    target_srs.ImportFromWkt(target_projection_wkt)
+    if os.path.isfile(target_file_or_projection_wkt):
+        target_projection_wkt = get_raster_or_vector_projection(
+            target_file_or_projection_wkt)
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromWkt(target_projection_wkt)
+    else:
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromWkt(target_file_or_projection_wkt)
 
     target_projected = target_srs.IsProjected()
 
@@ -1061,7 +1072,7 @@ def get_raster_pixel_size_in_tgt_projection_units(raster_path,
     # Otherwise ask GDAL what the raster would look like warped to target CRS.
     src_ds = gdal.OpenEx(raster_path, gdal.OF_RASTER)
     transformer = gdal.Transformer(
-        src_ds, None, [f'DST_SRS={target_projection_wkt}'])
+        src_ds, None, [f'DST_SRS={target_srs}'])
     target_warp = gdal.SuggestedWarpOutput(src_ds, transformer)
     pixel_width = target_warp.geotransform[1]
     pixel_height = target_warp.geotransform[5]
