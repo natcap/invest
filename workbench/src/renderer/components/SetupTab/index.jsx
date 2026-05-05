@@ -285,8 +285,8 @@ class SetupTab extends React.Component {
     } else {
       alert( // eslint-disable-line no-alert
         t(
-          'Datastack/Logfile for model {{modelTitle}} does not match this model.',
-          { modelTitle: investList[datastack.model_id].modelTitle }
+          'Model ID in datastack/logfile ({{datastackModelId}}) does not match this model ({{currentModelId}}).',
+          { datastackModelId: datastack.model_id, currentModelId: modelID }
         )
       );
     }

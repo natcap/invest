@@ -1,0 +1,13 @@
+name: "Create build requirements file"
+description: "Read build requirements from pyproject.toml and write them to a requirements.txt"
+runs:
+  using: "composite"
+  steps:
+    - shell: python
+      run: |
+        import tomllib
+        with open('pyproject.toml', 'rb') as f:
+            pyproject_toml = tomllib.load(f)
+        with open('requirements-build.txt', 'w') as f:
+          for requirement in pyproject_toml['build-system']['requires']:
+            f.write(f'{requirement}\n')
