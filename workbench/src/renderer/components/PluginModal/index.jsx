@@ -252,6 +252,7 @@ export default function PluginModal(props) {
     );
   }
 
+  const pluginsURL = "https://invest.readthedocs.io/en/latest/plugins.html";
   let modalBody = (
     <Modal.Body>
       <Form aria-labelledby="add-plugin-form-title">
@@ -398,7 +399,9 @@ export default function PluginModal(props) {
         <p>
           {t('For more information about plugins, read our ')}
           <a
-            href="https://invest.readthedocs.io/en/latest/plugins.html"
+            href={pluginsURL}
+            title={pluginsURL}
+            aria-label={t("Plugins Developer's Guide (opens in web browser)")}
             onClick={openLinkInBrowser}
           >{t("Developer's Guide")}</a>.
         </p>
