@@ -191,15 +191,23 @@ def _get_spatial_inputs(args, model_spec):  # should this live in utils.py inste
         if (isinstance(inp, SpatialFileInput) and inp.is_default_projection)
     ]
     # Always set default_projection_input first even if user hasn't entered it
-    ordered_inputs = default_projection_input + [
-        input_spec for input_spec in valid_spatial_inputs if (
-            input_spec.id != default_projection_input[0].id)]
+    if default_projection_input:
+        ordered_inputs = default_projection_input + [
+            input_spec for input_spec in valid_spatial_inputs if (
+                input_spec.id != default_projection_input[0].id)]
+    else:
+        ordered_inputs = valid_spatial_inputs
 
-    def get_display_name_and_check_prj(input_spec):
+    target_projection_units = [
+        inp for inp in model_spec.inputs if inp.id=='target_projection'
+    ][0].projection_units
+
+    def get_display_name_and_check_prj(input_spec, target_projection_units):
         """Get display name, which is composed of the name and projection
 
         Only return an input's display name and projection if the
-        spatial input is correctly projected or input has default projection.
+        spatial input is correctly projected (with same projection units as
+        default) or input has default projection.
         """
         # the only "empty" input that would be passed to this function is the
         # default target projection input
@@ -221,7 +229,7 @@ def _get_spatial_inputs(args, model_spec):  # should this live in utils.py inste
                 raise TypeError("Input is not a raster or vector.")
 
         projection_warning = _check_projection(
-            srs, True, input_spec.projection_units)
+            srs, True, target_projection_units)
         if not projection_warning:
             # Get the top-level name (Projected or Geographic)
             prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
@@ -237,25 +245,11 @@ def _get_spatial_inputs(args, model_spec):  # should this live in utils.py inste
 
     options = []
     for inp in ordered_inputs:
-        display_name = get_display_name_and_check_prj(inp)
+        display_name = get_display_name_and_check_prj(inp,
+                                                      target_projection_units)
         if display_name:
             options.append(Option(key=inp.id, display_name=display_name))
     return options
-
-
-def _get_target_projection_input_id(args, model_spec):
-    target_projection_id = args.get('target_projection')
-    if target_projection_id:
-        return target_projection_id
-
-    default_projection_inputs = [
-        inp for inp in model_spec.inputs
-        if isinstance(inp, SpatialFileInput) and inp.is_default_projection
-    ]
-    if default_projection_inputs:
-        return default_projection_inputs[0].id
-
-    return None
 
 
 def _get_pixel_size(args, model_spec):
@@ -278,7 +272,8 @@ def _get_pixel_size(args, model_spec):
             args[projection_input_id])
     else:
         current_projection = None
-
+# todo should we allow any raster input, not just the validated (projected)
+# raster? i,e., is it possible to get pixel size in m for a raster w a GCS and not a projection?
     raster_inputs = [opt for opt in spatial_inputs if args.get(opt.key) and (
         pygeoprocessing.get_gis_type(
             args[opt.key]) == pygeoprocessing.RASTER_TYPE)]
@@ -546,13 +541,6 @@ class SpatialFileInput(FileInput):
         if self.projection_units and not self.projected:
             raise ValueError(
                 'Cannot specify projection_units when projected is None')
-        return self
-
-    @model_validator(mode='after')
-    def check_projected_default_projection(self):
-        if self.is_default_projection and not self.projected:
-            raise ValueError(
-                'Cannot specify is_default_projection when projected is False')
         return self
 
     def preprocess(self, value):
@@ -1871,6 +1859,29 @@ class OptionStringInput(Input):
         return [rst_line] + ['\t' + line for line in indented_block]
 
 
+class OptionSpatialInput(OptionStringInput):
+    """A string input which is limited to a set of spatial ModelSpec Inputs.
+
+    This corresponds to a dropdown menu in the workbench, where the user
+    is limited to a set of pre-defined options.
+    """
+
+    fallback_function: typing.Union[typing.Callable, None] = None
+    """A function that selects a default value for this input if one of the
+    dropdown options is not selected. Defaults to None."""
+
+    projection_units: typing.Union[pint.Unit, None] = None
+    """The units in which a selected spatial file input must be projected.
+    Defaults to None. """
+
+    def validate(self, value):
+        message = super().validate(value)
+        if message:
+            return message
+
+        # Check that option is a ModelSpec input
+
+
 class FileOutput(Output):
     """A generic file output, or result, of an invest model.
 
@@ -2256,8 +2267,12 @@ class ModelSpec(BaseModel):
         Returns:
             dictionary mapping input keys to preprocessed input values
         """
-
+        # Currently, fallback behavior relies on on the input tagged with
+        # is_default_projection to be required, not optional
         if not args.get('target_projection'):
+            #TODO: or do we want to set this just like with target pixel size?
+            # pros: will find a suitable spatial input if one exists
+            # cons: less transparent to user?
             default_projection_inputs = [
                 input_spec for input_spec in self.inputs
                 if (
@@ -2267,13 +2282,30 @@ class ModelSpec(BaseModel):
             ]
             if default_projection_inputs:
                 args['target_projection'] = default_projection_inputs[0].id
-                if not args.get('target_pixelsize'):
-                    args['target_pixelsize'] = default_projection_inputs[0].id
+            else:
+                raise ValueError("Target projection not able to be specified and no default option.")
 
-        elif not args.get('target_pixelsize'):
-            default_projection_input = args.get('target_projection')
-            args['target_pixelsize'] = default_projection_input.id
+        # if not args.get('target_pixelsize'): #for AWY, this works
+        #     args['target_pixelsize'] = default_projection_inputs[0].id
 
+        if not args.get('target_pixelsize'):
+            all_options = self.get_input(
+                'target_pixelsize').dropdown_function(args, self)
+            if all_options:
+                args['target_pixelsize'] = all_options[0].key
+                LOGGER.info("Getting target pixel size from "
+                            f"{args[args['target_pixelsize']]}")
+            else:
+                raise ValueError(
+                    "Target pixel size not able to be specified as no valid "
+                    "spatial input options.")
+
+        # for input_spec in self.inputs:
+        #     if (isinstance(input_spec, OptionStringInput)
+        #             and input_spec.fallback_function
+        #             and not args.get(input_spec.id)):
+        #         args[input_spec.id] = input_spec.fallback_function(args, self)
+        # TODO need to make sure that this works for UMH i.e. pixel size doesnt fall back to same arg as target projection bc this is a vector in UMh
         return args
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):
@@ -2588,7 +2620,7 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
         Option(key="MFD", description="Multiple flow direction")
     ]
 )
-TARGET_PROJECTION = OptionStringInput(
+TARGET_PROJECTION = OptionSpatialInput(
     id="target_projection",
     name=gettext("target projection"),
     about=gettext(
@@ -2598,7 +2630,7 @@ TARGET_PROJECTION = OptionStringInput(
     options=[],
     dropdown_function=_get_spatial_inputs
 )
-TARGET_PIXELSIZE = OptionStringInput(
+TARGET_PIXELSIZE = OptionSpatialInput(
     id="target_pixelsize",
     name=gettext("target pixel size"),
     about=gettext(

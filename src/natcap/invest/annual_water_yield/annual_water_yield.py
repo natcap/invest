@@ -180,7 +180,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=int,
             units=None,
-            projected=True,
             is_default_projection=True
         ),
         spec.SingleBandRasterInput(
