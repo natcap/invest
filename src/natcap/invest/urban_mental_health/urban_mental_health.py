@@ -86,16 +86,6 @@ def _get_pixelsize_umh(args, model_spec):
     return ordered_options
 # TODO - NDVI in title case is incorrect when it populates in dropdown menu
 
-# def _target_pixelsize_fallback(args, model_spec):
-#     model_option = args.get('model_option')
-
-#     if model_option == 'lulc':
-#         return 'lulc_base'
-#     elif model_option == 'ndvi':
-#         return 'ndvi_base'
-
-#     return None
-
 
 _model_description = gettext(
     """
@@ -141,7 +131,6 @@ MODEL_SPEC = spec.ModelSpec(
                 "determine the processing area. Final outputs will be clipped "
                 "to this AOI."),
             projected=True,
-            projection_units=u.meter,
             is_default_projection=True
         )),
         spec.SingleBandRasterInput(
@@ -339,7 +328,6 @@ MODEL_SPEC = spec.ModelSpec(
                 "Otherwise, will default to the baseline NDVI raster "
                 "pixel size."),
             dropdown_function=_get_pixelsize_umh,
-            # fallback_function=_target_pixelsize_fallback
         )),
         ],
     outputs=[
@@ -631,6 +619,14 @@ MODEL_SPEC = spec.ModelSpec(
                 data_type=float,
                 units=u.people
             ),
+            spec.VectorOutput(
+                id="aoi_reprojected",
+                path="intermediate/aoi_reprojected.shp",
+                about=gettext(
+                    "AOI vector reprojected to match the selected target "
+                    "projection."),
+                fields=[]
+            ),
             spec.TASKGRAPH_CACHE
         ]
 )
@@ -726,7 +722,6 @@ def execute(args):
     LOGGER.info("Start preprocessing")
 
     # get target pixel size for outputs
-    print(f"args[args['target_pixelsize']]: {args[args['target_pixelsize']]}")
     pixel_size = _get_raster_pixel_size_in_meters(
         args[args['target_pixelsize']], args['aoi_path'])
 
@@ -748,7 +743,17 @@ def execute(args):
     # Users should input the AOI to which they want outputs clipped
     # InVEST will take care of buffering the processing AOI to ensure
     # correct edge pixel calculation
-    aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
+    target_spatial_prj = utils.get_raster_or_vector_projection(
+        args[args['target_projection']])
+    if args['target_projection'] != 'aoi_path':
+        LOGGER.info("Reprojecting AOI to target projection defined in "
+                    f"{args['target_projection']}")
+        pygeoprocessing.reproject_vector(args['aoi_path'], target_spatial_prj,
+                                         file_registry['aoi_reprojected'])
+        aoi = file_registry['aoi_reprojected']
+    else:
+        aoi = args['aoi_path']
+    aoi_info = pygeoprocessing.get_vector_info(aoi)
     aoi_projection = aoi_info["projection_wkt"]
     aoi_sr = osr.SpatialReference()
     aoi_sr.ImportFromWkt(aoi_projection)
@@ -777,11 +782,8 @@ def execute(args):
         # Note: population raster is not checked; it just needs to cover AOI
         # which seems straighforward enough to not require checking bounds
 
-    align_index = input_align_list.index( #TODO change this to match which input selected for tgt pixelsize
-        args['lulc_base'] if args['model_option'] == 'lulc' else args['ndvi_base'])
+    align_index = input_align_list.index(args[args['target_pixelsize']])
     LOGGER.info(f"Aligning input rasters to {input_align_list[align_index]}")
-    target_spatial_prj = utils.get_raster_or_vector_projection(
-        args[args['target_projection']]) #TODO - need to validate that target_spatial_prj is projected in meters!! could be off if user deviates from default AOI
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(input_align_list, output_align_list, resample_method_list,
