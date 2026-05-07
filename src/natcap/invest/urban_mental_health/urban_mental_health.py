@@ -20,6 +20,83 @@ from natcap.invest.unit_registry import u
 LOGGER = logging.getLogger(__name__)
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
 
+
+def _get_pixelsize_umh(args, model_spec):
+    """Return spatial inputs and pixel size as dropdown Options, default first
+
+    Pixel size units match the units specified in the current target_projection
+    input's projection"""
+    if args['model_option'] == 'lulc':
+        default_for_model_option = 'lulc_base'
+    else:
+        default_for_model_option = 'ndvi_base'
+
+    spatial_inputs = spec._get_spatial_inputs(args, model_spec)
+    projection_input_id = args.get('target_projection')
+    if not projection_input_id:
+        default_projection_inputs = [
+            inp for inp in model_spec.inputs
+            if isinstance(inp, spec.SpatialFileInput) and inp.is_default_projection
+        ]
+        if default_projection_inputs:
+            projection_input_id = default_projection_inputs[0].id
+
+    if projection_input_id and args.get(projection_input_id):
+        current_projection = utils.get_raster_or_vector_projection(
+            args[projection_input_id])
+    else:
+        current_projection = None
+
+    raster_inputs = [opt for opt in spatial_inputs if args.get(opt.key) and (
+        pygeoprocessing.get_gis_type(
+            args[opt.key]) == pygeoprocessing.RASTER_TYPE)]
+    if not raster_inputs:
+        return []
+
+    def get_display_name_and_pixel_size(option_key, selected_projection_wkt):
+        # the only "empty" input that would be passed to this function is the
+        # default target projection input
+        inp_name = model_spec.get_input(option_key).name.title()
+        if not args.get(option_key):
+            return "(Default) " + inp_name
+        # if default projection input hasn't been entered and target
+        # projection hasn't been selected, i.e., changed from the default text,
+        # selected_projection_wkt will be None
+        if selected_projection_wkt:
+            # convert pixel size to be in same units as selected target projection
+            trans_pixelsize = utils.get_raster_pixel_size_in_tgt_projection_units(
+                args[option_key], selected_projection_wkt)
+            formatted_pixelsize = [float(round(pix, 3)) for pix in trans_pixelsize]
+            if model_spec.get_input(option_key).id == default_for_model_option:
+                return "(Default) " + inp_name + f" {formatted_pixelsize}"
+            return inp_name + f" {formatted_pixelsize}"
+        else:
+            return ''
+
+    options = []
+    for opt in raster_inputs:
+        display_name = get_display_name_and_pixel_size(opt.key,
+                                                       current_projection)
+        if display_name:
+            options.append(spec.Option(key=opt.key, display_name=display_name))
+    default_pixelsize_input = [
+        opt for opt in options if opt.key == default_for_model_option]
+    ordered_options = default_pixelsize_input + [
+        opt for opt in options if opt.key != default_for_model_option]
+    return ordered_options
+# TODO - NDVI in title case is incorrect when it populates in dropdown menu
+
+# def _target_pixelsize_fallback(args, model_spec):
+#     model_option = args.get('model_option')
+
+#     if model_option == 'lulc':
+#         return 'lulc_base'
+#     elif model_option == 'ndvi':
+#         return 'ndvi_base'
+
+#     return None
+
+
 _model_description = gettext(
     """
     The InVEST Urban Mental Health model estimates the impacts of nature
@@ -47,7 +124,8 @@ MODEL_SPEC = spec.ModelSpec(
          "health_cost_rate"],
         ["model_option"],
         ["ndvi_base", "ndvi_alt"],
-        ["lulc_base", "lulc_alt", "lulc_attr_csv"]
+        ["lulc_base", "lulc_alt", "lulc_attr_csv"],
+        ["target_projection", "target_pixelsize"]
     ],
     inputs=[
         spec.WORKSPACE,
@@ -63,7 +141,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "determine the processing area. Final outputs will be clipped "
                 "to this AOI."),
             projected=True,
-            projection_units=u.meter
+            projection_units=u.meter,
+            is_default_projection=True
         )),
         spec.SingleBandRasterInput(
             id="population_raster",
@@ -247,7 +326,21 @@ MODEL_SPEC = spec.ModelSpec(
             # raster is provided so attribute table is needed for water masking
             required="model_option=='lulc' or (model_option!='lulc' and lulc_base)",
             allowed="model_option=='lulc' or lulc_base"
-        )
+        ),
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            projection_units=u.meter
+        )),
+        spec.TARGET_PIXELSIZE.model_copy(update=dict(
+            about=gettext(
+                "Input with target pixel size to which all other spatial "
+                "inputs will be resampled. Units match those of the selected "
+                "Target Projection. If the selected model option is 'LULC', "
+                "then will default to the baseline LULC raster pixel size. "
+                "Otherwise, will default to the baseline NDVI raster "
+                "pixel size."),
+            dropdown_function=_get_pixelsize_umh,
+            # fallback_function=_target_pixelsize_fallback
+        )),
         ],
     outputs=[
             spec.SingleBandRasterOutput(
@@ -613,6 +706,15 @@ def execute(args):
                 and not ``args['ndvi_base']``. NDVI value of the LULC class.
             - ``exclude`` (bool): (required) Specifies whether to keep (0)
                 or mask out (1) the LULC class.
+        args['target_projection'] (string): (optional) if a non-empty string,
+            path to input that defines the target projection and alignment
+            for other spatial inputs.
+        args['target_pixelsize'] (string): (optional) if a non-empty string,
+            path to input that defines the target pixel size for other
+            spatial inputs.
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
 
     Returns:
         dict: File registry dictionary mapping ``MODEL_SPEC`` output ids to
@@ -624,12 +726,9 @@ def execute(args):
     LOGGER.info("Start preprocessing")
 
     # get target pixel size for outputs
-    if args['model_option'] == 'ndvi':
-        pixel_size = _get_raster_pixel_size_in_meters(args['ndvi_base'],
-                                                      args['aoi_path'])
-    else:
-        pixel_size = _get_raster_pixel_size_in_meters(args['lulc_base'],
-                                                      args['aoi_path'])
+    print(f"args[args['target_pixelsize']]: {args[args['target_pixelsize']]}")
+    pixel_size = _get_raster_pixel_size_in_meters(
+        args[args['target_pixelsize']], args['aoi_path'])
 
     pixel_radius = int(round(args['search_radius']/pixel_size[0]))
     LOGGER.info(f"Search radius {args['search_radius']} results in "
@@ -678,17 +777,18 @@ def execute(args):
         # Note: population raster is not checked; it just needs to cover AOI
         # which seems straighforward enough to not require checking bounds
 
-    align_index = input_align_list.index(
+    align_index = input_align_list.index( #TODO change this to match which input selected for tgt pixelsize
         args['lulc_base'] if args['model_option'] == 'lulc' else args['ndvi_base'])
     LOGGER.info(f"Aligning input rasters to {input_align_list[align_index]}")
-
+    target_spatial_prj = utils.get_raster_or_vector_projection(
+        args[args['target_projection']]) #TODO - need to validate that target_spatial_prj is projected in meters!! could be off if user deviates from default AOI
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(input_align_list, output_align_list, resample_method_list,
               pixel_size, aoi_buffered_bbox),
         kwargs={
             'raster_align_index': align_index,
-            'target_projection_wkt': aoi_projection},
+            'target_projection_wkt': target_spatial_prj},
         target_path_list=output_align_list,
         task_name='align input rasters')
 
@@ -708,7 +808,7 @@ def execute(args):
                 'population_aligned'],
             'target_pixel_size': pixel_size,
             'target_bb': target_snapped_bbox,
-            'target_projection_wkt': aoi_projection,
+            'target_projection_wkt': target_spatial_prj,
             'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['population_aligned']],
@@ -981,7 +1081,7 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
                     "which is the native resolution of the raster (transformed"
                     "to have square pixels if it doesn't already).")
         return (tgt_pixel_size, -tgt_pixel_size)
-    pixel_width, pixel_height = utils.get_raster_pixel_size_in_target_units(
+    pixel_width, pixel_height = utils.get_raster_pixel_size_in_tgt_projection_units(
         raster_path, vector_path)
     LOGGER.info("Baseline raster is not projected in meters; will use "
                 f"transformed pixel size {pixel_width, pixel_height} as "
