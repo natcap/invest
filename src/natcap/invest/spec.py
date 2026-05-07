@@ -1860,26 +1860,19 @@ class OptionStringInput(Input):
 
 
 class OptionSpatialInput(OptionStringInput):
-    """A string input which is limited to a set of spatial ModelSpec Inputs.
+    """A string input which has an additional projection_units attribute.
 
     This corresponds to a dropdown menu in the workbench, where the user
     is limited to a set of pre-defined options.
     """
-
-    fallback_function: typing.Union[typing.Callable, None] = None
-    """A function that selects a default value for this input if one of the
-    dropdown options is not selected. Defaults to None."""
-
     projection_units: typing.Union[pint.Unit, None] = None
     """The units in which a selected spatial file input must be projected.
-    Defaults to None. """
+    Defaults to None. """ #TODO - is new class needed?
 
     def validate(self, value):
         message = super().validate(value)
         if message:
             return message
-
-        # Check that option is a ModelSpec input
 
 
 class FileOutput(Output):
