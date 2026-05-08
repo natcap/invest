@@ -328,7 +328,10 @@ MODEL_SPEC = spec.ModelSpec(
                 "Otherwise, will default to the baseline NDVI raster "
                 "pixel size."),
             dropdown_function=_get_pixelsize_umh,
-            responsive_to='model_spec'
+            responsive_to='model_option'
+            # TODO if a raster input is invalid when the default is set,
+            # but then filepath is changed, should dropdown reset to default?
+
         )),
         ],
     outputs=[
