@@ -328,6 +328,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Otherwise, will default to the baseline NDVI raster "
                 "pixel size."),
             dropdown_function=_get_pixelsize_umh,
+            responsive_to='model_spec'
         )),
         ],
     outputs=[
@@ -748,11 +749,17 @@ def execute(args):
     if args['target_projection'] != 'aoi_path':
         LOGGER.info("Reprojecting AOI to target projection defined in "
                     f"{args['target_projection']}")
-        pygeoprocessing.reproject_vector(args['aoi_path'], target_spatial_prj,
-                                         file_registry['aoi_reprojected'])
+        reproject_aoi_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(args['aoi_path'], target_spatial_prj,
+                  file_registry['aoi_reprojected']),
+            target_path_list=[file_registry['aoi_reprojected']],
+            task_name='reproject aoi vector')
         aoi = file_registry['aoi_reprojected']
+        align_dependent_tasks = [reproject_aoi_task]
     else:
         aoi = args['aoi_path']
+        align_dependent_tasks = []
     aoi_info = pygeoprocessing.get_vector_info(aoi)
     aoi_projection = aoi_info["projection_wkt"]
     aoi_sr = osr.SpatialReference()
@@ -782,8 +789,11 @@ def execute(args):
         # Note: population raster is not checked; it just needs to cover AOI
         # which seems straighforward enough to not require checking bounds
 
-    align_index = input_align_list.index(args[args['target_pixelsize']])
-    LOGGER.info(f"Aligning input rasters to {input_align_list[align_index]}")
+    if args[args['target_pixelsize']] in input_align_list:
+        align_index = input_align_list.index(args[args['target_pixelsize']])
+    else:
+        align_index = 0
+    LOGGER.info(f"Aligning raster stack to {input_align_list[align_index]}")
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(input_align_list, output_align_list, resample_method_list,
@@ -792,6 +802,7 @@ def execute(args):
             'raster_align_index': align_index,
             'target_projection_wkt': target_spatial_prj},
         target_path_list=output_align_list,
+        dependent_task_list=align_dependent_tasks,
         task_name='align input rasters')
 
     # Resample population raster to match aligned inputs; this is used for
