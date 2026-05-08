@@ -349,9 +349,28 @@ class SetupTab extends React.Component {
    */
   updateArgValues(key, value) {
     const { argsValues } = this.state;
-    argsValues[key].value = value;
+    const { argsSpec } = this.props;
+    // argsValues[key].value = value;
+
+    const newArgsValues = {
+      ...argsValues,
+      [key]: {
+        ...argsValues[key],
+        value: value,
+      },
+    };
+
+    Object.keys(newArgsValues).forEach((argkey) => {
+      const spec = argsSpec[argkey];
+      if (spec?.responsive_to?.includes(key)) {
+        newArgsValues[argkey] = {
+          ...newArgsValues[argkey],
+          value: '', //clear to allow to choose new value
+        };
+      }
+    });
     this.setState({
-      argsValues: argsValues,
+      argsValues: newArgsValues,
     }, () => {
       this.props.updateJobProperties(this.props.tabID, {
         status: undefined, // Clear job status to hide model status indicator.
