@@ -1083,3 +1083,96 @@ class UMHTests(unittest.TestCase):
         self.assertTrue(
             "having a set NoData value, which can cause problems if the " in
             str(context.exception))
+
+    def test_target_pixelsize_correct_default(self):
+        """Test correct default pixelsize and projection"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        # not necessary but want to be explicit and guard against changing function
+        args['target_projection'] = ''
+        args['target_pixelsize'] = ''
+
+        resolved_args, _, task_graph = urban_mental_health.MODEL_SPEC.setup(args)
+        task_graph.close()
+        task_graph.join()
+
+        self.assertEqual(resolved_args['target_projection'], 'aoi_path')
+        self.assertEqual(resolved_args['target_pixelsize'], 'ndvi_base')
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+        resolved_args, _, task_graph = urban_mental_health.MODEL_SPEC.setup(args)
+        task_graph.close()
+        task_graph.join()
+
+        self.assertEqual(resolved_args['target_projection'], 'aoi_path')
+        self.assertEqual(resolved_args['target_pixelsize'], 'lulc_base')
+
+    def test_pixelsize_dropdown_default_first(self):
+        """Test correct default options appear first"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        args['target_projection'] = ''
+        args['target_pixelsize'] = ''
+
+        options = urban_mental_health._get_pixelsize_umh(
+            args, urban_mental_health.MODEL_SPEC)
+
+        self.assertEqual(options[0].key, 'ndvi_base')
+        self.assertTrue(options[0].display_name.startswith('(Default)'))
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+        options = urban_mental_health._get_pixelsize_umh(
+            args, urban_mental_health.MODEL_SPEC)
+
+        self.assertEqual(options[0].key, 'lulc_base')
+        self.assertTrue(options[0].display_name.startswith('(Default)'))
+
+    def test_target_projection_correct_default(self):
+        """Test model if population raster is target projection and resolution"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        file_reg = urban_mental_health.execute(args)
+
+        expected_projection_wkt = pygeoprocessing.get_raster_info(
+            args['ndvi_base'])['projection_wkt']
+
+        # assert that outputs are in the same projection as ndvi
+        actual_projection = pygeoprocessing.get_raster_info(
+            file_reg['preventable_cases'])['projection_wkt']
+
+        self.assertEqual(actual_projection, expected_projection_wkt)
+
+    def test_projection_if_population_raster_is_target(self):
+        """Test model if population raster is target projection"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        # make population raster in differnt projection
+        raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
+        args['population_raster'] = raster_path
+        args['target_projection'] = 'population_raster'
+        args['target_pixelsize'] = 'population_raster'
+
+        # Create pop raster in a different projected CRS than other raster
+        # inputs to check which ends up as target projection
+        raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
+        projection_wkt = srs.ExportToWkt()
+
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array.astype(numpy.float32),
+            FLOAT32_NODATA,
+            (10, -10),
+            (6019339.53, 2499628.03),
+            projection_wkt,
+            raster_path)
+
+        # assert that outputs are in that ^ projection
+        file_reg = urban_mental_health.execute(args)
+        actual_projection = pygeoprocessing.get_raster_info(
+            file_reg['preventable_cases'])['projection_wkt']
+        self.assertEqual(actual_projection, projection_wkt)
