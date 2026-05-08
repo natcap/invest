@@ -1869,6 +1869,9 @@ class OptionSpatialInput(OptionStringInput):
     """The units in which a selected spatial file input must be projected.
     Defaults to None. """ #TODO - is new class needed?
 
+    responsive_to: typing.Union[str, None] = None
+    """A different model input which, when changed in the workbench, will cause the option dropdown menu to re-call dropdown function"""
+
     def validate(self, value):
         message = super().validate(value)
         if message:
@@ -2613,7 +2616,7 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
         Option(key="MFD", description="Multiple flow direction")
     ]
 )
-TARGET_PROJECTION = OptionSpatialInput(
+TARGET_PROJECTION = OptionSpatialInput( #TODO - add 'Custom' option to all lists and if its selected, another numerical input pixelsize is allowed
     id="target_projection",
     name=gettext("target projection"),
     about=gettext(
