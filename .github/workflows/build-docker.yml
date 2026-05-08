@@ -50,9 +50,19 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Create build requirements file
+              shell: python
+              run: |
+                  import tomllib
+                  with open('pyproject.toml', 'rb') as f:
+                      pyproject_toml = tomllib.load(f)
+                  with open('requirements-build.txt', 'w') as f:
+                    for requirement in pyproject_toml['build-system']['requires']:
+                      f.write(f'{requirement}\n')
+
             - name: Create environment file
               run: |
-                  python scripts/convert-requirements-to-conda-yml.py requirements.txt > docker/environment.yml
+                  python scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-build.txt > docker/environment.yml
 
             - name: Build docker
               run: |

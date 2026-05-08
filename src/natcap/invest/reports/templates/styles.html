@@ -177,6 +177,13 @@
   align to top keeps the actual maps aligned*/
   .vega-embed {
     vertical-align: top;
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+    &.has-actions summary {
+      opacity: 0.65;
+    }
   }
   .vega-embed .vega-bind-radio label {
     padding-right: 0.5rem;
@@ -191,10 +198,6 @@
     border: 0.1rem solid var(--invest-green);
     border-collapse: collapse;
     font-size: 0.8rem;
-  }
-  .vega-fit-horizontal {
-    display: flex;
-    justify-content: center;
   }
   .caption {
     background-color: ghostwhite;

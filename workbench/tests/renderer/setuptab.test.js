@@ -978,3 +978,43 @@ describe('Form drag-and-drop', () => {
     expect(setupInput).toHaveValue('');
   });
 });
+
+describe('loadParametersFromFile', () => {
+  test('Loading a datastack with an unrecognized model ID should present an error message', async () => {
+    const spec = {
+      model_id: 'coastal_blue_carbon',
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    const inputFieldOrder = [Object.keys(spec.args)];
+    const mockDatastack = {
+      model_id: 'coastal_purple_carbon',
+      model_title: 'Coastal Purple Carbon',
+      args: {},
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    jest.spyOn(window, 'alert').mockImplementation();
+
+    const { findByTestId } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+
+    await waitFor(() => fireEvent.drop(setupForm, {
+      dataTransfer: {
+        files: [new File([], 'test.json')],
+      }
+    }));
+
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith(
+        'Model ID in datastack/logfile (coastal_purple_carbon) does not match this model (coastal_blue_carbon).');
+    });
+  });
+});
