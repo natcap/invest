@@ -9,6 +9,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
 import { MdCheckCircleOutline, MdClose } from 'react-icons/md';
 
+import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -251,6 +252,7 @@ export default function PluginModal(props) {
     );
   }
 
+  const pluginsURL = "https://invest.readthedocs.io/en/latest/plugins.html";
   let modalBody = (
     <Modal.Body>
       <Form aria-labelledby="add-plugin-form-title">
@@ -392,6 +394,18 @@ export default function PluginModal(props) {
           }
         </div>
       </Form>
+      <hr />
+      <div>
+        <p>
+          {t('For more information about plugins, read our ')}
+          <a
+            href={pluginsURL}
+            title={pluginsURL}
+            aria-label={t("Plugins Developer's Guide (opens in web browser)")}
+            onClick={openLinkInBrowser}
+          >{t("Developer's Guide")}</a>.
+        </p>
+      </div>
     </Modal.Body>
   );
   if (installErr) {

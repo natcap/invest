@@ -89,6 +89,8 @@ Workbench
   doesn't recognize (such as the ID of a plugin that isn't installed, or an
   otherwise malformed model ID) now presents an error message instead of
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
+* Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
+  Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
 
 3.19.0 (2026-04-16)
 -------------------
