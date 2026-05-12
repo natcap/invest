@@ -364,10 +364,10 @@ deploy:
 	@echo "  * $(DOWNLOAD_DIR_URL)"
 
 deploy_wheel:
-	$(GSUTIL) -m rsync $(DIST_DIR)/*.whl $(DIST_URL_BASE)
+	$(GSUTIL) -m cp $(DIST_DIR)/*.whl $(DIST_URL_BASE)
 
 deploy_sdist:
-	$(GSUTIL) -m rsync $(DIST_DIR)/*.tar.gz $(DIST_URL_BASE)
+	$(GSUTIL) -m cp $(DIST_DIR)/*.tar.gz $(DIST_URL_BASE)
 
 deploy_data:
 	$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
