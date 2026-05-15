@@ -124,9 +124,9 @@ class RasterDatatype(str, Enum):
     """
     binary_high_contrast = 'binary_high_contrast'
     """
-    Use `binary_high_contrast` where `1` pixels are likely to be surrounded
-    # by `0` pixels but _not_ adjacent to white background,
-    # as in stream network maps.
+    Use `binary_high_contrast` where `1` pixels are likely to be surrounded by
+    `0` pixels but _not_ adjacent to white background, as in stream network
+    maps.
     """
     continuous = 'continuous'
     """For numeric data."""

@@ -25,13 +25,25 @@ LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
+model_description = gettext(
+    """
+    The InVEST Urban Cooling model calculates an index of heat mitigation based
+    on shade, evapotranspiration, and albedo, as well as distance from cooling
+    islands (e.g., parks). The index is used to estimate temperature reduction
+    by vegetation. Finally, the model estimates the value of the heat
+    mitigation service using two (optional) valuation methods: energy
+    consumption and work productivity.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="urban_cooling_model",
     model_title=gettext("Urban Cooling"),
     userguide="urban_cooling_model.html",
+    reporter="natcap.invest.urban_cooling_model.reporter",
+    about=model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
-    aliases=("ucm",),
+    aliases=set("ucm",),
     module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
@@ -98,7 +110,6 @@ MODEL_SPEC = spec.ModelSpec(
                         " option is selected for the Cooling Capacity Calculation Method."
                     ),
                     required="cc_method == 'factors'",
-                    units=None
                 ),
                 spec.RatioInput(
                     id="albedo",
@@ -108,7 +119,6 @@ MODEL_SPEC = spec.ModelSpec(
                         " for the Cooling Capacity Calculation Method."
                     ),
                     required="cc_method == 'factors'",
-                    units=None
                 ),
                 spec.RatioInput(
                     id="building_intensity",
@@ -119,7 +129,6 @@ MODEL_SPEC = spec.ModelSpec(
                         " Calculation Method."
                     ),
                     required="cc_method == 'intensity'",
-                    units=None
                 )
             ],
             index_col="lucode"
@@ -184,7 +193,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="do_productivity_valuation",
             allowed="do_productivity_valuation",
-            units=None,
             expression="0 <= value <= 100"
         ),
         spec.VectorInput(
@@ -269,7 +277,6 @@ MODEL_SPEC = spec.ModelSpec(
                 " capacity index. If not provided, defaults to 0.6."
             ),
             required=False,
-            units=None
         ),
         spec.RatioInput(
             id="cc_weight_albedo",
@@ -279,7 +286,6 @@ MODEL_SPEC = spec.ModelSpec(
                 " capacity index. If not provided, defaults to 0.2."
             ),
             required=False,
-            units=None
         ),
         spec.RatioInput(
             id="cc_weight_eti",
@@ -289,7 +295,6 @@ MODEL_SPEC = spec.ModelSpec(
                 " capacity index. If not provided, defaults to 0.2."
             ),
             required=False,
-            units=None
         )
     ],
     outputs=[
@@ -1476,7 +1481,7 @@ def mask_cc_green_areas_op(green_area_array, cc_array):
             and 0 represent areas that are not green.
 
     Returns:
-        A modified `cc_array` where only green areas retain their original values, 
+        A modified `cc_array` where only green areas retain their original values,
         non-green areas are set to 0, and nodata values are preserved.
 
     """
