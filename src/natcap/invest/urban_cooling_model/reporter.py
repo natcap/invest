@@ -40,7 +40,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                          model_spec.get_input('lulc_raster_path')),
         RasterPlotConfig(args_dict['ref_eto_raster_path'],
                          RasterDatatype.continuous,
-                         model_spec.get_input('ref_eto_raster_path')),
+                         model_spec.get_input('ref_eto_raster_path'),
+                         colormap='viridis'),
     ]
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         input_raster_plot_configs)
@@ -51,7 +52,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     output_raster_heading = 'Heat Mitigation Index'
     output_raster_plot_configs = [
         RasterPlotConfig(file_registry['hm'], RasterDatatype.continuous,
-                         model_spec.get_output('hm')),
+                         model_spec.get_output('hm'), colormap='Blues'),
     ]
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_plot_configs)
@@ -68,9 +69,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     intermediate_heading_1 = gettext('Cooling Capacity and Air Temperature Maps')
     intermediate_raster_plot_configs_1 = [
         RasterPlotConfig(file_registry['cc'], RasterDatatype.continuous,
-                         model_spec.get_output('cc')),
+                         model_spec.get_output('cc'), colormap='Blues'),
         RasterPlotConfig(file_registry['t_air'], RasterDatatype.continuous,
-                         model_spec.get_output('t_air')),
+                         model_spec.get_output('t_air'), colormap='RdYlBu_r'),
     ]
     intermediate_img_src_1 = raster_utils.plot_and_base64_encode_rasters(
         intermediate_raster_plot_configs_1)
@@ -85,25 +86,29 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     intermediate_heading_2 = gettext('Biophysical Maps')
     intermediate_raster_plot_configs_2 = [
         RasterPlotConfig(file_registry['kc'], RasterDatatype.continuous,
-                         model_spec.get_output('kc')),
+                         model_spec.get_output('kc'), colormap='viridis'),
         RasterPlotConfig(file_registry['green_area'], RasterDatatype.binary,
                          model_spec.get_output('green_area'),
                          colormap=green_area_colormap),
     ]
+
     if args_dict['cc_method'] == 'intensity':
         intermediate_raster_plot_configs_2.extend([
             RasterPlotConfig(file_registry['building_intensity'],
                              RasterDatatype.continuous,
-                             model_spec.get_output('building_intensity')),
+                             model_spec.get_output('building_intensity'),
+                             colormap='Reds'),
         ])
     else:
         intermediate_raster_plot_configs_2.extend([
             RasterPlotConfig(file_registry['shade'],
                              RasterDatatype.continuous,
-                             model_spec.get_output('shade')),
+                             model_spec.get_output('shade'),
+                             colormap='Blues'),
             RasterPlotConfig(file_registry['albedo'],
                              RasterDatatype.continuous,
-                             model_spec.get_output('albedo')),
+                             model_spec.get_output('albedo'),
+                             colormap='Blues'),
         ])
     intermediate_img_src_2 = raster_utils.plot_and_base64_encode_rasters(
         intermediate_raster_plot_configs_2)
