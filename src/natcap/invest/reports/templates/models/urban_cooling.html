@@ -50,6 +50,24 @@
     agg_results
   )}}
 
+  {{ accordion_section(
+    'Results Aggregated by AOI Feature',
+    content_grid([
+      (content_grid([
+        ('<div id="cc_map"></div>', 100),
+        (caption(cc_map_caption, uhi_map_source_list), 100)
+      ]), 100/3),
+      (content_grid([
+        ('<div id="air_temp_map"></div>', 100),
+        (caption(air_temp_map_caption, uhi_map_source_list), 100)
+      ]), 100/3),
+      (content_grid([
+        ('<div id="air_temp_anomaly_map"></div>', 100),
+        (caption(air_temp_anomaly_map_caption, uhi_map_source_list), 100)
+      ]), 100/3),
+    ])
+  ) }}
+
   {% for section in intermediate_raster_sections %}
   {{ accordion_section(
     section['heading'],
@@ -114,7 +132,16 @@
 
 {% endblock content %}
 
+{% from 'vegalite-plot.html' import embed_vega %}
 {% block scripts %}
   {{ super() }}
   {% include 'datatable-js.html' %}
+  {% include 'vega-dependencies.html' %}
+  {% include 'vega-embed-js.html' %}
+  {% set chart_spec_id_list = [
+    (cc_map_json, 'cc_map'),
+    (air_temp_map_json, 'air_temp_map'),
+    (air_temp_anomaly_map_json, 'air_temp_anomaly_map'),
+  ] %}
+  {{ embed_vega(chart_spec_id_list) }}
 {% endblock scripts %}

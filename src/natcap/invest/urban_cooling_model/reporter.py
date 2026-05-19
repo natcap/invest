@@ -1,11 +1,13 @@
 import logging
 import time
 
+import altair
+import geopandas
 from matplotlib.colors import ListedColormap
 
 from natcap.invest import __version__
 from natcap.invest import gettext
-from natcap.invest.reports import jinja_env, raster_utils, report_constants
+from natcap.invest.reports import jinja_env, raster_utils, report_constants, vector_utils
 from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 from natcap.invest.reports.sdr_ndr_utils import generate_results_table_from_vector
 from natcap.invest.spec import ModelSpec
@@ -13,6 +15,30 @@ from natcap.invest.spec import ModelSpec
 LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/urban_cooling.html')
+
+MAP_WIDTH = 250 # pixels
+
+
+def _create_aggregate_map(geodataframe, xy_ratio, attribute,
+                          title, scale: altair.Scale):
+    attr_map = altair.Chart(geodataframe).mark_geoshape(
+        stroke="white",
+        strokeWidth=0.5
+    ).project(
+        type='identity',
+        reflectY=True
+    ).encode(
+        color=altair.Color(attribute, scale=scale),
+        tooltip=[altair.Tooltip(attribute, title=attribute)]
+    ).properties(
+        width=MAP_WIDTH,
+        height=MAP_WIDTH / xy_ratio,
+        title=title
+    ).configure_title(
+        fontSize=16,
+    ).configure_legend(title=None, **vector_utils.LEGEND_CONFIG)
+
+    return attr_map.to_json()
 
 
 def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
@@ -64,6 +90,32 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                              'avg_wbgt_v', 'avg_ltls_v', 'avg_hvls_v']
     (agg_table, agg_totals_table) = generate_results_table_from_vector(
         file_registry['uhi_results'], agg_table_cols_to_sum)
+
+    uhi_output = model_spec.get_output('uhi_results')
+    agg_uhi_results = geopandas.read_file(file_registry['uhi_results'])
+    _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
+    cc_map_json = _create_aggregate_map(
+        agg_uhi_results, xy_ratio, 'avg_cc',
+        gettext('Average Cooling Capacity'),
+        altair.Scale(domain=[0, 1], scheme='blues'))
+    cc_map_caption = (uhi_output.get_field('avg_cc').about)
+    ref_temp = args_dict['t_ref']
+    uhi_effect = args_dict['uhi_max']
+    air_temp_map_json = _create_aggregate_map(
+        agg_uhi_results, xy_ratio, 'avg_tmp_v',
+        gettext('Average Air Temperature'),
+        altair.Scale(
+            domain={'unionWith': [
+                ref_temp - uhi_effect, ref_temp + uhi_effect]},
+            domainMid=ref_temp, scheme='redyellowblue', reverse=True))
+    air_temp_map_caption = (uhi_output.get_field('avg_tmp_v').about)
+    air_temp_anomaly_map_json = _create_aggregate_map(
+        agg_uhi_results, xy_ratio, 'avg_tmp_an',
+        gettext('Average Air Temperature Anomaly'),
+        altair.Scale(domain={'unionWith': [-1 * uhi_effect, uhi_effect]},
+                     domainMid=0, scheme='redyellowblue', reverse=True))
+    air_temp_anomaly_map_caption = (uhi_output.get_field('avg_tmp_an').about)
+    uhi_map_source_list = [model_spec.get_output('uhi_results').path]
 
     # Key intermediate raster outputs: cooling capacity, air temperature
     intermediate_heading_1 = gettext('Cooling Capacity and Air Temperature Maps')
@@ -142,6 +194,13 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             args_dict=args_dict,
             agg_table=agg_table,
             agg_totals_table=agg_totals_table,
+            cc_map_json=cc_map_json,
+            cc_map_caption=cc_map_caption,
+            air_temp_map_json=air_temp_map_json,
+            air_temp_map_caption=air_temp_map_caption,
+            air_temp_anomaly_map_json=air_temp_anomaly_map_json,
+            air_temp_anomaly_map_caption=air_temp_anomaly_map_caption,
+            uhi_map_source_list=uhi_map_source_list,
             input_raster_heading=input_raster_heading,
             inputs_img_src=inputs_img_src,
             inputs_caption=input_raster_caption,
