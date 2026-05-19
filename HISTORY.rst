@@ -21,6 +21,7 @@
   - Seasonal Water Yield
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Mental Health
   - Urban Nature Access
   - Urban Stormwater Retention
   - Visitation: Recreation and Tourism
@@ -61,10 +62,59 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
+Unreleased Changes
+------------------
 
-..
-  Unreleased Changes
-  ------------------
+General
+=======
+* To ensure consistent raster plot sizing in reports, padding is now added to
+  the top of raster plots if an adjacent raster plot has a units subheading.
+  (`#2471 <https://github.com/natcap/invest/issues/2471>`_)
+* The ``deploy_dist`` Makefile target was split into ``deploy_wheel`` and
+  ``deploy_sdist``.
+* ``Input, Output, and ModelSpec`` classes now create immutable objects.
+  Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
+  (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
+* Made some styling and usability improvements to the Vega-Lite visualizations
+  (e.g., vector plots, histograms) that appear in some InVEST reports.
+  (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
+
+Workbench
+=========
+* Fixed a bug in Workbench application logs where the label referring to the
+  origin of the log message was inaccurate. Messages are now labeled as from
+  either the "main" or "renderer" process.
+  (`#2522 <https://github.com/natcap/invest/issues/2522>`_)
+* Attempting to load a datastack or logfile with a model ID the Workbench
+  doesn't recognize (such as the ID of a plugin that isn't installed, or an
+  otherwise malformed model ID) now presents an error message instead of
+  failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
+* Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
+  Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+
+SDR
+===
+* Added exception-handling when checking if watershed geoemtries overlap.
+  Invalid geometries will no longer raise an exception during this check
+  because they can still be rasterized and used in zonal_statistics.
+  (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
+
+
+3.19.0 (2026-04-16)
+-------------------
+
+Highlights
+==========
+* InVEST introduces a new model: Urban Mental Health. This model estimates
+  the number of preventable cases (and optionally, associated costs) of
+  mental health conditions linked to changes in urban nature exposure. Using
+  NDVI as a proxy, it applies an exposure-response relationship to quantify
+  how increases in nearby vegetation can reduce risk of mental health
+  outcomes. Users can analyze scenarios using either LULC or NDVI inputs.
+* The Seasonal Water Yield model now generates a report containing visual
+  summaries of model inputs and outputs. This report is designed to help
+  users more easily interpret results, validate data and model behavior,
+  and explore visualizations of key outputs.
 
 General
 =======
@@ -72,14 +122,30 @@ General
   ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
   these targets to fail on missing artifacts instead of silently ignoring
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
-
+* Pre-built wheels are now constrained to require one specific minor version of
+  GDAL in an attempt to ensure compatibility of the compiled extensions with
+  the version of ``libgdal`` available. Users who need a different GDAL version
+  may install ``natcap.invest`` from conda-forge or build their own wheel from
+  source. (`#2206 <https://github.com/natcap/invest/issues/2206>`_)
+* The ``manylinux_2_39`` wheels have been replaced with ``linux`` wheels built
+  on Ubuntu. This reduces the size of the wheels and avoids licensing concerns
+  around redistributing libraries.
+  (`#2483 <https://github.com/natcap/invest/issues/2483>`_)
 
 Workbench
 =========
 * The Workbench now filters model args to include only those whose
   corresponding form fields are enabled at the time a model is run.
   (`#2436 <https://github.com/natcap/invest/issues/2436>`_)
+* Fixed a bug where loading new parameters into a model input form
+  where the model had previously been run would not update the 'Model Complete'
+  status indicator. (`#1655 <https://github.com/natcap/invest/issues/1655>`_)
 
+HRA
+===
+* Updated a log message that refers to a URL where users can upload
+  and visualize model results. The previous URL was broken.
+  (`#2443 <https://github.com/natcap/invest/issues/2443>`_)
 
 NDR
 ===
@@ -87,6 +153,40 @@ NDR
   ``calc_n=False`` and ``calc_p=True``, or vice versa.
   (`#2472 <https://github.com/natcap/invest/issues/2472>`_)
 
+Seasonal Water Yield
+====================
+* The model now generates a report, a visual summary of results, available in
+  the output workspace and also viewable from the Workbench after the model run
+  completes. (`#2321 <https://github.com/natcap/invest/issues/2321>`_)
+* The model now generates an additional output, a CSV containing average monthly
+  quickflow, baseflow, and precipitation values, in cubic meters per month, for
+  each feature in the AOI. This output is used by the report to generate some
+  plots. Note that this CSV is only created when the model is run without
+  inputting a Local Recharge raster.
+  (`#2321 <https://github.com/natcap/invest/issues/2321>`_)
+* Various updates to model output data metadata, including correcting the
+  units of some outputs.
+  (`#2450 <https://github.com/natcap/invest/issues/2450>`_)
+* Updated the naming convention of several monthly intermediate outputs to be
+  1-indexed rather than 0-indexed. This makes filenames consistent throughout
+  the model, where 1=January and 12=December.
+  (`#2451 <https://github.com/natcap/invest/issues/2451>`_)
+
+Urban Mental Health
+===================
+* Added the Urban Mental Health model to InVEST. This model evaluates
+  differences between baseline and a future/counterfactual scenario to quantify
+  preventable cases of mental health conditions (and optionally, related costs)
+  associated with changes in nature exposure, using NDVI as a proxy.
+  (`#2140 <https://github.com/natcap/invest/issues/2140>`_)
+
+Visitation: Recreation and Tourism
+==================================
+* Fixed a bug where AOIs with very many polygons could require file transfers
+  exceeding 1GB, from server to client, and the server process could crash.
+  Now, file transfers from server to client avoid sending redundant copies of
+  AOI geoemtries, drastically reducing the size of file transfers.
+  (`#1950 <https://github.com/natcap/invest/issues/1950>`_)
 
 3.18.0 (2026-02-25)
 -------------------

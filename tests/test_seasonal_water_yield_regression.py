@@ -14,9 +14,6 @@ from osgeo import osr
 from .utils import assert_complete_execute
 
 gdal.UseExceptions()
-REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'seasonal_water_yield')
 
 
 def make_simple_shp(base_shp_path, origin):
@@ -601,7 +598,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         execute_kwargs = {
             'generate_report': bool(seasonal_water_yield.MODEL_SPEC.reporter),
-            'save_file_registry': True
+            'save_file_registry': True,
+            'check_outputs': True
         }
         seasonal_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
@@ -615,6 +613,18 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
+
+        # check the values in the avg monthly quickflow baseflow precip csv
+        actual_result_df = pandas.read_csv(
+            os.path.join(args['workspace_dir'], 'monthly_quickflow_baseflow.csv'))
+        expected_qf = [56.69889, 62.00944, 67.35032, 72.72129, 78.12209, 83.55236,
+                       89.01173, 94.49973, 100.01591, 105.55979, 111.13096, 116.72885]
+        expected_b = [60.96804 for i in range(12)]
+        expected_p = [110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220]
+        for expected_val, col_name in [(expected_qf, 'quickflow'),
+                (expected_b, 'baseflow'), (expected_p, 'precipitation')]:
+            numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
+                                          rtol=1e-5)
 
     def test_base_regression_d8(self):
         """SWY base regression test on sample data in D8 mode.
@@ -667,6 +677,18 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                     (field, f'expected: {expected_value}', f'actual: {val}'))
         if mismatch_list:
             raise RuntimeError(f'results not expected: {mismatch_list}')
+
+        # check the values in the avg monthly quickflow baseflow precip csv
+        actual_result_df = pandas.read_csv(
+            os.path.join(args['workspace_dir'], 'monthly_quickflow_baseflow.csv'))
+        expected_qf = [55.81547, 61.04926, 66.31405, 71.60957, 76.93555, 82.29161,
+                       87.67738, 93.09235, 98.53606, 104.00803, 109.50784, 115.03485]
+        expected_b = [61.969 for i in range(12)]
+        expected_p = [110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220]
+        for expected_val, col_name in [(expected_qf, 'quickflow'),
+                (expected_b, 'baseflow'), (expected_p, 'precipitation')]:
+            numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
+                                          rtol=1e-5)
 
     def test_base_regression_nodata_inf(self):
         """SWY base regression test on sample data with really small nodata.
@@ -932,12 +954,62 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_recharge_raster(recharge_ras_path)
         args['l_path'] = recharge_ras_path
 
-        seasonal_water_yield.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(seasonal_water_yield.MODEL_SPEC.reporter),
+            'save_file_registry': True,
+            'check_outputs': True
+        }
+        seasonal_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, seasonal_water_yield.MODEL_SPEC, **execute_kwargs)
 
         # generate aggregated results csv table for assertion
         agg_results_csv_path = os.path.join(args['workspace_dir'],
                                             'agg_results_l.csv')
         make_agg_results_csv(agg_results_csv_path, recharge=True)
+
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
+            agg_results_csv_path)
+
+    def test_user_climate_zones(self):
+        """SWY user climate zones test on sample data.
+
+        Executes SWY in user defined climate zones mode and checks that the
+        output files are generated and that the aggregate shapefile fields
+        are the same as the regression case.
+        """
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        workspace_dir = os.path.join(self.workspace_dir, 'workspace')
+        os.mkdir(workspace_dir)
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            workspace_dir)
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+
+        cz_csv_path = os.path.join(self.workspace_dir, 'cz.csv')
+        make_climate_zone_csv(cz_csv_path)
+        cz_ras_path = os.path.join(args['workspace_dir'], 'dem.tif')
+        make_gradient_raster(cz_ras_path)
+        args['climate_zone_raster_path'] = cz_ras_path
+        args['climate_zone_table_path'] = cz_csv_path
+        args['user_defined_climate_zones'] = True
+
+        execute_kwargs = {
+            'generate_report': bool(seasonal_water_yield.MODEL_SPEC.reporter),
+            'save_file_registry': True,
+            'check_outputs': True
+        }
+        seasonal_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args, seasonal_water_yield.MODEL_SPEC, **execute_kwargs)
+
+        # generate aggregated results csv table for assertion
+        agg_results_csv_path = os.path.join(args['workspace_dir'],
+                                            'agg_results_cz.csv')
+        make_agg_results_csv(agg_results_csv_path, climate_zones=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
@@ -1262,10 +1334,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         target_aet_path = os.path.join(self.workspace_dir,
                                        'target_aet_path.tif')
 
+        month_range = range(1, 13)
         seasonal_water_yield_core.calculate_local_recharge(
-            [precip_path for i in range(12)], [et0_path for i in range(12)],
-            [quickflow_path for i in range(12)], flow_dir_path,
-            [kc_path for i in range(12)], alpha_month_map, beta,
+            [precip_path for i in month_range], [et0_path for i in month_range],
+            [quickflow_path for i in month_range], flow_dir_path,
+            [kc_path for i in month_range], alpha_month_map, beta,
             gamma, stream_path, target_li_path, target_li_avail_path,
             target_l_sum_avail_path, target_aet_path,
             os.path.join(self.workspace_dir, 'target_precip_path.tif'),

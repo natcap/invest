@@ -8,8 +8,8 @@ cimport numpy
 cimport cython
 from osgeo import gdal
 
-from ..managed_raster.managed_raster cimport D8
-from ..managed_raster.managed_raster cimport MFD
+from pygeoprocessing.extensions cimport D8
+from pygeoprocessing.extensions cimport MFD
 from .retention cimport calculate_retention
 
 cdef extern from "time.h" nogil:

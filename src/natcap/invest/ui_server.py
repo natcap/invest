@@ -3,7 +3,6 @@ import importlib
 import json
 import logging
 
-from osgeo import gdal
 from flask import Flask
 from flask import request
 from flask_cors import CORS
@@ -16,6 +15,7 @@ from natcap.invest import models
 from natcap.invest import spec
 from natcap.invest import usage
 from natcap.invest import validation
+from natcap.invest.utils import base_model_id
 
 LOGGER = logging.getLogger(__name__)
 
@@ -269,8 +269,9 @@ def build_datastack_archive():
 @app.route(f'/{PREFIX}/log_model_start', methods=['POST'])
 def log_model_start():
     payload = request.get_json()
+    modelID = base_model_id(payload['model_id'])
     usage._log_model(
-        pyname=models.model_id_to_pyname[payload['model_id']],
+        pyname=models.model_id_to_pyname[modelID],
         model_args=json.loads(payload['model_args']),
         invest_interface=payload['invest_interface'],
         session_id=payload['session_id'],

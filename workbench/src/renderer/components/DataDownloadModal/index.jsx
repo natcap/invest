@@ -201,6 +201,7 @@ class DataDownloadModal extends React.Component {
       'Urban Stormwater Retention': t('Urban Stormwater Retention'),
       'Urban Cooling': t('Urban Cooling'),
       'Urban Flood Risk Mitigation': t('Urban Flood Risk Mitigation'),
+      'Urban Mental Health': t('Urban Mental Health'),
       'Urban Nature Access': t('Urban Nature Access'),
       'Visitation: Recreation and Tourism': t('Visitation: Recreation and Tourism'),
       'Wave Energy Production': t('Wave Energy Production'),

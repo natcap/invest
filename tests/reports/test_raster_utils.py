@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import geometamaker
 import matplotlib
 import matplotlib.testing.compare
 from matplotlib.testing import set_font_settings_for_testing
@@ -170,6 +171,39 @@ class RasterPlotLayoutTests(unittest.TestCase):
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_units_subtitle_padding(self):
+        """Test subtitle offset for plots of rasters with and without units"""
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        # check that no subtitle offset because no units
+        fig = raster_utils.plot_raster_list([self.raster_config])
+        raster_axes = [ax for ax in fig.axes if ax.get_label() != '<colorbar>']
+        for ax in raster_axes:
+            ylim = ax.get_ylim()
+            expected_ylim = (3.5, -0.5)
+            self.assertEqual(ylim, expected_ylim)
+
+        # Test plot ylims if one raster has units and other does not
+        raster_path_with_units = os.path.join(self.workspace_dir, 'foo.tif')
+        make_simple_raster(raster_path_with_units, shape)
+        # units determined by checking metadata
+        metadata = geometamaker.describe(raster_path_with_units)
+        metadata.set_band_description(1, units="meters")
+        metadata.write()
+        raster_config_with_units = RasterPlotConfig(
+            raster_path_with_units,
+            RasterDatatype.continuous,
+            spec.Output(id='foo', units="meter"))
+
+        config_list = [self.raster_config, raster_config_with_units]
+        fig = raster_utils.plot_raster_list(config_list)
+        raster_axes = [ax for ax in fig.axes if ax.get_label() != '<colorbar>']
+        for ax in raster_axes:
+            bottom, top = ax.get_ylim()
+            expected_ylim = (shape[0], -0.1 * shape[0])
+            self.assertEqual((bottom, top), expected_ylim)
 
 
 class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
@@ -339,6 +373,24 @@ class RasterPlotFacetsTests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
+    @staticmethod
+    @patch('natcap.invest.reports.raster_utils._get_raster_units')
+    def create_small_plots_grid(workspace_dir, shape, mock_get_raster_units,
+                                supertitle=None):
+        raster_paths = [os.path.join(workspace_dir, f'{s}.tif')
+                        for s in ['a', 'b', 'c', 'd']]
+        arrays = [numpy.linspace(
+            i, i+1, num=numpy.multiply(*shape)).reshape(*shape) for i in range(4)]
+        for raster_path, array in zip(raster_paths, arrays):
+            pygeoprocessing.numpy_array_to_raster(
+                array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+                projection_wkt=PROJ_WKT, target_path=raster_path)
+
+        mock_get_raster_units.return_value = 'flux capacitrons'
+        return raster_utils.plot_raster_facets(
+            raster_paths, RasterDatatype.continuous, small_plots=True,
+            supertitle=supertitle)
+
     def test_plot_raster_facets(self):
         """Test rasters share a common colorscale."""
         figname = 'plot_raster_facets.png'
@@ -359,6 +411,40 @@ class RasterPlotFacetsTests(unittest.TestCase):
 
         fig = raster_utils.plot_raster_facets(
             [a_raster_filepath, b_raster_filepath], RasterDatatype.continuous)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_facets_small_plots(self):
+        """Test small plots: standard AOI width should have 4 columns."""
+        figname = 'plot_raster_facets_small_plots.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape)
+
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_facets_small_plots_wide_aoi(self):
+        """Test small plots: wide AOI width should have 3 columns."""
+        figname = 'plot_raster_facets_small_plots_wide_aoi.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (6, 12)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape)
+
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_facets_small_plots_supertitle(self):
+        """Test small plots with optional supertitle."""
+        figname = 'plot_raster_facets_small_plots_supertitle.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (2, 10)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape,
+                                           supertitle="Custom Title")
+
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
@@ -542,5 +628,5 @@ class RasterWorkspaceSummaryTests(unittest.TestCase):
             file_registry, args_dict)
         dataframe = raster_utils.raster_workspace_summary(file_registry)
 
-        # There are 2 rasters in the sample output spec
-        self.assertEqual(dataframe.shape, (2, 7))
+        # There are 3 rasters in the sample output spec
+        self.assertEqual(dataframe.shape, (3, 7))

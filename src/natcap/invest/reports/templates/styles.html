@@ -177,6 +177,13 @@
   align to top keeps the actual maps aligned*/
   .vega-embed {
     vertical-align: top;
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+    &.has-actions summary {
+      opacity: 0.65;
+    }
   }
   .vega-embed .vega-bind-radio label {
     padding-right: 0.5rem;
