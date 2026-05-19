@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+  {{ super() }}
+{% endblock styles %}
+
+{% block content %}
+
+  {{ super() }}
+
+  {% from 'args-table.html' import args_table %}
+  {% from 'caption.html' import caption %}
+  {% from 'content-grid.html' import content_grid %}
+  {% from 'metadata.html' import list_metadata %}
+  {% from 'raster-plot-img.html' import raster_plot_img %}
+  {% from 'wide-table.html' import wide_table %}
+
+  <h2 class="section-header">Results</h2>
+
+  {{ accordion_section(
+    'Primary Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (caption(outputs_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {% set ns = namespace(vector_items=[]) %}
+
+  {% set vector_items = [] %}
+  {% for field in vector_plot_list %}
+    {% set vector_block = content_grid([
+      ('<div id="' ~ field[0] ~ '"></div>', 100),
+      (caption(field[2], admin_boundaries_map_source_list), 100)
+    ]) %}
+    {% set ns.vector_items = ns.vector_items + [(vector_block, 50)] %}
+  {% endfor %}
+
+  {{ accordion_section(
+    'Aggregated Vector Outputs',
+    content_grid(ns.vector_items)
+  )}}
+
+
+  {{ accordion_section(
+    'Urban Nature Accessibility Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(output_accessible_img_src, 'Urban Nature Accessibility Outputs'), 100),
+      (caption(output_accessible_raster_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Urban Nature Balance Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(output_balance_img_src, 'Accessible Urban Nature Outputs'), 100),
+      (caption(output_balance_raster_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Urban Nature Balance Percapita Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(output_balance_percapita_img_src, 'Accessible Urban Nature Outputs'), 100),
+      (caption(output_balance_percapita_raster_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Intermediate Outputs',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(intermediates_img_src, 'Intermediate Outputs'), 100),
+      (caption(intermediates_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Output Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Inputs</h2>
+
+  {% if args_dict != None %}
+    {{ accordion_section(
+      'Arguments',
+      args_table(args_dict)
+    )}}
+  {% endif %}
+
+  {% set input_items = [
+    (caption(raster_group_caption, pre_caption=True), 100),
+    (caption(lulc_pre_caption, pre_caption=True), 100),
+    (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+    (caption(inputs_caption, definition_list=True), 100)
+  ] %}
+
+  {{ accordion_section(
+    'Input Maps',
+    content_grid(input_items)
+  )}}
+
+  {{ accordion_section(
+    'Input Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Metadata</h2>
+
+  {{
+    accordion_section(
+      'Output Filenames and Descriptions',
+      list_metadata(model_spec_outputs),
+      expanded=False
+    )
+  }}
+
+{% endblock content %}
+
+
+{% from 'vegalite-plot.html' import embed_vega %}
+
+{% block scripts %}
+  {{ super() }}
+  {% include "vega-dependencies.html" %}
+  {% include 'vega-embed-js.html' %}
+
+  {% set ns = namespace(chart_spec_id_list=[]) %}
+  {% for vector in vector_plot_list %}
+    {% set ns.chart_spec_id_list = ns.chart_spec_id_list + [(vector[1], vector[0])] %}
+  {% endfor %}
+  {{ embed_vega(ns.chart_spec_id_list) }}
+{% endblock scripts %}

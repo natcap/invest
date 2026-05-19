@@ -38,6 +38,7 @@ MODEL_SPEC = spec.ModelSpec(
     model_id="urban_nature_access",
     model_title=gettext("Urban Nature Access"),
     userguide="urban_nature_access.html",
+    reporter="natcap.invest.urban_nature_access.reporter",
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("una",),
@@ -426,7 +427,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "The area of greenspace available within the defined radius,"
                 " weighted by the selected decay function."
             ),
-            created_if="search_radius_mode == 'radius per urban nature class'",
+            created_if=(
+                f"search_radius_mode == '{RADIUS_OPT_UNIFORM}'"),
             data_type=float,
             units=u.meter**2
         ),
