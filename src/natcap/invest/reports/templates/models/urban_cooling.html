@@ -27,27 +27,12 @@
     ])
   )}}
 
-  {% if agg_totals_table is defined and agg_totals_table != None %}
-    {% set agg_results = content_grid([
-      (wide_table(
-        agg_table | safe,
-        font_size_px=15
-      ), 100),
-      (wide_table(
-        agg_totals_table | safe,
-        font_size_px=15
-      ), 100),
-    ]) %}
-  {% else %}
-    {% set agg_results = wide_table(
-      agg_table | safe,
-      font_size_px=15
-    ) %}
-  {% endif %}
-
   {{ accordion_section(
     'Aggregate Results',
-    agg_results
+    wide_table(
+      uhi_table | safe,
+      font_size_px=15
+    )
   )}}
 
   {{ accordion_section(
@@ -67,6 +52,45 @@
       ]), 100/3),
     ])
   ) }}
+
+  {% if bldg_table != None %}
+    {% if bldg_totals_table != None %}
+      {% set bldg_agg_results = content_grid([
+        (wide_table(
+          bldg_table | safe,
+          font_size_px=15
+        ), 100),
+        (wide_table(
+          bldg_totals_table | safe,
+          font_size_px=15
+        ), 100),
+      ]) %}
+    {% else %}
+      {% set bldg_agg_results = wide_table(
+        bldg_table | safe,
+        font_size_px=15
+      ) %}
+    {% endif %}
+
+    {{ accordion_section(
+      'Building Stats',
+      bldg_agg_results,
+    )}}
+
+    {{ accordion_section(
+      'Energy Savings and Air Temperature by Building',
+      content_grid([
+        (content_grid([
+          ('<div id="energy_map"></div>', 100),
+          (caption(energy_map_caption, bldg_map_source_list), 100)
+        ]), 50),
+        (content_grid([
+          ('<div id="bldg_air_temp_map"></div>', 100),
+          (caption(bldg_air_temp_map_caption, bldg_map_source_list), 100)
+        ]), 50),
+      ])
+    ) }}
+  {% endif %}
 
   {% for section in intermediate_raster_sections %}
   {{ accordion_section(
@@ -142,6 +166,8 @@
     (cc_map_json, 'cc_map'),
     (air_temp_map_json, 'air_temp_map'),
     (air_temp_anomaly_map_json, 'air_temp_anomaly_map'),
+    (energy_map_json, 'energy_map'),
+    (bldg_air_temp_map_json, 'bldg_air_temp_map'),
   ] %}
   {{ embed_vega(chart_spec_id_list) }}
 {% endblock scripts %}

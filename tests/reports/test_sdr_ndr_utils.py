@@ -62,14 +62,45 @@ class SDRNDRUtilsTests(unittest.TestCase):
         """Clean up remaining files."""
         shutil.rmtree(self.workspace_dir)
 
+    def test_generate_results_table_without_totals(self):
+        """Return a single HTML table when ``cols_to_sum`` is omitted."""
+
+        num_features = 3
+
+        filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
+        attribute_list = _generate_mock_watershed_data(num_features, filepath)
+
+        # Omit cols_to_sum to signal we have no need for totals.
+        main_table = (
+            sdr_ndr_utils.generate_results_table_from_vector(filepath))
+        self.assertIsNotNone(main_table)
+
+        soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
+
+        # Make sure table body has exactly 1 row per feature.
+        table_body_rows = soup.find('tbody').find_all('tr')
+        self.assertEqual(len(table_body_rows), num_features)
+
+        # Make sure table body has expected number of columns.
+        ws_1_row = table_body_rows[0]
+        ws_1_cells = ws_1_row.find_all('td')
+        self.assertEqual(len(ws_1_cells), 4)
+
+        # Make sure table has class 'datatable' but not 'paginate'.
+        datatable_table = soup.find_all(class_='datatable')
+        self.assertEqual(len(datatable_table), 1)
+        paginated_table = soup.find_all(class_='paginate')
+        self.assertEqual(len(paginated_table), 0)
+
     def test_generate_results_table_single_feature(self):
-        """Return a single-row HTML table; do not return totals."""
+        """Return a single-row HTML table and ``None`` when non-empty
+        ``cols_to_sum`` is specified and vector has exactly 1 feature."""
 
         num_features = 1
 
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
         attribute_list = _generate_mock_watershed_data(num_features, filepath)
-        cols_to_sum = []
+        cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
             sdr_ndr_utils.generate_results_table_from_vector(
@@ -92,7 +123,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
         actual_values = [cell.string for cell in ws_1_cells]
         expected_values = [str(v) for v in ws_1_data.values()]
         self.assertEqual(expected_values, actual_values)
-        
+
         # Make sure table has class 'datatable' but not 'paginate'.
         datatable_table = soup.find_all(class_='datatable')
         self.assertEqual(len(datatable_table), 1)
@@ -103,7 +134,8 @@ class SDRNDRUtilsTests(unittest.TestCase):
         self.assertIsNone(totals_table)
 
     def test_generate_results_table_and_totals(self):
-        """Return main table and totals table when vector has > 1 feature."""
+        """Return main table and totals table when non-empty
+        ``cols_to_sum`` is specified and vector has > 1 feature."""
 
         num_features = 2
 

@@ -16,11 +16,8 @@ LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/urban_cooling.html')
 
-MAP_WIDTH = 250 # pixels
-
-
 def _create_aggregate_map(geodataframe, xy_ratio, attribute,
-                          title, scale: altair.Scale):
+                          title, scale: altair.Scale, map_width=250):
     attr_map = altair.Chart(geodataframe).mark_geoshape(
         stroke="white",
         strokeWidth=0.5
@@ -31,8 +28,8 @@ def _create_aggregate_map(geodataframe, xy_ratio, attribute,
         color=altair.Color(attribute, scale=scale),
         tooltip=[altair.Tooltip(attribute, title=attribute)]
     ).properties(
-        width=MAP_WIDTH,
-        height=MAP_WIDTH / xy_ratio,
+        width=map_width,
+        height=map_width / xy_ratio,
         title=title
     ).configure_title(
         fontSize=16,
@@ -86,11 +83,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         output_raster_plot_configs)
 
     # Key vector output: uhi_results
-    agg_table_cols_to_sum = ['avg_cc', 'avg_tmp_v', 'avg_tmp_an', 'avd_eng_cn',
-                             'avg_wbgt_v', 'avg_ltls_v', 'avg_hvls_v']
-    (agg_table, agg_totals_table) = generate_results_table_from_vector(
-        file_registry['uhi_results'], agg_table_cols_to_sum)
-
+    uhi_table = generate_results_table_from_vector(
+        file_registry['uhi_results'])
     uhi_output = model_spec.get_output('uhi_results')
     agg_uhi_results = geopandas.read_file(file_registry['uhi_results'])
     _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
@@ -115,7 +109,41 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         altair.Scale(domain={'unionWith': [-1 * uhi_effect, uhi_effect]},
                      domainMid=0, scheme='redyellowblue', reverse=True))
     air_temp_anomaly_map_caption = (uhi_output.get_field('avg_tmp_an').about)
-    uhi_map_source_list = [model_spec.get_output('uhi_results').path]
+    uhi_map_source_list = [uhi_output.path]
+
+    # Optional vector output: buildings with stats
+    if 'buildings_with_stats' in file_registry:
+        bldg_table_cols_to_sum = ['energy_sav']
+        (bldg_table, bldg_totals_table) = generate_results_table_from_vector(
+            file_registry['buildings_with_stats'], bldg_table_cols_to_sum)
+
+        bldg_output = model_spec.get_output('buildings_with_stats')
+        agg_bldg_results = geopandas.read_file(
+            file_registry['buildings_with_stats'])
+        _, xy_ratio = vector_utils.get_geojson_bbox(agg_bldg_results)
+        energy_map_json = _create_aggregate_map(
+            agg_bldg_results, xy_ratio, 'energy_sav',
+            gettext('Energy Savings by Building'),
+            altair.Scale(scheme='greens'),
+            map_width=450)
+        energy_map_caption = (bldg_output.get_field('energy_sav').about)
+        ref_temp = args_dict['t_ref']
+        uhi_effect = args_dict['uhi_max']
+        bldg_air_temp_map_json = _create_aggregate_map(
+            agg_bldg_results, xy_ratio, 'mean_t_air',
+            gettext('Average Air Temperature by Building'),
+            altair.Scale(scheme='redyellowblue', reverse=True),
+            map_width=450)
+        bldg_air_temp_map_caption = (bldg_output.get_field('mean_t_air').about)
+        bldg_map_source_list = [bldg_output.path]
+    else:
+        bldg_table = None
+        bldg_totals_table = None
+        energy_map_json = None
+        energy_map_caption = None
+        bldg_air_temp_map_json = None
+        bldg_air_temp_map_caption = None
+        bldg_map_source_list = None
 
     # Key intermediate raster outputs: cooling capacity, air temperature
     intermediate_heading_1 = gettext('Cooling Capacity and Air Temperature Maps')
@@ -192,8 +220,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             userguide_page=model_spec.userguide,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
-            agg_table=agg_table,
-            agg_totals_table=agg_totals_table,
+            uhi_table=uhi_table,
             cc_map_json=cc_map_json,
             cc_map_caption=cc_map_caption,
             air_temp_map_json=air_temp_map_json,
@@ -201,6 +228,13 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             air_temp_anomaly_map_json=air_temp_anomaly_map_json,
             air_temp_anomaly_map_caption=air_temp_anomaly_map_caption,
             uhi_map_source_list=uhi_map_source_list,
+            bldg_table=bldg_table,
+            bldg_totals_table=bldg_totals_table,
+            energy_map_json=energy_map_json,
+            energy_map_caption=energy_map_caption,
+            bldg_air_temp_map_json=bldg_air_temp_map_json,
+            bldg_air_temp_map_caption=bldg_air_temp_map_caption,
+            bldg_map_source_list=bldg_map_source_list,
             input_raster_heading=input_raster_heading,
             inputs_img_src=inputs_img_src,
             inputs_caption=input_raster_caption,
