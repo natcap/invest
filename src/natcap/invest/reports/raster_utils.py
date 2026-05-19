@@ -76,6 +76,7 @@ truncated_PuOr_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
 # Mapping 'datatype' to colormaps and resampling algorithms
 COLORMAPS = {
     'continuous': 'viridis',
+    'ratio': 'viridis',
     'divergent': truncated_PuOr_cmap,
     # Default for nominal data is matplotlib's tab20.
     # If > 20 colors are needed, colormap will be generated with distinctipy.
@@ -89,6 +90,7 @@ COLORMAPS = {
 }
 RESAMPLE_ALGS = {
     'continuous': 'bilinear',
+    'ratio': 'bilinear',
     'divergent': 'bilinear',
     'nominal': 'nearest',
     'binary': 'nearest',
@@ -130,6 +132,12 @@ class RasterDatatype(str, Enum):
     """
     continuous = 'continuous'
     """For numeric data."""
+    ratio = 'ratio'
+    """
+    For numeric data strictly in the range [0, 1]. With this option, the
+    colorbar will span the entire range [0, 1], even if the range of actual
+    values is smaller.
+    """
     divergent = 'divergent'
     """For rasters where values span positive and negative values."""
     nominal = 'nominal'
@@ -435,6 +443,9 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             imshow_kwargs['vmin'] = -0.5
             imshow_kwargs['vmax'] = 1.5
             colorbar_kwargs['ticks'] = [0, 1]
+        if dtype == RasterDatatype.ratio:
+            imshow_kwargs['vmin'] = 0
+            imshow_kwargs['vmax'] = 1
 
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
         ax.set_title(**_get_title_kwargs(

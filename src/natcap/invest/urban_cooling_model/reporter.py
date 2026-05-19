@@ -51,7 +51,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     # Key raster output: heat mitigation index
     output_raster_heading = 'Heat Mitigation Index'
     output_raster_plot_configs = [
-        RasterPlotConfig(file_registry['hm'], RasterDatatype.continuous,
+        RasterPlotConfig(file_registry['hm'], RasterDatatype.ratio,
                          model_spec.get_output('hm'), colormap='Blues'),
     ]
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
@@ -68,7 +68,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     # Key intermediate raster outputs: cooling capacity, air temperature
     intermediate_heading_1 = gettext('Cooling Capacity and Air Temperature Maps')
     intermediate_raster_plot_configs_1 = [
-        RasterPlotConfig(file_registry['cc'], RasterDatatype.continuous,
+        RasterPlotConfig(file_registry['cc'], RasterDatatype.ratio,
                          model_spec.get_output('cc'), colormap='Blues'),
         RasterPlotConfig(file_registry['t_air'], RasterDatatype.continuous,
                          model_spec.get_output('t_air'), colormap='RdYlBu_r'),
@@ -95,18 +95,18 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     if args_dict['cc_method'] == 'intensity':
         intermediate_raster_plot_configs_2.extend([
             RasterPlotConfig(file_registry['building_intensity'],
-                             RasterDatatype.continuous,
+                             RasterDatatype.ratio,
                              model_spec.get_output('building_intensity'),
                              colormap='Reds'),
         ])
     else:
         intermediate_raster_plot_configs_2.extend([
             RasterPlotConfig(file_registry['shade'],
-                             RasterDatatype.continuous,
+                             RasterDatatype.ratio,
                              model_spec.get_output('shade'),
                              colormap='Blues'),
             RasterPlotConfig(file_registry['albedo'],
-                             RasterDatatype.continuous,
+                             RasterDatatype.ratio,
                              model_spec.get_output('albedo'),
                              colormap='Blues'),
         ])
