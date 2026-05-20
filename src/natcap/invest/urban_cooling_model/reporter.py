@@ -10,6 +10,7 @@ from natcap.invest import gettext
 from natcap.invest.reports import jinja_env, raster_utils, report_constants, vector_utils
 from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 from natcap.invest.reports.sdr_ndr_utils import generate_results_table_from_vector
+from natcap.invest.reports.vector_utils import get_vector_attr_table_caption
 from natcap.invest.spec import ModelSpec
 
 LOGGER = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     uhi_table = generate_results_table_from_vector(
         file_registry['uhi_results'])
     uhi_output = model_spec.get_output('uhi_results')
+    uhi_table_caption = get_vector_attr_table_caption(uhi_output)
     agg_uhi_results = geopandas.read_file(file_registry['uhi_results'])
     _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
     cc_map_json = _create_aggregate_map(
@@ -214,6 +216,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
             uhi_table=uhi_table,
+            uhi_table_caption=uhi_table_caption,
             cc_map_json=cc_map_json,
             cc_map_caption=cc_map_caption,
             air_temp_map_json=air_temp_map_json,

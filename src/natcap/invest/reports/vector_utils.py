@@ -1,5 +1,6 @@
-import altair
-
+from natcap.invest import gettext
+from natcap.invest.spec import Output, PercentOutput, VectorOutput
+from natcap.invest.unit_registry import u
 
 LEGEND_CONFIG = {
     'labelFontSize': 14,
@@ -44,3 +45,40 @@ def get_geojson_bbox(geodataframe):
         "properties": {}
     }
     return extent_feature, xy_ratio
+
+
+def get_vector_attr_table_caption(vector_spec: VectorOutput) -> list[str]:
+    """Generate caption for a vector attribute table.
+
+    Useful when column names are abbreviated or otherwise unclear.
+
+    Args:
+        vector_spec (natcap.invest.spec.VectorOutput): the specification of the
+            vector output.
+
+    Returns:
+        caption (list[str]): a list of formatted strings suitable for passing
+        to the ``natcap.invest.reports`` ``caption`` macro with
+        ``definition_list=True``.
+    """
+    def _get_units_text(field: Output) -> str:
+        """Get units string to append to a field description.
+
+        Args:
+            field (natcap.invest.spec.Output): the field specification.
+
+        Returns:
+            units_text (str): a string in the format ``' (Units: {units})'`` if
+                the field has units defined and they are neither ``None`` nor
+                ``u.none``; empty string otherwise.
+        """
+        units_prefix = gettext('Units:')
+        if (hasattr(field, 'units')
+            and field.units is not None and field.units != u.none):
+            return f' ({units_prefix} {field.units})'
+        elif isinstance(field, PercentOutput):
+            return f' ({units_prefix} %)'
+        return ''
+
+    return [f'{field.id}:{field.about}{_get_units_text(field)}'
+            for field in vector_spec.fields]
