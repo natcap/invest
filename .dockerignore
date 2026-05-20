@@ -1,5 +1,4 @@
 # Anything that should not be loaded into the docker context should be included here.
-.git
 env*
 build
 dist
