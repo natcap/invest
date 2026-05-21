@@ -432,7 +432,7 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
-        run: make deploy_wheel deploy_sdist deploy_userguide deploy_workbench
+        run: make deploy_wheel deploy_userguide deploy_workbench
 
       # This relies on the file existing on GCP, so it must be run after `make
       # deploy` is called.
