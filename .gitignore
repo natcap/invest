@@ -1,12 +1,12 @@
 #################################################################################
 # InVEST .gitignore
 #
-# This file isn't intended to match all possible files.  Please consider using
+# This file isn't intended to match all possible files. Please consider using
 # a personal .gitignore to augment this based on your own environment.
-# Personal, custom .gitignore files can be placed at a few different locations
+# Personal, custom .gitignore files can be placed at a few different locations,
 # for example:
 #    * ~/.config/git/ignore  # for your global .gitignore
-#    * ~/.gitignore_global   * alternate location for global .gitignore
+#    * ~/.gitignore_global   # alternate location for global .gitignore
 #    * ./.git/info/exclude   # for your personal ignore rules for this repo
 #
 #################################################################################
