@@ -360,8 +360,8 @@ jobs:
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv  # Choco-provided command to reload environment variables
 
-      - name: Build userguide
-        run: make userguide
+      # - name: Build userguide
+      #   run: make userguide
 
       - name: Build binaries
         run: make CONDA="$MAMBA_EXE" binaries
@@ -421,12 +421,12 @@ jobs:
       #     yarn run build
       #     yarn run dist
 
-      # # gsutil (part of make deploy) never seems to support the latest python version.
-      # - name: Set up python for gsutil
-      #   uses: actions/setup-python@v6
-      #   with:
-      #     python-version: ${{ env.GSUTIL_PYTHON_VERSION }}
-      #   id: python-gsutil-task
+      # gsutil (part of make deploy) never seems to support the latest python version.
+      - name: Set up python for gsutil
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.GSUTIL_PYTHON_VERSION }}
+        id: python-gsutil-task
 
       # - name: Deploy binaries and user guide to GCS
       #   if: github.event_name != 'pull_request'
