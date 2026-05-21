@@ -114,9 +114,14 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     # Optional vector output: buildings_with_stats
     if 'buildings_with_stats' in file_registry:
+        # Limit columns to the index column (whose name may vary)
+        # and the model-defined columns 'energy_sav' and 'mean_t_air'.
+        bldg_table_cols = [0, 'energy_sav', 'mean_t_air']
         bldg_table_cols_to_sum = ['energy_sav']
         (bldg_table, bldg_totals_table) = generate_results_table_from_vector(
-            file_registry['buildings_with_stats'], bldg_table_cols_to_sum)
+            file_registry['buildings_with_stats'],
+            target_cols=bldg_table_cols,
+            cols_to_sum=bldg_table_cols_to_sum)
 
         bldg_output = model_spec.get_output('buildings_with_stats')
         agg_bldg_results = geopandas.read_file(

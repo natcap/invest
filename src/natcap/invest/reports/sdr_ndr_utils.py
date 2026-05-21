@@ -9,7 +9,8 @@ from natcap.invest.reports.report_constants import TABLE_PAGINATION_THRESHOLD
 
 
 def generate_results_table_from_vector(
-        filepath: str, cols_to_sum: list[str] = []
+        filepath: str, target_cols: list[int | str] = [],
+        cols_to_sum: list[str] = []
         ) -> str | tuple[str, str | None]:
     """Generate HTML table—and, optionally, HTML table of totals—from a vector.
 
@@ -20,8 +21,11 @@ def generate_results_table_from_vector(
 
     Args:
         filepath (str): path to vector file (e.g., Shapefile or GeoPackage).
-        cols_to_sum (list[str], optional): names of columns to include in totals table.
-            Defaults to an empty list.
+        target_cols (list[int | str], optional): indices and/or names of
+            columns to include in table. If not specified, all source columns
+            (except 'geometry') are included.
+        cols_to_sum (list[str], optional): names of columns to include in
+            totals table. Defaults to an empty list.
 
     Returns:
         html_table_main (str): HTML table containing all data from the vector's
@@ -33,7 +37,14 @@ def generate_results_table_from_vector(
             is ``None``. If ``cols_to_sum`` is empty, this output is omitted.
     """
     vector_df = geopandas.read_file(filepath, engine='fiona')
-    vector_df = vector_df.drop(columns=['geometry'])
+
+    if len(target_cols) > 0:
+        cols_to_include = [vector_df.columns[col] if isinstance(col, int) else col
+                        for col in target_cols]
+        cols_to_drop = list(set(vector_df.columns).difference(set(cols_to_include)))
+    else:
+        cols_to_drop = ['geometry']
+    vector_df = vector_df.drop(columns=cols_to_drop)
 
     css_classes = ['datatable']
     (num_rows, _) = vector_df.shape

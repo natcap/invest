@@ -68,7 +68,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
         num_features = 3
 
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
-        attribute_list = _generate_mock_watershed_data(num_features, filepath)
+        _generate_mock_watershed_data(num_features, filepath)
 
         # Omit cols_to_sum to signal we have no need for totals.
         main_table = (
@@ -104,7 +104,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
 
         (main_table, totals_table) = (
             sdr_ndr_utils.generate_results_table_from_vector(
-                filepath, cols_to_sum))
+                filepath, cols_to_sum=cols_to_sum))
         self.assertIsNotNone(main_table)
 
         soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
@@ -140,13 +140,12 @@ class SDRNDRUtilsTests(unittest.TestCase):
         num_features = 2
 
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
-        attribute_list = _generate_mock_watershed_data(
-            num_features, filepath)
+        attribute_list = _generate_mock_watershed_data(num_features, filepath)
         cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
             sdr_ndr_utils.generate_results_table_from_vector(
-                filepath, cols_to_sum))
+                filepath, cols_to_sum=cols_to_sum))
         self.assertIsNotNone(main_table)
 
         main_soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
@@ -200,6 +199,30 @@ class SDRNDRUtilsTests(unittest.TestCase):
         expected_values = [str(v) for v in expected_totals]
         self.assertEqual(expected_values, actual_values)
 
+    def test_generate_results_table_with_subset_of_columns(self):
+        """Return HTML table containing only cols listed in ``target_cols``."""
+
+        num_features = 3
+
+        filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
+        _generate_mock_watershed_data(num_features, filepath)
+
+        # Omit cols_to_sum to signal we have no need for totals.
+        # Specify columns to include in output.
+        main_table = (
+            sdr_ndr_utils.generate_results_table_from_vector(
+                filepath, target_cols=[1, 'calculated_value_2']))
+        self.assertIsNotNone(main_table)
+
+        soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
+
+        # Make sure table has only the expected columns.
+        table_header_row = soup.find('thead').find_all('tr')[0]
+        table_header_cells = table_header_row.find_all('th')
+        self.assertEqual(len(table_header_cells), 2)
+        self.assertEqual(table_header_cells[0].text, 'ws_name')
+        self.assertEqual(table_header_cells[1].text, 'calculated_value_2')
+
     def test_generate_results_table_with_pagination_directive(self):
         """Return table with paginate flag when there are a lot of features."""
 
@@ -208,12 +231,12 @@ class SDRNDRUtilsTests(unittest.TestCase):
                            sdr_ndr_utils.TABLE_PAGINATION_THRESHOLD)
 
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
-        _ = _generate_mock_watershed_data(num_features, filepath)
+        _generate_mock_watershed_data(num_features, filepath)
         cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
             sdr_ndr_utils.generate_results_table_from_vector(
-                filepath, cols_to_sum))
+                filepath, cols_to_sum=cols_to_sum))
         self.assertIsNotNone(main_table)
 
         main_soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
