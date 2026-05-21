@@ -30,9 +30,9 @@ model_description = gettext(
     The InVEST Urban Cooling model calculates an index of heat mitigation based
     on shade, evapotranspiration, and albedo, as well as distance from cooling
     islands (e.g., parks). The index is used to estimate temperature reduction
-    by vegetation. Finally, the model estimates the value of the heat
-    mitigation service using two (optional) valuation methods: energy
-    consumption and work productivity.
+    by vegetation. Optionally, the model estimates the value of the heat
+    mitigation service using two valuation methods: energy consumption and/or
+    work productivity.
     """)
 
 MODEL_SPEC = spec.ModelSpec(
