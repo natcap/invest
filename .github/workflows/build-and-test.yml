@@ -322,7 +322,7 @@ jobs:
             binary-extension: dmg
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
-            workspace-path: ${{ github.workspace }}
+            workspace-path: InVEST-failed-windows-workspace.tar
             binary-extension: exe
     steps:
       - uses: actions/checkout@v6
