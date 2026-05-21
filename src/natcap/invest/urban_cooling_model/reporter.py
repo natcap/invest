@@ -73,9 +73,11 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     input_raster_caption = raster_utils.caption_raster_list(
         input_raster_plot_configs)
 
-    # Key raster output: heat mitigation index
-    output_raster_heading = gettext('Heat Mitigation Index')
+    # Primary raster outputs: air temperature, heat mitigation index
+    output_raster_heading = gettext('Air Temperature and Heat Mitigation Index')
     output_raster_plot_configs = [
+        RasterPlotConfig(file_registry['t_air'], RasterDatatype.continuous,
+                         model_spec.get_output('t_air'), colormap='Reds'),
         RasterPlotConfig(file_registry['hm'], RasterDatatype.continuous,
                          model_spec.get_output('hm'), colormap='Greens'),
     ]
@@ -83,20 +85,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         output_raster_plot_configs)
     output_raster_caption = raster_utils.caption_raster_list(
         output_raster_plot_configs)
-
-    # Additional raster outputs: cooling capacity, air temperature
-    secondary_output_raster_heading = gettext(
-        'Cooling Capacity and Air Temperature')
-    secondary_output_raster_plot_configs = [
-        RasterPlotConfig(file_registry['cc'], RasterDatatype.continuous,
-                         model_spec.get_output('cc'), colormap='Blues'),
-        RasterPlotConfig(file_registry['t_air'], RasterDatatype.continuous,
-                         model_spec.get_output('t_air'), colormap='Reds'),
-    ]
-    secondary_outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        secondary_output_raster_plot_configs)
-    secondary_output_raster_caption = raster_utils.caption_raster_list(
-        secondary_output_raster_plot_configs)
 
     # Key vector output: uhi_results
     uhi_table = generate_results_table_from_vector(
@@ -157,19 +145,19 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         bldg_air_temp_map_caption = None
         bldg_map_source_list = None
 
-    # Biophysical maps (intermediate raster outputs): ETI, green area (always);
+    # Secondary raster outputs: cooling capacity, ETI, green area (always);
     # building intensity ('intensity' method); shade, albedo ('factors' method)
     green_area_colormap = ListedColormap(["#ccccd5", "#006500"])
-    # green_area_colormap = ListedColormap(["#000000", "#008900"])
     biophysical_heading = gettext('Biophysical Maps')
     biophysical_raster_plot_configs = [
+        RasterPlotConfig(file_registry['cc'], RasterDatatype.continuous,
+                         model_spec.get_output('cc'), colormap='Blues'),
         RasterPlotConfig(file_registry['eti'], RasterDatatype.continuous,
                          model_spec.get_output('eti'), colormap='Greens'),
         RasterPlotConfig(file_registry['green_area'], RasterDatatype.binary,
                          model_spec.get_output('green_area'),
                          colormap=green_area_colormap),
     ]
-
     if args_dict['cc_method'] == 'intensity':
         biophysical_raster_plot_configs.extend([
             RasterPlotConfig(file_registry['building_intensity'],
@@ -233,9 +221,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             output_raster_heading=output_raster_heading,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
-            secondary_output_raster_heading=secondary_output_raster_heading,
-            secondary_outputs_img_src=secondary_outputs_img_src,
-            secondary_outputs_caption=secondary_output_raster_caption,
             biophysical_heading=biophysical_heading,
             biophysical_img_src=biophysical_img_src,
             biophysical_raster_caption=biophysical_raster_caption,
