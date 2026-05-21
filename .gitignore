@@ -56,6 +56,7 @@ __pycache__/
 # Built Visual Studio Code Extensions
 *.vsix
 
+#################################################################################
 # Files related to Sublime Text
 # Adapted from  https://github.com/github/gitignore/blob/main/Global/SublimeText.gitignore
 # Cache files for Sublime Text
