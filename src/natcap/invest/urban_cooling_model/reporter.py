@@ -66,7 +66,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         RasterPlotConfig(args_dict['ref_eto_raster_path'],
                          RasterDatatype.continuous,
                          model_spec.get_input('ref_eto_raster_path'),
-                         colormap='viridis'),
+                         colormap='Greens'),
     ]
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         input_raster_plot_configs)
@@ -76,8 +76,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     # Key raster output: heat mitigation index
     output_raster_heading = gettext('Heat Mitigation Index')
     output_raster_plot_configs = [
-        RasterPlotConfig(file_registry['hm'], RasterDatatype.ratio,
-                         model_spec.get_output('hm'), colormap='Blues'),
+        RasterPlotConfig(file_registry['hm'], RasterDatatype.continuous,
+                         model_spec.get_output('hm'), colormap='Greens'),
     ]
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_plot_configs)
@@ -88,10 +88,10 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     secondary_output_raster_heading = gettext(
         'Cooling Capacity and Air Temperature')
     secondary_output_raster_plot_configs = [
-        RasterPlotConfig(file_registry['cc'], RasterDatatype.ratio,
+        RasterPlotConfig(file_registry['cc'], RasterDatatype.continuous,
                          model_spec.get_output('cc'), colormap='Blues'),
         RasterPlotConfig(file_registry['t_air'], RasterDatatype.continuous,
-                         model_spec.get_output('t_air'), colormap='RdYlBu_r'),
+                         model_spec.get_output('t_air'), colormap='Reds'),
     ]
     secondary_outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         secondary_output_raster_plot_configs)
@@ -108,17 +108,13 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     cc_map_json = _create_aggregate_map(
         agg_uhi_results, xy_ratio, 'avg_cc',
         gettext('Average Cooling Capacity'),
-        altair.Scale(domain=[0, 1], scheme='blues'))
+        altair.Scale(scheme='blues'))
     cc_map_caption = (uhi_output.get_field('avg_cc').about)
-    ref_temp = args_dict['t_ref']
     uhi_effect = args_dict['uhi_max']
     air_temp_map_json = _create_aggregate_map(
         agg_uhi_results, xy_ratio, 'avg_tmp_v',
         gettext('Average Air Temperature'),
-        altair.Scale(
-            domain={'unionWith': [
-                ref_temp - uhi_effect, ref_temp + uhi_effect]},
-            domainMid=ref_temp, scheme='redyellowblue', reverse=True))
+        altair.Scale(scheme='reds'))
     air_temp_map_caption = (uhi_output.get_field('avg_tmp_v').about)
     air_temp_anomaly_map_json = _create_aggregate_map(
         agg_uhi_results, xy_ratio, 'avg_tmp_an',
@@ -144,12 +140,11 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             altair.Scale(scheme='greens'),
             map_width=450)
         energy_map_caption = (bldg_output.get_field('energy_sav').about)
-        ref_temp = args_dict['t_ref']
         uhi_effect = args_dict['uhi_max']
         bldg_air_temp_map_json = _create_aggregate_map(
             agg_bldg_results, xy_ratio, 'mean_t_air',
             gettext('Average Air Temperature by Building'),
-            altair.Scale(scheme='redyellowblue', reverse=True),
+            altair.Scale(scheme='reds'),
             map_width=450)
         bldg_air_temp_map_caption = (bldg_output.get_field('mean_t_air').about)
         bldg_map_source_list = [bldg_output.path]
@@ -169,7 +164,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     biophysical_heading = gettext('Biophysical Maps')
     biophysical_raster_plot_configs = [
         RasterPlotConfig(file_registry['kc'], RasterDatatype.continuous,
-                         model_spec.get_output('kc'), colormap='viridis'),
+                         model_spec.get_output('kc'), colormap='Greens'),
         RasterPlotConfig(file_registry['green_area'], RasterDatatype.binary,
                          model_spec.get_output('green_area'),
                          colormap=green_area_colormap),
@@ -178,18 +173,18 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     if args_dict['cc_method'] == 'intensity':
         biophysical_raster_plot_configs.extend([
             RasterPlotConfig(file_registry['building_intensity'],
-                             RasterDatatype.ratio,
+                             RasterDatatype.continuous,
                              model_spec.get_output('building_intensity'),
                              colormap='Reds'),
         ])
     else:
         biophysical_raster_plot_configs.extend([
             RasterPlotConfig(file_registry['shade'],
-                             RasterDatatype.ratio,
+                             RasterDatatype.continuous,
                              model_spec.get_output('shade'),
                              colormap='Blues'),
             RasterPlotConfig(file_registry['albedo'],
-                             RasterDatatype.ratio,
+                             RasterDatatype.continuous,
                              model_spec.get_output('albedo'),
                              colormap='Blues'),
         ])
