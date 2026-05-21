@@ -24,6 +24,9 @@ env
 requirements-all.yml  # Generated in make env
 workbench/build
 workbench/node_modules/
+workbench/coverage/
+workbench/resources/storage_token.txt
+workbench/dist
 
 #################################################################################
 # Random frustrating files
