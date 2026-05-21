@@ -80,6 +80,9 @@ General
   (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
 * Added a `.gitignore` for InVEST build files and common editor files.
   (`#258 <https://github.com/natcap/invest/issues/258>`_)
+* Fixed an issue with Windows binary builds where users would see runtime
+  warnings saying ``GDAL_DATA`` is not defined.
+  (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
 
 Workbench
 =========
