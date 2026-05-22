@@ -91,26 +91,53 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         file_registry['uhi_results'])
     uhi_output = model_spec.get_output('uhi_results')
     uhi_table_caption = get_vector_attr_table_caption(uhi_output)
-    agg_uhi_results = geopandas.read_file(file_registry['uhi_results'])
+
+    agg_uhi_results = geopandas.read_file(
+        file_registry['uhi_results'], engine='fiona')
     _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
+    uhi_map_source_list = [uhi_output.path]
+
     cc_map_json = _create_aggregate_map(
         agg_uhi_results, xy_ratio, 'avg_cc',
-        gettext('Average Cooling Capacity'),
+        gettext('Average Cooling Capacity (unitless)'),
         altair.Scale(scheme='blues'))
     cc_map_caption = (uhi_output.get_field('avg_cc').about)
     uhi_effect = args_dict['uhi_max']
     air_temp_map_json = _create_aggregate_map(
         agg_uhi_results, xy_ratio, 'avg_tmp_v',
-        gettext('Average Air Temperature'),
+        gettext('Average Air Temperature (°C)'),
         altair.Scale(scheme='reds'))
     air_temp_map_caption = (uhi_output.get_field('avg_tmp_v').about)
     air_temp_anomaly_map_json = _create_aggregate_map(
         agg_uhi_results, xy_ratio, 'avg_tmp_an',
-        gettext('Average Air Temperature Anomaly'),
+        gettext('Average Air Temperature Anomaly (°C)'),
         altair.Scale(domain={'unionWith': [-1 * uhi_effect, uhi_effect]},
                      domainMid=0, scheme='redyellowblue', reverse=True))
     air_temp_anomaly_map_caption = (uhi_output.get_field('avg_tmp_an').about)
-    uhi_map_source_list = [uhi_output.path]
+
+    if args_dict['do_productivity_valuation']:
+        wbgt_map_json = _create_aggregate_map(
+            agg_uhi_results, xy_ratio, 'avg_wbgt_v',
+            gettext('Average Wet Bulb Globe Temperature (WBGT, °C)'),
+            altair.Scale(scheme='reds'))
+        wbgt_map_caption = (uhi_output.get_field('avg_wbgt_v').about)
+        light_work_map_json = _create_aggregate_map(
+            agg_uhi_results, xy_ratio, 'avg_ltls_v',
+            gettext('Light Work Productivity Loss (%)'),
+            altair.Scale(domain=[0, 100], scheme='purples'))
+        light_work_map_caption = (uhi_output.get_field('avg_ltls_v').about)
+        heavy_work_map_json = _create_aggregate_map(
+            agg_uhi_results, xy_ratio, 'avg_hvls_v',
+            gettext('Heavy Work Productivity Loss (%)'),
+            altair.Scale(domain=[0, 100], scheme='purples'))
+        heavy_work_map_caption = (uhi_output.get_field('avg_hvls_v').about)
+
+    if args_dict['do_energy_valuation']:
+        energy_map_json = _create_aggregate_map(
+            agg_uhi_results, xy_ratio, 'avd_eng_cn',
+            gettext('Avoided Energy Consumption (kWh or currency)'),
+            altair.Scale(scheme='greens'))
+        energy_map_caption = (uhi_output.get_field('avd_eng_cn').about)
 
     # Optional vector output: buildings_with_stats
     if 'buildings_with_stats' in file_registry:
@@ -125,14 +152,14 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
         bldg_output = model_spec.get_output('buildings_with_stats')
         agg_bldg_results = geopandas.read_file(
-            file_registry['buildings_with_stats'])
+            file_registry['buildings_with_stats'], engine='fiona')
         _, xy_ratio = vector_utils.get_geojson_bbox(agg_bldg_results)
-        energy_map_json = _create_aggregate_map(
+        bldg_energy_map_json = _create_aggregate_map(
             agg_bldg_results, xy_ratio, 'energy_sav',
             gettext('Energy Savings by Building'),
             altair.Scale(scheme='greens'),
             map_width=450)
-        energy_map_caption = (bldg_output.get_field('energy_sav').about)
+        bldg_energy_map_caption = (bldg_output.get_field('energy_sav').about)
         uhi_effect = args_dict['uhi_max']
         bldg_air_temp_map_json = _create_aggregate_map(
             agg_bldg_results, xy_ratio, 'mean_t_air',
@@ -144,8 +171,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     else:
         bldg_table = None
         bldg_totals_table = None
-        energy_map_json = None
-        energy_map_caption = None
+        bldg_energy_map_json = None
+        bldg_energy_map_caption = None
         bldg_air_temp_map_json = None
         bldg_air_temp_map_caption = None
         bldg_map_source_list = None
@@ -211,11 +238,19 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             air_temp_map_caption=air_temp_map_caption,
             air_temp_anomaly_map_json=air_temp_anomaly_map_json,
             air_temp_anomaly_map_caption=air_temp_anomaly_map_caption,
+            energy_map_json=energy_map_json,
+            energy_map_caption=energy_map_caption,
+            wbgt_map_json=wbgt_map_json,
+            wbgt_map_caption=wbgt_map_caption,
+            light_work_map_json=light_work_map_json,
+            light_work_map_caption=light_work_map_caption,
+            heavy_work_map_json=heavy_work_map_json,
+            heavy_work_map_caption=heavy_work_map_caption,
             uhi_map_source_list=uhi_map_source_list,
             bldg_table=bldg_table,
             bldg_totals_table=bldg_totals_table,
-            energy_map_json=energy_map_json,
-            energy_map_caption=energy_map_caption,
+            bldg_energy_map_json=bldg_energy_map_json,
+            bldg_energy_map_caption=bldg_energy_map_caption,
             bldg_air_temp_map_json=bldg_air_temp_map_json,
             bldg_air_temp_map_caption=bldg_air_temp_map_caption,
             bldg_map_source_list=bldg_map_source_list,

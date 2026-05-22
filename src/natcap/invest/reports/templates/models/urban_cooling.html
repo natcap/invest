@@ -53,6 +53,22 @@
         ('<div id="air_temp_anomaly_map"></div>', 100),
         (caption(air_temp_anomaly_map_caption, uhi_map_source_list), 100)
       ]), 100/3),
+      (content_grid([
+        ('<div id="wbgt_map"></div>', 100),
+        (caption(wbgt_map_caption, uhi_map_source_list), 100)
+      ]), 100/3),
+      (content_grid([
+        ('<div id="light_work_map"></div>', 100),
+        (caption(light_work_map_caption, uhi_map_source_list), 100)
+      ]), 100/3),
+      (content_grid([
+        ('<div id="heavy_work_map"></div>', 100),
+        (caption(heavy_work_map_caption, uhi_map_source_list), 100)
+      ]), 100/3),
+      (content_grid([
+        ('<div id="energy_map"></div>', 100),
+        (caption(energy_map_caption, uhi_map_source_list), 100)
+      ]), 100/3),
     ])
   ) }}
 
@@ -84,8 +100,8 @@
       'Energy Savings and Air Temperature by Building',
       content_grid([
         (content_grid([
-          ('<div id="energy_map"></div>', 100),
-          (caption(energy_map_caption, bldg_map_source_list), 100)
+          ('<div id="bldg_energy_map"></div>', 100),
+          (caption(bldg_energy_map_caption, bldg_map_source_list), 100)
         ]), 50),
         (content_grid([
           ('<div id="bldg_air_temp_map"></div>', 100),
@@ -167,7 +183,11 @@
     (cc_map_json, 'cc_map'),
     (air_temp_map_json, 'air_temp_map'),
     (air_temp_anomaly_map_json, 'air_temp_anomaly_map'),
+    (wbgt_map_json, 'wbgt_map'),
+    (light_work_map_json, 'light_work_map'),
+    (heavy_work_map_json, 'heavy_work_map'),
     (energy_map_json, 'energy_map'),
+    (bldg_energy_map_json, 'bldg_energy_map'),
     (bldg_air_temp_map_json, 'bldg_air_temp_map'),
   ] %}
   {{ embed_vega(chart_spec_id_list) }}
