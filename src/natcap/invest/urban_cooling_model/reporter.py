@@ -58,7 +58,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     # Input rasters: LULC, reference evapotranspiration
     input_raster_heading = gettext(
-        'LULC and Reference Evapotranspiration Maps')
+        'Input Rasters: LULC and Reference Evapotranspiration')
     input_raster_plot_configs = [
         RasterPlotConfig(args_dict['lulc_raster_path'],
                          RasterDatatype.nominal,
