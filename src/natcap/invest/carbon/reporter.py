@@ -200,6 +200,29 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                intermediate_raster_captions)
     ]
 
+    lulc_rat_html = None
+    rat_df_list = []
+    rat_value_names = set()
+    for lulc_raster in input_raster_config_list:
+        rat = raster_utils.get_raster_attribute_table(lulc_raster.raster_path)
+        if rat:
+            [rat_value_names.add(col.name) for col in rat.columns if col.usage == 'MinMax']
+            rat_df_list.append(pandas.DataFrame(rat.rows))
+    if len(rat_df_list) > 1:
+        if len(rat_value_names) != 1:
+            LOGGER.debug('raster attribute table columns do not match; cannot be joined.')
+        else:
+            join_col = list(rat_value_names)[0]
+            joined_rats = rat_df_list[0].join(
+                rat_df_list[1].set_index(join_col),
+                on=join_col,
+                how='left',
+                lsuffix=f'_{input_raster_config_list[0].spec.name}',
+                rsuffix=f'_{input_raster_config_list[1].spec.name}')
+            lulc_rat_html = joined_rats.to_html(classes=['datatable', 'paginate'])
+    elif len(rat_df_list) == 1:
+        rat_df_list[0].to_html(classes='datatable')
+
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict, model_spec).to_html(na_rep='')
 
@@ -223,6 +246,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             inputs_img_src=inputs_img_src,
             inputs_caption=input_raster_caption,
             lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
+            lulc_rat_html=lulc_rat_html,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
             intermediate_raster_sections=intermediate_raster_sections,

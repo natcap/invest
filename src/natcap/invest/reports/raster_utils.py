@@ -710,13 +710,29 @@ def _get_raster_metadata(filepath):
         return resource
 
 
+def get_raster_attribute_table(filepath):
+    rat = None
+    resource = _get_raster_metadata(filepath)
+    if resource is None:
+        # if no metadata already exists, generate it
+        resource = geometamaker.describe(filepath)
+        if isinstance(resource, geometamaker.models.RasterResource):
+            rat = resource.get_rat(1)
+    else:
+        rat = resource.get_rat(1)
+    return rat
+
+
 def _get_raster_units(filepath):
     resource = _get_raster_metadata(filepath)
     return resource.get_band_description(1).units if resource else None
 
 
 def raster_workspace_summary(file_registry):
-    """Create a table of stats for all rasters in a file_registry."""
+    """Create a table of stats for all rasters in a file_registry.
+
+    Metadata docs were already created by invest for files in the workspace.
+    """
     raster_summary = {}
 
     def _summarize_output(item):
@@ -747,6 +763,8 @@ def raster_inputs_summary(args_dict, model_spec):
     paths_to_check.extend(_parse_csv_paths_from_spec(args_dict, model_spec))
 
     for v in paths_to_check:
+        # Generate metadata but do not write to disk because we
+        # don't know if we have write permission
         resource = geometamaker.describe(v, compute_stats=True)
         if isinstance(resource, geometamaker.models.RasterResource):
             filename = os.path.basename(resource.path)

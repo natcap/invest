@@ -74,6 +74,11 @@
   )}}
 
   {{ accordion_section(
+    'LULC Raster Attribute Tables',
+    lulc_rat_html | safe
+  )}}
+
+  {{ accordion_section(
     'Input Raster Stats',
     content_grid([
       (stats_table_note, 100),
