@@ -64,7 +64,7 @@ PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) -m setuptools_scm)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 
-GSUTIL := gsutil
+GSUTIL := gcloud storage
 SIGNTOOL := SignTool
 RST2HTML5 := rst2html5
 
@@ -356,27 +356,27 @@ codesign:
 	python codesigning/enqueue-current-installer.py
 
 deploy:
-	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
-	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
-	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-	-$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
+	-$(GSUTIL) rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GSUTIL) rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	-$(GSUTIL) rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	-$(GSUTIL) rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)"
 
 deploy_wheel:
-	$(GSUTIL) -m cp $(DIST_DIR)/*.whl $(DIST_URL_BASE)
+	$(GSUTIL) cp $(DIST_DIR)/*.whl $(DIST_URL_BASE)
 
 deploy_sdist:
-	$(GSUTIL) -m cp $(DIST_DIR)/*.tar.gz $(DIST_URL_BASE)
+	$(GSUTIL) cp $(DIST_DIR)/*.tar.gz $(DIST_URL_BASE)
 
 deploy_data:
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	$(GSUTIL) rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 
 deploy_userguide:
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	$(GSUTIL) rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 
 deploy_workbench:
-	$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
+	$(GSUTIL) rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 
 changelog:
 	$(RST2HTML5) $(CHANGELOG_SRC) $(CHANGELOG_DEST)
