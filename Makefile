@@ -185,7 +185,7 @@ invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
 
 deploy_autotest_reports:
-	find $(AUTOTEST_DIR) -name "*report*.html" | gcloud storage cp -I $(REPORTS_BASE_URL)
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GCLOUD_STORAGE) cp -I $(REPORTS_BASE_URL)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
