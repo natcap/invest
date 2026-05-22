@@ -26,22 +26,15 @@
     ])
   )}}
 
-  {% set ns = namespace(vector_items=[]) %}
 
-  {% set vector_items = [] %}
-  {% for field in vector_plot_list %}
-    {% set vector_block = content_grid([
-      ('<div id="' ~ field[0] ~ '"></div>', 100),
-      (caption(field[2], admin_boundaries_map_source_list), 100)
-    ]) %}
-    {% set ns.vector_items = ns.vector_items + [(vector_block, 50)] %}
-  {% endfor %}
 
   {{ accordion_section(
     'Aggregated Vector Outputs',
-    content_grid(ns.vector_items)
-  )}}
-
+    content_grid([
+      ('<div id="Admin_Units_Plots"></div>', 100),
+      (caption(vector_plot_captions, admin_boundaries_map_source_list, definition_list=True), 100)
+    ])
+  ) }}
 
   {{ accordion_section(
     'Urban Nature Accessibility Outputs',
@@ -52,32 +45,34 @@
     ])
   )}}
 
-  {{ accordion_section(
-    'Urban Nature Balance Outputs',
-    content_grid([
-      (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(output_balance_img_src, 'Accessible Urban Nature Outputs'), 100),
-      (caption(output_balance_raster_caption, definition_list=True), 100)
-    ])
-  )}}
+  {% if args_dict['search_radius_mode'] == 'radius per population group' %}
+    {{ accordion_section(
+      'Urban Nature Balance Outputs',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(output_balance_img_src, 'Accessible Urban Nature Outputs'), 100),
+        (caption(output_balance_raster_caption, definition_list=True), 100)
+      ])
+    )}}
 
-  {{ accordion_section(
-    'Urban Nature Balance Percapita Outputs',
-    content_grid([
-      (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(output_balance_percapita_img_src, 'Accessible Urban Nature Outputs'), 100),
-      (caption(output_balance_percapita_raster_caption, definition_list=True), 100)
-    ])
-  )}}
+    {{ accordion_section(
+      'Urban Nature Balance Percapita Outputs',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(output_balance_percapita_img_src, 'Accessible Urban Nature Outputs'), 100),
+        (caption(output_balance_percapita_raster_caption, definition_list=True), 100)
+      ])
+    )}}
 
-  {{ accordion_section(
-    'Intermediate Outputs',
-    content_grid([
-      (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(intermediates_img_src, 'Intermediate Outputs'), 100),
-      (caption(intermediates_caption, definition_list=True), 100)
-    ])
-  )}}
+    {{ accordion_section(
+      'Select Intermediate Outputs',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(intermediates_img_src, 'Select Intermediate Outputs'), 100),
+        (caption(intermediates_caption, definition_list=True), 100)
+      ])
+    )}}
+  {% endif %}
 
   {{ accordion_section(
     'Output Raster Stats',
@@ -142,9 +137,7 @@
   {% include "vega-dependencies.html" %}
   {% include 'vega-embed-js.html' %}
 
-  {% set ns = namespace(chart_spec_id_list=[]) %}
-  {% for vector in vector_plot_list %}
-    {% set ns.chart_spec_id_list = ns.chart_spec_id_list + [(vector[1], vector[0])] %}
-  {% endfor %}
-  {{ embed_vega(ns.chart_spec_id_list) }}
+  
+  {% set chart_spec_id_list = [(admin_map_json, "Admin_Units_Plots")] %}
+  {{ embed_vega(chart_spec_id_list) }}
 {% endblock scripts %}
