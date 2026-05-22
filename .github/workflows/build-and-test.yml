@@ -483,7 +483,6 @@ jobs:
         env:
           CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
         run: |
-          find autotest_dir -name "*report*.html"
           make deploy_autotest_reports AUTOTEST_DIR=autotest_dir
           make print-REPORTS_BASE_URL >> $GITHUB_OUTPUT
 
