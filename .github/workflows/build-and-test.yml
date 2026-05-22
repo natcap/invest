@@ -195,15 +195,15 @@ jobs:
   #         name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
   #         path: conda-env.txt
 
-  #     - name: Authenticate GCP
-  #       if: github.event_name != 'pull_request'
-  #       uses: google-github-actions/auth@v3
-  #       with:
-  #         credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-  #     - name: Set up GCP
-  #       if: github.event_name != 'pull_request'
-  #       uses: google-github-actions/setup-gcloud@v3
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v3
 
   #     # gsutil (part of make deploy) never seems to support the latest python version.
   #     - name: Set up python for gsutil
@@ -470,6 +470,8 @@ jobs:
       - name: Deploy autotest reports
         id: invest-autotest-deploy
         if: steps.invest-autotest.outcome == 'success' && matrix.os == 'windows-latest'
+        env:
+          CLOUDSDK_PYTHON: ${{ steps.python-gsutil-task.outputs.python-path }}
         run: |
           make deploy_autotest_reports AUTOTEST_DIR=autotest_dir
           make print-REPORTS_BASE_URL >> $GITHUB_OUTPUT
@@ -491,16 +493,16 @@ jobs:
       #     name: ${{ runner.os }}_puppeteer_log.zip'
       #     path: ${{ matrix.puppeteer-log }}
 
-      - name: Tar the workspace to preserve permissions
-        if: always()
-        run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
+      # - name: Tar the workspace to preserve permissions
+      #   if: always()
+      #   run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
 
       - name: Upload workspace on failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: InVEST-failed-${{ runner.os }}-workspace
-          path: ${{ matrix.workspace-path}}
+          path: ${{ github.workspace }}
 
   # build-sampledata:
   #   name: Build sampledata archives
