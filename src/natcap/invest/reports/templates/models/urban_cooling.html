@@ -83,12 +83,16 @@
           bldg_totals_table | safe,
           font_size_px=15
         ), 100),
+        (caption(bldg_table_caption, definition_list=True), 100)
       ]) %}
     {% else %}
-      {% set bldg_agg_results = wide_table(
-        bldg_table | safe,
-        font_size_px=15
-      ) %}
+      {% set bldg_agg_results = content_grid([
+        wide_table(
+          bldg_table | safe,
+          font_size_px=15
+        ),
+        (caption(bldg_table_caption, definition_list=True), 100)
+      ])%}
     {% endif %}
 
     {{ accordion_section(

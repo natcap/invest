@@ -141,6 +141,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     # Optional vector output: buildings_with_stats
     if 'buildings_with_stats' in file_registry:
+        bldg_output = model_spec.get_output('buildings_with_stats')
         # Limit columns to the index column (whose name may vary)
         # and the model-defined columns 'energy_sav' and 'mean_t_air'.
         bldg_table_cols = [0, 'energy_sav', 'mean_t_air']
@@ -149,22 +150,22 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             file_registry['buildings_with_stats'],
             target_cols=bldg_table_cols,
             cols_to_sum=bldg_table_cols_to_sum)
+        bldg_table_caption = get_vector_attr_table_caption(bldg_output)
 
-        bldg_output = model_spec.get_output('buildings_with_stats')
         agg_bldg_results = geopandas.read_file(
             file_registry['buildings_with_stats'], engine='fiona')
         _, xy_ratio = vector_utils.get_geojson_bbox(agg_bldg_results)
         bldg_energy_map_json = _create_aggregate_map(
             agg_bldg_results, xy_ratio, 'energy_sav',
-            gettext('Energy Savings by Building'),
+            gettext('Energy Savings by Building (kWh or currency)'),
             altair.Scale(scheme='greens'),
             map_width=450)
         bldg_energy_map_caption = (bldg_output.get_field('energy_sav').about)
         uhi_effect = args_dict['uhi_max']
         bldg_air_temp_map_json = _create_aggregate_map(
             agg_bldg_results, xy_ratio, 'mean_t_air',
-            gettext('Average Air Temperature by Building'),
-            altair.Scale(scheme='reds'),
+            gettext('Average Air Temperature by Building (°C)'),
+            altair.Scale(scheme='yelloworangered'),
             map_width=450)
         bldg_air_temp_map_caption = (bldg_output.get_field('mean_t_air').about)
         bldg_map_source_list = [bldg_output.path]
@@ -249,6 +250,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             uhi_map_source_list=uhi_map_source_list,
             bldg_table=bldg_table,
             bldg_totals_table=bldg_totals_table,
+            bldg_table_caption=bldg_table_caption,
             bldg_energy_map_json=bldg_energy_map_json,
             bldg_energy_map_caption=bldg_energy_map_caption,
             bldg_air_temp_map_json=bldg_air_temp_map_json,
