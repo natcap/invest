@@ -1,6 +1,5 @@
 from natcap.invest import gettext
-from natcap.invest.spec import Output, PercentOutput, VectorOutput
-from natcap.invest.unit_registry import u
+from natcap.invest.spec import format_unit, Output, VectorOutput
 
 LEGEND_CONFIG = {
     'labelFontSize': 14,
@@ -69,15 +68,11 @@ def get_vector_attr_table_caption(vector_spec: VectorOutput) -> list[str]:
 
         Returns:
             units_text (str): a string in the format ``' (Units: {units})'`` if
-                the field has units defined and they are neither ``None`` nor
-                ``u.none``; empty string otherwise.
+                the field has units defined and they are not ``None``; empty
+                string otherwise.
         """
-        units_prefix = gettext('Units:')
-        if (hasattr(field, 'units')
-            and field.units is not None and field.units != u.none):
-            return f' ({units_prefix} {field.units})'
-        elif isinstance(field, PercentOutput):
-            return f' ({units_prefix} %)'
+        if hasattr(field, 'units') and field.units is not None:
+            return f' ({gettext("Units:")} {format_unit(field.units)})'
         return ''
 
     return [f'{field.id}:{field.about}{_get_units_text(field)}'

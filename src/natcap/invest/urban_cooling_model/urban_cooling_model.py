@@ -67,7 +67,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " have corresponding entries in the Biophysical Table."
             ),
             data_type=int,
-            units=None,
+            units=u.none,
             projected=True,
             projection_units=u.meter
         ),
@@ -303,7 +303,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="hm.tif",
             about=gettext("Map of heat mitigation index."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.VectorOutput(
             id="uhi_results",
@@ -314,7 +314,9 @@ MODEL_SPEC = spec.ModelSpec(
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
                 spec.NumberOutput(
-                    id="avg_cc", about=gettext("Average CC value"), units=u.none
+                    id="avg_cc",
+                    about=gettext("Average CC value"),
+                    units=u.none
                 ),
                 spec.NumberOutput(
                     id="avg_tmp_v",
@@ -329,10 +331,13 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberOutput(
                     id="avd_eng_cn",
                     about=gettext(
-                        "Avoided energy consumption (kWh or $ if optional energy cost"
+                        "Avoided energy consumption (kWh or currency units if optional energy cost"
                         " input column was provided in the Energy Consumption Table)."
                     ),
-                    units=u.none
+                    # Units intentionally set to `None` to avoid printing
+                    # 'unitless' in reports (this output is not unitless;
+                    # its units vary depending on inputs).
+                    units=None
                 ),
                 spec.NumberOutput(
                     id="avg_wbgt_v",
@@ -364,7 +369,10 @@ MODEL_SPEC = spec.ModelSpec(
                         " contains NO natural areas nor green spaces; where CC = 0 for"
                         " all LULC classes."
                     ),
-                    units=u.none
+                    # Units intentionally set to `None` to avoid printing
+                    # 'unitless' in reports (this output is not unitless;
+                    # its units vary depending on inputs).
+                    units=None
                 ),
                 spec.NumberOutput(
                     id="mean_t_air",
@@ -381,21 +389,21 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/cc.tif",
             about=gettext("Map of cooling capacity"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="cc_park",
             path="intermediate/cc_park.tif",
             about=gettext("Map of cooling capacity decayed by proximity to greenspace"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="cc_masked_green_areas",
             path="intermediate/cc_masked_green_areas.tif",
             about=gettext("Cooling capacity map masked by non-green areas"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="t_air",
@@ -416,7 +424,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/eti.tif",
             about=gettext("Map of the evapotranspiration index."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="wbgt",
@@ -450,14 +458,14 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/albedo.tif",
             about=gettext("Map of albedo."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="area_kernel",
             path="intermediate/area_kernel.tif",
             about=gettext("Area kernel for green area convolution."),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="green_area_sum",
@@ -496,7 +504,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/lulc.tif",
             about=gettext("Map of land use/land cover."),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="ref_eto",
@@ -513,7 +521,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/shade.tif",
             about=gettext("Map of shade."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.FileOutput(
             id="cc_ref_aoi_stats",

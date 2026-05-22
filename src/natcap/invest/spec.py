@@ -1856,7 +1856,8 @@ class NumberOutput(Output):
 
 class IntegerOutput(Output):
     """An integer output, or result, of an invest model."""
-    pass
+    units: typing.Union[pint.Unit, None] = None
+    """The units of measurement for this numeric value"""
 
 
 class RatioOutput(Output):
@@ -1865,7 +1866,8 @@ class RatioOutput(Output):
     A ratio is a proportion expressed as a value from 0 to 1 (in contrast to a
     percent, which ranges from 0 to 100).
     """
-    pass
+    units: typing.Union[pint.Unit, None] = None
+    """The units of measurement for this numeric value"""
 
 
 class PercentOutput(Output):
@@ -1874,7 +1876,8 @@ class PercentOutput(Output):
     A percent is a proportion expressed as a value from 0 to 100 (in contrast to
     a ratio, which ranges from 0 to 1).
     """
-    pass
+    units: typing.Union[pint.Unit, None] = u.percent
+    """The units of measurement for this numeric value"""
 
 
 class StringOutput(Output):
@@ -2483,6 +2486,7 @@ def format_unit(unit):
     Returns:
         String describing the unit.
     """
+    LOGGER.info(f'unit: {unit}')
     if unit is None:
         return ''
 
