@@ -1,6 +1,8 @@
 import altair
 
 
+MAP_WIDTH = 450 #pixels
+
 LEGEND_CONFIG = {
     'labelFontSize': 14,
     'titleFontSize': 14,
@@ -44,3 +46,31 @@ def get_geojson_bbox(geodataframe):
         "properties": {}
     }
     return extent_feature, xy_ratio
+
+
+def create_aggregate_map(geodataframe, xy_ratio, attribute,
+                         colorscheme, title, divergent=False):
+    if divergent:
+        scale_config = altair.Scale(domainMid=0, scheme=colorscheme)
+    else:
+        scale_config = altair.Scale(scheme=colorscheme)
+
+    attr_map = altair.Chart(geodataframe).mark_geoshape(
+        stroke="white",
+        strokeWidth=0.5
+    ).project(
+        type='identity',
+        reflectY=True
+    ).encode(
+        color=altair.Color(
+            attribute,
+            scale=scale_config
+        ),
+        tooltip=[altair.Tooltip(attribute, title=attribute)]
+    ).properties(
+        width=MAP_WIDTH,
+        height=MAP_WIDTH / xy_ratio,
+        title=title
+    ).configure_legend(**LEGEND_CONFIG)
+
+    return attr_map.to_json()
