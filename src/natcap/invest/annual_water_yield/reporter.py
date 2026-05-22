@@ -87,15 +87,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     w_aggregate_df = pandas.read_csv(file_registry['watershed_results_wyield_csv'])
     w_aggregate_table_caption = _caption_fields_in_table(
         model_spec, 'watershed_results_wyield_csv', w_aggregate_df)
-    w_aggregate_table_source_list = [
-        model_spec.get_output('watershed_results_wyield_csv').path]
 
-    watershed_table_params = {
-        "table": w_aggregate_df.to_html(index=False,
-                                        classes=['datatable', 'paginate']),
-        "caption": w_aggregate_table_caption,
-        "sources": w_aggregate_table_source_list
-    }
+    watershed_results_table = w_aggregate_df.to_html(index=False,
+        classes=['datatable', 'paginate'])
 
     watershed_map_params = None
     (num_rows, _) = w_aggregate_df.shape
@@ -176,7 +170,6 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             "table": sw_aggregate_df.to_html(index=False,
                                              classes=['datatable', 'paginate']),
             "table_caption": sw_aggregate_table_caption,
-            "table_sources": sw_aggregate_table_source_list
         }
 
     input_raster_config_list = [
@@ -228,7 +221,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             wyield_img_src=wyield_img_src,
             precip_aet_img_src=precip_aet_img_src,
             wyield_raster_caption=wyield_raster_caption,
-            watershed_table_params=watershed_table_params,
+            watershed_table=watershed_results_table,
+            watershed_table_caption=w_aggregate_table_caption,
             watershed_map_params=watershed_map_params,
             valuation_results=valuation_results,
             subwatershed_results=subwatershed_results,

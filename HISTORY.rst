@@ -88,6 +88,12 @@ Workbench
   otherwise malformed model ID) now presents an error message instead of
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 
+Annual Water Yield
+==================
+* The model now generates a report, a visual summary of results, available in
+  the output workspace and also viewable from the Workbench after the model run
+  completes. (`#2533 <https://github.com/natcap/invest/issues/2533>`_)
+
 3.19.0 (2026-04-16)
 -------------------
 

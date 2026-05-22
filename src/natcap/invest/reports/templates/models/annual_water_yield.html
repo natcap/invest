@@ -30,8 +30,8 @@
 
   {% set watershed_results_inner = [ 
     (content_grid([
-      (wide_table(watershed_table_params['table'] | safe, font_size_px=16), 100),
-      (caption(watershed_table_params['caption'], definition_list=True), 100)
+      (wide_table(watershed_table | safe, font_size_px=16), 100),
+      (caption(watershed_table_caption, definition_list=True), 100)
     ]), 100)
   ] %}
 
