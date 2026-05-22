@@ -195,15 +195,15 @@ jobs:
   #         name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
   #         path: conda-env.txt
 
-      - name: Authenticate GCP
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v3
-        with:
-          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      # - name: Authenticate GCP
+      #   if: github.event_name != 'pull_request'
+      #   uses: google-github-actions/auth@v3
+      #   with:
+      #     credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-      - name: Set up GCP
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v3
+      # - name: Set up GCP
+      #   if: github.event_name != 'pull_request'
+      #   uses: google-github-actions/setup-gcloud@v3
 
   #     # gsutil (part of make deploy) never seems to support the latest python version.
   #     - name: Set up python for gsutil
@@ -427,6 +427,16 @@ jobs:
         with:
           python-version: ${{ env.GSUTIL_PYTHON_VERSION }}
         id: python-gsutil-task
+
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v3
 
       # - name: Deploy binaries and user guide to GCS
       #   if: github.event_name != 'pull_request'
