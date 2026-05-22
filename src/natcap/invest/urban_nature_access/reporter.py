@@ -58,56 +58,75 @@ def infer_continuous_or_divergent(raster_path: str) -> str:
         return RasterDatatype.continuous
 
 
-def _generate_agg_results_table(preventable_cases_cost_sum_table_path: str,
-                                cost: float | None) -> str:
-    full_table_df = pandas.read_csv(preventable_cases_cost_sum_table_path)
-    total_cases = list(full_table_df['total_cases'])[-1]
-    table_df = pandas.DataFrame({'Total Preventable Cases': [total_cases]})
-    if cost:
-        total_cost = list(full_table_df['total_cost'])[-1]
-        table_df['Total Preventable Cost'] = [total_cost]
-
-    return table_df.to_html(index=False)
-
-
-def _create_vector_map(
+def _create_vector_maps(
         geodataframe,
-        xy_ratio,
-        attribute,
-        title):
-    """Create a choropleth map for a given attribute and return Vega JSON."""
-    display_names = {'SUP_DEMadm_cap': gettext('Balance'),
-                     'Pund_adm': gettext('Population'),
-                     'Povr_adm': gettext('Population')}
+        xy_ratio):
+    """Create choropleth maps and return one Vega JSON spec."""
 
-    # if the attribute has any negative values, use a divergent color
-    # scale; otherwise, use a continuous color scale
-    if (geodataframe[attribute] < 0).any():
-        scale = altair.Scale(scheme='purpleorange', reverse=True, domainMid=0)
-    else:
-        scale = altair.Scale(scheme='purples')
+    display_names = {
+        'SUP_DEMadm_cap': (
+            gettext('Balance'),
+            gettext('Per Person Average Urban Nature Supply/Demand Balance by Admin Unit')),
+        'Pund_adm': (
+            gettext('Population'),
+            gettext('Population Undersupplied with Urban Nature by Admin Unit')),
+        'Povr_adm': (
+            gettext('Population'),
+            gettext('Population Oversupplied with Urban Nature by Admin Unit'))
+    }
 
-    chart = altair.Chart(geodataframe).mark_geoshape(
-        stroke="white",
-        strokeWidth=0.5
-    ).project(
-        type='identity',
-        reflectY=True
-    ).encode(
-        color=altair.Color(
-            f'{attribute}:Q',
-            scale=scale,
-            legend=altair.Legend(title=display_names[attribute])
-        ),
-        tooltip=[
-            altair.Tooltip(f'{attribute}:Q', title=display_names[attribute], format=',.2f')
-        ]
-    ).properties(
-        width=MAP_WIDTH,
-        height=MAP_WIDTH / xy_ratio,
-        title=title
-    ).configure_legend(**vector_utils.LEGEND_CONFIG)
-    return chart.to_json()
+    charts = []
+    for attribute, (legend_title, chart_title) in display_names.items():
+        if (geodataframe[attribute] < 0).any():
+            # dataMin = min(geodataframe[attribute])
+            # dataMax = max(geodataframe[attribute])
+            scale = altair.Scale(
+                scheme='purpleorange',
+                reverse=True,
+                domainMid=0)
+                # Want to make the values more similar in intensity even if 
+                # domainMin=min(dataMin, numpy.mean(-1*dataMax, dataMin)),
+                # domainMax=max(dataMax, numpy.mean(abs(dataMin), dataMax)))
+        else:
+            scale = altair.Scale(scheme='purples')
+
+        chart = altair.Chart(geodataframe).mark_geoshape(
+            stroke='white',
+            strokeWidth=0.5
+        ).project(
+            type='identity',
+            reflectY=True
+        ).encode(
+            color=altair.Color(
+                f'{attribute}:Q',
+                scale=scale,
+                legend=altair.Legend(title=legend_title, orient='right')),
+            tooltip=[
+                altair.Tooltip(
+                    f'{attribute}:Q',
+                    title=legend_title,
+                    format=',.2f')
+            ]
+        ).properties(
+            width=MAP_WIDTH,
+            height=MAP_WIDTH / xy_ratio,
+            title=altair.TitleParams(
+                text=chart_title,
+                subtitle=gettext('Attribute: ') + attribute
+            ))
+
+        charts.append(chart)
+
+    combined_chart = altair.concat(
+        *charts,
+        columns=2
+    ).resolve_scale(
+        color='independent'
+    ).configure_legend(
+        **vector_utils.LEGEND_CONFIG
+    )
+
+    return combined_chart.to_json()
 
 
 def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
@@ -140,18 +159,25 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         ),
     ]
 
-    intermediate_raster_config_list = [
-        RasterPlotConfig(
-            raster_path=file_registry['urban_nature_area'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('urban_nature_area')
-        ),
-        RasterPlotConfig(
-            raster_path=file_registry['urban_nature_population_ratio'],
-            datatype=RasterDatatype.continuous,
-            spec=model_spec.get_output('urban_nature_population_ratio')
-        ),
-    ]
+    if args_dict['search_radius_mode'] != "radius per urban nature class":
+        intermediate_raster_config_list = [
+            RasterPlotConfig(
+                raster_path=file_registry['urban_nature_area'],#TODO check if these should be divergent
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('urban_nature_area')
+            ),
+            RasterPlotConfig(
+                raster_path=file_registry['urban_nature_population_ratio'],
+                datatype=RasterDatatype.continuous,
+                spec=model_spec.get_output('urban_nature_population_ratio')
+            ),
+        ]
+        intermediates_img_src = raster_utils.plot_and_base64_encode_rasters(
+            intermediate_raster_config_list)
+        intermediates_caption = raster_utils.caption_raster_list(
+            intermediate_raster_config_list)
+    else:
+        intermediates_img_src = intermediates_caption = None
 
     output_accessible_list = []
     output_balance_list = []
@@ -173,15 +199,17 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             output_balance_list.append(
                 RasterPlotConfig(
                     raster_path=file_registry['urban_nature_balance_[POP_GROUP]'][group],
-                    datatype=RasterDatatype.continuous,
+                    datatype=RasterDatatype.divergent,
                     spec=model_spec.get_output('urban_nature_balance_[POP_GROUP]'),
+                    transform=RasterTransform.log
                 )
             )
             output_balance_percapita_list.append(
                 RasterPlotConfig(
                     raster_path=file_registry['urban_nature_balance_percapita_[POP_GROUP]'][group],
-                    datatype=RasterDatatype.continuous,
+                    datatype=RasterDatatype.divergent,
                     spec=model_spec.get_output('urban_nature_balance_percapita_[POP_GROUP]'),
+                    transform=RasterTransform.log
                 )
             )
 
@@ -214,35 +242,12 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                         spec=model_spec.get_output('accessible_urban_nature_lucode_[LUCODE]'),
                     )
                 )
-                output_balance_list.append(
-                    RasterPlotConfig(
-                        raster_path=file_registry['urban_nature_balance_[LUCODE]'][str(lucode)],
-                        datatype=RasterDatatype.continuous,
-                        spec=model_spec.get_output('urban_nature_balance_[LUCODE]'),
-                    )
-                )
-                output_balance_percapita_list.append(
-                    RasterPlotConfig(
-                        raster_path=file_registry['urban_nature_balance_percapita_[LUCODE]'][str(lucode)],
-                        datatype=RasterDatatype.continuous,
-                        spec=model_spec.get_output('urban_nature_balance_percapita_[LUCODE]'),
-                    )
-                )
-
                 output_accessible_raster_caption = raster_utils.caption_raster_list(
                     output_accessible_list)[0].replace("lucode_1", "lucode_LUCODE")
-
-                output_balance_img_src = raster_utils.plot_and_base64_encode_rasters(
-                    output_balance_list)
-                output_balance_raster_caption = re.sub(
-                    r'(lucode_).*?(\.tif)', r'\1LUCODE\2',
-                    output_balance_list[0].caption)
-
-                output_balance_percapita_img_src = raster_utils.plot_and_base64_encode_rasters(
-                    output_balance_percapita_list)
-                output_balance_percapita_raster_caption = re.sub(
-                    r'(lucode_).*?(\.tif)', r'\1LUCODE\2',
-                    output_balance_percapita_list[0].caption)
+            output_balance_img_src = None
+            output_balance_raster_caption = None
+            output_balance_percapita_img_src = None
+            output_balance_percapita_raster_caption = None
 
     else:
         output_accessible_list = [
@@ -274,29 +279,33 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         RasterPlotConfig(
             raster_path=file_registry['urban_nature_balance_percapita'],
             spec=model_spec.get_output('urban_nature_balance_percapita'),
-            datatype=RasterDatatype.continuous,
-            transform=RasterTransform.linear
+            datatype=RasterDatatype.divergent,
+            transform=RasterTransform.linear,
+            special_values=SpecialValueConfig(
+                extend="both",
+                threshold=(-1000, 1000),
+                label=('<-1000', '>1000'),
+                color=('#8C4300', '#1F0737')
+            )
         ),
         RasterPlotConfig(
             raster_path=file_registry['urban_nature_balance_totalpop'],
             spec=model_spec.get_output('urban_nature_balance_totalpop'),
-            datatype=RasterDatatype.continuous,
-            transform=RasterTransform.linear
+            datatype=RasterDatatype.divergent,
+            transform=RasterTransform.linear,
+            special_values=SpecialValueConfig(
+                extend="both",
+                threshold=(-1000, 1000),
+                label=('<-1000', '>1000'),
+                color=('#8C4300', '#1F0737')
+            )
         )
     ]
-
-    # TODO - if aggregate by population group is true, should report include
-    # all these rasters or vector maps?
 
     inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         input_raster_config_list)
     inputs_raster_caption = raster_utils.caption_raster_list(
         input_raster_config_list)
-
-    intermediates_img_src = raster_utils.plot_and_base64_encode_rasters(
-        intermediate_raster_config_list)
-    intermediates_caption = raster_utils.caption_raster_list(
-        intermediate_raster_config_list)
 
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_config_list)
@@ -312,37 +321,20 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     output_raster_stats_table = raster_utils.raster_workspace_summary(
         file_registry).to_html(na_rep='')
 
-    # agg_results_table = _generate_agg_results_table(
-    #     file_registry['preventable_cases_cost_sum_table'],
-    #     args_dict.get('health_cost_rate'))
-
-    # Vector maps ########################################
-    admin_boundaries_vector_path = file_registry['admin_boundaries']
-    admin_boundaries_gdf = geopandas.read_file(admin_boundaries_vector_path)
+    admin_boundaries_gdf = geopandas.read_file(file_registry['admin_boundaries'])
     _, xy_ratio = vector_utils.get_geojson_bbox(admin_boundaries_gdf)
 
-    # would people prefer to see the various attrs in vector ie by admin unit, or rasters
+    admin_map_json = _create_vector_maps(
+        admin_boundaries_gdf,
+        xy_ratio
+    )
+
+    # TODO would people prefer to see the various attrs in vector ie by admin unit, or rasters
     vector_field_list = ['SUP_DEMadm_cap', 'Pund_adm', 'Povr_adm']
-    vector_title_list = [
-        gettext('Per Person Average Urban Nature Supply/Demand Balance by Admin Unit'),
-        gettext('Population Undersupplied with Urban Nature by Admin Unit'),
-        gettext('Population Oversupplied with Urban Nature by Admin Unit')
+    vector_plot_captions = [
+        field + ':' + model_spec.get_output('admin_boundaries').get_field(field).about
+        for field in vector_field_list
     ]
-
-    vector_plot_list = []
-    for field, title in zip(vector_field_list, vector_title_list):
-        admin_map_json = _create_vector_map(
-            admin_boundaries_gdf,
-            xy_ratio,
-            field,
-            title
-        )
-        admin_map_caption = [
-            model_spec.get_output('admin_boundaries')
-            .get_field(field).about
-        ]
-
-        vector_plot_list.append((field, admin_map_json, admin_map_caption))
 
     admin_boundaries_map_source_list = [
         model_spec.get_output('admin_boundaries').path
@@ -377,7 +369,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
             stats_table_note=report_constants.STATS_TABLE_NOTE,
-            vector_plot_list=vector_plot_list,
+            admin_map_json=admin_map_json,
+            vector_plot_captions=vector_plot_captions,
             admin_boundaries_map_source_list=admin_boundaries_map_source_list,
             model_spec_outputs=model_spec.outputs,
         ))
