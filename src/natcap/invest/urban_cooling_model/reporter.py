@@ -178,15 +178,14 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         bldg_air_temp_map_caption = None
         bldg_map_source_list = None
 
-    # Secondary raster outputs: cooling capacity, ETI, green area (always);
-    # building intensity ('intensity' method); shade, albedo ('factors' method)
+    # Secondary raster outputs: cooling capacity (always);
+    # building intensity ('intensity' method);
+    # ETI, shade, albedo ('factors' method)
     green_area_colormap = ListedColormap(["#ccccd5", "#006500"])
     biophysical_heading = gettext('Biophysical Maps')
     biophysical_raster_plot_configs = [
         RasterPlotConfig(file_registry['cc'], RasterDatatype.continuous,
                          model_spec.get_output('cc'), colormap='Blues'),
-        RasterPlotConfig(file_registry['eti'], RasterDatatype.continuous,
-                         model_spec.get_output('eti'), colormap='Greens'),
         RasterPlotConfig(file_registry['green_area'], RasterDatatype.binary,
                          model_spec.get_output('green_area'),
                          colormap=green_area_colormap),
@@ -200,6 +199,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         ])
     else:
         biophysical_raster_plot_configs.extend([
+            RasterPlotConfig(file_registry['eti'], RasterDatatype.continuous,
+                            model_spec.get_output('eti'), colormap='Greens'),
             RasterPlotConfig(file_registry['shade'],
                              RasterDatatype.continuous,
                              model_spec.get_output('shade'),
