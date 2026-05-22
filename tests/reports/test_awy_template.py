@@ -4,7 +4,7 @@ import unittest
 import pandas
 from bs4 import BeautifulSoup
 
-from natcap.invest.seasonal_water_yield import MODEL_SPEC
+from natcap.invest.annual_water_yield import MODEL_SPEC
 from natcap.invest.reports import jinja_env
 
 TEMPLATE = jinja_env.get_template('models/annual_water_yield.html')
