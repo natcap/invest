@@ -161,7 +161,7 @@ def build_datastack_archive(args, model_id, datastack_path):
     spatial_types = {spec.SingleBandRasterInput, spec.VectorInput,
                      spec.RasterOrVectorInput}
     file_based_types = spatial_types.union({
-        spec.CSVInput, spec.FileInput, spec.DirectoryInput})
+        spec.CSVInput, spec.FileInput, spec.WorkspaceInput})
     rewritten_args = {}
     for key in args:
         # Allow the model to override specific arguments in datastack archive
@@ -307,7 +307,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
-        elif type(input_spec) is spec.DirectoryInput:
+        elif type(input_spec) is spec.WorkspaceInput:
             # copy the whole folder
             target_directory = os.path.join(data_dir, f'{key}_directory')
             os.makedirs(target_directory)

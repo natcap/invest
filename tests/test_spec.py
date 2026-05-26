@@ -236,15 +236,10 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_directory_spec(self):
         self.maxDiff = None
-        dir_spec = spec.DirectoryInput(
-            id="bar",
-            about="Description",
-            name="Bar",
-            contents=[]
-        )
+        dir_spec = spec.WorkspaceInput()
         out = dir_spec.describe_rst()
         expected_rst = ([
-            '**Bar** (`directory <input_types.html#directory>`__, *required*): Description'
+            f'**workspace** (`workspace directory <input_types.html#workspace>`__, *required*): {dir_spec.about}'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
