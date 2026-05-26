@@ -299,9 +299,23 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
+            id="t_air",
+            path="T_air.tif",
+            about=gettext("Map of air temperature with air mixing."),
+            data_type=float,
+            units=u.degree_Celsius
+        ),
+        spec.SingleBandRasterOutput(
             id="hm",
             path="hm.tif",
             about=gettext("Map of heat mitigation index."),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="cc",
+            path="cc.tif",
+            about=gettext("Map of cooling capacity"),
             data_type=float,
             units=u.none
         ),
@@ -385,13 +399,6 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.SingleBandRasterOutput(
-            id="cc",
-            path="intermediate/cc.tif",
-            about=gettext("Map of cooling capacity"),
-            data_type=float,
-            units=u.none
-        ),
-        spec.SingleBandRasterOutput(
             id="cc_park",
             path="intermediate/cc_park.tif",
             about=gettext("Map of cooling capacity decayed by proximity to greenspace"),
@@ -404,13 +411,6 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Cooling capacity map masked by non-green areas"),
             data_type=float,
             units=u.none
-        ),
-        spec.SingleBandRasterOutput(
-            id="t_air",
-            path="intermediate/T_air.tif",
-            about=gettext("Map of air temperature with air mixing."),
-            data_type=float,
-            units=u.degree_Celsius
         ),
         spec.SingleBandRasterOutput(
             id="t_air_nomix",
