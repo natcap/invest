@@ -1,18 +1,13 @@
 import logging
-import os
 import time
 
-import numpy
 import pandas
-from pint import Unit
-import pygeoprocessing
 
 from natcap.invest import __version__
 from natcap.invest import gettext
 from natcap.invest.reports import jinja_env, raster_utils, report_constants
 from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 from natcap.invest.spec import ModelSpec
-from natcap.invest.unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,59 +46,6 @@ def _get_intermediate_output_headings(args_dict: dict) -> list[str]:
         return [gettext('Carbon Maps by Pool Type')]
 
 
-def _get_table_inputs(args_dict: dict) -> list[tuple[str, str, Unit]]:
-    table_inputs = [
-        ('c_storage_bas', gettext('Baseline Carbon Storage'), u.metric_ton),
-    ]
-    if args_dict['calc_sequestration']:
-        table_inputs.extend([
-            ('c_storage_alt', gettext('Alternate Carbon Storage'),
-             u.metric_ton),
-            ('c_change_bas_alt', gettext('Change in Carbon Storage'),
-             u.metric_ton),
-        ])
-    if args_dict['do_valuation']:
-        table_inputs.extend([
-            ('npv_alt', gettext('Net Present Value of Carbon Change'),
-             u.currency),
-        ])
-    return table_inputs
-
-
-def _generate_agg_results_table(args_dict: dict, file_registry: dict) -> str:
-    table_inputs = _get_table_inputs(args_dict)
-
-    table_df = pandas.DataFrame()
-
-    total_col_name = gettext('Total')
-    units_col_name = gettext('Units')
-    filename_col_name = gettext('Filename')
-
-    for (raster_id, description, units) in table_inputs:
-        raster_path = file_registry[raster_id]
-        raster_info = pygeoprocessing.get_raster_info(raster_path)
-        nodata = raster_info['nodata'][0]
-
-        # Calculate sum.
-        raster_sum = 0.0
-        for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
-            raster_sum += numpy.sum(
-                block[~pygeoprocessing.array_equals_nodata(
-                        block, nodata)], dtype=numpy.float64)
-
-        # Adjust for units.
-        pixel_area = abs(numpy.prod(raster_info['pixel_size']))
-        # Since each pixel value is in t/ha, ``total`` is in (t/ha * px) = t•px/ha.
-        # Adjusted sum = ([total] t•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = t.
-        summary_stat = raster_sum * pixel_area / 10000
-
-        # Populate table row.
-        table_df.loc[description, [total_col_name, units_col_name, filename_col_name]] = [
-            summary_stat, units, os.path.basename(raster_path)]
-
-    return table_df.to_html()
-
-
 def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
            target_html_filepath: str):
     """Generate an HTML summary of model results.
@@ -131,7 +73,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             raster_path=file_registry['c_storage_bas'],
             datatype=RasterDatatype.continuous,
             spec=model_spec.get_output('c_storage_bas'))]
-    
+
     intermediate_raster_config_lists = [[
         RasterPlotConfig(
             raster_path=file_registry[f'c_{pool_type}_bas'],
@@ -178,7 +120,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         input_raster_config_list)
     input_raster_caption = raster_utils.caption_raster_list(
         input_raster_config_list)
-    
+
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_config_list)
     output_raster_caption = raster_utils.caption_raster_list(
@@ -206,7 +148,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     output_raster_stats_table = raster_utils.raster_workspace_summary(
         file_registry).to_html(na_rep='')
 
-    agg_results_table = _generate_agg_results_table(args_dict, file_registry)
+    agg_results_df = pandas.read_csv(file_registry['summary_csv'], index_col=0)
+    agg_results_df.index.rename(None, inplace=True)
+    agg_results_table = agg_results_df.to_html()
 
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
