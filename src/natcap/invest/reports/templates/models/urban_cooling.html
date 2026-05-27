@@ -38,39 +38,15 @@
     ])
   )}}
 
-  {{ accordion_section(
-    'Results Aggregated by AOI Feature',
-    content_grid([
-      (content_grid([
-        ('<div id="cc_map"></div>', 100),
-        (caption(cc_map_caption, uhi_map_source_list), 100)
-      ]), 100/3),
-      (content_grid([
-        ('<div id="air_temp_map"></div>', 100),
-        (caption(air_temp_map_caption, uhi_map_source_list), 100)
-      ]), 100/3),
-      (content_grid([
-        ('<div id="air_temp_anomaly_map"></div>', 100),
-        (caption(air_temp_anomaly_map_caption, uhi_map_source_list), 100)
-      ]), 100/3),
-      (content_grid([
-        ('<div id="wbgt_map"></div>', 100),
-        (caption(wbgt_map_caption, uhi_map_source_list), 100)
-      ]), 100/3),
-      (content_grid([
-        ('<div id="light_work_map"></div>', 100),
-        (caption(light_work_map_caption, uhi_map_source_list), 100)
-      ]), 100/3),
-      (content_grid([
-        ('<div id="heavy_work_map"></div>', 100),
-        (caption(heavy_work_map_caption, uhi_map_source_list), 100)
-      ]), 100/3),
-      (content_grid([
-        ('<div id="energy_map"></div>', 100),
-        (caption(energy_map_caption, uhi_map_source_list), 100)
-      ]), 100/3),
-    ])
-  ) }}
+  {% if aoi_map_json != None %}
+    {{ accordion_section(
+      'Results Aggregated by AOI Feature',
+      content_grid([
+          ('<div id="aoi_map"></div>', 100),
+          (caption(aoi_map_caption, aoi_map_source_list, definition_list=True), 100)
+      ])
+    ) }}
+  {% endif %}
 
   {% if bldg_table != None %}
     {% if bldg_totals_table != None %}
@@ -178,13 +154,7 @@
   {% include 'vega-dependencies.html' %}
   {% include 'vega-embed-js.html' %}
   {% set chart_spec_id_list = [
-    (cc_map_json, 'cc_map'),
-    (air_temp_map_json, 'air_temp_map'),
-    (air_temp_anomaly_map_json, 'air_temp_anomaly_map'),
-    (wbgt_map_json, 'wbgt_map'),
-    (light_work_map_json, 'light_work_map'),
-    (heavy_work_map_json, 'heavy_work_map'),
-    (energy_map_json, 'energy_map'),
+    (aoi_map_json, 'aoi_map'),
     (bldg_map_json, 'bldg_map'),
   ] %}
   {{ embed_vega(chart_spec_id_list) }}

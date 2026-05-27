@@ -43,9 +43,12 @@ def _create_map(geodataframe, xy_ratio, attribute,
 def _create_aoi_maps(model_spec, file_registry, args_dict):
     agg_uhi_results = geopandas.read_file(
         file_registry['uhi_results'], engine='fiona')
-    _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
 
-    uhi_output_spec = model_spec.get_output('uhi_results')
+    # Do not plot AOI maps when there is only one feature.
+    num_features = len(agg_uhi_results)
+    if num_features <= 1:
+        return (None, None, None)
+
     uhi_effect = args_dict['uhi_max']
     TITLES_AND_SCALES = {
         'avg_cc': (
@@ -85,9 +88,12 @@ def _create_aoi_maps(model_spec, file_registry, args_dict):
     if args_dict['do_energy_valuation']:
         attr_list.extend(['avd_eng_cn'])
 
+    uhi_output_spec = model_spec.get_output('uhi_results')
     caption = vector_utils.get_vector_attr_table_caption(
         uhi_output_spec, attr_list)
     source_list = [uhi_output_spec.path]
+
+    _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
 
     def _create_aoi_map(attribute, title, scale: altair.Scale):
         return _create_map(agg_uhi_results, xy_ratio, attribute, title, scale)
@@ -148,7 +154,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         'Air Temperature and Heat Mitigation Index')
     output_raster_plot_configs = [
         RasterPlotConfig(file_registry['t_air'], RasterDatatype.continuous,
-                         model_spec.get_output('t_air'), colormap='Reds'),
+                         model_spec.get_output('t_air'), colormap='YlOrRd'),
         RasterPlotConfig(file_registry['hm'], RasterDatatype.continuous,
                          model_spec.get_output('hm'), colormap='Greens'),
     ]
