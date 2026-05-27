@@ -17,27 +17,6 @@ LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/urban_cooling.html')
 
-def _create_aggregate_map(geodataframe, xy_ratio, attribute,
-                          title, scale: altair.Scale, map_width=250):
-    attr_map = altair.Chart(geodataframe).mark_geoshape(
-        stroke="white",
-        strokeWidth=0.5
-    ).project(
-        type='identity',
-        reflectY=True
-    ).encode(
-        color=altair.Color(attribute, scale=scale),
-        tooltip=[altair.Tooltip(attribute, title=attribute)]
-    ).properties(
-        width=map_width,
-        height=map_width / xy_ratio,
-        title=title
-    ).configure_title(
-        fontSize=16,
-    ).configure_legend(title=None, **vector_utils.LEGEND_CONFIG)
-
-    return attr_map.to_json()
-
 def _create_map(geodataframe, xy_ratio, attribute,
                 title, scale: altair.Scale, map_width=250):
     return altair.Chart(geodataframe).mark_geoshape(
@@ -52,8 +31,83 @@ def _create_map(geodataframe, xy_ratio, attribute,
     ).properties(
         width=map_width,
         height=map_width / xy_ratio,
-        title=title
+        title=altair.TitleParams(
+                text=title,
+                fontSize=18,
+                subtitle=gettext('Attribute: ') + attribute,
+                subtitleFontSize=16,
+                offset=16
+            )
     )
+
+def _create_aoi_maps(model_spec, file_registry, args_dict):
+    agg_uhi_results = geopandas.read_file(
+        file_registry['uhi_results'], engine='fiona')
+    _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
+
+    uhi_output_spec = model_spec.get_output('uhi_results')
+    uhi_effect = args_dict['uhi_max']
+    TITLES_AND_SCALES = {
+        'avg_cc': (
+            gettext('Average Cooling Capacity (unitless)'),
+            altair.Scale(scheme='blues')
+        ),
+        'avg_tmp_v': (
+            gettext('Average Air Temperature (°C)'),
+            altair.Scale(scheme='yelloworangered')
+        ),
+        'avg_tmp_an': (
+            gettext('Average Air Temperature Anomaly (°C)'),
+            altair.Scale(domain={'unionWith': [-1 * uhi_effect, uhi_effect]},
+                         domainMid=0, scheme='redyellowblue', reverse=True)
+        ),
+        'avg_wbgt_v': (
+            gettext('Average Wet Bulb Globe Temperature (WBGT, °C)'),
+            altair.Scale(scheme='yelloworangered')
+        ),
+        'avg_ltls_v': (
+            gettext('Light Work Productivity Loss (%)'),
+            altair.Scale(domain=[0, 100], scheme='purples')
+        ),
+        'avg_hvls_v': (
+            gettext('Heavy Work Productivity Loss (%)'),
+            altair.Scale(domain=[0, 100], scheme='purples')
+        ),
+        'avd_eng_cn': (
+            gettext('Avoided Energy Consumption (kWh or currency)'),
+            altair.Scale(scheme='greens')
+        )
+    }
+
+    attr_list = ['avg_cc', 'avg_tmp_v', 'avg_tmp_an']
+    if args_dict['do_productivity_valuation']:
+        attr_list.extend(['avg_wbgt_v', 'avg_ltls_v', 'avg_hvls_v'])
+    if args_dict['do_energy_valuation']:
+        attr_list.extend(['avd_eng_cn'])
+
+    caption = vector_utils.get_vector_attr_table_caption(
+        uhi_output_spec, attr_list)
+    source_list = [uhi_output_spec.path]
+
+    def _create_aoi_map(attribute, title, scale: altair.Scale):
+        return _create_map(agg_uhi_results, xy_ratio, attribute, title, scale)
+
+    aoi_maps = [_create_aoi_map(attr, *TITLES_AND_SCALES[attr])
+                for attr in attr_list]
+
+    compound_map = altair.concat(
+        *aoi_maps,
+        columns=3
+    ).configure_concat(
+        spacing=64
+    ).configure_legend(
+        title=None,
+        **vector_utils.LEGEND_CONFIG
+    ).resolve_scale(
+        color='independent'
+    )
+
+    return (compound_map.to_json(), caption, source_list)
 
 def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
            target_html_filepath: str):
@@ -90,7 +144,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         input_raster_plot_configs)
 
     # Primary raster outputs: air temperature, heat mitigation index
-    output_raster_heading = gettext('Air Temperature and Heat Mitigation Index')
+    output_raster_heading = gettext(
+        'Air Temperature and Heat Mitigation Index')
     output_raster_plot_configs = [
         RasterPlotConfig(file_registry['t_air'], RasterDatatype.continuous,
                          model_spec.get_output('t_air'), colormap='Reds'),
@@ -105,55 +160,13 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     # Key vector output: uhi_results
     uhi_table = generate_results_table_from_vector(
         file_registry['uhi_results'])
-    uhi_output = model_spec.get_output('uhi_results')
-    uhi_table_caption = get_vector_attr_table_caption(uhi_output)
-
-    agg_uhi_results = geopandas.read_file(
-        file_registry['uhi_results'], engine='fiona')
-    _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
-    uhi_map_source_list = [uhi_output.path]
-
-    cc_map_json = _create_aggregate_map(
-        agg_uhi_results, xy_ratio, 'avg_cc',
-        gettext('Average Cooling Capacity (unitless)'),
-        altair.Scale(scheme='blues'))
-    cc_map_caption = (uhi_output.get_field('avg_cc').about)
-    uhi_effect = args_dict['uhi_max']
-    air_temp_map_json = _create_aggregate_map(
-        agg_uhi_results, xy_ratio, 'avg_tmp_v',
-        gettext('Average Air Temperature (°C)'),
-        altair.Scale(scheme='reds'))
-    air_temp_map_caption = (uhi_output.get_field('avg_tmp_v').about)
-    air_temp_anomaly_map_json = _create_aggregate_map(
-        agg_uhi_results, xy_ratio, 'avg_tmp_an',
-        gettext('Average Air Temperature Anomaly (°C)'),
-        altair.Scale(domain={'unionWith': [-1 * uhi_effect, uhi_effect]},
-                     domainMid=0, scheme='redyellowblue', reverse=True))
-    air_temp_anomaly_map_caption = (uhi_output.get_field('avg_tmp_an').about)
-
-    if args_dict['do_productivity_valuation']:
-        wbgt_map_json = _create_aggregate_map(
-            agg_uhi_results, xy_ratio, 'avg_wbgt_v',
-            gettext('Average Wet Bulb Globe Temperature (WBGT, °C)'),
-            altair.Scale(scheme='reds'))
-        wbgt_map_caption = (uhi_output.get_field('avg_wbgt_v').about)
-        light_work_map_json = _create_aggregate_map(
-            agg_uhi_results, xy_ratio, 'avg_ltls_v',
-            gettext('Light Work Productivity Loss (%)'),
-            altair.Scale(domain=[0, 100], scheme='purples'))
-        light_work_map_caption = (uhi_output.get_field('avg_ltls_v').about)
-        heavy_work_map_json = _create_aggregate_map(
-            agg_uhi_results, xy_ratio, 'avg_hvls_v',
-            gettext('Heavy Work Productivity Loss (%)'),
-            altair.Scale(domain=[0, 100], scheme='purples'))
-        heavy_work_map_caption = (uhi_output.get_field('avg_hvls_v').about)
-
-    if args_dict['do_energy_valuation']:
-        energy_map_json = _create_aggregate_map(
-            agg_uhi_results, xy_ratio, 'avd_eng_cn',
-            gettext('Avoided Energy Consumption (kWh or currency)'),
-            altair.Scale(scheme='greens'))
-        energy_map_caption = (uhi_output.get_field('avd_eng_cn').about)
+    uhi_table_caption = get_vector_attr_table_caption(
+        model_spec.get_output('uhi_results'))
+    (
+        aoi_map_json,
+        aoi_map_caption,
+        aoi_map_source_list
+    ) = _create_aoi_maps(model_spec, file_registry, args_dict)
 
     # Optional vector output: buildings_with_stats
     if 'buildings_with_stats' in file_registry:
@@ -205,6 +218,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     else:
         bldg_table = None
         bldg_totals_table = None
+        bldg_table_caption = None
         bldg_map_json = None
         bldg_map_caption = None
         bldg_map_source_list = None
@@ -265,21 +279,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             args_dict=args_dict,
             uhi_table=uhi_table,
             uhi_table_caption=uhi_table_caption,
-            cc_map_json=cc_map_json,
-            cc_map_caption=cc_map_caption,
-            air_temp_map_json=air_temp_map_json,
-            air_temp_map_caption=air_temp_map_caption,
-            air_temp_anomaly_map_json=air_temp_anomaly_map_json,
-            air_temp_anomaly_map_caption=air_temp_anomaly_map_caption,
-            energy_map_json=energy_map_json,
-            energy_map_caption=energy_map_caption,
-            wbgt_map_json=wbgt_map_json,
-            wbgt_map_caption=wbgt_map_caption,
-            light_work_map_json=light_work_map_json,
-            light_work_map_caption=light_work_map_caption,
-            heavy_work_map_json=heavy_work_map_json,
-            heavy_work_map_caption=heavy_work_map_caption,
-            uhi_map_source_list=uhi_map_source_list,
+            aoi_map_json=aoi_map_json,
+            aoi_map_caption=aoi_map_caption,
+            aoi_map_source_list=aoi_map_source_list,
             bldg_table=bldg_table,
             bldg_totals_table=bldg_totals_table,
             bldg_table_caption=bldg_table_caption,
