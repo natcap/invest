@@ -74,16 +74,15 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
         """Test report rendering with LULC option without health_cost_rate"""
 
         render_args = _get_render_args(MODEL_SPEC)
-        render_args['args_dict']['model_option'] = 'radius per urban nature class'
+        render_args['args_dict']['search_radius_mode'] = 'radius per urban nature class'
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 11)
+        self.assertEqual(len(sections), 8)
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
 
-        # should only have plot for preventable cases, not preventable cost
-        vega_plots = soup.find_all(class_='.vega-embed')  # TODO - in UMH test remove vega fit horizontal
+        vega_plots = soup.find_all(class_='.vega-embed')
         self.assertEqual(len(vega_plots), 1)
 
     def test_render_search_radius_by_pop_option(self):
@@ -95,16 +94,11 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
         sections = soup.find_all(class_='accordion-section')
         self.assertEqual(len(sections), 11)
 
-    # def test_render_ndvi_option_with_cost(self):
-    #     """Test report rendering with NDVI model option with cost"""
-    #     render_args = _get_render_args(MODEL_SPEC)
-    #     render_args['args_dict']['model_option'] = 'ndvi'
-    #     html = TEMPLATE.render(render_args)
-    #     soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
-    #     sections = soup.find_all(class_='accordion-section')
-    #     # Does not have reclassified LULC to NDVI section
-    #     self.assertEqual(len(sections), 10)
-
-    #     # should have plots for both preventable cases and cost
-    #     vega_plots = soup.find_all(class_='vega-fit-horizontal')
-    #     self.assertEqual(len(vega_plots), 2)
+    def test_render_uniform_search_radius(self):
+        """Test report rendering with LULC option with baseline NDVI input"""
+        render_args = _get_render_args(MODEL_SPEC)
+        render_args['args_dict']['search_radius_mode'] = 'uniform radius'
+        html = TEMPLATE.render(render_args)
+        soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
+        sections = soup.find_all(class_='accordion-section')
+        self.assertEqual(len(sections), 8)
