@@ -11,7 +11,7 @@ from natcap.invest.reports import jinja_env, raster_utils, report_constants, vec
 from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 from natcap.invest.reports.sdr_ndr_utils import generate_results_table_from_vector
 from natcap.invest.reports.vector_utils import get_vector_attr_table_caption
-from natcap.invest.spec import ModelSpec
+from natcap.invest.spec import format_unit, ModelSpec
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,6 +38,22 @@ def _create_aggregate_map(geodataframe, xy_ratio, attribute,
 
     return attr_map.to_json()
 
+def _create_map(geodataframe, xy_ratio, attribute,
+                title, scale: altair.Scale, map_width=250):
+    return altair.Chart(geodataframe).mark_geoshape(
+        stroke="white",
+        strokeWidth=0.5,
+        tooltip=True
+    ).project(
+        type='identity',
+        reflectY=True
+    ).encode(
+        color=altair.Color(attribute, scale=scale)
+    ).properties(
+        width=map_width,
+        height=map_width / xy_ratio,
+        title=title
+    )
 
 def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
            target_html_filepath: str):
@@ -155,27 +171,42 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         agg_bldg_results = geopandas.read_file(
             file_registry['buildings_with_stats'], engine='fiona')
         _, xy_ratio = vector_utils.get_geojson_bbox(agg_bldg_results)
-        bldg_energy_map_json = _create_aggregate_map(
-            agg_bldg_results, xy_ratio, 'energy_sav',
-            gettext('Energy Savings by Building (kWh or currency)'),
-            altair.Scale(scheme='greens'),
-            map_width=450)
-        bldg_energy_map_caption = (bldg_output.get_field('energy_sav').about)
-        uhi_effect = args_dict['uhi_max']
-        bldg_air_temp_map_json = _create_aggregate_map(
-            agg_bldg_results, xy_ratio, 'mean_t_air',
-            gettext('Average Air Temperature by Building (°C)'),
-            altair.Scale(scheme='yelloworangered'),
-            map_width=450)
-        bldg_air_temp_map_caption = (bldg_output.get_field('mean_t_air').about)
+        energy_sav_field = bldg_output.get_field('energy_sav')
+        energy_sav_title = gettext('Energy Savings by Building')
+        energy_sav_units = gettext('kWh or currency')
+        bldg_air_temp_field = bldg_output.get_field('mean_t_air')
+        bldg_air_temp_title = gettext('Average Air Temperature by Building')
+        bldg_air_temp_units = format_unit(bldg_air_temp_field.units)
+        bldg_map = altair.concat(
+            _create_map(agg_bldg_results, xy_ratio, 'energy_sav',
+                        f'{energy_sav_title} ({energy_sav_units})',
+                        altair.Scale(scheme='greens'), map_width=550),
+            _create_map(agg_bldg_results, xy_ratio, 'mean_t_air',
+                        f'{bldg_air_temp_title} ({bldg_air_temp_units})',
+                        altair.Scale(scheme='yelloworangered'),
+                        map_width=550),
+            columns=2
+        ).configure_concat(
+            spacing=64
+        ).configure_title(
+            fontSize=18,
+        ).configure_legend(
+            title=None,
+            **vector_utils.LEGEND_CONFIG
+        ).resolve_scale(
+            color='independent'
+        )
+        bldg_map_json = bldg_map.to_json()
+        bldg_map_caption = [
+            f'{energy_sav_title}:{energy_sav_field.about}',
+            f'{bldg_air_temp_title}:{bldg_air_temp_field.about} (Units: {bldg_air_temp_units}).',
+        ]
         bldg_map_source_list = [bldg_output.path]
     else:
         bldg_table = None
         bldg_totals_table = None
-        bldg_energy_map_json = None
-        bldg_energy_map_caption = None
-        bldg_air_temp_map_json = None
-        bldg_air_temp_map_caption = None
+        bldg_map_json = None
+        bldg_map_caption = None
         bldg_map_source_list = None
 
     # Secondary raster outputs: cooling capacity (always);
@@ -252,10 +283,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             bldg_table=bldg_table,
             bldg_totals_table=bldg_totals_table,
             bldg_table_caption=bldg_table_caption,
-            bldg_energy_map_json=bldg_energy_map_json,
-            bldg_energy_map_caption=bldg_energy_map_caption,
-            bldg_air_temp_map_json=bldg_air_temp_map_json,
-            bldg_air_temp_map_caption=bldg_air_temp_map_caption,
+            bldg_map_json=bldg_map_json,
+            bldg_map_caption=bldg_map_caption,
             bldg_map_source_list=bldg_map_source_list,
             input_raster_heading=input_raster_heading,
             inputs_img_src=inputs_img_src,

@@ -103,14 +103,8 @@
     {{ accordion_section(
       'Energy Savings and Air Temperature by Building',
       content_grid([
-        (content_grid([
-          ('<div id="bldg_energy_map"></div>', 100),
-          (caption(bldg_energy_map_caption, bldg_map_source_list), 100)
-        ]), 50),
-        (content_grid([
-          ('<div id="bldg_air_temp_map"></div>', 100),
-          (caption(bldg_air_temp_map_caption, bldg_map_source_list), 100)
-        ]), 50),
+          ('<div id="bldg_map"></div>', 100),
+          (caption(bldg_map_caption, bldg_map_source_list, definition_list=True), 100)
       ])
     ) }}
   {% endif %}
@@ -191,8 +185,7 @@
     (light_work_map_json, 'light_work_map'),
     (heavy_work_map_json, 'heavy_work_map'),
     (energy_map_json, 'energy_map'),
-    (bldg_energy_map_json, 'bldg_energy_map'),
-    (bldg_air_temp_map_json, 'bldg_air_temp_map'),
+    (bldg_map_json, 'bldg_map'),
   ] %}
   {{ embed_vega(chart_spec_id_list) }}
 {% endblock scripts %}
