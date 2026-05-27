@@ -58,6 +58,21 @@ def infer_continuous_or_divergent(raster_path: str) -> str:
         return RasterDatatype.continuous
 
 
+def get_min_max_for_vector_colorbar(datamin, datamax):
+    """Get a min and max for colorbar range that ensures legend displays nicely"""
+    if abs(datamin) < 0.2*datamax:
+        # set min to -20% of max if that value is smaller than actual min to
+        # avoid having an overly compressed colorbar
+        domain_min = round(min(datamin, -0.2*datamax), -1)
+        return (domain_min, round(datamax, -1))
+
+    elif datamax < -0.2*datamin:
+        domain_max = round(max(datamax, -0.2*datamin), -1)
+        return (round(datamin, -1), round(domain_max, -1))
+
+    return (round(datamin, -1), round(datamax, -1))
+
+
 def _create_vector_maps(
         geodataframe,
         xy_ratio):
@@ -78,17 +93,20 @@ def _create_vector_maps(
     charts = []
     for attribute, (legend_title, chart_title) in display_names.items():
         if (geodataframe[attribute] < 0).any():
-            # dataMin = min(geodataframe[attribute])
-            # dataMax = max(geodataframe[attribute])
+            domain_min, domain_max = get_min_max_for_vector_colorbar(
+                min(geodataframe[attribute]), max(geodataframe[attribute])
+            )
             scale = altair.Scale(
                 scheme='purpleorange',
                 reverse=True,
-                domainMid=0)
-                # Want to make the values more similar in intensity even if 
-                # domainMin=min(dataMin, numpy.mean(-1*dataMax, dataMin)),
-                # domainMax=max(dataMax, numpy.mean(abs(dataMin), dataMax)))
+                domain=[domain_min, 0, domain_max])
+            legend = altair.Legend(
+                title=legend_title,
+                orient='right',
+                values=[domain_min, numpy.mean([domain_max, domain_min]), domain_max])
         else:
             scale = altair.Scale(scheme='purples')
+            legend = altair.Legend(title=legend_title, orient='right')
 
         chart = altair.Chart(geodataframe).mark_geoshape(
             stroke='white',
@@ -100,7 +118,7 @@ def _create_vector_maps(
             color=altair.Color(
                 f'{attribute}:Q',
                 scale=scale,
-                legend=altair.Legend(title=legend_title, orient='right')),
+                legend=legend),
             tooltip=[
                 altair.Tooltip(
                     f'{attribute}:Q',
