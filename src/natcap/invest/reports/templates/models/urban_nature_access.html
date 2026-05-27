@@ -15,7 +15,10 @@
   {% from 'raster-plot-img.html' import raster_plot_img %}
   {% from 'wide-table.html' import wide_table %}
 
-  <h2 class="section-header">Results</h2>
+  <h2 class="section-header">
+    Results <span style="font-weight: normal;">(Search Radius Mode: {{ args_dict['search_radius_mode'] }})</span>
+  </h2>
+
 
   {{ accordion_section(
     'Primary Outputs',
@@ -136,8 +139,6 @@
   {{ super() }}
   {% include "vega-dependencies.html" %}
   {% include 'vega-embed-js.html' %}
-
-  
   {% set chart_spec_id_list = [(admin_map_json, "Admin_Units_Plots")] %}
   {{ embed_vega(chart_spec_id_list) }}
 {% endblock scripts %}
