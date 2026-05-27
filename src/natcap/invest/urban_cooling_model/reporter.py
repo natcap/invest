@@ -4,6 +4,7 @@ import time
 import altair
 import geopandas
 from matplotlib.colors import ListedColormap
+from pint import Unit
 
 from natcap.invest import __version__
 from natcap.invest import gettext
@@ -20,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
 TEMPLATE = jinja_env.get_template('models/urban_cooling.html')
 
 def _create_map(geodataframe: geopandas.GeoDataFrame, xy_ratio: float,
-                attribute: str, title: str, scale: altair.Scale,
+                attribute: str, title: str, units: Unit, scale: altair.Scale,
                 map_width: int) -> altair.Chart:
     """Create a choropleth map from the provided data and specifications."""
     return altair.Chart(geodataframe).mark_geoshape(
@@ -36,13 +37,21 @@ def _create_map(geodataframe: geopandas.GeoDataFrame, xy_ratio: float,
         width=map_width,
         height=map_width / xy_ratio,
         title=altair.TitleParams(
-                text=title,
+                text=f'{title} ({format_unit(units)})',
                 fontSize=18,
                 subtitle=gettext('Attribute: ') + attribute,
                 subtitleFontSize=16,
                 offset=16
             )
     )
+
+
+def _get_energy_sav_units(args_dict: dict) -> Unit:
+    energy_consumption_df = read_csv_to_dataframe(
+        args_dict['energy_consumption_table_path'])
+    energy_cols = [col.lower() for col in energy_consumption_df.columns]
+    return u.currency if 'cost' in energy_cols else u.kilowatt_hour
+
 
 def _create_aoi_maps(
             model_spec: ModelSpec,
@@ -89,35 +98,43 @@ def _create_aoi_maps(
     if num_features <= 1:
         return (None, None, None)
 
+    uhi_output_spec = model_spec.get_output('uhi_results')
     uhi_effect = args_dict['uhi_max']
-    TITLES_AND_SCALES = {
+    TITLES_UNITS_SCALES = {
         'avg_cc': (
-            gettext('Average Cooling Capacity (unitless)'),
+            gettext('Average Cooling Capacity'),
+            uhi_output_spec.get_field('avg_cc').units,
             altair.Scale(scheme='blues')
         ),
         'avg_tmp_v': (
-            gettext('Average Air Temperature (°C)'),
+            gettext('Average Air Temperature'),
+            uhi_output_spec.get_field('avg_tmp_v').units,
             altair.Scale(scheme='yelloworangered')
         ),
         'avg_tmp_an': (
-            gettext('Average Air Temperature Anomaly (°C)'),
+            gettext('Average Air Temperature Anomaly'),
+            uhi_output_spec.get_field('avg_tmp_an').units,
             altair.Scale(domain={'unionWith': [-1 * uhi_effect, uhi_effect]},
                          domainMid=0, scheme='redyellowblue', reverse=True)
         ),
         'avg_wbgt_v': (
-            gettext('Average Wet Bulb Globe Temperature (WBGT, °C)'),
+            gettext('Average Wet Bulb Globe Temperature (WBGT)'),
+            uhi_output_spec.get_field('avg_wbgt_v').units,
             altair.Scale(scheme='yelloworangered')
         ),
         'avg_ltls_v': (
-            gettext('Light Work Productivity Loss (%)'),
+            gettext('Light Work Productivity Loss'),
+            uhi_output_spec.get_field('avg_ltls_v').units,
             altair.Scale(domain=[0, 100], scheme='purples')
         ),
         'avg_hvls_v': (
-            gettext('Heavy Work Productivity Loss (%)'),
+            gettext('Heavy Work Productivity Loss'),
+            uhi_output_spec.get_field('avg_hvls_v').units,
             altair.Scale(domain=[0, 100], scheme='purples')
         ),
         'avd_eng_cn': (
-            gettext('Avoided Energy Consumption (kWh or currency)'),
+            gettext('Avoided Energy Consumption'),
+            _get_energy_sav_units(args_dict),
             altair.Scale(scheme='greens')
         )
     }
@@ -128,18 +145,18 @@ def _create_aoi_maps(
     if args_dict['do_energy_valuation']:
         attr_list.extend(['avd_eng_cn'])
 
-    uhi_output_spec = model_spec.get_output('uhi_results')
     caption = vector_utils.get_vector_attr_table_caption(
         uhi_output_spec, attr_list)
     source_list = [uhi_output_spec.path]
 
     _, xy_ratio = vector_utils.get_geojson_bbox(agg_uhi_results)
 
-    def _create_aoi_map(attribute, title, scale: altair.Scale):
-        return _create_map(
-            agg_uhi_results, xy_ratio, attribute, title, scale, map_width=250)
+    def _create_aoi_map(attribute: str, title: str, units: Unit,
+                        scale: altair.Scale) -> altair.Chart:
+        return _create_map(agg_uhi_results, xy_ratio, attribute, title, units,
+                           scale, map_width=250)
 
-    aoi_maps = [_create_aoi_map(attr, *TITLES_AND_SCALES[attr])
+    aoi_maps = [_create_aoi_map(attr, *TITLES_UNITS_SCALES[attr])
                 for attr in attr_list]
 
     compound_map = altair.concat(
@@ -193,22 +210,15 @@ def _create_bldg_maps(
         bldg_output_spec, attr_list)
     bldg_map_source_list = [bldg_output_spec.path]
 
-    energy_sav_title = gettext('Energy Savings by Building')
-    energy_consumption_df = read_csv_to_dataframe(
-        args_dict['energy_consumption_table_path'])
-    energy_cols = [col.lower() for col in energy_consumption_df.columns]
-    energy_sav_units = u.currency if 'cost' in energy_cols else u.kilowatt_hour
-
-    bldg_air_temp_title = gettext('Average Air Temperature by Building')
-    bldg_air_temp_units = bldg_output_spec.get_field('mean_t_air').units
-
-    TITLES_AND_SCALES = {
+    TITLES_UNITS_SCALES = {
         'energy_sav': (
-            f'{energy_sav_title} ({format_unit(energy_sav_units)})',
+            gettext('Energy Savings by Building'),
+            _get_energy_sav_units(args_dict),
             altair.Scale(scheme='greens')
         ),
         'mean_t_air': (
-            f'{bldg_air_temp_title} ({format_unit(bldg_air_temp_units)})',
+            gettext('Average Air Temperature by Building'),
+            bldg_output_spec.get_field('mean_t_air').units,
             altair.Scale(scheme='yelloworangered')
         )
     }
@@ -217,11 +227,12 @@ def _create_bldg_maps(
         file_registry['buildings_with_stats'], engine='fiona')
     _, xy_ratio = vector_utils.get_geojson_bbox(agg_bldg_results)
 
-    def _create_bldg_map(attribute, title, scale: altair.Scale):
-        return _create_map(
-            agg_bldg_results, xy_ratio, attribute, title, scale, map_width=550)
+    def _create_bldg_map(attribute: str, title: str, units: Unit,
+                        scale: altair.Scale) -> altair.Chart:
+        return _create_map(agg_bldg_results, xy_ratio, attribute, title, units,
+                           scale, map_width=550)
 
-    bldg_maps = [_create_bldg_map(attr, *TITLES_AND_SCALES[attr])
+    bldg_maps = [_create_bldg_map(attr, *TITLES_UNITS_SCALES[attr])
                 for attr in attr_list]
 
     compound_map = altair.concat(
