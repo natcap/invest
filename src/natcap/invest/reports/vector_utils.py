@@ -46,7 +46,9 @@ def get_geojson_bbox(geodataframe):
     return extent_feature, xy_ratio
 
 
-def get_vector_attr_table_caption(vector_spec: VectorOutput) -> list[str]:
+def get_vector_attr_table_caption(
+        vector_spec: VectorOutput,
+        fields_to_include: list[str] = []) -> list[str]:
     """Generate caption for a vector attribute table.
 
     Useful when column names are abbreviated or otherwise unclear.
@@ -54,6 +56,9 @@ def get_vector_attr_table_caption(vector_spec: VectorOutput) -> list[str]:
     Args:
         vector_spec (natcap.invest.spec.VectorOutput): the specification of the
             vector output.
+        fields_to_include (list[str], optional): names of fields to include in
+            the caption. If no list is provided, all fields defined in the spec
+            are included in the caption.
 
     Returns:
         caption (list[str]): a list of formatted strings suitable for passing
@@ -75,5 +80,11 @@ def get_vector_attr_table_caption(vector_spec: VectorOutput) -> list[str]:
             return f' ({gettext("Units:")} {format_unit(field.units)})'
         return ''
 
+    if len(fields_to_include) > 0:
+        fields = [vector_spec.get_field(field_name)
+                  for field_name in fields_to_include]
+    else:
+        fields = vector_spec.fields
+
     return [f'{field.id}:{field.about}{_get_units_text(field)}'
-            for field in vector_spec.fields]
+            for field in fields]
