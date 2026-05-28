@@ -442,7 +442,8 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                         linthresh=0.03, vmin=vmin, vmax=vmax)
                 else:
                     LOGGER.info(
-                        f"Using divergent datatype with halfrange {halfrange}.")
+                        f"Using divergent datatype for raster {raster_path} "
+                        f"with halfrange: {halfrange}.")
                     transform = matplotlib.colors.CenteredNorm(
                         halfrange=halfrange)
             if dtype == 'continuous':
@@ -530,6 +531,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 cbar = fig.colorbar(
                     mappable, ax=ax, extend=config.special_values.extend,
                     **colorbar_kwargs)
+                # Use clim from mappable to ensure tick filtering matches actual displayed range
                 vmin, vmax = mappable.get_clim()
                 ticks = cbar.get_ticks()
                 # Only keep ticks that are (1) within a tolerance of the data
