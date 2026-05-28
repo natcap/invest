@@ -27,32 +27,6 @@ MAP_WIDTH = 450  # pixels
 NEAR_ZERO_RANGE = (-0.01, 0.01)
 
 
-def infer_continuous_or_divergent(raster_path: str) -> str:
-    """Infer if raster should have a 'continuous' or 'divergent' color ramp.
-
-    Rules:
-        - If min value < ~0 and max value > ~0--> 'divergent'
-        - Else --> 'continuous'
-
-    Args:
-        raster_path (str): Path to raster.
-
-    Returns:
-        str: 'continuous' or 'divergent'
-    """
-    # read raster's geometamaker metadata to get min value
-    resource = geometamaker.describe(raster_path)
-    min_val = float(
-        resource.data_model.bands[0].gdal_metadata['STATISTICS_MINIMUM'])
-    max_val = float(
-        resource.data_model.bands[0].gdal_metadata['STATISTICS_MAXIMUM'])
-
-    if min_val < NEAR_ZERO_RANGE[0] and max_val > NEAR_ZERO_RANGE[1]:
-        return RasterDatatype.divergent
-    else:
-        return RasterDatatype.continuous
-
-
 def get_min_max_for_vector_colorbar(datamin, datamax):
     """Get a min and max for colorbar range that ensures legend displays nicely"""
     if abs(datamin) < 0.2*datamax:
@@ -226,21 +200,21 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                 )
             )
 
-            output_accessible_raster_caption = re.sub(
-                r'(pop_).*?(\.tif)', r'\1POP_GROUP\2',
-                output_accessible_list[0].caption)
+        output_accessible_raster_caption = re.sub(
+            r'(pop_).*?(\.tif)', r'\1POP_GROUP\2',
+            output_accessible_list[0].caption)
 
-            output_balance_img_src = raster_utils.plot_and_base64_encode_rasters(
-                output_balance_list)
-            output_balance_raster_caption = re.sub(
-                r'(pop_).*?(\.tif)', r'\1POP_GROUP\2',
-                output_balance_list[0].caption)
+        output_balance_img_src = raster_utils.plot_and_base64_encode_rasters(
+            output_balance_list)
+        output_balance_raster_caption = re.sub(
+            r'(pop_).*?(\.tif)', r'\1POP_GROUP\2',
+            output_balance_list[0].caption)
 
-            output_balance_percapita_img_src = raster_utils.plot_and_base64_encode_rasters(
-                output_balance_percapita_list)
-            output_balance_percapita_raster_caption = re.sub(
-                r'(pop_).*?(\.tif)', r'\1POP_GROUP\2',
-                output_balance_percapita_list[0].caption)
+        output_balance_percapita_img_src = raster_utils.plot_and_base64_encode_rasters(
+            output_balance_percapita_list)
+        output_balance_percapita_raster_caption = re.sub(
+            r'(pop_).*?(\.tif)', r'\1POP_GROUP\2',
+            output_balance_percapita_list[0].caption)
 
     elif args_dict['search_radius_mode'] == 'radius per urban nature class':
         nature_class_list = pandas.read_csv(args_dict[
@@ -255,12 +229,12 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                         spec=model_spec.get_output('accessible_urban_nature_lucode_[LUCODE]'),
                     )
                 )
-                output_accessible_raster_caption = raster_utils.caption_raster_list(
-                    output_accessible_list)[0].replace("lucode_1", "lucode_LUCODE")
-            output_balance_img_src = None
-            output_balance_raster_caption = None
-            output_balance_percapita_img_src = None
-            output_balance_percapita_raster_caption = None
+        output_accessible_raster_caption = raster_utils.caption_raster_list(
+            output_accessible_list)[0].replace("lucode_1", "lucode_LUCODE")
+        output_balance_img_src = None
+        output_balance_raster_caption = None
+        output_balance_percapita_img_src = None
+        output_balance_percapita_raster_caption = None
 
     else:
         output_accessible_list = [
