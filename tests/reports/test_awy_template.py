@@ -23,6 +23,7 @@ def _get_render_args(model_spec):
     watershed_table = '<table class="test__watersheds-table"></table>',
     stats_table_note = 'This is a test!'
     raster_group_caption = 'This is another test!'
+    lulc_pre_caption = 'This is a caption for LULC rasters'
     img_caption = ['output.tif:Output map.']
     heading = 'Test heading'
     outputs_caption = ['results.tif:Results map.']
@@ -41,6 +42,7 @@ def _get_render_args(model_spec):
         'timestamp': timestamp,
         'args_dict': args_dict,
         'raster_group_caption': raster_group_caption,
+        'lulc_pre_caption': lulc_pre_caption,
         'stats_table_note': stats_table_note,
         'wyield_img_src': img_src,
         'precip_aet_img_src': img_src,
