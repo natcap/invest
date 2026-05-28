@@ -163,6 +163,7 @@ class SpecialValueConfig:
     color: str
     """Color used for the special values"""
 
+
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class RasterPlotConfig:
     """A definition for how to plot a raster."""
@@ -189,6 +190,56 @@ class RasterPlotConfig:
 
         self.colormap = plt.get_cmap(self.colormap if self.colormap
                                      else COLORMAPS[self.datatype])
+
+
+# @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
+# class LULCPlotConfig:
+#     """A definition for how to plot a raster."""
+
+#     raster_path: str
+#     """Filepath to a raster to plot. The basename will be the plot title."""
+#     spec: Input | Output
+#     """The InVEST specification of the raster."""
+#     colors_dict: dict
+#     """"""
+#     title: str | None = None
+#     """An optional plot title. If ``None``, the filename is used."""
+#     # colormap: str | Colormap = COLORMAPS['nominal']
+#     # """The string name of a registered matplotlib colormap or a colormap object."""
+#     """"""
+
+#     def __post_init__(self):
+#         if self.title is None:
+#             self.title = os.path.basename(self.raster_path)
+#         self.caption = f'{self.title}:{self.spec.about}'
+
+#     def plot(self):
+#         resample_alg = RESAMPLE_ALGS['nominal']
+#         arr, resampled = _read_masked_array(self.raster_path, resample_alg)
+#         xy_ratio = arr.shape[1] / arr.shape[0]
+#         # fig, axs = _figure_subplots(xy_ratio, n_plots=1)
+#         # ax = axs[0]
+#         figure_width = MAX_FIGURE_WIDTH_2_COL_WIDE_AOI * 0.6
+#         fig, ax = plt.subplots(
+#             figsize=(figure_width, figure_width / xy_ratio),
+#             layout='compressed')
+#         plt.close()
+#         imshow_kwargs = {}
+#         imshow_kwargs['interpolation'] = 'none'
+
+#         ax.set_title(**_get_title_kwargs(
+#             self.title, resampled, 100))
+
+#         categories = sorted(self.colors_dict.keys())
+#         colors = [self.colors_dict[cat] for cat in categories]
+#         colormap = matplotlib.colors.ListedColormap(colors)
+#         bounds = categories + [max(categories) + 1]
+#         norm = matplotlib.colors.BoundaryNorm(bounds, colormap.N)
+#         imshow_kwargs['norm'] = norm
+
+#         ax.imshow(arr, cmap=colormap, **imshow_kwargs)
+#         ax.set_axis_off()
+#         return base64_encode(fig)
 
 
 def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
@@ -387,6 +438,22 @@ def _get_legend_kwargs(num_patches: int, n_plots: int, xy_ratio: float):
         'loc': 'upper left',
         'ncol': ncol,
     }
+
+
+def get_categorical_colors(num_colors):
+    cmap = matplotlib.colormaps[COLORMAPS['nominal']]
+    # If > 20 colors needed, generate colormap to override default.
+    if num_colors > 20:
+        # Values of pastel_factor and rng have been chosen specifically
+        # for Carbon (Willamette) sample data. If/when we create a
+        # report using sample data that is ill-suited to the color
+        # palette generated with these values, we will take a different
+        # approach to customizing color palettes.
+        cmap = ListedColormap(
+            distinctipy.get_colors(
+                num_colors, pastel_factor=0.6, rng=0))
+    colors = cmap(numpy.linspace(0, 1, num_colors))
+    return colors
 
 
 def plot_raster_list(raster_list: list[RasterPlotConfig]):
@@ -663,6 +730,81 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
 
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
+
+
+def plot_categorical_raster_with_table(raster_path):
+    lulc_rat_html = None
+    value_col_name = None
+    count_col_name = None
+    rat = get_raster_attribute_table(raster_path)
+    if rat:
+        rat_value_names = set()
+        for col in rat.columns:
+            if col.usage == 'MinMax':
+                rat_value_names.add(col.name)
+            if col.usage == 'PixelCount':
+                count_col_name = col.name
+        if len(rat_value_names) == 1:
+            value_col_name = list(rat_value_names)[0]
+            rat_dataframe = pandas.DataFrame(rat.rows)
+    if value_col_name is None:
+        def count_frequency(counter, block):
+            values, counts = numpy.unique(
+                block[~numpy.isnan(block)], return_counts=True)
+            return counter + collections.Counter(dict(zip(values, counts)))
+
+        table = pygeoprocessing.raster_reduce(
+            count_frequency, (raster_path, 1), collections.Counter())
+        value_col_name = 'value'
+        count_col_name = 'count'
+        rat_dataframe = pandas.DataFrame(
+            table.items(), columns=[value_col_name, count_col_name])
+
+    colors = get_categorical_colors(rat_dataframe.shape[0])
+    # sort pixel values so colors are assigned the same here as in imshow.
+    colors_dict = dict(zip(sorted(rat_dataframe[value_col_name]), colors))
+    legend_col_name = ''  # the color swatch column needs no label
+    rat_dataframe.insert(
+        0, legend_col_name, [matplotlib.colors.to_hex(c) for c in colors])
+    if count_col_name in rat_dataframe.columns:
+        rat_dataframe = rat_dataframe.sort_values(
+            count_col_name, ascending=False)
+    styler = rat_dataframe.style.map(
+        lambda val: f"background-color: {val}; color: {val}",
+        subset=[legend_col_name])
+    lulc_rat_html = styler.hide(axis='index').to_html()
+    # lulc_plot_config = LULCPlotConfig(
+    #     raster_path=args_dict['lulc_path'],
+    #     datatype=RasterDatatype.nominal,
+    #     spec=model_spec.get_input('lulc_path'),
+    #     colors_dict=colors_dict)
+    
+    resample_alg = RESAMPLE_ALGS['nominal']
+    arr, resampled = _read_masked_array(raster_path, resample_alg)
+    xy_ratio = arr.shape[1] / arr.shape[0]
+    # fig, axs = _figure_subplots(xy_ratio, n_plots=1)
+    # ax = axs[0]
+    figure_width = MAX_FIGURE_WIDTH_2_COL_WIDE_AOI * 0.6
+    fig, ax = plt.subplots(
+        figsize=(figure_width, figure_width / xy_ratio),
+        layout='compressed')
+    plt.close()
+    imshow_kwargs = {}
+    imshow_kwargs['interpolation'] = 'none'
+
+    ax.set_title(**_get_title_kwargs(
+        os.path.basename(raster_path), resampled, 100))
+
+    categories = sorted(colors_dict.keys())
+    colors = [colors_dict[cat] for cat in categories]
+    colormap = matplotlib.colors.ListedColormap(colors)
+    bounds = categories + [max(categories) + 1]
+    norm = matplotlib.colors.BoundaryNorm(bounds, colormap.N)
+    imshow_kwargs['norm'] = norm
+
+    ax.imshow(arr, cmap=colormap, **imshow_kwargs)
+    ax.set_axis_off()
+    return base64_encode(fig), lulc_rat_html
 
 
 # TODO: this may end up in the geometamaker API

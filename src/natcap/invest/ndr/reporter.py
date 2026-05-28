@@ -30,11 +30,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         raster_path=args_dict['runoff_proxy_path'],
         datatype=RasterDatatype.continuous,
         spec=model_spec.get_input('runoff_proxy_path'))
-    lulc_config = RasterPlotConfig(
-        raster_path=args_dict['lulc_path'],
-        datatype=RasterDatatype.nominal,
-        spec=model_spec.get_input('lulc_path'))
-    input_raster_plot_configs = [dem_config, runoff_proxy_config, lulc_config]
+    # lulc_config = RasterPlotConfig(
+    #     raster_path=args_dict['lulc_path'],
+    #     datatype=RasterDatatype.nominal,
+    #     spec=model_spec.get_input('lulc_path'))
+    input_raster_plot_configs = [dem_config, runoff_proxy_config] # , lulc_config]
 
     output_raster_plot_configs = []
     if args_dict[CALC_N]:

@@ -78,6 +78,16 @@
   )}}
 
   {{ accordion_section(
+    'Landuse / Landcover Input',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(lulc_img_src, 'LULC Input'), 60),
+      (lulc_legend_html | safe, 40),
+      (caption(lulc_caption, definition_list=True), 100),
+    ])
+  )}}
+
+  {{ accordion_section(
     'Raster Inputs',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
