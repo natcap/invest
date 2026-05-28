@@ -104,6 +104,11 @@ SDR
   because they can still be rasterized and used in zonal_statistics.
   (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
 
+Urban Nature Access
+===================
+* The model now generates a report which displays a visual summary of results
+  and metadata. (`#2534 <https://github.com/natcap/invest/issues/2534>`_)
+
 
 3.19.0 (2026-04-16)
 -------------------
