@@ -1,7 +1,7 @@
 import unittest
 from bs4 import BeautifulSoup
 
-from natcap.invest.urban_mental_health import MODEL_SPEC
+from natcap.invest.urban_nature_access import MODEL_SPEC
 from natcap.invest.reports import jinja_env
 
 TEMPLATE = jinja_env.get_template('models/urban_nature_access.html')
