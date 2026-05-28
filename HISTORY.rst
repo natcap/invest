@@ -62,7 +62,6 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-
 Unreleased Changes
 ------------------
 
@@ -71,6 +70,8 @@ General
 * To ensure consistent raster plot sizing in reports, padding is now added to
   the top of raster plots if an adjacent raster plot has a units subheading.
   (`#2471 <https://github.com/natcap/invest/issues/2471>`_)
+* The ``deploy_dist`` Makefile target was split into ``deploy_wheel`` and
+  ``deploy_sdist``.
 * ``Input, Output, and ModelSpec`` classes now create immutable objects.
   Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
   (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
@@ -79,6 +80,14 @@ General
   directory should instead use an individual ``Input`` for each file, or a
   ``CSVInput`` to list out multiple files.
   (`#2179 <https://github.com/natcap/invest/issues/2179>`_)
+* Made some styling and usability improvements to the Vega-Lite visualizations
+  (e.g., vector plots, histograms) that appear in some InVEST reports.
+  (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
+* Added a `.gitignore` for InVEST build files and common editor files.
+  (`#258 <https://github.com/natcap/invest/issues/258>`_)
+* Fixed an issue with Windows binary builds where users would see runtime
+  warnings saying ``GDAL_DATA`` is not defined.
+  (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
 
 Workbench
 =========
@@ -86,6 +95,19 @@ Workbench
   origin of the log message was inaccurate. Messages are now labeled as from
   either the "main" or "renderer" process.
   (`#2522 <https://github.com/natcap/invest/issues/2522>`_)
+* Attempting to load a datastack or logfile with a model ID the Workbench
+  doesn't recognize (such as the ID of a plugin that isn't installed, or an
+  otherwise malformed model ID) now presents an error message instead of
+  failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
+* Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
+  Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+
+SDR
+===
+* Added exception-handling when checking if watershed geoemtries overlap.
+  Invalid geometries will no longer raise an exception during this check
+  because they can still be rasterized and used in zonal_statistics.
+  (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
 
 
 3.19.0 (2026-04-16)
@@ -110,6 +132,15 @@ General
   ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
   these targets to fail on missing artifacts instead of silently ignoring
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
+* Pre-built wheels are now constrained to require one specific minor version of
+  GDAL in an attempt to ensure compatibility of the compiled extensions with
+  the version of ``libgdal`` available. Users who need a different GDAL version
+  may install ``natcap.invest`` from conda-forge or build their own wheel from
+  source. (`#2206 <https://github.com/natcap/invest/issues/2206>`_)
+* The ``manylinux_2_39`` wheels have been replaced with ``linux`` wheels built
+  on Ubuntu. This reduces the size of the wheels and avoids licensing concerns
+  around redistributing libraries.
+  (`#2483 <https://github.com/natcap/invest/issues/2483>`_)
 
 Workbench
 =========
