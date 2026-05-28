@@ -253,7 +253,7 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext(
                         "Sum of raster values (units depend upon the raster"
                         " being summed and are listed in the 'units' column)"),
-                    units=u.none
+                    units=u.other
                 ),
                 spec.StringOutput(
                     id="units",
@@ -687,7 +687,7 @@ def _generate_summary_results_table(raster_list, target_csv_path):
 
     with open(target_csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow([gettext('Rasters'),
+        writer.writerow([gettext('Raster'),
                          gettext('Total'),
                          gettext('Units'),
                          gettext('Filename')])
