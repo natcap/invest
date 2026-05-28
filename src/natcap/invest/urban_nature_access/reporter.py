@@ -4,13 +4,8 @@ import time
 import altair
 import geopandas
 import geometamaker
-import matplotlib
 import numpy
 import pandas
-import pygeoprocessing
-from pydantic import ConfigDict
-from pydantic.dataclasses import dataclass
-from osgeo import gdal
 import re
 
 from natcap.invest import validation
@@ -18,7 +13,7 @@ from natcap.invest import __version__
 from natcap.invest import gettext
 from natcap.invest.reports import jinja_env, raster_utils, report_constants, \
     vector_utils
-from natcap.invest.spec import ModelSpec, FileRegistry
+from natcap.invest.spec import ModelSpec
 
 from natcap.invest.reports.raster_utils import RasterDatatype, \
     RasterPlotConfig, RasterTransform, SpecialValueConfig
@@ -180,7 +175,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     if args_dict['search_radius_mode'] != "radius per urban nature class":
         intermediate_raster_config_list = [
             RasterPlotConfig(
-                raster_path=file_registry['urban_nature_area'],#TODO check if these should be divergent
+                raster_path=file_registry['urban_nature_area'],
                 datatype=RasterDatatype.continuous,
                 spec=model_spec.get_output('urban_nature_area')
             ),
@@ -347,7 +342,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         xy_ratio
     )
 
-    # TODO would people prefer to see the various attrs in vector ie by admin unit, or rasters
     vector_field_list = ['SUP_DEMadm_cap', 'Pund_adm', 'Povr_adm']
     vector_plot_captions = [
         field + ':' + model_spec.get_output('admin_boundaries').get_field(field).about
@@ -369,7 +363,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             userguide_page=model_spec.userguide,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
-            # agg_results_table=agg_results_table,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_raster_caption,
             outputs_img_src=outputs_img_src,
