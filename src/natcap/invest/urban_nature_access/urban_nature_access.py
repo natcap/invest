@@ -904,9 +904,9 @@ def execute(args):
         split_population_fields = list(
             filter(lambda x: re.match(POP_FIELD_REGEX, x),
                    validation.load_fields_from_vector(
-                       args['admin_boundaries_vector_path'])))
+                       file_registry['reprojected_admin_boundaries'])))
 
-        if _geometries_overlap(args['admin_boundaries_vector_path']):
+        if _geometries_overlap(file_registry['reprojected_admin_boundaries']):
             LOGGER.warning(
                 "Some administrative boundaries overlap, which will affect "
                 "the accuracy of supply rasters per population group. ")

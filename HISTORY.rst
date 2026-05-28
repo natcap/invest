@@ -78,6 +78,11 @@ General
 * Made some styling and usability improvements to the Vega-Lite visualizations
   (e.g., vector plots, histograms) that appear in some InVEST reports.
   (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
+* Added a `.gitignore` for InVEST build files and common editor files.
+  (`#258 <https://github.com/natcap/invest/issues/258>`_)
+* Fixed an issue with Windows binary builds where users would see runtime
+  warnings saying ``GDAL_DATA`` is not defined.
+  (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
 
 Workbench
 =========
@@ -91,6 +96,14 @@ Workbench
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+
+SDR
+===
+* Added exception-handling when checking if watershed geoemtries overlap.
+  Invalid geometries will no longer raise an exception during this check
+  because they can still be rasterized and used in zonal_statistics.
+  (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
+
 
 3.19.0 (2026-04-16)
 -------------------
