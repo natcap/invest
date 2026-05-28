@@ -24,9 +24,7 @@ def _get_render_args(model_spec):
     outputs_caption = ['results.tif:Results map.']
     vegalite_json = '{}'
     test_caption = 'This is another test!'
-    agg_results_table = '<table class="test__agg-results-table"></table>'
-    agg_map_source_list = ['/source/file.shp']
-
+    admin_map_source_list = ['/source/file.shp']
     return {
         'locale': locale,
         'report_script': model_spec.reporter,
@@ -38,24 +36,10 @@ def _get_render_args(model_spec):
         'userguide_page': model_spec.userguide,
         'timestamp': timestamp,
         'args_dict': args_dict,
-        # 'agg_results_table': agg_results_table,
         'inputs_img_src': img_src,
         'inputs_caption': inputs_caption,
         'outputs_img_src': img_src,
         'outputs_caption': outputs_caption,
-        'output_aggregated_img_src': img_src,
-        'output_aggregated_raster_caption': test_caption,
-        'raster_group_caption': test_caption,
-        'lulc_pre_caption': lulc_pre_caption,
-        'output_raster_stats_table': output_stats_table,
-        'input_raster_stats_table': input_stats_table,
-        'stats_table_note': stats_table_note,
-        'aggregate_map_source_list': agg_map_source_list,
-        # 'vector_plot_list': [("fakeid", vegalite_json, test_caption)],
-        'admin_map_json': vegalite_json,
-        'vector_plot_captions': test_caption,
-        'admin_boundaries_map_source_list': agg_map_source_list,
-        'model_spec_outputs': model_spec.outputs,
         'output_accessible_img_src': img_src,
         'output_accessible_raster_caption': test_caption,
         'output_balance_img_src': img_src,
@@ -63,7 +47,16 @@ def _get_render_args(model_spec):
         'output_balance_percapita_img_src': img_src,
         'output_balance_percapita_raster_caption': test_caption,
         'intermediates_img_src': img_src,
-        'intermediates_caption': test_caption
+        'intermediates_caption': test_caption,
+        'raster_group_caption': test_caption,
+        'lulc_pre_caption': lulc_pre_caption,
+        'output_raster_stats_table': output_stats_table,
+        'input_raster_stats_table': input_stats_table,
+        'stats_table_note': stats_table_note,
+        'admin_map_json': vegalite_json,
+        'vector_plot_captions': test_caption,
+        'admin_boundaries_map_source_list': admin_map_source_list,
+        'model_spec_outputs': model_spec.outputs
     }
 
 
@@ -82,8 +75,8 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
 
-        vega_plots = soup.find_all(class_='.vega-embed')
-        self.assertEqual(len(vega_plots), 1)
+        plots = soup.select('#Admin_Units_Plots')
+        self.assertEqual(len(plots), 1)
 
     def test_render_search_radius_by_pop_option(self):
         """Test report rendering with LULC option with baseline NDVI input"""
