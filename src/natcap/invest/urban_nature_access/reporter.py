@@ -28,7 +28,7 @@ NEAR_ZERO_RANGE = (-0.01, 0.01)
 
 
 def get_min_max_for_vector_colorbar(datamin, datamax):
-    """Get a min and max for colorbar range that ensures legend displays nicely"""
+    """Get a min, max for colorbar range that ensures legend displays nicely"""
     if abs(datamin) < 0.2*datamax:
         # set min to -20% of max if that value is smaller than actual min to
         # avoid having an overly compressed colorbar
@@ -72,7 +72,8 @@ def _create_vector_maps(
             legend = altair.Legend(
                 title=legend_title,
                 orient='right',
-                values=[domain_min, numpy.mean([domain_max, domain_min]), domain_max])
+                values=[domain_min, numpy.mean([domain_max, domain_min]),
+                        domain_max])
         else:
             scale = altair.Scale(scheme='purples')
             legend = altair.Legend(title=legend_title, orient='right')
@@ -178,24 +179,31 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         for group in pop_group_list:
             output_accessible_list.append(
                 RasterPlotConfig(
-                    raster_path=file_registry['accessible_urban_nature_to_[POP_GROUP]'][group], # cannot used patterned outputs bc using file registry.registry dict
+                    # cant use patterned outputs bc using file_registry.registry dict
+                    raster_path=file_registry[
+                        'accessible_urban_nature_to_[POP_GROUP]'][group],
                     datatype=RasterDatatype.continuous,
-                    spec=model_spec.get_output('accessible_urban_nature_to_[POP_GROUP]'),
+                    spec=model_spec.get_output(
+                        'accessible_urban_nature_to_[POP_GROUP]'),
                 )
             )
             output_balance_list.append(
                 RasterPlotConfig(
-                    raster_path=file_registry['urban_nature_balance_[POP_GROUP]'][group],
+                    raster_path=file_registry[
+                        'urban_nature_balance_[POP_GROUP]'][group],
                     datatype=RasterDatatype.divergent,
-                    spec=model_spec.get_output('urban_nature_balance_[POP_GROUP]'),
+                    spec=model_spec.get_output(
+                        'urban_nature_balance_[POP_GROUP]'),
                     transform=RasterTransform.log
                 )
             )
             output_balance_percapita_list.append(
                 RasterPlotConfig(
-                    raster_path=file_registry['urban_nature_balance_percapita_[POP_GROUP]'][group],
+                    raster_path=file_registry[
+                        'urban_nature_balance_percapita_[POP_GROUP]'][group],
                     datatype=RasterDatatype.divergent,
-                    spec=model_spec.get_output('urban_nature_balance_percapita_[POP_GROUP]'),
+                    spec=model_spec.get_output(
+                        'urban_nature_balance_percapita_[POP_GROUP]'),
                     transform=RasterTransform.log
                 )
             )
@@ -221,12 +229,16 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             'lulc_attribute_table'])['lucode']
 
         for lucode in nature_class_list:
-            if str(lucode) in file_registry['accessible_urban_nature_lucode_[LUCODE]']:
+            if str(lucode) in file_registry[
+                    'accessible_urban_nature_lucode_[LUCODE]']:
                 output_accessible_list.append(
                     RasterPlotConfig(
-                        raster_path=file_registry['accessible_urban_nature_lucode_[LUCODE]'][str(lucode)],
+                        raster_path=file_registry[
+                            'accessible_urban_nature_lucode_[LUCODE]'][
+                                str(lucode)],
                         datatype=RasterDatatype.continuous,
-                        spec=model_spec.get_output('accessible_urban_nature_lucode_[LUCODE]'),
+                        spec=model_spec.get_output(
+                            'accessible_urban_nature_lucode_[LUCODE]'),
                     )
                 )
         output_accessible_raster_caption = raster_utils.caption_raster_list(
@@ -318,7 +330,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     vector_field_list = ['SUP_DEMadm_cap', 'Pund_adm', 'Povr_adm']
     vector_plot_captions = [
-        field + ':' + model_spec.get_output('admin_boundaries').get_field(field).about
+        field + ':' +
+        model_spec.get_output('admin_boundaries').get_field(field).about
         for field in vector_field_list
     ]
 
