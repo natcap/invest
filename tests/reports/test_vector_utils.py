@@ -8,7 +8,7 @@ import pygeoprocessing
 from bs4 import BeautifulSoup
 from osgeo import ogr, osr
 
-from natcap.invest.reports import sdr_ndr_utils
+from natcap.invest.reports import vector_utils
 
 BSOUP_HTML_PARSER = 'html.parser'
 
@@ -51,8 +51,8 @@ def _generate_mock_watershed_data(num_features, target_vector_path):
     return attribute_list
 
 
-class SDRNDRUtilsTests(unittest.TestCase):
-    """Unit tests for SDR/NDR utils."""
+class VectorUtilsTests(unittest.TestCase):
+    """Unit tests for vector utils."""
 
     def setUp(self):
         """Initialize SDRNDRUtilsTests tests."""
@@ -72,7 +72,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
 
         # Omit cols_to_sum to signal we have no need for totals.
         main_table = (
-            sdr_ndr_utils.generate_results_table_from_vector(filepath))
+            vector_utils.generate_results_table_from_vector(filepath))
         self.assertIsNotNone(main_table)
 
         soup = BeautifulSoup(main_table, BSOUP_HTML_PARSER)
@@ -103,7 +103,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
         cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
-            sdr_ndr_utils.generate_results_table_from_vector(
+            vector_utils.generate_results_table_from_vector(
                 filepath, cols_to_sum=cols_to_sum))
         self.assertIsNotNone(main_table)
 
@@ -144,7 +144,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
         cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
-            sdr_ndr_utils.generate_results_table_from_vector(
+            vector_utils.generate_results_table_from_vector(
                 filepath, cols_to_sum=cols_to_sum))
         self.assertIsNotNone(main_table)
 
@@ -210,7 +210,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
         # Omit cols_to_sum to signal we have no need for totals.
         # Specify columns to include in output.
         main_table = (
-            sdr_ndr_utils.generate_results_table_from_vector(
+            vector_utils.generate_results_table_from_vector(
                 filepath, target_cols=[1, 'calculated_value_2']))
         self.assertIsNotNone(main_table)
 
@@ -228,14 +228,14 @@ class SDRNDRUtilsTests(unittest.TestCase):
 
         num_features = 11
         self.assertGreater(num_features,
-                           sdr_ndr_utils.TABLE_PAGINATION_THRESHOLD)
+                           vector_utils.TABLE_PAGINATION_THRESHOLD)
 
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
         _generate_mock_watershed_data(num_features, filepath)
         cols_to_sum = ['calculated_value_1', 'calculated_value_2']
 
         (main_table, totals_table) = (
-            sdr_ndr_utils.generate_results_table_from_vector(
+            vector_utils.generate_results_table_from_vector(
                 filepath, cols_to_sum=cols_to_sum))
         self.assertIsNotNone(main_table)
 

@@ -7,7 +7,7 @@ import time
 from natcap.invest import __version__
 from natcap.invest import gettext
 from natcap.invest.reports import (
-    jinja_env, report_constants, sdr_ndr_utils, raster_utils)
+    jinja_env, report_constants, vector_utils, raster_utils)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
         f'Stream Network Maps (flow algorithm: {args_dict["flow_dir_algorithm"]})')
 
     (ws_vector_table, ws_vector_totals_table) = (
-        sdr_ndr_utils.generate_results_table_from_vector(
+        vector_utils.generate_results_table_from_vector(
             file_registry[results_vector_id], results_vector_cols_to_sum))
 
     output_raster_stats_table = raster_utils.raster_workspace_summary(

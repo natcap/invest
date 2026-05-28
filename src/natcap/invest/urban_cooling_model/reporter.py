@@ -8,10 +8,11 @@ from pint import Unit
 
 from natcap.invest import __version__
 from natcap.invest import gettext
-from natcap.invest.reports import jinja_env, raster_utils, report_constants, vector_utils
+from natcap.invest.reports import (
+    jinja_env, raster_utils, report_constants, vector_utils)
 from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
-from natcap.invest.reports.sdr_ndr_utils import generate_results_table_from_vector
-from natcap.invest.reports.vector_utils import get_vector_attr_table_caption
+from natcap.invest.reports.vector_utils import (
+    get_vector_attr_table_caption, generate_results_table_from_vector)
 from natcap.invest.spec import format_unit, ModelSpec
 from natcap.invest.unit_registry import u
 from natcap.invest.utils import read_csv_to_dataframe
