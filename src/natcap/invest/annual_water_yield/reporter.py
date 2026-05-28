@@ -116,7 +116,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     if num_rows > 1 and args_dict['valuation_table_path']:
         hp_energy_json = vector_utils.create_aggregate_map(
             w_results, xy_ratio, 'hp_energy', 'blues',
-            gettext("In Energy Production Terms ({units})").format(
+            gettext("Hydropower Production in Energy Production Terms ({units})").format(
                 units=model_spec.get_output(
                     'watershed_results_wyield').get_field('hp_energy').units))
         hp_energy_caption = [
@@ -124,7 +124,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
         hp_val_json = vector_utils.create_aggregate_map(
             w_results, xy_ratio, 'hp_val', 'blues',
-            gettext("In Economic Terms ({units})").format(
+            gettext("Hydropower Production in Economic Terms ({units})").format(
                 units=model_spec.get_output(
                     'watershed_results_wyield').get_field('hp_val').units))
         hp_val_caption = [
@@ -132,14 +132,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
         source_list = [model_spec.get_output('watershed_results_wyield').path]
 
-        valuation_title = gettext("Hydropower Production by Watershed")
         valuation_results = {
             "energy_json": hp_energy_json,
             "energy_caption": hp_energy_caption,
             "val_json": hp_val_json,
             "val_caption": hp_val_caption,
             "source_list": source_list,
-            "title": valuation_title
         }
 
     subwatershed_results = None
@@ -217,6 +215,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
+            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
             stats_table_note=report_constants.STATS_TABLE_NOTE,
             wyield_img_src=wyield_img_src,
             precip_aet_img_src=precip_aet_img_src,

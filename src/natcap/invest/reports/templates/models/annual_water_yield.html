@@ -45,7 +45,6 @@
   {% endif %}
   {% if valuation_results %}
     {% set _ = watershed_results_inner.extend([
-      (valuation_results['title'], 100),
       (content_grid([
         ('<div id="hp_energy"></div>', 100),
         (caption(valuation_results['energy_caption'], valuation_results['source_list']), 100)
@@ -101,6 +100,7 @@
     'Raster Inputs',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
+      (caption(lulc_pre_caption, pre_caption=True), 100),
       (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
       (caption(inputs_caption, definition_list=True), 100)
     ])
