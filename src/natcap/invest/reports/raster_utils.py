@@ -515,26 +515,15 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             else:
                 if config.special_values.extend == 'min':
                     cmap.set_under(config.special_values.color)
-                    # mappable = ax.imshow(
-                    #     arr, cmap=cmap, vmin=config.special_values.threshold,
-                    #     **imshow_kwargs)
                     y_pos = -0.05  # position for label just below the colorbar
                     va = "top"
                 elif config.special_values.extend == 'max':
                     cmap.set_over(config.special_values.color)
-                    # mappable = ax.imshow(
-                    #     arr, cmap=cmap, vmax=config.special_values.threshold,
-                    #     **imshow_kwargs)
                     y_pos = 1.05  # position for label just above the colorbar
                     va = "bottom"
                 else:  # extend is 'both'
                     cmap.set_under(config.special_values.color[0])
                     cmap.set_over(config.special_values.color[1])
-                    # mappable = ax.imshow(
-                    #     arr, cmap=cmap,
-                    #     vmin=config.special_values.threshold[0],
-                    #     vmax=config.special_values.threshold[1],
-                    #     **imshow_kwargs)
                 mappable = ax.imshow(
                         arr, cmap=cmap,
                         **imshow_kwargs)
@@ -550,31 +539,23 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 tick_dif = (ticks[1] - ticks[0])/2 if len(ticks) > 1 else 0.1
                 tol = tick_dif/100
                 if config.special_values.extend in ['min', 'max']:
-                    cbar.ax.text(
-                        0, y_pos, str(config.special_values.label),
-                        transform=cbar.ax.transAxes, va=va, ha='left'
-                    )
-                    ticks = [t for t in ticks if
-                             (vmin - tol) <= t <= (vmax + tol) and abs(
-                                t-config.special_values.threshold) >= tick_dif]
-                    ticks.append(config.special_values.threshold)
-                    cbar.set_ticks(sorted(ticks))
+                    labels = [config.special_values.label]
+                    thresholds = [config.special_values.threshold]
+                    text_specs = [(0, y_pos, va)]
                 else:
-                    cbar.ax.text(
-                        0, -0.05, str(config.special_values.label[0]),
-                        transform=cbar.ax.transAxes, va='top', ha='left'
-                    )
-                    cbar.ax.text(
-                        0, 1.05, str(config.special_values.label[1]),
-                        transform=cbar.ax.transAxes, va='bottom', ha='left'
-                    )
-                    ticks = [t for t in ticks if
-                             (vmin - tol) <= t <= (vmax + tol) and abs(
-                                t-config.special_values.threshold[0]) >= tick_dif and abs(
-                                t-config.special_values.threshold[1]) >= tick_dif]
-                    ticks.append(config.special_values.threshold[0])
-                    ticks.append(config.special_values.threshold[1])
-                    cbar.set_ticks(sorted(ticks))
+                    labels = config.special_values.label
+                    thresholds = config.special_values.threshold
+                    text_specs = [(0, -0.05, 'top'), (0, 1.05, 'bottom')]
+                for label, (x, y, va_) in zip(labels, text_specs):
+                    cbar.ax.text(x, y, str(label), transform=cbar.ax.transAxes,
+                                 va=va_, ha='left')
+                ticks = [
+                    tick for tick in ticks
+                    if (vmin - tol) <= tick <= (vmax + tol)
+                    and all(abs(tick - t) >= tick_dif for t in thresholds)
+                ]
+                ticks.extend(thresholds)
+                cbar.set_ticks(sorted(ticks))
 
     [ax.set_axis_off() for ax in axs.flatten()]
     return fig
