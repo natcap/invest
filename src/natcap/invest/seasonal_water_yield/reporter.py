@@ -1,21 +1,13 @@
-import calendar
-import csv
 import logging
 import os
 import time
 
 import altair
 import geopandas
-import numpy
 import pandas
-import pygeoprocessing
-from matplotlib.colors import LinearSegmentedColormap
-from osgeo import gdal
-from osgeo import ogr
 
 from natcap.invest import __version__
 from natcap.invest import gettext
-import natcap.invest.spec
 from natcap.invest.reports import jinja_env
 from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
@@ -23,14 +15,13 @@ from natcap.invest.reports import vector_utils
 from natcap.invest.reports.raster_utils import RasterDatatype
 from natcap.invest.reports.raster_utils import RasterPlotConfig
 from natcap.invest.reports.raster_utils import RasterTransform
-from natcap.invest.unit_registry import u
 
 
 LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/seasonal_water_yield.html')
 
-MAP_WIDTH = 450 # pixels
+MAP_WIDTH = 450  # pixels
 
 
 def _create_aggregate_map(geodataframe, xy_ratio, attribute,
@@ -104,7 +95,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     )
 
     precip_chart = base_chart.mark_line().encode(
-            altair.X("month", sort=[i for i in range(1, 13)]).title("Month"),
+        altair.X("month", sort=[i for i in range(1, 13)]).title("Month"),
         altair.Y(
             "sum(precipitation)",
             axis=altair.Axis(orient="right")
@@ -228,11 +219,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         RasterPlotConfig(
             raster_path=args_dict['dem_raster_path'],
             datatype=RasterDatatype.continuous,
-            spec=model_spec.get_input('dem_raster_path')),
-        RasterPlotConfig(
-            raster_path=args_dict['lulc_raster_path'],
-            datatype=RasterDatatype.nominal,
-            spec=model_spec.get_input('lulc_raster_path'))
+            spec=model_spec.get_input('dem_raster_path'))
     ]
 
     if args_dict['user_defined_local_recharge']:
@@ -346,6 +333,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     inputs_raster_caption = raster_utils.caption_raster_list(
             input_raster_config_list)
 
+    lulc_img_src, lulc_legend_html = raster_utils.plot_categorical_raster_with_table(
+        args_dict['lulc_raster_path'])
+    lulc_caption = f"{os.path.basename(
+        args_dict['lulc_raster_path'])}:{model_spec.get_input('lulc_raster_path').about}"
+
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
             report_script=model_spec.reporter,
@@ -370,6 +362,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             input_raster_stats_table=input_raster_stats_table,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_raster_caption,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
+            lulc_caption=lulc_caption,
             qf_b_charts=qf_b_charts,
             qb_map_json=qb_map_json,
             qb_map_caption=qb_map_caption,
