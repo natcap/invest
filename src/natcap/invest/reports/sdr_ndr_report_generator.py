@@ -63,7 +63,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
 
     (ws_vector_table, ws_vector_totals_table) = (
         vector_utils.generate_results_table_from_vector(
-            file_registry[results_vector_id], results_vector_cols_to_sum))
+            file_registry[results_vector_id],
+            cols_to_sum=results_vector_cols_to_sum)
+    )
 
     output_raster_stats_table = raster_utils.raster_workspace_summary(
         file_registry).to_html(na_rep='')
