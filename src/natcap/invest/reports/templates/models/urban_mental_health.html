@@ -78,9 +78,8 @@
     {{ accordion_section(
       'Reclassified Baseline & Alternate LULC (to NDVI)',
       content_grid([
-        (caption(lulc_pre_caption, pre_caption=True), 100),
-        (raster_plot_img(intermediate_reclass_lulc_img_src, 'Reclassified Baseline & Alternate LULC (to NDVI)'), 100),
-        (caption(intermediate_reclass_lulc_img_caption, definition_list=True), 100)
+        (raster_plot_img(intermediate_reclass_lulc_to_ndvi_img_src, 'Reclassified Baseline & Alternate LULC (to NDVI)'), 100),
+        (caption(intermediate_reclass_lulc_to_ndvi_img_caption, definition_list=True), 100)
       ])
     )}}
   {% endif %}
@@ -109,16 +108,22 @@
     (caption(raster_group_caption, pre_caption=True), 100)
   ] %}
 
-  {% if args_dict['lulc_base'] %}
-    {% set input_items = input_items + [
-      (caption(lulc_pre_caption, pre_caption=True), 100)
-    ] %}
-  {% endif %}
-
   {% set input_items = input_items + [
     (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
     (caption(inputs_caption, definition_list=True), 100)
   ] %}
+
+  {% if lulc_img_src != None %}
+    {{ accordion_section(
+      'LULC Maps',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(lulc_img_src, 'LULC Inputs'), 100),
+        (wide_table(lulc_legend_html | safe, font_size_px=14), 100),
+        (caption(lulc_caption, definition_list=True), 100)
+      ])
+    )}}
+  {% endif %}
 
   {{ accordion_section(
     'Input Maps',

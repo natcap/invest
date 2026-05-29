@@ -739,17 +739,23 @@ def plot_categorical_raster_with_table(raster_path_list):
                 if col.usage == 'MinMax':
                     value_col = col.name
             rat_value_names.add(value_col)
-            rat_df_list.append(pandas.DataFrame(rat.rows))
+            df = pandas.DataFrame(rat.rows)
+            # Some RAT include color tables. This is not useful to display in
+            # this context. Best we can do is guess what the column names could be.
+            col_filter = df.filter(['Red', 'Green', 'Blue', 'Alpha', 'Opacity'])
+            df = df.drop(col_filter, axis=1)
+            rat_df_list.append(df)
         if len(rat_value_names) == 1:
             value_col_name = list(rat_value_names)[0]
         else:
-            # TODO: is it still okay if names don't match be each table has exactly one MinMax col?
+            # TODO: is it still okay if names don't match if each table has exactly one MinMax col?
             LOGGER.debug('default raster attribute tables do not match and will be ignored.')
     if value_col_name is None:
         rat_df_list = []
         value_col_name = 'value'
         count_col_name = 'count'
         for raster_path in raster_path_list:
+            LOGGER.info(f'Calculating frequency table for classes in {raster_path}')
             table = pygeoprocessing.raster_reduce(
                 count_frequency, (raster_path, 1), collections.Counter())
             rat_df_list.append(pandas.DataFrame(
@@ -780,8 +786,9 @@ def plot_categorical_raster_with_table(raster_path_list):
     styler = rat_dataframe.style.map(
         lambda val: f"background-color: {val}; color: {val}",
         subset=[legend_col_name])
-    lulc_rat_html = styler.hide(axis='index').to_html(
-        table_attributes='class="datatable"')
+    # lulc_rat_html = styler.hide(axis='index').to_html(
+    #     table_attributes='class="datatable"')
+    lulc_rat_html = styler.hide(axis='index').to_html()
     # lulc_plot_config = LULCPlotConfig(
     #     raster_path=args_dict['lulc_path'],
     #     datatype=RasterDatatype.nominal,
