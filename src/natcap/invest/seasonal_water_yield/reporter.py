@@ -334,7 +334,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             input_raster_config_list)
 
     lulc_img_src, lulc_legend_html = raster_utils.plot_categorical_raster_with_table(
-        args_dict['lulc_raster_path'])
+        [args_dict['lulc_raster_path']])
     lulc_caption = f"{os.path.basename(
         args_dict['lulc_raster_path'])}:{model_spec.get_input('lulc_raster_path').about}"
 

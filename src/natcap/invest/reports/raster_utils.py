@@ -1,5 +1,6 @@
 import base64
 import collections
+import functools
 import logging
 import math
 import textwrap
@@ -732,33 +733,57 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
     return fig
 
 
-def plot_categorical_raster_with_table(raster_path):
+def count_frequency(counter, block):
+    values, counts = numpy.unique(
+        block[~numpy.isnan(block)], return_counts=True)
+    return counter + collections.Counter(dict(zip(values, counts)))
+
+
+def plot_categorical_raster_with_table(raster_path_list):
     lulc_rat_html = None
     value_col_name = None
-    count_col_name = None
-    rat = get_raster_attribute_table(raster_path)
-    if rat:
+    rat_list = []
+    for raster_path in raster_path_list:
+        rat_list.append(get_raster_attribute_table(raster_path))
+    if None not in rat_list:    
+        rat_df_list = []
         rat_value_names = set()
-        for col in rat.columns:
-            if col.usage == 'MinMax':
-                rat_value_names.add(col.name)
-            if col.usage == 'PixelCount':
-                count_col_name = col.name
+        for rat in rat_list:
+            value_col = None
+            for col in rat.columns:
+                if col.usage == 'MinMax':
+                    value_col = col.name
+            rat_value_names.add(value_col)
+            rat_df_list.append(pandas.DataFrame(rat.rows))
         if len(rat_value_names) == 1:
             value_col_name = list(rat_value_names)[0]
-            rat_dataframe = pandas.DataFrame(rat.rows)
+        else:
+            # TODO: is it still okay if names don't match be each table has exactly one MinMax col?
+            LOGGER.debug('default raster attribute tables do not match and will be ignored.')
     if value_col_name is None:
-        def count_frequency(counter, block):
-            values, counts = numpy.unique(
-                block[~numpy.isnan(block)], return_counts=True)
-            return counter + collections.Counter(dict(zip(values, counts)))
-
-        table = pygeoprocessing.raster_reduce(
-            count_frequency, (raster_path, 1), collections.Counter())
+        rat_df_list = []
         value_col_name = 'value'
         count_col_name = 'count'
-        rat_dataframe = pandas.DataFrame(
-            table.items(), columns=[value_col_name, count_col_name])
+        for raster_path in raster_path_list:
+            table = pygeoprocessing.raster_reduce(
+                count_frequency, (raster_path, 1), collections.Counter())
+            rat_df_list.append(pandas.DataFrame(
+                table.items(), columns=[value_col_name, count_col_name]))
+    if len(rat_df_list) > 1:
+        rat_dataframe = functools.reduce(
+            lambda left, right: pandas.merge(left, right, on=[value_col_name], how='outer'),
+            rat_df_list)
+        # join_col = value_col_name
+        # joined_rats = rat_df_list[0].join(
+        #     rat_df_list[1].set_index(join_col),
+        #     on=join_col,
+        #     how='left',
+        #     lsuffix=f'_{input_raster_config_list[0].spec.name}',
+        #     rsuffix=f'_{input_raster_config_list[1].spec.name}')
+        # lulc_rat_html = merged_rats.to_html(classes=['datatable', 'paginate'])
+    elif len(rat_df_list) == 1:
+        rat_dataframe = rat_df_list[0]
+        # rat_df_list[0].to_html(classes='datatable')
 
     colors = get_categorical_colors(rat_dataframe.shape[0])
     # sort pixel values so colors are assigned the same here as in imshow.
@@ -766,13 +791,12 @@ def plot_categorical_raster_with_table(raster_path):
     legend_col_name = ''  # the color swatch column needs no label
     rat_dataframe.insert(
         0, legend_col_name, [matplotlib.colors.to_hex(c) for c in colors])
-    if count_col_name in rat_dataframe.columns:
-        rat_dataframe = rat_dataframe.sort_values(
-            count_col_name, ascending=False)
+    rat_dataframe = rat_dataframe.sort_values(value_col_name)
     styler = rat_dataframe.style.map(
         lambda val: f"background-color: {val}; color: {val}",
         subset=[legend_col_name])
-    lulc_rat_html = styler.hide(axis='index').to_html()
+    lulc_rat_html = styler.hide(axis='index').to_html(
+        table_attributes='class="datatable"')
     # lulc_plot_config = LULCPlotConfig(
     #     raster_path=args_dict['lulc_path'],
     #     datatype=RasterDatatype.nominal,
@@ -780,30 +804,37 @@ def plot_categorical_raster_with_table(raster_path):
     #     colors_dict=colors_dict)
     
     resample_alg = RESAMPLE_ALGS['nominal']
-    arr, resampled = _read_masked_array(raster_path, resample_alg)
-    xy_ratio = arr.shape[1] / arr.shape[0]
+    raster_info = pygeoprocessing.get_raster_info(raster_path_list[0])
+    bbox = raster_info['bounding_box']
+    xy_ratio = _get_aspect_ratio(bbox)
     # fig, axs = _figure_subplots(xy_ratio, n_plots=1)
     # ax = axs[0]
     figure_width = MAX_FIGURE_WIDTH_2_COL_WIDE_AOI * 0.6
-    fig, ax = plt.subplots(
+    n_plots = len(raster_path_list)
+    fig, axs = plt.subplots(
+        1, n_plots,
         figsize=(figure_width, figure_width / xy_ratio),
         layout='compressed')
     plt.close()
+    if n_plots == 1:
+        axs = numpy.array([axs])
     imshow_kwargs = {}
     imshow_kwargs['interpolation'] = 'none'
 
-    ax.set_title(**_get_title_kwargs(
-        os.path.basename(raster_path), resampled, 100))
+    for ax, raster_path in zip(axs, raster_path_list):
+        arr, resampled = _read_masked_array(raster_path, resample_alg)
+        ax.set_title(**_get_title_kwargs(
+            os.path.basename(raster_path), resampled, 100))
 
-    categories = sorted(colors_dict.keys())
-    colors = [colors_dict[cat] for cat in categories]
-    colormap = matplotlib.colors.ListedColormap(colors)
-    bounds = categories + [max(categories) + 1]
-    norm = matplotlib.colors.BoundaryNorm(bounds, colormap.N)
-    imshow_kwargs['norm'] = norm
+        categories = sorted(colors_dict.keys())
+        colors = [colors_dict[cat] for cat in categories]
+        colormap = matplotlib.colors.ListedColormap(colors)
+        bounds = categories + [max(categories) + 1]
+        norm = matplotlib.colors.BoundaryNorm(bounds, colormap.N)
+        imshow_kwargs['norm'] = norm
 
-    ax.imshow(arr, cmap=colormap, **imshow_kwargs)
-    ax.set_axis_off()
+        ax.imshow(arr, cmap=colormap, **imshow_kwargs)
+        ax.set_axis_off()
     return base64_encode(fig), lulc_rat_html
 
 

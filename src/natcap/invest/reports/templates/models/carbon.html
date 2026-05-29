@@ -67,15 +67,10 @@
     'LULC Maps',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (caption(lulc_pre_caption, pre_caption=True), 100),
-      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
-      (caption(inputs_caption, definition_list=True), 100)
+      (raster_plot_img(lulc_img_src, 'LULC Inputs'), 100),
+      (lulc_legend_html | safe, 100),
+      (caption(lulc_caption, definition_list=True), 100)
     ])
-  )}}
-
-  {{ accordion_section(
-    'LULC Raster Attribute Tables',
-    lulc_rat_html | safe
   )}}
 
   {{ accordion_section(
