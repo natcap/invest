@@ -2486,7 +2486,6 @@ def format_unit(unit):
     Returns:
         String describing the unit.
     """
-    LOGGER.info(f'unit: {unit}')
     if unit is None:
         return ''
 
