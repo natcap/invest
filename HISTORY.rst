@@ -92,6 +92,16 @@ Workbench
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
 
+Urban Cooling
+=============
+* The Urban Cooling model now generates a report, a visual summary of results,
+  available in the output workspace and also viewable from the Workbench after
+  the model run completes.
+  (`#2322 <https://github.com/natcap/invest/issues/2322>`_)
+* The ``T_air`` and ``cc`` outputs have been moved out of the intermediate
+  directory and into the main output workspace.
+  (`#2564 <https://github.com/natcap/invest/issues/2564>`_)
+
 3.19.0 (2026-04-16)
 -------------------
 
