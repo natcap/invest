@@ -110,7 +110,7 @@ def _create_aoi_maps(
         'avg_tmp_v': (
             gettext('Average Air Temperature'),
             uhi_output_spec.get_field('avg_tmp_v').units,
-            altair.Scale(scheme='yelloworangered')
+            altair.Scale(scheme='reds')
         ),
         'avg_tmp_an': (
             gettext('Average Air Temperature Anomaly'),
@@ -121,7 +121,7 @@ def _create_aoi_maps(
         'avg_wbgt_v': (
             gettext('Average Wet Bulb Globe Temperature (WBGT)'),
             uhi_output_spec.get_field('avg_wbgt_v').units,
-            altair.Scale(scheme='yelloworangered')
+            altair.Scale(scheme='reds')
         ),
         'avg_ltls_v': (
             gettext('Light Work Productivity Loss'),
@@ -220,7 +220,7 @@ def _create_bldg_maps(
         'mean_t_air': (
             gettext('Average Air Temperature by Building'),
             bldg_output_spec.get_field('mean_t_air').units,
-            altair.Scale(scheme='yelloworangered')
+            altair.Scale(scheme='reds')
         )
     }
 
@@ -289,7 +289,7 @@ def report(file_registry: dict[str, str], args_dict: dict,
         'Air Temperature and Heat Mitigation Index')
     output_raster_plot_configs = [
         RasterPlotConfig(file_registry['t_air'], RasterDatatype.continuous,
-                         model_spec.get_output('t_air'), colormap='YlOrRd'),
+                         model_spec.get_output('t_air'), colormap='Reds'),
         RasterPlotConfig(file_registry['hm'], RasterDatatype.continuous,
                          model_spec.get_output('hm'), colormap='Greens'),
     ]
