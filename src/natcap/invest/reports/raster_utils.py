@@ -452,7 +452,7 @@ def get_categorical_colors(num_colors):
         # approach to customizing color palettes.
         cmap = ListedColormap(
             distinctipy.get_colors(
-                num_colors, pastel_factor=0.6, rng=0))
+                num_colors, pastel_factor=0.6, rng=0, n_attempts=10))
     colors = cmap(numpy.linspace(0, 1, num_colors))
     return colors
 
@@ -525,29 +525,14 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         if dtype == 'nominal':
             # typically a 'nominal' raster would be an int type, but we replaced
             # nodata with nan, so the array is now a float.
-            values, counts = numpy.unique(arr[~numpy.isnan(arr)], return_counts=True)
-            values = values[numpy.argsort(-counts)].astype(int)  # descending order
-            # We need enough colors to cover the full range of values.
-            # If there is only one color per unique value, and the range of
-            # values is larger than the number of unique values, matplotlib's
-            # normalization can cause multiple values to be represented by the
-            # same color.
-            # (Future work may involve writing a custom normalizer to prevent
-            # this problem and generate only one color for each unique value.)
-            num_colors = numpy.max(values) - numpy.min(values) + 1
-            # If > 20 colors needed, generate colormap to override default.
-            if num_colors > 20:
-                # Values of pastel_factor and rng have been chosen specifically
-                # for Carbon (Willamette) sample data. If/when we create a
-                # report using sample data that is ill-suited to the color
-                # palette generated with these values, we will take a different
-                # approach to customizing color palettes.
-                cmap = ListedColormap(
-                    distinctipy.get_colors(
-                        num_colors, pastel_factor=0.6, rng=0))
-
+            values = list(numpy.unique(arr[~numpy.isnan(arr)]).astype(int))
+            num_colors = len(values)
+            colors = get_categorical_colors(num_colors)
+            cmap = matplotlib.colors.ListedColormap(colors)
+            bounds = values + [max(values) + 1]
+            norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
+            imshow_kwargs['norm'] = norm
             mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
-            colors = [mappable.cmap(mappable.norm(value)) for value in values]
             patches = [matplotlib.patches.Patch(
                 color=colors[i],
                 label=f'{values[i]}') for i in range(len(values))]
