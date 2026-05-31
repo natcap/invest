@@ -119,9 +119,6 @@
   }
   .wide-table-wrapper {
     overflow-x: auto;
-    table > tbody {
-      word-break: break-word;
-    }
   }
   .full-width {
     width: 100%;
@@ -173,6 +170,13 @@
   }
   button {
     cursor: pointer;
+  }
+  .legend-table {
+    font-size: 0.8rem;
+    border: 0;
+    td {
+      white-space: nowrap;
+    }
   }
   /*Because widgets of varying size tend to be below maps,
   align to top keeps the actual maps aligned*/

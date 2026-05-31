@@ -2,6 +2,7 @@
 
 {% block styles %}
   {{ super() }}
+  {% include 'datatable-styles.html' %}
 {% endblock styles %}
 
 {% block content %}
@@ -113,13 +114,19 @@
     (caption(inputs_caption, definition_list=True), 100)
   ] %}
 
+  {% set img_width = 100 %}
+  {% set table_width = 100 %}
+  {% if args_dict['model_option'] == 'ndvi' %}
+    {% set img_width = 60 %}
+    {% set table_width = 40 %}
+  {% endif %}
   {% if lulc_img_src != None %}
     {{ accordion_section(
       'LULC Maps',
       content_grid([
         (caption(raster_group_caption, pre_caption=True), 100),
-        (raster_plot_img(lulc_img_src, 'LULC Inputs'), 100),
-        (wide_table(lulc_legend_html | safe, font_size_px=14), 100),
+        (raster_plot_img(lulc_img_src, 'LULC Inputs'), img_width),
+        (wide_table(lulc_legend_html | safe), table_width),
         (caption(lulc_caption, definition_list=True), 100)
       ])
     )}}
@@ -158,6 +165,7 @@
 
 {% block scripts %}
   {{ super() }}
+  {% include 'datatable-js.html' %}
   {% include "vega-dependencies.html" %}
   {% include 'vega-embed-js.html' %}
 
