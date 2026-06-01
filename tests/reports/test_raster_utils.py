@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from bs4 import BeautifulSoup
 import geometamaker
 import matplotlib
 import matplotlib.testing.compare
@@ -641,7 +642,18 @@ class PlotCategoricalRastersTest(unittest.TestCase):
     @staticmethod
     def html_string_to_dataframe(html_string):
         """Helper to convert an HTML table string to a pandas dataframe."""
-        return pandas.read_html(io.StringIO(html_string), flavor='bs4')[0]
+        soup = BeautifulSoup(html_string, 'html.parser')
+        rows = soup.find_all('tr')
+        header = rows[0]
+        cells = header.find_all(['th', 'td'])
+        col_names = [cell.get_text() for cell in cells]
+        df = pandas.DataFrame(columns=col_names)
+
+        for idx, row in enumerate(rows[1:]):
+            cells = row.find_all(['td'])
+            cell_values = [cell.get_text() for cell in cells]
+            df.loc[idx + 1] = cell_values
+        return df
 
     def test_plot_single_raster_with_rat(self):
         """Test single raster with RAT."""
@@ -669,7 +681,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         self.assertEqual(df.shape, (num_vals, 3))
         self.assertCountEqual(
             df.columns,
-            ['Unnamed: 0', 'value', 'count'])  # first col has color; pandas demands a name
+            ['', 'value', 'count'])  # first col has color
 
     def test_plot_two_rasters_with_rat(self):
         """Test two rasters with RATS and expect RATS are joined."""
@@ -747,7 +759,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         self.assertEqual(df.shape, (unique_values, n_cols))
         self.assertCountEqual(
             df.columns,
-            ['Unnamed: 0', 'value', 'count_x', 'count_y'])
+            ['', 'value', 'count_x', 'count_y'])
 
 
 class RasterWorkspaceSummaryTests(unittest.TestCase):
