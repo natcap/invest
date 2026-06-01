@@ -674,7 +674,9 @@ def count_frequency(counter, block):
     return counter + collections.Counter(dict(zip(values, counts)))
 
 
-def plot_categorical_raster_with_table(raster_path_list):
+def plot_categorical_raster_with_table(raster_path_list: list[str]):
+    if not isinstance(raster_path_list, list):
+        raise TypeError('Expected `raster_path_list` to be a list of filepaths')
     lulc_rat_html = None
     value_col_name = None
     rat_list = []

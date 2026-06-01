@@ -1,3 +1,4 @@
+import io
 import os
 import shutil
 import tempfile
@@ -10,7 +11,8 @@ import matplotlib.testing.compare
 from matplotlib.testing import set_font_settings_for_testing
 from matplotlib.testing.exceptions import ImageComparisonFailure
 import numpy
-from osgeo import osr
+from osgeo import gdal, osr
+import pandas
 import pygeoprocessing
 
 from natcap.invest import spec
@@ -65,6 +67,27 @@ def make_nominal_raster_with_distinct_counts(target_filepath, num_vals):
     pygeoprocessing.numpy_array_to_raster(
         array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
         projection_wkt=PROJ_WKT, target_path=target_filepath)
+
+
+def add_raster_attribute_table(target_filepath, value_name='value',
+                               count_name='count', extra_cols=[]):
+    raster = gdal.OpenEx(target_filepath, gdal.OF_UPDATE)
+    band = raster.GetRasterBand(1)
+    rat = gdal.RasterAttributeTable()
+    rat.CreateColumn(value_name, gdal.GFT_Integer, gdal.GFU_MinMax)
+    rat.CreateColumn(count_name, gdal.GFT_Integer, gdal.GFU_PixelCount)
+    for name in extra_cols:
+        rat.CreateColumn(name, gdal.GFT_String, gdal.GFU_Generic)
+
+    array = band.ReadAsArray()
+    values, counts = numpy.unique(array, return_counts=True)
+    for i in range(len(values)):
+        rat.SetValueAsInt(i, 0, int(values[i]))
+        rat.SetValueAsInt(i, 1, int(counts[i]))
+        for idx, name in enumerate(extra_cols):
+            rat.SetValueAsString(i, 2 + idx, 'foo')
+    band.SetDefaultRAT(rat)
+    band = raster = None
 
 
 def compare_snapshots(reference, actual):
@@ -602,6 +625,119 @@ class RasterCaptionTests(unittest.TestCase):
             [raster1_config, raster2_config])
 
         self.assertEqual(generated_caption, expected_caption)
+
+
+class PlotCategoricalRastersTest(unittest.TestCase):
+    """Unit tests for plotting categorical rasters with attribute table."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_plot_single_raster_with_rat(self):
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        add_raster_attribute_table(target_filepath, extra_cols=['foo'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        df = pandas.read_html(io.StringIO(table))[0]
+        # Our RAT has 3 columns, a 4th was added for the color swatch
+        self.assertEqual(df.shape, (num_vals, 4))
+
+    def test_plot_single_raster_without_rat(self):
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        # In the absence of a RAT, a frequency table was constructed
+        df = pandas.read_html(io.StringIO(table))[0]
+        self.assertEqual(df.shape, (num_vals, 3))
+        self.assertCountEqual(
+            df.columns,
+            ['Unnamed: 0', 'value', 'count'])  # first col has color; pandas demands a name
+
+    def test_plot_two_rasters_with_rat(self):
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        add_raster_attribute_table(filepath_a)
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        add_raster_attribute_table(filepath_b, extra_cols=['foo'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = pandas.read_html(io.StringIO(table))[0]
+        # In this example, the union of unique values in 'a' and 'b' happens to
+        # equal the unique values in 'b'
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        # and b has 1 extra column.
+        n_cols = 5
+        self.assertEqual(df.shape, (unique_values, n_cols))
+
+    def test_plot_two_rasters_one_missing_rat(self):
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        # This RAT will be ignored because the 2nd raster does not also
+        # have a RAT.
+        add_raster_attribute_table(
+            filepath_a, extra_cols=['foo', 'bar', 'baz'])
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = pandas.read_html(io.StringIO(table))[0]
+        # Since one was missing a rat, we expect the plot function to ignore
+        # the existing RAT and build its own frequency table for both.
+        # In this example, the union of unique values in 'a' and 'b' happens to
+        # equal the unique values in 'b'
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        n_cols = 4
+        self.assertEqual(df.shape, (unique_values, n_cols))
+
+    def test_plot_two_rasters_with_incompatible_rat(self):
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        add_raster_attribute_table(filepath_a, value_name='VALUE')
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        add_raster_attribute_table(filepath_b, value_name='VAL')
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = pandas.read_html(io.StringIO(table))[0]
+
+        # Since the two RAT do not have a common column, they could not be joined.
+        # Expect the default frequency table instead.
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        n_cols = 4
+        self.assertEqual(df.shape, (unique_values, n_cols))
+        self.assertCountEqual(
+            df.columns,
+            ['Unnamed: 0', 'value', 'count_x', 'count_y'])
 
 
 class RasterWorkspaceSummaryTests(unittest.TestCase):
