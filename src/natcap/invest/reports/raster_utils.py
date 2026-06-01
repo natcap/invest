@@ -700,7 +700,6 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
         if len(rat_value_names) == 1:
             value_col_name = list(rat_value_names)[0]
         else:
-            # TODO: is it still okay if names don't match if each table has exactly one MinMax col?
             LOGGER.debug(
                 'default raster attribute tables do not match and will be ignored.')
     if value_col_name is None:
