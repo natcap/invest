@@ -193,7 +193,7 @@ def build_datastack_archive(args, model_id, datastack_path):
         input_spec = module.MODEL_SPEC.get_input(key)
         # We don't want to accidentally archive a user's complete workspace
         # directory, complete with prior runs there.
-        if isinstance(input_spec, WorkspaceInput):
+        if isinstance(input_spec, spec.WorkspaceInput):
             LOGGER.debug(
                 f"Skipping workspace directory: {args['workspace_dir']}")
             continue
