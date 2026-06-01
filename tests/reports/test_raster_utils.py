@@ -639,6 +639,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_plot_single_raster_with_rat(self):
+        """Test single raster with RAT."""
         target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
         num_vals = 12
         make_nominal_raster_with_distinct_counts(
@@ -651,6 +652,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         self.assertEqual(df.shape, (num_vals, 4))
 
     def test_plot_single_raster_without_rat(self):
+        """Test single raster without RAT."""
         target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
         num_vals = 12
         make_nominal_raster_with_distinct_counts(
@@ -665,6 +667,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
             ['Unnamed: 0', 'value', 'count'])  # first col has color; pandas demands a name
 
     def test_plot_two_rasters_with_rat(self):
+        """Test two rasters with RATS and expect RATS are joined."""
         filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
         num_vals_a = 6
         make_nominal_raster_with_distinct_counts(
@@ -688,6 +691,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         self.assertEqual(df.shape, (unique_values, n_cols))
 
     def test_plot_two_rasters_one_missing_rat(self):
+        """Test two rasters with one missing a RAT."""
         filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
         num_vals_a = 6
         make_nominal_raster_with_distinct_counts(
@@ -714,6 +718,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         self.assertEqual(df.shape, (unique_values, n_cols))
 
     def test_plot_two_rasters_with_incompatible_rat(self):
+        """Test two rasters with non-matching RATS."""
         filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
         num_vals_a = 6
         make_nominal_raster_with_distinct_counts(
@@ -729,8 +734,8 @@ class PlotCategoricalRastersTest(unittest.TestCase):
             [filepath_a, filepath_b])
         df = pandas.read_html(io.StringIO(table))[0]
 
-        # Since the two RAT do not have a common column, they could not be joined.
-        # Expect the default frequency table instead.
+        # Since the two RAT do not have a common value column, they could
+        # not be joined. Expect the default frequency table instead.
         unique_values = num_vals_b
         # The value and color columns are shared; each has a count col;
         n_cols = 4

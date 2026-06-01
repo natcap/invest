@@ -668,7 +668,8 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
     return fig
 
 
-def count_frequency(counter, block):
+def _count_frequency(counter, block):
+    """A reducer for ``pygeoprocessing.raster_reduce``."""
     values, counts = numpy.unique(
         block[~numpy.isnan(block)], return_counts=True)
     return counter + collections.Counter(dict(zip(values, counts)))
@@ -731,7 +732,7 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
             LOGGER.info(
                 f'Calculating frequency table for classes in {raster_path}')
             table = pygeoprocessing.raster_reduce(
-                count_frequency, (raster_path, 1), collections.Counter())
+                _count_frequency, (raster_path, 1), collections.Counter())
             rat_df_list.append(pandas.DataFrame(
                 table.items(), columns=[value_col_name, count_col_name]))
     if len(rat_df_list) > 1:

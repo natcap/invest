@@ -126,25 +126,11 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         lulc_raster_list.append(args_dict['lulc_base'])
         lulc_caption.append(
             f"{os.path.basename(args_dict['lulc_base'])}:{model_spec.get_input('lulc_base').about}")
-        # input_raster_config_list.append(
-        #     RasterPlotConfig(
-        #         raster_path=args_dict['lulc_base'],
-        #         datatype=RasterDatatype.nominal,
-        #         spec=model_spec.get_input('lulc_base')
-        #     )
-        # )
 
     if args_dict['lulc_alt']:
         lulc_raster_list.append(args_dict['lulc_alt'])
         lulc_caption.append(
             f"{os.path.basename(args_dict['lulc_alt'])}:{model_spec.get_input('lulc_alt').about}")
-        # input_raster_config_list.append(
-        #     RasterPlotConfig(
-        #         raster_path=args_dict['lulc_alt'],
-        #         datatype=RasterDatatype.nominal,
-        #         spec=model_spec.get_input('lulc_alt')
-        #     )
-        # )
 
     if args_dict["model_option"] == 'ndvi':
         input_raster_config_list.insert(0,
