@@ -675,13 +675,31 @@ def count_frequency(counter, block):
 
 
 def plot_categorical_raster_with_table(raster_path_list: list[str]):
+    """Plot one or more categorical rasters and generate an HTML table legend.
+
+    Unique pixel values are determined either from an existing
+    Raster Attribute Table or by calculating a frequency table from the array.
+
+    If multiple rasters are given, it is assumed the pixel values have a shared
+    meaning and the tables are joined based on the value column. All rasters
+    will share the same colormap.
+
+    Args:
+        raster_path_list (list[str]): list of filepaths to categorical rasters
+
+    Returns:
+        A tuple containing:
+            - A string representing a base64-encoded PNG
+            - An html table to use as the legend for the image
+
+    """
     if not isinstance(raster_path_list, list):
         raise TypeError('Expected `raster_path_list` to be a list of filepaths')
     lulc_rat_html = None
     value_col_name = None
     rat_list = []
     for raster_path in raster_path_list:
-        rat_list.append(get_raster_attribute_table(raster_path))
+        rat_list.append(_get_raster_attribute_table(raster_path))
     if None not in rat_list:    
         rat_df_list = []
         rat_value_names = set()
@@ -693,7 +711,8 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
             rat_value_names.add(value_col)
             df = pandas.DataFrame(rat.rows)
             # Some RAT include color tables. This is not useful to display in
-            # this context. Best we can do is guess what the column names could be.
+            # this context because it will be confusing.
+            # Best we can do is guess what the column names could be.
             col_filter = df.filter(['Red', 'Green', 'Blue', 'Alpha', 'Opacity'])
             df = df.drop(col_filter, axis=1)
             rat_df_list.append(df)
@@ -702,6 +721,8 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
         else:
             LOGGER.debug(
                 'default raster attribute tables do not match and will be ignored.')
+
+    # There was no RAT, or the RAT value columns were ambiguous
     if value_col_name is None:
         rat_df_list = []
         value_col_name = 'value'
@@ -818,7 +839,7 @@ def _get_raster_metadata(filepath):
         return resource
 
 
-def get_raster_attribute_table(filepath):
+def _get_raster_attribute_table(filepath):
     rat = None
     resource = _get_raster_metadata(filepath)
     if resource is None:
