@@ -733,8 +733,12 @@ def plot_categorical_raster_with_table(raster_path_list):
     classes = 'datatable legend-table'
     if rat_dataframe.shape[0] >= 20:
         classes += ' paginate'
+    if rat_dataframe.shape[1] >= 5:
+        # 3 or 4 columns will be typical (color, value, count, name/desc)
+        # But we have no idea how many there might be.
+        classes += ' colvis'
     lulc_rat_html = styler.hide(axis='index').to_html(
-        table_attributes=f'class="{classes}"')
+        table_attributes=f'class="{classes}"', na_rep='')
     
     resample_alg = RESAMPLE_ALGS['nominal']
     raster_info = pygeoprocessing.get_raster_info(raster_path_list[0])
