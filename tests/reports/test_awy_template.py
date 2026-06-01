@@ -30,6 +30,7 @@ def _get_render_args(model_spec):
     inputs_caption = ['input.tif:Input map.']
     caption = 'figure caption'
     agg_map_source_list = ['/source/file.shp']
+    table_columns_note = "A note about table columns."
 
     return {
         'report_script': model_spec.reporter,
@@ -52,6 +53,7 @@ def _get_render_args(model_spec):
         'watershed_map_params': None,
         'valuation_results': None,
         'subwatershed_results': None,
+        'table_columns_note': table_columns_note,
         'output_raster_stats_table': output_stats_table,
         'input_raster_stats_table': input_stats_table,
         'inputs_img_src': img_src,

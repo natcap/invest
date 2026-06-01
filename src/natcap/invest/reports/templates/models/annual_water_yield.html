@@ -31,7 +31,8 @@
   {% set watershed_results_inner = [ 
     (content_grid([
       (wide_table(watershed_table | safe, font_size_px=16), 100),
-      (caption(watershed_table_caption, definition_list=True), 100)
+      (caption(watershed_table_caption, definition_list=True), 100),
+      (caption(table_columns_note), 100)
     ]), 100)
   ] %}
 
@@ -68,7 +69,8 @@
         (content_grid([
           (wide_table(subwatershed_results['table'] | safe, font_size_px=16), 100),
           (caption(subwatershed_results['table_caption'],
-                   definition_list=True), 100)
+                   definition_list=True), 100),
+          (caption(table_columns_note), 100)
         ]), 100),
         (content_grid([
           ('<div id="sw_wyield_vol"></div>', 100),

@@ -170,6 +170,10 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             "table_caption": sw_aggregate_table_caption,
         }
 
+    table_columns_note = gettext(
+        "Note: Columns not defined here may appear in the table. Any columns not"
+        " listed were included in the user-provided input vector.")
+
     input_raster_config_list = [
         RasterPlotConfig(
             raster_path=args_dict['lulc_path'],
@@ -225,6 +229,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             watershed_map_params=watershed_map_params,
             valuation_results=valuation_results,
             subwatershed_results=subwatershed_results,
+            table_columns_note=table_columns_note,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
             inputs_img_src=inputs_img_src,
