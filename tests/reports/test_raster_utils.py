@@ -638,6 +638,11 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
+    @staticmethod
+    def html_string_to_dataframe(html_string):
+        """Helper to convert an HTML table string to a pandas dataframe."""
+        return pandas.read_html(io.StringIO(html_string), flavor='bs4')[0]
+
     def test_plot_single_raster_with_rat(self):
         """Test single raster with RAT."""
         target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
@@ -647,7 +652,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         add_raster_attribute_table(target_filepath, extra_cols=['foo'])
         img_src, table = raster_utils.plot_categorical_raster_with_table(
             [target_filepath])
-        df = pandas.read_html(io.StringIO(table))[0]
+        df = self.html_string_to_dataframe(table)
         # Our RAT has 3 columns, a 4th was added for the color swatch
         self.assertEqual(df.shape, (num_vals, 4))
 
@@ -660,7 +665,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         img_src, table = raster_utils.plot_categorical_raster_with_table(
             [target_filepath])
         # In the absence of a RAT, a frequency table was constructed
-        df = pandas.read_html(io.StringIO(table))[0]
+        df = self.html_string_to_dataframe(table)
         self.assertEqual(df.shape, (num_vals, 3))
         self.assertCountEqual(
             df.columns,
@@ -681,7 +686,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         add_raster_attribute_table(filepath_b, extra_cols=['foo'])
         img_src, table = raster_utils.plot_categorical_raster_with_table(
             [filepath_a, filepath_b])
-        df = pandas.read_html(io.StringIO(table))[0]
+        df = self.html_string_to_dataframe(table)
         # In this example, the union of unique values in 'a' and 'b' happens to
         # equal the unique values in 'b'
         unique_values = num_vals_b
@@ -707,7 +712,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
             filepath_b, num_vals_b)
         img_src, table = raster_utils.plot_categorical_raster_with_table(
             [filepath_a, filepath_b])
-        df = pandas.read_html(io.StringIO(table))[0]
+        df = self.html_string_to_dataframe(table)
         # Since one was missing a rat, we expect the plot function to ignore
         # the existing RAT and build its own frequency table for both.
         # In this example, the union of unique values in 'a' and 'b' happens to
@@ -732,7 +737,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         add_raster_attribute_table(filepath_b, value_name='VAL')
         img_src, table = raster_utils.plot_categorical_raster_with_table(
             [filepath_a, filepath_b])
-        df = pandas.read_html(io.StringIO(table))[0]
+        df = self.html_string_to_dataframe(table)
 
         # Since the two RAT do not have a common value column, they could
         # not be joined. Expect the default frequency table instead.
