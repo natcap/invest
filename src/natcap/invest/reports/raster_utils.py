@@ -183,6 +183,12 @@ class RasterPlotConfig:
     """Will customize the color and labeling of a special range of values"""
 
     def __post_init__(self):
+        if (self.special_values and self.datatype not in [
+                RasterDatatype.continuous, RasterDatatype.divergent]):
+            raise ValueError(
+                "`special_values` may only be defined for raster configs with "
+                "`datatype` of `continuous` or `divergent`."
+            )
         if self.title is None:
             self.title = os.path.basename(self.raster_path)
         self.caption = f'{self.title}:{self.spec.about}'
@@ -424,36 +430,35 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         imshow_kwargs['norm'] = transform
         imshow_kwargs['interpolation'] = 'none'
         cmap = config.colormap
-        if dtype in ['divergent', 'continuous']:
-            vmin = vmax = halfrange = None
-            if config.special_values:
-                if config.special_values.extend == 'min':
-                    vmin = config.special_values.threshold
-                    halfrange = abs(vmin)
-                elif config.special_values.extend == 'max':
-                    vmax = config.special_values.threshold
-                    halfrange = abs(vmax)
-                else:
-                    vmin, vmax = config.special_values.threshold
-                    halfrange = max(abs(vmin), abs(vmax))
-            if dtype == 'divergent':
-                if transform == 'log':
-                    transform = matplotlib.colors.SymLogNorm(
-                        linthresh=0.03, vmin=vmin, vmax=vmax)
-                else:
-                    LOGGER.info(
-                        f"Using divergent datatype for raster {raster_path} "
-                        f"with halfrange: {halfrange}.")
-                    transform = matplotlib.colors.CenteredNorm(
-                        halfrange=halfrange)
-            if dtype == 'continuous':
-                if transform == 'log':
-                    transform = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
-                else:
-                    transform = matplotlib.colors.Normalize(
-                        vmin=vmin, vmax=vmax)
-            imshow_kwargs['norm'] = transform
-        elif dtype.startswith('binary'):
+        vmin = vmax = halfrange = None
+        if config.special_values:
+            if config.special_values.extend == 'min':
+                vmin = config.special_values.threshold
+                halfrange = abs(vmin)
+            elif config.special_values.extend == 'max':
+                vmax = config.special_values.threshold
+                halfrange = abs(vmax)
+            else:
+                vmin, vmax = config.special_values.threshold
+                halfrange = max(abs(vmin), abs(vmax))
+        if dtype == 'divergent':
+            if transform == 'log':
+                transform = matplotlib.colors.SymLogNorm(
+                    linthresh=0.03, vmin=vmin, vmax=vmax)
+            else:
+                LOGGER.info(
+                    f"Using divergent datatype for raster {raster_path} "
+                    f"with halfrange: {halfrange}.")
+                transform = matplotlib.colors.CenteredNorm(
+                    halfrange=halfrange)
+        else:  # dtype is continuous
+            if transform == 'log':
+                transform = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
+            else:
+                transform = matplotlib.colors.Normalize(
+                    vmin=vmin, vmax=vmax)
+        imshow_kwargs['norm'] = transform
+        if dtype.startswith('binary'):
             transform = matplotlib.colors.BoundaryNorm([0, 0.5, 1], cmap.N)
             imshow_kwargs['vmin'] = -0.5
             imshow_kwargs['vmax'] = 1.5

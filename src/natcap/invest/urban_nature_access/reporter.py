@@ -3,12 +3,11 @@ import time
 
 import altair
 import geopandas
-import geometamaker
 import numpy
 import pandas
 import re
 
-from natcap.invest import validation
+from natcap.invest import utils, validation
 from natcap.invest import __version__
 from natcap.invest import gettext
 from natcap.invest.reports import jinja_env, raster_utils, report_constants, \
@@ -18,13 +17,14 @@ from natcap.invest.spec import ModelSpec
 from natcap.invest.reports.raster_utils import RasterDatatype, \
     RasterPlotConfig, RasterTransform, SpecialValueConfig
 
+from natcap.invest.urban_nature_access import RADIUS_OPT_POP_GROUP, \
+    RADIUS_OPT_URBAN_NATURE
+
 LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/urban_nature_access.html')
 
 MAP_WIDTH = 450  # pixels
-
-NEAR_ZERO_RANGE = (-0.01, 0.01)
 
 
 def get_min_max_for_vector_colorbar(datamin, datamax):
@@ -147,7 +147,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         ),
     ]
 
-    if args_dict['search_radius_mode'] != "radius per urban nature class":
+    intermediates_img_src = None
+    intermediates_caption = None
+    if args_dict['search_radius_mode'] != RADIUS_OPT_URBAN_NATURE:
         intermediate_raster_config_list = [
             RasterPlotConfig(
                 raster_path=file_registry['urban_nature_area'],
@@ -164,13 +166,25 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             intermediate_raster_config_list)
         intermediates_caption = raster_utils.caption_raster_list(
             intermediate_raster_config_list)
-    else:
-        intermediates_img_src = intermediates_caption = None
 
     output_accessible_list = []
     output_balance_list = []
     output_balance_percapita_list = []
-    if args_dict['search_radius_mode'] == 'radius per population group':
+    output_balance_img_src = None
+    output_balance_raster_caption = None
+    output_balance_percapita_img_src = None
+    output_balance_percapita_raster_caption = None
+    balance_viz = {
+        'datatype': RasterDatatype.divergent,
+        'transform': RasterTransform.linear,
+        'special_values': SpecialValueConfig(
+            extend="both",
+            threshold=(-1000, 1000),
+            label=('<-1000', '>1000'),
+            color=('#8C4300', '#1F0737')
+        )
+    }
+    if args_dict['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         pop_group_list = list(
             filter(lambda x: re.match('^pop_', x),
                    validation.load_fields_from_vector(
@@ -191,20 +205,18 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                 RasterPlotConfig(
                     raster_path=file_registry[
                         'urban_nature_balance_[POP_GROUP]'][group],
-                    datatype=RasterDatatype.divergent,
                     spec=model_spec.get_output(
                         'urban_nature_balance_[POP_GROUP]'),
-                    transform=RasterTransform.log
+                    **balance_viz
                 )
             )
             output_balance_percapita_list.append(
                 RasterPlotConfig(
                     raster_path=file_registry[
                         'urban_nature_balance_percapita_[POP_GROUP]'][group],
-                    datatype=RasterDatatype.divergent,
                     spec=model_spec.get_output(
                         'urban_nature_balance_percapita_[POP_GROUP]'),
-                    transform=RasterTransform.log
+                    **balance_viz
                 )
             )
 
@@ -224,9 +236,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             r'(pop_).*?(\.tif)', r'\1POP_GROUP\2',
             output_balance_percapita_list[0].caption)
 
-    elif args_dict['search_radius_mode'] == 'radius per urban nature class':
-        nature_class_list = pandas.read_csv(args_dict[
-            'lulc_attribute_table'])['lucode']
+    elif args_dict['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
+        nature_class_list = utils.read_csv_to_dataframe(
+            args_dict['lulc_attribute_table'])['lucode']
 
         for lucode in nature_class_list:
             if str(lucode) in file_registry[
@@ -243,10 +255,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                 )
         output_accessible_raster_caption = raster_utils.caption_raster_list(
             output_accessible_list)[0].replace("lucode_1", "lucode_LUCODE")
-        output_balance_img_src = None
-        output_balance_raster_caption = None
-        output_balance_percapita_img_src = None
-        output_balance_percapita_raster_caption = None
 
     else:
         output_accessible_list = [
@@ -257,10 +265,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             )]
         output_accessible_raster_caption = raster_utils.caption_raster_list(
                 output_accessible_list)
-        output_balance_img_src = None
-        output_balance_raster_caption = None
-        output_balance_percapita_img_src = None
-        output_balance_percapita_raster_caption = None
 
     output_raster_config_list = [
         RasterPlotConfig(
@@ -278,26 +282,12 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         RasterPlotConfig(
             raster_path=file_registry['urban_nature_balance_percapita'],
             spec=model_spec.get_output('urban_nature_balance_percapita'),
-            datatype=RasterDatatype.divergent,
-            transform=RasterTransform.linear,
-            special_values=SpecialValueConfig(
-                extend="both",
-                threshold=(-1000, 1000),
-                label=('<-1000', '>1000'),
-                color=('#8C4300', '#1F0737')
-            )
+            **balance_viz
         ),
         RasterPlotConfig(
             raster_path=file_registry['urban_nature_balance_totalpop'],
             spec=model_spec.get_output('urban_nature_balance_totalpop'),
-            datatype=RasterDatatype.divergent,
-            transform=RasterTransform.linear,
-            special_values=SpecialValueConfig(
-                extend="both",
-                threshold=(-1000, 1000),
-                label=('<-1000', '>1000'),
-                color=('#8C4300', '#1F0737')
-            )
+            **balance_viz
         )
     ]
 

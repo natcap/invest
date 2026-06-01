@@ -35,8 +35,20 @@ RADIUS_OPT_POP_GROUP = 'radius per population group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
 
-_model_description = """
-Nature in urban areas provides numerous benefits to people–from urban cooling to flood mitigation to opportunities for recreation, physical activity, and renewal. The InVEST Urban Nature Access model allows for examination of access to the recreational, social, psychological, and physical health benefits of nature. Assessing nature-based recreation and its health benefits first requires an understanding of both the “supply” of urban nature and “demand” for urban nature. The supply is determined by the type, size, proximity, and quality of urban nature, while the demand depends on people’s preferences or local policy requirements/urban planning standards. The InVEST Urban Nature Access model provides a measure of both supply and demand for urban nature, as well as the supply-demand balance, which quantifies the extent to which supply meets demand at the individual, administrative, and city levels."""
+_model_description = gettext(
+    """
+    The InVEST Urban Nature Access model allows for examination of access to
+    the recreational, social, psychological, and physical health benefits of
+    nature. Assessing nature-based recreation and its health benefits first
+    requires an understanding of both the "supply" of urban nature and
+    "demand" for urban nature. The supply is determined by the type, size,
+    proximity, and quality of urban nature, while the demand depends on
+    people's preferences or local policy requirements/urban planning
+    standards. The InVEST Urban Nature Access model provides a measure of
+    both supply and demand for urban nature, as well as the supply-demand
+    balance, which quantifies the extent to which supply meets demand at
+    the individual, administrative, and city levels.
+    """)
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="urban_nature_access",
