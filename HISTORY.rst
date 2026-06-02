@@ -83,6 +83,10 @@ General
 * Fixed an issue with Windows binary builds where users would see runtime
   warnings saying ``GDAL_DATA`` is not defined.
   (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
+* Avoid logging a Python traceback and avoid attempting to generate metadata
+  and an html report if a model's ``execute`` function does not return a
+  ``FileRegistry.registry`` dictionary.
+  (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
 
 Workbench
 =========

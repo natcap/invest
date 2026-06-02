@@ -2235,6 +2235,22 @@ class ModelSpec(ImmutableBaseModel):
             model_module = importlib.import_module(self.module_name)
             registry = model_module.execute(args)
 
+            if not isinstance(registry, dict):
+                msg = "`execute` was called with {kwargs}, but no" \
+                      " file registry dictionary was returned from `execute`."
+                kwargs_used = []
+                if check_outputs:
+                    kwargs_used.append('check_outputs=True')
+                if generate_metadata:
+                    kwargs_used.append('generate_metadata=True')
+                if save_file_registry:
+                    kwargs_used.append('save_file_registry=True')
+                if generate_report:
+                    kwargs_used.append('generate_report=True')
+                if len(kwargs_used):
+                    LOGGER.warning(msg.format(kwargs=', '.join(kwargs_used)))
+                return
+
             preprocessed_args = self.preprocess_inputs(args)
 
             if check_outputs:
