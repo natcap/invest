@@ -101,6 +101,11 @@ Workbench
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
 
+Annual Water Yield
+==================
+* Allow watershed input to have a POLYGON or MULTIPOLYGON geometry type.
+  (`#2513 <https://github.com/natcap/invest/issues/2513>`_)
+
 SDR
 ===
 * Added exception-handling when checking if watershed geoemtries overlap.
