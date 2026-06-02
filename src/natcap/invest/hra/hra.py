@@ -2446,6 +2446,7 @@ def _override_datastack_archive_criteria_table_path(
 
     target_output_path = os.path.join(data_dir, f'{args_key}_csv',
                                       os.path.basename(criteria_table_path))
+    os.makedirs(os.path.dirname(target_output_path), exist_ok=True)
     numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',
                   fmt="%s", encoding="UTF-8")
     return target_output_path
