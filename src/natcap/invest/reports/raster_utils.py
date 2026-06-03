@@ -31,7 +31,8 @@ LOGGER = logging.getLogger(__name__)
 
 MPL_SAVE_FIG_KWARGS = {
     'format': 'png',
-    'bbox_inches': 'tight'
+    'bbox_inches': 'tight',
+    'dpi': 100
 }
 
 # Our CSS sets report container max width to 80rem, which is 1280px
@@ -224,7 +225,7 @@ def caption_raster_list(raster_list: list[RasterPlotConfig]):
     return [config.caption for config in raster_list]
 
 
-def _read_masked_array(filepath, resample_method):
+def _read_masked_array(filepath, resample_method, target_width):
     """Read a raster into a masked numpy array.
 
     If the raster is large, build overviews and then read array from the
@@ -244,21 +245,38 @@ def _read_masked_array(filepath, resample_method):
     info = pygeoprocessing.get_raster_info(filepath)
     nodata = info['nodata'][0]
     resampled = False
-    if os.path.getsize(filepath) > 4e6:
+    raster_width = info['raster_size'][0]
+    # image_width = 600  # px
+    # if os.path.getsize(filepath) > 4e6:
+    # TODO: the external ovr is actually larger in filesize
+    # than the original tif! It is probably not being compressed.
+    # What happens if the ovr is stored internally?
+    if raster_width > target_width:
+        level = raster_width // target_width
         resampled = True
         raster = gdal.OpenEx(filepath)
         band = raster.GetRasterBand(1)
+        ovr_idx = 0
         if band.GetOverviewCount() == 0:
+            LOGGER.info(f'Overview level {level}')
             pygeoprocessing.build_overviews(
                 filepath,
                 internal=False,
                 resample_method=resample_method,
-                overwrite=False, levels='auto')
+                overwrite=False, levels=[level])
+        else:
+            # Find the overview with width closest to,
+            # but not smaller than, target_width
+            # Overviews are ordered from largest array size to smallest
+            for i in range(band.GetOverviewCount()):
+                ovr_idx = i
+                if band.GetOverview(i).XSize < target_width:
+                    break
 
         raster = gdal.OpenEx(filepath)
         band = raster.GetRasterBand(1)
-        n = band.GetOverviewCount()
-        array = band.GetOverview(n - 1).ReadAsArray()
+        # n = band.GetOverviewCount()
+        array = band.GetOverview(ovr_idx).ReadAsArray()
         raster = band = None
     else:
         array = pygeoprocessing.raster_to_numpy_array(filepath)
@@ -268,6 +286,7 @@ def _read_masked_array(filepath, resample_method):
     else:
         valid_mask = numpy.full(array.shape, True)
     masked_array[valid_mask] = array[valid_mask]
+    LOGGER.info(f'plotting array of shape {masked_array.shape}')
     return (masked_array, resampled)
 
 
@@ -315,6 +334,7 @@ def _figure_subplots(xy_ratio, n_plots, small_plots=False):
         downscale_factor = max_figure_height / figure_height
         figure_height = max_figure_height
         figure_width *= downscale_factor
+        sub_width *= downscale_factor
 
     fig, axs = plt.subplots(
         n_rows, n_cols, figsize=(figure_width, figure_height),
@@ -322,7 +342,7 @@ def _figure_subplots(xy_ratio, n_plots, small_plots=False):
     plt.close()
     if n_plots == 1:
         axs = numpy.array([axs])
-    return fig, axs
+    return fig, axs, sub_width
 
 
 def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
@@ -406,7 +426,8 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
     bbox = raster_info['bounding_box']
     n_plots = len(raster_list)
     xy_ratio = _get_aspect_ratio(bbox)
-    fig, axs = _figure_subplots(xy_ratio, n_plots)
+    fig, axs, subplot_width = _figure_subplots(xy_ratio, n_plots)
+    target_px_width = subplot_width * MPL_SAVE_FIG_KWARGS['dpi']
 
     # To ensure that plots in same group are the same size, subtitle_offset
     # padding is needed if _any_ raster in list has units (see InVEST #2471)
@@ -418,10 +439,13 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         dtype = config.datatype
         transform = config.transform
         resample_alg = RESAMPLE_ALGS[dtype]
-        arr, resampled = _read_masked_array(raster_path, resample_alg)
+        arr, resampled = _read_masked_array(
+            raster_path, resample_alg, target_px_width)
         imshow_kwargs = {}
         colorbar_kwargs = {}
         imshow_kwargs['norm'] = transform
+        # We have already resampled rasters to be close to the final image
+        # resolution so avoid letting matplotlib do further interpolation.
         imshow_kwargs['interpolation'] = 'none'
         cmap = config.colormap
         if dtype == 'divergent':
@@ -610,7 +634,9 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
     bbox = raster_info['bounding_box']
     n_plots = len(tif_list)
     xy_ratio = _get_aspect_ratio(bbox)
-    fig, axes = _figure_subplots(xy_ratio, n_plots, small_plots=small_plots)
+    fig, axes, subplot_width = _figure_subplots(
+        xy_ratio, n_plots, small_plots=small_plots)
+    target_px_width = subplot_width * MPL_SAVE_FIG_KWARGS['dpi']
 
     if transform is None:
         transform = 'linear'
@@ -622,14 +648,15 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
             f'title_list: {title_list} \n'
             f'tif_list: {tif_list}')
     resample_alg = resample_alg = RESAMPLE_ALGS[datatype]
-    arr, resampled = _read_masked_array(tif_list[0], resample_alg)
+    arr, resampled = _read_masked_array(tif_list[0], resample_alg, target_px_width)
     ndarray = numpy.empty((n_plots, *arr.shape))
     ndarray[0] = arr
     for i, tif in enumerate(tif_list):
         # We already got the first one to initialize the ndarray with correct shape
         if i == 0:
             continue
-        arr, resampled = _read_masked_array(tif, RESAMPLE_ALGS[datatype])
+        arr, resampled = _read_masked_array(
+            tif, RESAMPLE_ALGS[datatype], target_px_width)
         ndarray[i] = arr
     # Perhaps this could be optimized by reading min/max from tif metadata
     # instead of storing all arrays in memory
