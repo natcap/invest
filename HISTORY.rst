@@ -83,6 +83,9 @@ General
 * Fixed an issue with Windows binary builds where users would see runtime
   warnings saying ``GDAL_DATA`` is not defined.
   (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
+* When saving a datastack, CSVs are now copied into argument-named
+  subfolders, which preserves original filenames and ensures metadata
+  compatibility. (`#2442 <https://github.com/natcap/invest/issues/2442>`_)
 
 Workbench
 =========
