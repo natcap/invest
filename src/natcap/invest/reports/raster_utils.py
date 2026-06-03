@@ -676,12 +676,12 @@ def _count_frequency(counter, block):
 
 
 def plot_categorical_raster_with_table(raster_path_list: list[str]):
-    """Plot one or more categorical rasters and generate an HTML table legend.
+    """Plot one or two categorical rasters and generate an HTML table legend.
 
     Unique pixel values are determined either from an existing
     Raster Attribute Table or by calculating a frequency table from the array.
 
-    If multiple rasters are given, it is assumed the pixel values have a shared
+    If two rasters are given, it is assumed the pixel values have a shared
     meaning and the tables are joined based on the value column. All rasters
     will share the same colormap.
 
@@ -696,6 +696,8 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
     """
     if not isinstance(raster_path_list, list):
         raise TypeError('Expected `raster_path_list` to be a list of filepaths')
+    if len(raster_path_list) > 2:
+        raise ValueError('`raster_path_list` cannot include more than 2 items.')
     lulc_rat_html = None
     value_col_name = None
     rat_list = []
@@ -737,11 +739,13 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
                 _count_frequency, (raster_path, 1), collections.Counter())
             rat_df_list.append(pandas.DataFrame(
                 table.items(), columns=[value_col_name, count_col_name]))
-    if len(rat_df_list) > 1:
-        rat_dataframe = functools.reduce(
-            lambda left, right: pandas.merge(
-                left, right, on=[value_col_name], how='outer'),
-            rat_df_list)
+    if len(rat_df_list) == 2:
+        # TODO: Support arbitrary length of tables with a reducer that calls
+        # merge. The tricky part is assigning appropriate suffixes.
+        rat_dataframe = pandas.merge(
+            rat_df_list[0], rat_df_list[1],
+            on=[value_col_name], how='outer',
+            suffixes=['_left', '_right'])
     elif len(rat_df_list) == 1:
         rat_dataframe = rat_df_list[0]
 

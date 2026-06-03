@@ -758,7 +758,17 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         self.assertEqual(df.shape, (unique_values, n_cols))
         self.assertCountEqual(
             df.columns,
-            ['color', 'value', 'count_x', 'count_y'])
+            ['color', 'value', 'count_left', 'count_right'])
+
+    def test_plot_three_rasters_without_rat(self):
+        """Test three rasters raises ValueError."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        with self.assertRaises(ValueError):
+            img_src, table = raster_utils.plot_categorical_raster_with_table(
+                [target_filepath] * 3)
 
 
 class RasterWorkspaceSummaryTests(unittest.TestCase):
