@@ -846,9 +846,7 @@ def _get_raster_attribute_table(filepath):
     if resource is None:
         # if no metadata already exists, generate it
         resource = geometamaker.describe(filepath)
-        if isinstance(resource, geometamaker.models.RasterResource):
-            rat = resource.get_rat(1)
-    else:
+    if isinstance(resource, geometamaker.models.RasterResource):
         rat = resource.get_rat(1)
     return rat
 
