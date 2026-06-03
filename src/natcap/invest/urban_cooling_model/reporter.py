@@ -48,10 +48,23 @@ def _create_map(geodataframe: geopandas.GeoDataFrame, xy_ratio: float,
 
 
 def _get_energy_sav_units(args_dict: dict) -> Unit:
-    energy_consumption_df = read_csv_to_dataframe(
-        args_dict['energy_consumption_table_path'])
-    energy_cols = [col.lower() for col in energy_consumption_df.columns]
-    return u.currency if 'cost' in energy_cols else u.kilowatt_hour
+    """Get `energy_sav` units for this model run based on model inputs.
+
+    Args:
+        args_dict (dict): inputs to the model run.
+
+    Returns:
+        units (``pint.Unit``): One of the following: ``u.currency`` if the
+        energy consumption table contains a 'cost' column; ``u.kilowatt_hour``
+        if it does not; ``u.other`` if no energy consumption table was
+        provided.
+    """
+    if args_dict['energy_consumption_table_path']:
+        energy_consumption_df = read_csv_to_dataframe(
+            args_dict['energy_consumption_table_path'])
+        energy_cols = [col.lower() for col in energy_consumption_df.columns]
+        return u.currency if 'cost' in energy_cols else u.kilowatt_hour
+    return u.other
 
 
 def _create_aoi_maps(
