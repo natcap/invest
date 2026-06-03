@@ -451,6 +451,13 @@ class DatastackArchiveTests(unittest.TestCase):
         numpy.testing.assert_allclose(model_array, reg_array)
         utils._assert_vectors_equal(
             archive_params['vector'], params['vector'])
+        # assert CSV in datastack is saved to correct subfolder location
+        expected_csv_path = os.path.join(
+            out_directory, 'data', 'simple_table_csv',
+            os.path.basename(params['simple_table']))
+        self.assertEqual(archive_params['simple_table'], expected_csv_path)
+        self.assertTrue(os.path.exists(expected_csv_path))
+        self.assertTrue(os.path.exists(expected_csv_path + '.yml'))
         pandas.testing.assert_frame_equal(
             pandas.read_csv(archive_params['simple_table']),
             pandas.read_csv(params['simple_table']))
@@ -473,6 +480,13 @@ class DatastackArchiveTests(unittest.TestCase):
             archive_params['spatial_table']
         ).to_dict(orient='index')
         spatial_csv_dir = os.path.dirname(archive_params['spatial_table'])
+        # assert paths inside CSV are relative to CSV folder
+        contained_files_dir = os.path.join(
+            spatial_csv_dir, 'spatial_table_csv_data')
+        spatial_file_from_csv = spatial_csv_dict[3]['path']
+        self.assertTrue(os.path.exists(spatial_file_from_csv))
+        self.assertIn(contained_files_dir, spatial_file_from_csv)
+
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(
                 os.path.join(spatial_csv_dir, spatial_csv_dict[3]['path'])),

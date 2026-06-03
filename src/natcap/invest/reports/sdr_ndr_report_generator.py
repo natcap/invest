@@ -1,6 +1,7 @@
 # Shared report generator for SDR and NDR
 # (to be extended to support other similar models, and renamed as appropriate)
 
+import os
 import logging
 import time
 
@@ -70,6 +71,10 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
     output_raster_stats_table = raster_utils.raster_workspace_summary(
         file_registry).to_html(na_rep='')
 
+    lulc_img_src, lulc_legend_html = raster_utils.plot_categorical_raster_with_table(
+        [args_dict['lulc_path']])
+    lulc_caption = f"{os.path.basename(args_dict['lulc_path'])}:{model_spec.get_input('lulc_path').about}"
+
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict, model_spec).to_html(na_rep='')
 
@@ -94,6 +99,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             args_dict=args_dict,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_caption,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
+            lulc_caption=lulc_caption,
             outputs_img_src=outputs_img_src,
             outputs_caption=outputs_caption,
             intermediate_outputs_heading=intermediate_outputs_heading,

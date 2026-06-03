@@ -136,7 +136,7 @@ def generate_results_table_from_vector(
             set(vector_df.columns).difference(set(cols_to_include)))
         vector_df = vector_df.drop(columns=cols_to_drop)
 
-    css_classes = ['datatable']
+    css_classes = ['datatable colvis']
     (num_rows, _) = vector_df.shape
     if num_rows > TABLE_PAGINATION_THRESHOLD:
         css_classes.append('paginate')
