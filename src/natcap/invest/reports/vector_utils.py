@@ -4,6 +4,7 @@ import pandas
 from natcap.invest import gettext
 from natcap.invest.reports.report_constants import TABLE_PAGINATION_THRESHOLD
 from natcap.invest.spec import format_unit, Output, VectorOutput
+from natcap.invest.unit_registry import u
 
 LEGEND_CONFIG = {
     'labelFontSize': 14,
@@ -77,11 +78,13 @@ def get_vector_attr_table_caption(
 
         Returns:
             units_text (str): a string in the format ``' (Units: {units})'`` if
-                the field has units defined and they are not ``None``; empty
-                string otherwise.
+                the field has units defined and they are neither ``None`` nor
+                ``u.other``; empty string otherwise.
         """
-        if hasattr(field, 'units') and field.units is not None:
-            return f' ({gettext("Units:")} {format_unit(field.units)})'
+        if (hasattr(field, 'units')
+            and field.units is not None
+            and field.units != u.other):
+                return f' ({gettext("Units:")} {format_unit(field.units)})'
         return ''
 
     if len(fields_to_include) > 0:

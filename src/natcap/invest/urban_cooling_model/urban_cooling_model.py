@@ -348,10 +348,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "Avoided energy consumption (kWh or currency units if optional energy cost"
                         " input column was provided in the Energy Consumption Table)."
                     ),
-                    # Units intentionally set to `None` to avoid printing
-                    # 'unitless' in reports (this output is not unitless;
-                    # its units vary depending on inputs).
-                    units=None
+                    units=u.other
                 ),
                 spec.NumberOutput(
                     id="avg_wbgt_v",
@@ -383,10 +380,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " contains NO natural areas nor green spaces; where CC = 0 for"
                         " all LULC classes."
                     ),
-                    # Units intentionally set to `None` to avoid printing
-                    # 'unitless' in reports (this output is not unitless;
-                    # its units vary depending on inputs).
-                    units=None
+                    units=u.other
                 ),
                 spec.NumberOutput(
                     id="mean_t_air",
