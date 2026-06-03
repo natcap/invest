@@ -229,7 +229,7 @@ def _create_bldg_maps(
     _, xy_ratio = vector_utils.get_geojson_bbox(agg_bldg_results)
 
     def _create_bldg_map(attribute: str, title: str, units: Unit,
-                        scale: altair.Scale) -> altair.Chart:
+                         scale: altair.Scale) -> altair.Chart:
         return _create_map(agg_bldg_results, xy_ratio, attribute, title, units,
                            scale, map_width=550)
 
@@ -310,6 +310,12 @@ def report(file_registry: dict[str, str], args_dict: dict,
     ) = _create_aoi_maps(model_spec, file_registry, args_dict)
 
     # Optional vector output: buildings_with_stats
+    bldg_table = None
+    bldg_totals_table = None
+    bldg_table_caption = None
+    bldg_map_json = None
+    bldg_map_caption = None
+    bldg_map_source_list = None
     if 'buildings_with_stats' in file_registry:
         # Limit columns to the index column (whose name may vary)
         # and the model-defined columns 'energy_sav' and 'mean_t_air'.
@@ -326,15 +332,8 @@ def report(file_registry: dict[str, str], args_dict: dict,
             bldg_map_caption,
             bldg_map_source_list
         ) = _create_bldg_maps(model_spec, file_registry, args_dict)
-    else:
-        bldg_table = None
-        bldg_totals_table = None
-        bldg_table_caption = None
-        bldg_map_json = None
-        bldg_map_caption = None
-        bldg_map_source_list = None
 
-    # Secondary raster outputs: cooling capacity (always);
+    # Secondary raster outputs: cooling capacity, green area (always);
     # building intensity ('intensity' method);
     # ETI, shade, albedo ('factors' method)
     green_area_colormap = ListedColormap(["#ccccd5", "#006500"])
