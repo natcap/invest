@@ -17,8 +17,8 @@ from natcap.invest.spec import ModelSpec
 from natcap.invest.reports.raster_utils import RasterDatatype, \
     RasterPlotConfig, RasterTransform, SpecialValueConfig
 
-from natcap.invest.urban_nature_access import RADIUS_OPT_POP_GROUP, \
-    RADIUS_OPT_URBAN_NATURE
+from natcap.invest.urban_nature_access.urban_nature_access import \
+    RADIUS_OPT_POP_GROUP, RADIUS_OPT_URBAN_NATURE
 
 LOGGER = logging.getLogger(__name__)
 
@@ -178,10 +178,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         'datatype': RasterDatatype.divergent,
         'transform': RasterTransform.linear,
         'special_values': SpecialValueConfig(
-            extend="both",
-            threshold=(-1000, 1000),
-            label=('<-1000', '>1000'),
-            color=('#8C4300', '#1F0737')
+            thresholds=(-1000, 1000),
+            labels=('<-1000', '>1000'),
+            colors=('#8C4300', '#1F0737')
         )
     }
     if args_dict['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
