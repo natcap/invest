@@ -749,7 +749,7 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
     # Sort values before matching them with colors to ensure the mapping is
     # the same here as in imshow.
     colors_dict = dict(zip(sorted(rat_dataframe[value_col_name]), colors))
-    legend_col_name = ''  # the color swatch column needs no label
+    legend_col_name = 'color'  # the color swatch column needs no label
     rat_dataframe.insert(
         0, legend_col_name, [matplotlib.colors.to_hex(c) for c in colors])
     rat_dataframe = rat_dataframe.sort_values(value_col_name)

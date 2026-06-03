@@ -1,4 +1,3 @@
-import io
 import os
 import shutil
 import tempfile
@@ -681,7 +680,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         self.assertEqual(df.shape, (num_vals, 3))
         self.assertCountEqual(
             df.columns,
-            ['', 'value', 'count'])  # first col has color
+            ['color', 'value', 'count'])
 
     def test_plot_two_rasters_with_rat(self):
         """Test two rasters with RATS and expect RATS are joined."""
@@ -759,7 +758,7 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         self.assertEqual(df.shape, (unique_values, n_cols))
         self.assertCountEqual(
             df.columns,
-            ['', 'value', 'count_x', 'count_y'])
+            ['color', 'value', 'count_x', 'count_y'])
 
 
 class RasterWorkspaceSummaryTests(unittest.TestCase):
