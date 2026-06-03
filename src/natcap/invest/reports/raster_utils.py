@@ -757,7 +757,7 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
     rat_dataframe.insert(
         0, legend_col_name, [matplotlib.colors.to_hex(c) for c in colors])
     rat_dataframe = rat_dataframe.sort_values(value_col_name)
-    styler = rat_dataframe.style.map(
+    styler = rat_dataframe.style.format(na_rep='').map(
         lambda val: f"background-color: {val}; color: {val}",
         subset=[legend_col_name])
     classes = 'datatable legend-table'
@@ -768,7 +768,7 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
         # But we have no idea how many there might be.
         classes += ' colvis'
     lulc_rat_html = styler.hide(axis='index').to_html(
-        table_attributes=f'class="{classes}"', na_rep='')
+        table_attributes=f'class="{classes}"')
     
     resample_alg = RESAMPLE_ALGS['nominal']
     raster_info = pygeoprocessing.get_raster_info(raster_path_list[0])
