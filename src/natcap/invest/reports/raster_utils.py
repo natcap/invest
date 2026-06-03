@@ -481,10 +481,6 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 transform = matplotlib.colors.SymLogNorm(
                     linthresh=0.03, vmin=vmin, vmax=vmax)
             else:
-                if vmin is None:
-                    vmin = numpy.nanmin(arr)
-                if vmax is None:
-                    vmax = numpy.nanmax(arr)
                 transform = matplotlib.colors.TwoSlopeNorm(
                     vmin=vmin, vcenter=0, vmax=vmax)
         elif dtype == 'continuous':
