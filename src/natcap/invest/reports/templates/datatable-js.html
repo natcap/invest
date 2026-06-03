@@ -48,6 +48,12 @@
         },
       };
     }
+    if (table.classList.contains('legend-table')) {
+      options = {
+        ...options,
+        order: [[1, 'asc']]
+      }
+    }
     new DataTable(table, options);
   });
 </script>

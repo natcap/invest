@@ -756,7 +756,6 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
     legend_col_name = 'color'  # the color swatch column needs no label
     rat_dataframe.insert(
         0, legend_col_name, [matplotlib.colors.to_hex(c) for c in colors])
-    rat_dataframe = rat_dataframe.sort_values(value_col_name)
     styler = rat_dataframe.style.format(na_rep='').map(
         lambda val: f"background-color: {val}; color: {val}",
         subset=[legend_col_name])
