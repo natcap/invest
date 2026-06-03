@@ -2,6 +2,8 @@ import unittest
 from bs4 import BeautifulSoup
 
 from natcap.invest.urban_nature_access import MODEL_SPEC
+from natcap.invest.urban_nature_access.urban_nature_access import \
+    RADIUS_OPT_URBAN_NATURE, RADIUS_OPT_POP_GROUP, RADIUS_OPT_UNIFORM
 from natcap.invest.reports import jinja_env
 
 TEMPLATE = jinja_env.get_template('models/urban_nature_access.html')
@@ -65,7 +67,7 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
         """Test report rendering with LULC option without health_cost_rate"""
 
         render_args = _get_render_args(MODEL_SPEC)
-        render_args['args_dict']['search_radius_mode'] = 'radius per urban nature class'
+        render_args['args_dict']['search_radius_mode'] = RADIUS_OPT_URBAN_NATURE
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
@@ -79,7 +81,7 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
     def test_render_search_radius_by_pop_option(self):
         """Test report rendering with LULC option with baseline NDVI input"""
         render_args = _get_render_args(MODEL_SPEC)
-        render_args['args_dict']['search_radius_mode'] = 'radius per population group'
+        render_args['args_dict']['search_radius_mode'] = RADIUS_OPT_POP_GROUP
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
@@ -88,7 +90,7 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
     def test_render_uniform_search_radius(self):
         """Test report rendering with LULC option with baseline NDVI input"""
         render_args = _get_render_args(MODEL_SPEC)
-        render_args['args_dict']['search_radius_mode'] = 'uniform radius'
+        render_args['args_dict']['search_radius_mode'] = RADIUS_OPT_UNIFORM
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
