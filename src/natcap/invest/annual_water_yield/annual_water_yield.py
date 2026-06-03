@@ -221,7 +221,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " to a point of interest where hydropower production will be"
                 " analyzed."
             ),
-            geometry_types={"POLYGON"},
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
                 spec.IntegerInput(
                     id="ws_id",

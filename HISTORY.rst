@@ -85,6 +85,9 @@ General
   (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
 * Reports now display a Raster Attribute Table for Land Use/Land Cover
   input rasters. (`#2333 <https://github.com/natcap/invest/issues/2333>`_)
+* When saving a datastack, CSVs are now copied into argument-named
+  subfolders, which preserves original filenames and ensures metadata
+  compatibility. (`#2442 <https://github.com/natcap/invest/issues/2442>`_)
 
 Workbench
 =========
@@ -98,6 +101,11 @@ Workbench
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+
+Annual Water Yield
+==================
+* Allow watershed input to have a POLYGON or MULTIPOLYGON geometry type.
+  (`#2513 <https://github.com/natcap/invest/issues/2513>`_)
 
 SDR
 ===
