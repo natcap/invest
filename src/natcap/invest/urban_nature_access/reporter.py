@@ -4,8 +4,8 @@ import time
 import altair
 import geopandas
 import numpy
-import pandas
 import re
+from matplotlib import colors as mcolors
 
 from natcap.invest import utils, validation
 from natcap.invest import __version__
@@ -15,7 +15,7 @@ from natcap.invest.reports import jinja_env, raster_utils, report_constants, \
 from natcap.invest.spec import ModelSpec
 
 from natcap.invest.reports.raster_utils import RasterDatatype, \
-    RasterPlotConfig, RasterTransform, SpecialValueConfig
+    RasterPlotConfig, RasterTransform, SpecialValueConfig, COLORMAPS
 
 from natcap.invest.urban_nature_access.urban_nature_access import \
     RADIUS_OPT_POP_GROUP, RADIUS_OPT_URBAN_NATURE
@@ -174,13 +174,15 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     output_balance_raster_caption = None
     output_balance_percapita_img_src = None
     output_balance_percapita_raster_caption = None
+    hex_lower = mcolors.rgb2hex(COLORMAPS['divergent'](0.0))
+    hex_upper = mcolors.rgb2hex(COLORMAPS['divergent'](1.0))
     balance_viz = {
         'datatype': RasterDatatype.divergent,
         'transform': RasterTransform.linear,
         'special_values': SpecialValueConfig(
             thresholds=(-1000, 1000),
             labels=('<-1000', '>1000'),
-            colors=('#8C4300', '#1F0737')
+            colors=(hex_lower, hex_upper)
         )
     }
     if args_dict['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
