@@ -63,10 +63,10 @@
       ]) %}
     {% else %}
       {% set bldg_agg_results = content_grid([
-        wide_table(
+        (wide_table(
           bldg_table | safe,
           font_size_px=15
-        ),
+        ), 100),
         (caption(bldg_table_caption, definition_list=True), 100)
       ])%}
     {% endif %}
