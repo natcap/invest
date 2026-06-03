@@ -150,18 +150,28 @@ class RasterTransform(str, Enum):
 class SpecialValueConfig:
     """Configuration for customizing color and labeling of special value range.
 
-    The colorbar will be extended on the side specified by `extend`, and
-    values beyond the `threshold` will be colored with `color` and the end
-    of the colorbar will be labeled with `label`.
+    The colorbar will be extended on either the lower or upper bounds
+    (or both), and values beyond the `thresholds` will be colored with
+    `colors` and the end of the colorbar will be labeled with `labels`.
     """
-    extend: Literal["min", "max", "both"]
-    """Which side of the colorbar to extend"""
-    threshold: float | tuple[float, float]
-    """Boundary value for the special range or tuple of upper and lower bounds"""
-    label: str | tuple[str, str]
+    thresholds: tuple[float | None, float | None]
+    """Boundary value for the special upper and lower bounds, respectively"""
+    labels: tuple[str | None, str | None]
     """Label(s) to show on the colorbar for the special region"""
-    color: str | tuple[str, str]
+    colors: tuple[str | None, str | None]
     """Color(s) used for the special values"""
+
+    def __post_init__(self):
+        tuples = (self.thresholds, self.labels, self.colors)
+        for idx in [0, 1]:
+            if any(t[idx] is None for t in tuples) and not \
+                    all(t[idx] is None for t in tuples):
+                raise ValueError(
+                    f"If index {idx} is `None` in any of the special config "
+                    f"tuples, index {idx} must be `None` in all tuples. "
+                    "Current incompatible `thresholds`, `labels`, and "
+                    f"`colors` tuples are: {tuples}")
+
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class RasterPlotConfig:
@@ -395,6 +405,34 @@ def _get_legend_kwargs(num_patches: int, n_plots: int, xy_ratio: float):
     }
 
 
+def _configure_special_values(cmap, special_values):
+    """Config. colormap extensions and return colorbar label/tick settings."""
+    lower_threshold, upper_threshold = special_values.thresholds
+    lower_label, upper_label = special_values.labels
+    lower_color, upper_color = special_values.colors
+
+    extend = 'neither'
+    thresholds = []
+    labels = []
+    text_specs = []
+
+    if lower_threshold is not None:
+        cmap.set_under(lower_color)
+        extend = 'min'
+        thresholds.append(lower_threshold)
+        labels.append(lower_label)
+        text_specs.append((0, -0.05, 'top'))
+
+    if upper_threshold is not None:
+        cmap.set_over(upper_color)
+        extend = 'max' if extend == 'neither' else 'both'
+        thresholds.append(upper_threshold)
+        labels.append(upper_label)
+        text_specs.append((0, 1.05, 'bottom'))
+
+    return extend, thresholds, labels, text_specs
+
+
 def plot_raster_list(raster_list: list[RasterPlotConfig]):
     """Plot a list of rasters.
 
@@ -427,42 +465,38 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         arr, resampled = _read_masked_array(raster_path, resample_alg)
         imshow_kwargs = {}
         colorbar_kwargs = {}
-        imshow_kwargs['norm'] = transform
         imshow_kwargs['interpolation'] = 'none'
         cmap = config.colormap
-        vmin = vmax = halfrange = None
+        vmin = vmax = None
         if config.special_values:
-            if config.special_values.extend == 'min':
-                vmin = config.special_values.threshold
-                halfrange = abs(vmin)
-            elif config.special_values.extend == 'max':
-                vmax = config.special_values.threshold
-                halfrange = abs(vmax)
-            else:
-                vmin, vmax = config.special_values.threshold
-                halfrange = max(abs(vmin), abs(vmax))
+            vmin = config.special_values.thresholds[0]
+            vmax = config.special_values.thresholds[1]
         if dtype == 'divergent':
             if transform == 'log':
+                if None not in [vmin, vmax] and abs(vmin) != vmax:
+                    raise UserWarning(
+                        "To ensure that 0 falls at the logical breakpoint of "
+                        "the divergent color ramp, vmax should equal "
+                        f"abs(vmin). Actual vmin: {vmin}, vmax: {vmax}")
                 transform = matplotlib.colors.SymLogNorm(
                     linthresh=0.03, vmin=vmin, vmax=vmax)
             else:
-                LOGGER.info(
-                    f"Using divergent datatype for raster {raster_path} "
-                    f"with halfrange: {halfrange}.")
-                transform = matplotlib.colors.CenteredNorm(
-                    halfrange=halfrange)
-        else:  # dtype is continuous
+                if vmin is None:
+                    vmin = numpy.nanmin(arr)
+                if vmax is None:
+                    vmax = numpy.nanmax(arr)
+                transform = matplotlib.colors.TwoSlopeNorm(
+                    vmin=vmin, vcenter=0, vmax=vmax)
+        elif dtype == 'continuous':
             if transform == 'log':
                 transform = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
             else:
                 transform = matplotlib.colors.Normalize(
                     vmin=vmin, vmax=vmax)
-        imshow_kwargs['norm'] = transform
         if dtype.startswith('binary'):
-            transform = matplotlib.colors.BoundaryNorm([0, 0.5, 1], cmap.N)
-            imshow_kwargs['vmin'] = -0.5
-            imshow_kwargs['vmax'] = 1.5
+            transform = matplotlib.colors.NoNorm()
             colorbar_kwargs['ticks'] = [0, 1]
+        imshow_kwargs['norm'] = transform
 
         title_line_width = _get_title_line_width(n_plots, xy_ratio)
         ax.set_title(**_get_title_kwargs(
@@ -519,22 +553,13 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
                 fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
             else:
-                if config.special_values.extend == 'min':
-                    cmap.set_under(config.special_values.color)
-                    y_pos = -0.05  # position for label just below the colorbar
-                    va = "top"
-                elif config.special_values.extend == 'max':
-                    cmap.set_over(config.special_values.color)
-                    y_pos = 1.05  # position for label just above the colorbar
-                    va = "bottom"
-                else:  # extend is 'both'
-                    cmap.set_under(config.special_values.color[0])
-                    cmap.set_over(config.special_values.color[1])
+                extend, thresholds, labels, text_specs = \
+                    _configure_special_values(cmap, config.special_values)
                 mappable = ax.imshow(
                         arr, cmap=cmap,
                         **imshow_kwargs)
                 cbar = fig.colorbar(
-                    mappable, ax=ax, extend=config.special_values.extend,
+                    mappable, ax=ax, extend=extend,
                     **colorbar_kwargs)
                 # Use clim from mappable to ensure tick filtering matches actual displayed range
                 vmin, vmax = mappable.get_clim()
@@ -545,14 +570,6 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 # value and regular tick)
                 tick_dif = (ticks[1] - ticks[0])/2 if len(ticks) > 1 else 0.1
                 tol = tick_dif/100
-                if config.special_values.extend in ['min', 'max']:
-                    labels = [config.special_values.label]
-                    thresholds = [config.special_values.threshold]
-                    text_specs = [(0, y_pos, va)]
-                else:
-                    labels = config.special_values.label
-                    thresholds = config.special_values.threshold
-                    text_specs = [(0, -0.05, 'top'), (0, 1.05, 'bottom')]
                 for label, (x, y, va_) in zip(labels, text_specs):
                     cbar.ax.text(x, y, str(label), transform=cbar.ax.transAxes,
                                  va=va_, ha='left')
