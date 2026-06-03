@@ -708,10 +708,12 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
             value_col = None
             for col in rat.columns:
                 if col.usage == 'MinMax':
+                    # GeoMetaMaker assigned the MinMax usage. GDAL uses MinMax to
+                    # denote that the value is a single pixel value rather than a range.
                     value_col = col.name
             rat_value_names.add(value_col)
             df = pandas.DataFrame(rat.rows)
-            # Some RAT include color tables. This is not useful to display in
+            # Some RATs include color tables. This is not useful to display in
             # this context because it will be confusing.
             # Best we can do is guess what the column names could be.
             col_filter = df.filter(['Red', 'Green', 'Blue', 'Alpha', 'Opacity'])
@@ -744,7 +746,8 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
         rat_dataframe = rat_df_list[0]
 
     colors = get_categorical_colors(rat_dataframe.shape[0])
-    # sort pixel values so colors are assigned the same here as in imshow.
+    # Sort values before matching them with colors to ensure the mapping is
+    # the same here as in imshow.
     colors_dict = dict(zip(sorted(rat_dataframe[value_col_name]), colors))
     legend_col_name = ''  # the color swatch column needs no label
     rat_dataframe.insert(
