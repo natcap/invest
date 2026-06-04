@@ -265,9 +265,7 @@ export default function PluginModal(props) {
             aria-label={t("Community Plugin Registry (opens in web browser)")}
             onClick={openLinkInBrowser}
           >{t("Community Plugin Registry")}</a>.
-        </p>
-        <p>
-          {t('For more information about creating a plugin, read our ')}
+          {t(' For more information about creating a plugin, read our ')}
           <a
             href={pluginDocsURL}
             title={pluginDocsURL}
