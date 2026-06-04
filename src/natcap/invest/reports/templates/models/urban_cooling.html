@@ -153,9 +153,14 @@
   {% include 'datatable-js.html' %}
   {% include 'vega-dependencies.html' %}
   {% include 'vega-embed-js.html' %}
-  {% set chart_spec_id_list = [
-    (aoi_map_json, 'aoi_map'),
-    (bldg_map_json, 'bldg_map'),
-  ] %}
+  {% set chart_spec_id_list = [] %}
+  {% if aoi_map_json != None %}
+    {% set chart_spec_id_list = chart_spec_id_list + [
+      (aoi_map_json, 'aoi_map')] %}
+  {% endif %}
+  {% if bldg_map_json != None %}
+    {% set chart_spec_id_list = chart_spec_id_list + [
+      (bldg_map_json, 'bldg_map')] %}
+  {% endif %}
   {{ embed_vega(chart_spec_id_list) }}
 {% endblock scripts %}
