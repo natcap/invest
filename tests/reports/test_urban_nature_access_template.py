@@ -26,6 +26,7 @@ def _get_render_args(model_spec):
     vegalite_json = '{}'
     test_caption = 'This is another test!'
     admin_map_source_list = ['/source/file.shp']
+    lulc_legend_html = '<table class="test__lulc-legend-table"></table>'
     return {
         'report_script': model_spec.reporter,
         'invest_version': invest_version,
@@ -38,6 +39,9 @@ def _get_render_args(model_spec):
         'args_dict': args_dict,
         'inputs_img_src': img_src,
         'inputs_caption': inputs_caption,
+        'lulc_img_src': img_src,
+        'lulc_legend_html': lulc_legend_html,
+        'lulc_caption': inputs_caption,
         'outputs_img_src': img_src,
         'outputs_caption': outputs_caption,
         'output_accessible_img_src': img_src,

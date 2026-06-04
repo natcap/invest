@@ -4,6 +4,7 @@ import time
 import altair
 import geopandas
 import numpy
+import os
 import re
 from matplotlib import colors as mcolors
 
@@ -136,15 +137,10 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     input_raster_config_list = [
         RasterPlotConfig(
-            raster_path=args_dict['lulc_raster_path'],
-            datatype=RasterDatatype.nominal,
-            spec=model_spec.get_input('lulc_raster_path')
-        ),
-        RasterPlotConfig(
             raster_path=args_dict['population_raster_path'],
             datatype=RasterDatatype.continuous,
             spec=model_spec.get_input('population_raster_path')
-        ),
+        )
     ]
 
     intermediates_img_src = None
@@ -297,6 +293,10 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     inputs_raster_caption = raster_utils.caption_raster_list(
         input_raster_config_list)
 
+    lulc_img_src, lulc_legend_html = raster_utils.plot_categorical_raster_with_table(
+        [args_dict['lulc_raster_path']])
+    lulc_caption = f"{os.path.basename(args_dict['lulc_raster_path'])}:{model_spec.get_input('lulc_raster_path').about}"
+
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_config_list)
     outputs_raster_caption = raster_utils.caption_raster_list(
@@ -343,6 +343,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             args_dict=args_dict,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_raster_caption,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
+            lulc_caption=lulc_caption,
             outputs_img_src=outputs_img_src,
             outputs_caption=outputs_raster_caption,
             output_accessible_img_src=output_accessible_img_src,
