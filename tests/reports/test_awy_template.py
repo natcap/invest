@@ -1,7 +1,6 @@
 import time
 import unittest
 
-import pandas
 from bs4 import BeautifulSoup
 
 from natcap.invest.annual_water_yield import MODEL_SPEC
@@ -23,14 +22,13 @@ def _get_render_args(model_spec):
     watershed_table = '<table class="test__watersheds-table"></table>'
     stats_table_note = 'This is a test!'
     raster_group_caption = 'This is another test!'
-    lulc_pre_caption = 'This is a caption for LULC rasters'
     img_caption = ['output.tif:Output map.']
-    heading = 'Test heading'
-    outputs_caption = ['results.tif:Results map.']
     inputs_caption = ['input.tif:Input map.']
     caption = 'figure caption'
     agg_map_source_list = ['/source/file.shp']
     table_columns_note = "A note about table columns."
+    lulc_legend_html = '<table class="test__lulc-legend-table"></table>'
+    lulc_caption = ['lulc.tif: LULC map']
 
     return {
         'report_script': model_spec.reporter,
@@ -43,7 +41,6 @@ def _get_render_args(model_spec):
         'timestamp': timestamp,
         'args_dict': args_dict,
         'raster_group_caption': raster_group_caption,
-        'lulc_pre_caption': lulc_pre_caption,
         'stats_table_note': stats_table_note,
         'wyield_img_src': img_src,
         'precip_aet_img_src': img_src,
@@ -58,9 +55,13 @@ def _get_render_args(model_spec):
         'input_raster_stats_table': input_stats_table,
         'inputs_img_src': img_src,
         'inputs_caption': inputs_caption,
+        'lulc_caption': lulc_caption,
+        'lulc_img_src': img_src,
+        'lulc_legend_html': lulc_legend_html,
         'aggregate_map_source_list': agg_map_source_list,
         'model_spec_outputs': model_spec.outputs
     }
+
 
 class AnnualWaterYieldTemplateTests(unittest.TestCase):
     """Unit tests for AWY template."""
@@ -81,7 +82,10 @@ class AnnualWaterYieldTemplateTests(unittest.TestCase):
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 8)
+        self.assertEqual(len(sections), 9)
+
+        plots = soup.select('#sw_wyield_vol')
+        self.assertEqual(len(plots), 1)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
@@ -108,7 +112,7 @@ class AnnualWaterYieldTemplateTests(unittest.TestCase):
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 7)
+        self.assertEqual(len(sections), 8)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
@@ -129,7 +133,7 @@ class AnnualWaterYieldTemplateTests(unittest.TestCase):
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 7)
+        self.assertEqual(len(sections), 8)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')

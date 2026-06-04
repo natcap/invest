@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 import geopandas
@@ -82,8 +83,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     w_aggregate_table_caption = _caption_fields_in_table(
         model_spec, 'watershed_results_wyield_csv', w_aggregate_df)
 
-    watershed_results_table = w_aggregate_df.to_html(index=False,
-        classes=['datatable', 'paginate'])
+    watershed_results_table = w_aggregate_df.to_html(
+        index=False, classes=['datatable', 'paginate'])
 
     watershed_map_params = None
     (num_rows, _) = w_aggregate_df.shape
@@ -152,8 +153,6 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         sw_aggregate_df = pandas.read_csv(file_registry['subwatershed_results_wyield_csv'])
         sw_aggregate_table_caption = _caption_fields_in_table(
             model_spec, 'subwatershed_results_wyield_csv', sw_aggregate_df)
-        sw_aggregate_table_source_list = [
-            model_spec.get_output('subwatershed_results_wyield_csv').path]
 
         subwatershed_results = {
             "map_json": sw_wyield_vol_json,
@@ -168,11 +167,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         "Note: Columns not defined here may appear in the table. Any columns not"
         " listed were included in the user-provided input vector.")
 
+    lulc_img_src, lulc_legend_html = raster_utils.plot_categorical_raster_with_table(
+        [args_dict['lulc_path']])
+    lulc_caption = (f"{os.path.basename(args_dict['lulc_path'])}:"
+                    f"{model_spec.get_input('lulc_path').about}")
+
     input_raster_config_list = [
-        RasterPlotConfig(
-            raster_path=args_dict['lulc_path'],
-            datatype=RasterDatatype.nominal,
-            spec=model_spec.get_input('lulc_path')),
         RasterPlotConfig(
             raster_path=args_dict['precipitation_path'],
             datatype=RasterDatatype.continuous,
@@ -213,7 +213,6 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
-            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
             stats_table_note=report_constants.STATS_TABLE_NOTE,
             wyield_img_src=wyield_img_src,
             precip_aet_img_src=precip_aet_img_src,
@@ -225,6 +224,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             subwatershed_results=subwatershed_results,
             table_columns_note=table_columns_note,
             output_raster_stats_table=output_raster_stats_table,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
+            lulc_caption=lulc_caption,
             input_raster_stats_table=input_raster_stats_table,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_raster_caption,
