@@ -148,6 +148,7 @@ function parseArgType(argtype) {
       break;
     case 'boolean':
     case 'option_string':
+    case 'workspace':
       userFriendlyArgType = '';
       break;
     default:

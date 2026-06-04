@@ -23,7 +23,7 @@ import pint
 import pygeoprocessing
 from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_validator, model_validator
+    field_validator, model_serializer, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
@@ -1072,7 +1072,7 @@ class WorkspaceInput(Input):
     This is used to describe a directory where model outputs will be written.
     """
     id: typing.ClassVar[str] = 'workspace_dir'
-    name: typing.ClassVar[str] = 'workspace'
+    name: typing.ClassVar[str] = 'workspace directory'
     about: typing.ClassVar[str] = gettext(
         "The folder where all the model's output files will be written."
         " If this folder does not exist, it will be created. If data"
@@ -1131,6 +1131,16 @@ class WorkspaceInput(Input):
                 os.remove(temp_path)
         except OSError:
             return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='write')
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler):
+        """Custom serializer to include static class attributes in the dict representation"""
+        return {
+            **handler(self),
+            'id': self.id,
+            'name': self.name,
+            'about': self.about
+        }
 
 
 class NumberInput(Input):
