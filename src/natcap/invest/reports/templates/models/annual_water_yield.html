@@ -138,16 +138,18 @@
   {% include 'vega-embed-js.html' %}
   {% set chart_spec_id_list = [] %}
   {% if watershed_map_params %}
-  {{ chart_spec_id_list.append((watershed_map_params['json'], 'w_wyield_vol')) }}
+    {% set chart_spec_id_list = chart_spec_id_list + [
+      (watershed_map_params['json'], 'w_wyield_vol')] %}
   {% endif %}
   {% if subwatershed_results %}
-    {{ chart_spec_id_list.append((subwatershed_results['map_json'], 'sw_wyield_vol')) }}
+    {% set chart_spec_id_list = chart_spec_id_list + [
+      (subwatershed_results['map_json'], 'sw_wyield_vol')] %}
   {% endif %}
   {% if valuation_results %}
-    {{ chart_spec_id_list.extend([
+    {% set chart_spec_id_list = chart_spec_id_list + [
       (valuation_results['energy_json'], 'hp_energy'),
-      (valuation_results['val_json'], 'hp_val')
-    ]) }}
+      (valuation_results['val_json'], 'hp_val')]
+    %}
   {% endif %}
   {{ embed_vega(chart_spec_id_list) }}
 {% endblock scripts %}

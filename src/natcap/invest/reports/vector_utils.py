@@ -50,6 +50,21 @@ def get_geojson_bbox(geodataframe):
 
 def create_aggregate_map(geodataframe, xy_ratio, attribute,
                          colorscheme, title, divergent=False):
+    """Generate Altair choropleth map JSON of a vector attribute.
+
+    Args:
+        geodataframe (geodataframe): The source data for the plots, as a geodataframe.
+        xy_ratio (float): The aspect ratio of the bounding box (width/height).
+        attribute (str): The name of the vector attribute to plot.
+        colorscheme (str): The Altair color scheme to use.
+        title (str): The title for the plot.
+        divergent (bool): Whether the data are divergent. If divergent, ``domainMid``
+            is set to 0.
+
+    Returns:
+        Altair chart JSON, to be passed to the report template.
+
+    """
     if divergent:
         scale_config = altair.Scale(domainMid=0, scheme=colorscheme)
     else:

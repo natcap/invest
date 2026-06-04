@@ -20,7 +20,7 @@ def _get_render_args(model_spec):
     img_src = 'bAse64eNcoDEdIMagE'
     output_stats_table = '<table class="test__output-stats-table"></table>'
     input_stats_table = '<table class="test__input-stats-table"></table>'
-    watershed_table = '<table class="test__watersheds-table"></table>',
+    watershed_table = '<table class="test__watersheds-table"></table>'
     stats_table_note = 'This is a test!'
     raster_group_caption = 'This is another test!'
     lulc_pre_caption = 'This is a caption for LULC rasters'
@@ -87,7 +87,7 @@ class AnnualWaterYieldTemplateTests(unittest.TestCase):
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
 
     def test_render_with_valuation(self):
-        """Test report rendering with valuation_table_path."""
+        """Test report rendering with valuation_table_path, multiple watersheds."""
 
         render_args = _get_render_args(MODEL_SPEC)
 
@@ -112,6 +112,14 @@ class AnnualWaterYieldTemplateTests(unittest.TestCase):
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
+
+        # The plots are only included if # watersheds > 1
+        plots = soup.select('#w_wyield_vol')
+        self.assertEqual(len(plots), 1)
+        plots = soup.select('#hp_energy')
+        self.assertEqual(len(plots), 1)
+        plots = soup.select('#hp_val')
+        self.assertEqual(len(plots), 1)
 
     def test_render_without_valuation(self):
         """Test report rendering when no valuation_table_path."""

@@ -1,23 +1,17 @@
-import csv
 import logging
-import os
 import time
 
-import altair
 import geopandas
 import pandas
 
 from natcap.invest import __version__
 from natcap.invest import gettext
-import natcap.invest.spec
 from natcap.invest.reports import jinja_env
 from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
-from natcap.invest.reports import sdr_ndr_utils
 from natcap.invest.reports import vector_utils
 from natcap.invest.reports.raster_utils import RasterDatatype
 from natcap.invest.reports.raster_utils import RasterPlotConfig
-from natcap.invest.unit_registry import u
 
 
 LOGGER = logging.getLogger(__name__)
