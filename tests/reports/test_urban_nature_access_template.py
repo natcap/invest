@@ -75,7 +75,7 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 8)
+        self.assertEqual(len(sections), 9)
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
 
@@ -89,7 +89,7 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 11)
+        self.assertEqual(len(sections), 12)
 
     def test_render_uniform_search_radius(self):
         """Test report rendering with LULC option with baseline NDVI input"""
@@ -98,4 +98,4 @@ class UrbanNatureAccessTemplateTests(unittest.TestCase):
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 8)
+        self.assertEqual(len(sections), 9)
