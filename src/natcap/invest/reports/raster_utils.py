@@ -1,6 +1,5 @@
 import base64
 import collections
-import functools
 import logging
 import math
 import textwrap
@@ -20,7 +19,7 @@ import matplotlib.pyplot as plt
 import pandas
 import yaml
 from osgeo import gdal
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from pydantic.dataclasses import dataclass
 from typing import Literal
 
@@ -147,8 +146,7 @@ class RasterTransform(str, Enum):
     log = 'log'
 
 
-@dataclass
-class SpecialValueConfig:
+class SpecialValueConfig(BaseModel):
     """Configuration for customizing color and labeling of special value range.
 
     The colorbar will be extended on either the lower or upper bounds
@@ -162,7 +160,8 @@ class SpecialValueConfig:
     colors: tuple[str | None, str | None]
     """Color(s) used for the special values"""
 
-    def __post_init__(self):
+    @model_validator(mode='after')
+    def validate_special_value_config(self):
         tuples = (self.thresholds, self.labels, self.colors)
         for idx in [0, 1]:
             if any(t[idx] is None for t in tuples) and not \
@@ -172,7 +171,7 @@ class SpecialValueConfig:
                     f"tuples, index {idx} must be `None` in all tuples. "
                     "Current incompatible `thresholds`, `labels`, and "
                     f"`colors` tuples are: {tuples}")
-
+        return self
 
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
@@ -195,18 +194,22 @@ class RasterPlotConfig:
     """Will customize the color and labeling of a special range of values"""
 
     def __post_init__(self):
-        if (self.special_values and self.datatype not in [
-                RasterDatatype.continuous, RasterDatatype.divergent]):
-            raise ValueError(
-                "`special_values` may only be defined for raster configs with "
-                "`datatype` of `continuous` or `divergent`."
-            )
         if self.title is None:
             self.title = os.path.basename(self.raster_path)
         self.caption = f'{self.title}:{self.spec.about}'
 
         self.colormap = plt.get_cmap(self.colormap if self.colormap
                                      else COLORMAPS[self.datatype])
+
+    @model_validator(mode='after')
+    def check_special_values_and_datatype(self):
+        if (self.special_values and self.datatype not in [
+                RasterDatatype.continuous, RasterDatatype.divergent]):
+            raise ValueError(
+                "`special_values` may only be defined for raster configs with "
+                "`datatype` of `continuous` or `divergent`."
+            )
+        return self
 
 
 def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
@@ -423,7 +426,13 @@ def get_categorical_colors(num_colors):
     return colors
 
 
-def _configure_special_values(cmap, special_values):
+def _configure_special_values(
+        cmap: matplotlib.colors.ListedColormap,
+        special_values: SpecialValueConfig) -> tuple[
+            Literal['neither', 'min', 'max', 'both'],
+            list[float],
+            list[str],
+            list[tuple[int, float, Literal['top', 'bottom']]]]:
     """Config. colormap extensions and return colorbar label/tick settings."""
     lower_threshold, upper_threshold = special_values.thresholds
     lower_label, upper_label = special_values.labels
@@ -487,8 +496,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         cmap = config.colormap
         vmin = vmax = None
         if config.special_values:
-            vmin = config.special_values.thresholds[0]
-            vmax = config.special_values.thresholds[1]
+            vmin, vmax = config.special_values.thresholds
         if dtype == 'divergent':
             if transform == 'log':
                 if None not in [vmin, vmax] and abs(vmin) != vmax:
