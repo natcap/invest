@@ -1,22 +1,17 @@
+import os
 import logging
 import time
 
 import altair
 import geopandas
 import geometamaker
-import matplotlib
-import numpy
 import pandas
-import pygeoprocessing
-from pydantic import ConfigDict
-from pydantic.dataclasses import dataclass
-from osgeo import gdal
 
 from natcap.invest import __version__
 from natcap.invest import gettext
 from natcap.invest.reports import jinja_env, raster_utils, report_constants, \
     vector_utils
-from natcap.invest.spec import ModelSpec, FileRegistry
+from natcap.invest.spec import ModelSpec
 
 from natcap.invest.reports.raster_utils import RasterDatatype, \
     RasterPlotConfig, RasterTransform, SpecialValueConfig
@@ -125,23 +120,17 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     ndvi_colorramp = 'viridis_r'
 
     input_raster_config_list = []
+    lulc_raster_list = []
+    lulc_caption = []
     if args_dict['lulc_base']:
-        input_raster_config_list.append(
-            RasterPlotConfig(
-                raster_path=args_dict['lulc_base'],
-                datatype=RasterDatatype.nominal,
-                spec=model_spec.get_input('lulc_base')
-            )
-        )
+        lulc_raster_list.append(args_dict['lulc_base'])
+        lulc_caption.append(
+            f"{os.path.basename(args_dict['lulc_base'])}:{model_spec.get_input('lulc_base').about}")
 
     if args_dict['lulc_alt']:
-        input_raster_config_list.append(
-            RasterPlotConfig(
-                raster_path=args_dict['lulc_alt'],
-                datatype=RasterDatatype.nominal,
-                spec=model_spec.get_input('lulc_alt')
-            )
-        )
+        lulc_raster_list.append(args_dict['lulc_alt'])
+        lulc_caption.append(
+            f"{os.path.basename(args_dict['lulc_alt'])}:{model_spec.get_input('lulc_alt').about}")
 
     if args_dict["model_option"] == 'ndvi':
         input_raster_config_list.insert(0,
@@ -161,7 +150,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             )
         )
     else:
-        intermediate_reclass_lulc_list = [
+        intermediate_lulc_to_ndvi_config_list = [
             RasterPlotConfig(
                 raster_path=file_registry['ndvi_base_aligned_masked'],
                 datatype=RasterDatatype.continuous,
@@ -245,11 +234,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             )
         )
 
-    inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        input_raster_config_list)
-    input_raster_caption = raster_utils.caption_raster_list(
-        input_raster_config_list)
-
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_config_list)
     output_raster_caption = raster_utils.caption_raster_list(
@@ -265,15 +249,23 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     intermediate_delta_ndvi_img_caption = raster_utils.caption_raster_list(
         intermediate_delta_ndvi_list)
 
+    intermediate_lulc_to_ndvi_img_src = None
+    intermediate_lulc_to_ndvi_img_caption = None
     if args_dict["model_option"] == 'lulc':
-        intermediate_reclass_lulc_img_src = raster_utils.plot_and_base64_encode_rasters(
-            intermediate_reclass_lulc_list)
-        intermediate_reclass_lulc_img_caption = raster_utils.caption_raster_list(
-            intermediate_reclass_lulc_list)
-    else:
-        intermediate_reclass_lulc_img_src = None
-        intermediate_reclass_lulc_img_caption = None
+        intermediate_lulc_to_ndvi_img_src = raster_utils.plot_and_base64_encode_rasters(
+            intermediate_lulc_to_ndvi_config_list)
+        intermediate_lulc_to_ndvi_img_caption = raster_utils.caption_raster_list(
+            intermediate_lulc_to_ndvi_config_list)
 
+    lulc_img_src = None
+    lulc_legend_html = None
+    if len(lulc_raster_list):
+        lulc_img_src, lulc_legend_html = \
+            raster_utils.plot_categorical_raster_with_table(lulc_raster_list)
+    inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
+        input_raster_config_list)
+    input_raster_caption = raster_utils.caption_raster_list(
+        input_raster_config_list)
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict, model_spec).to_html(na_rep='')
 
@@ -342,10 +334,12 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             intermediate_baseline_img_caption=intermediate_baseline_img_caption,
             intermediate_delta_ndvi_img_src=intermediate_delta_ndvi_img_src,
             intermediate_delta_ndvi_img_caption=intermediate_delta_ndvi_img_caption,
-            intermediate_reclass_lulc_img_src=intermediate_reclass_lulc_img_src,
-            intermediate_reclass_lulc_img_caption=intermediate_reclass_lulc_img_caption,
+            intermediate_reclass_lulc_to_ndvi_img_src=intermediate_lulc_to_ndvi_img_src,
+            intermediate_reclass_lulc_to_ndvi_img_caption=intermediate_lulc_to_ndvi_img_caption,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
+            lulc_caption=lulc_caption,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
-            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
             stats_table_note=report_constants.STATS_TABLE_NOTE,

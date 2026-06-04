@@ -12,7 +12,7 @@ def generate_results_table_from_vector(filepath, cols_to_sum):
     vector_df = geopandas.read_file(filepath, engine='fiona')
     vector_df = vector_df.drop(columns=['geometry'])
 
-    css_classes = ['datatable']
+    css_classes = ['datatable colvis']
     (num_rows, _) = vector_df.shape
     if num_rows > TABLE_PAGINATION_THRESHOLD:
         css_classes.append('paginate')
