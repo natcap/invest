@@ -14,12 +14,14 @@ import numpy
 from osgeo import gdal, osr
 import pandas
 import pygeoprocessing
+from pydantic import ValidationError
 
 from natcap.invest import spec
 from natcap.invest.reports import MATPLOTLIB_PARAMS, raster_utils
 from natcap.invest.reports.raster_utils import RasterDatatype
 from natcap.invest.reports.raster_utils import RasterTransform
 from natcap.invest.reports.raster_utils import RasterPlotConfig
+from natcap.invest.reports.raster_utils import SpecialValueConfig
 
 projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
@@ -322,6 +324,42 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
+
+    def test_special_value_config(self):
+        """Should pass when only index 0 (lower bound) is fully populated."""
+        config = SpecialValueConfig(
+            thresholds=(0.0, 100.0),
+            labels=("Low", "High"),
+            colors=("blue", "red")
+        )
+        self.assertEqual(config.thresholds, (0.0, 100.0))
+
+        config = SpecialValueConfig(
+            thresholds=(0.0, None),
+            labels=("Low", None),
+            colors=("blue", None)
+        )
+        self.assertEqual(config.colors, ("blue", None))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),
+                labels=(None, None),  # missing lower label
+                colors=("blue", None)
+            )
+        self.assertTrue(
+            "If index 0 is `None` in any of the special config tuples" in
+            str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),  # missing upper threshold
+                labels=("Low", "High"),
+                colors=("blue", None)  # missing upper color
+            )
+        self.assertTrue(
+            "If index 1 is `None` in any of the special config tuples" in
+            str(context.exception))
 
 
 class RasterPlotLegendTests(unittest.TestCase):
