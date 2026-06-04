@@ -252,9 +252,29 @@ export default function PluginModal(props) {
     );
   }
 
-  const pluginsURL = "https://invest.readthedocs.io/en/latest/plugins.html";
+  const pluginDocsURL = "https://invest.readthedocs.io/en/latest/plugins.html";
+  const pluginRegistryURL = "https://natcap.github.io/invest-plugin-registry/";
   let modalBody = (
     <Modal.Body>
+      <div>
+        <p>
+          {t('Explore available plugins on our ')}
+          <a
+            href={pluginRegistryURL}
+            title={pluginRegistryURL}
+            aria-label={t("Community Plugin Registry (opens in web browser)")}
+            onClick={openLinkInBrowser}
+          >{t("Community Plugin Registry")}</a>.
+          {t(' For more information about creating a plugin, read our ')}
+          <a
+            href={pluginDocsURL}
+            title={pluginDocsURL}
+            aria-label={t("Plugins Developer's Guide (opens in web browser)")}
+            onClick={openLinkInBrowser}
+          >{t("Developer's Guide")}</a>.
+        </p>
+      </div>
+      <hr />
       <Form aria-labelledby="add-plugin-form-title">
         <Form.Group>
           <h5 id="add-plugin-form-title" className="mb-3">{t('Add a plugin')}</h5>
@@ -394,18 +414,6 @@ export default function PluginModal(props) {
           }
         </div>
       </Form>
-      <hr />
-      <div>
-        <p>
-          {t('For more information about plugins, read our ')}
-          <a
-            href={pluginsURL}
-            title={pluginsURL}
-            aria-label={t("Plugins Developer's Guide (opens in web browser)")}
-            onClick={openLinkInBrowser}
-          >{t("Developer's Guide")}</a>.
-        </p>
-      </div>
     </Modal.Body>
   );
   if (installErr) {
