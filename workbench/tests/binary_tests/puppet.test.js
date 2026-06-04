@@ -213,7 +213,7 @@ test('Run a real invest model', async () => {
   const argsForm = await page.waitForSelector('.args-form');
 
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace (directory)"][role="textbox"]');
+    'aria/[name="Workspace (workspace)"][role="textbox"]');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const aoi = await argsForm.waitForSelector(
     'aria/[name="Area Of Interest (vector)"][role="textbox"]');
