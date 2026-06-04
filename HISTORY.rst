@@ -70,12 +70,24 @@ General
 * To ensure consistent raster plot sizing in reports, padding is now added to
   the top of raster plots if an adjacent raster plot has a units subheading.
   (`#2471 <https://github.com/natcap/invest/issues/2471>`_)
+* The ``deploy_dist`` Makefile target was split into ``deploy_wheel`` and
+  ``deploy_sdist``.
 * ``Input, Output, and ModelSpec`` classes now create immutable objects.
   Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
   (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
 * Made some styling and usability improvements to the Vega-Lite visualizations
   (e.g., vector plots, histograms) that appear in some InVEST reports.
   (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
+* Added a `.gitignore` for InVEST build files and common editor files.
+  (`#258 <https://github.com/natcap/invest/issues/258>`_)
+* Fixed an issue with Windows binary builds where users would see runtime
+  warnings saying ``GDAL_DATA`` is not defined.
+  (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
+* Reports now display a Raster Attribute Table for Land Use/Land Cover
+  input rasters. (`#2333 <https://github.com/natcap/invest/issues/2333>`_)
+* When saving a datastack, CSVs are now copied into argument-named
+  subfolders, which preserves original filenames and ensures metadata
+  compatibility. (`#2442 <https://github.com/natcap/invest/issues/2442>`_)
 
 Workbench
 =========
@@ -87,6 +99,21 @@ Workbench
   doesn't recognize (such as the ID of a plugin that isn't installed, or an
   otherwise malformed model ID) now presents an error message instead of
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
+* Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
+  Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+
+Annual Water Yield
+==================
+* Allow watershed input to have a POLYGON or MULTIPOLYGON geometry type.
+  (`#2513 <https://github.com/natcap/invest/issues/2513>`_)
+
+SDR
+===
+* Added exception-handling when checking if watershed geoemtries overlap.
+  Invalid geometries will no longer raise an exception during this check
+  because they can still be rasterized and used in zonal_statistics.
+  (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
+
 
 Annual Water Yield
 ==================

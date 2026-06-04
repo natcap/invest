@@ -1,5 +1,6 @@
 import base64
 import collections
+import functools
 import logging
 import math
 import textwrap
@@ -162,6 +163,7 @@ class SpecialValueConfig:
     """Label to show on the colorbar for the special region"""
     color: str
     """Color used for the special values"""
+
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class RasterPlotConfig:
@@ -389,6 +391,22 @@ def _get_legend_kwargs(num_patches: int, n_plots: int, xy_ratio: float):
     }
 
 
+def get_categorical_colors(num_colors):
+    cmap = matplotlib.colormaps[COLORMAPS['nominal']]
+    # If > 20 colors needed, generate colormap to override default.
+    if num_colors > 20:
+        # Values of pastel_factor and rng have been chosen specifically
+        # for Carbon (Willamette) sample data. If/when we create a
+        # report using sample data that is ill-suited to the color
+        # palette generated with these values, we will take a different
+        # approach to customizing color palettes.
+        cmap = ListedColormap(
+            distinctipy.get_colors(
+                num_colors, pastel_factor=0.6, rng=0, n_attempts=10))
+    colors = cmap(numpy.linspace(0, 1, num_colors))
+    return colors
+
+
 def plot_raster_list(raster_list: list[RasterPlotConfig]):
     """Plot a list of rasters.
 
@@ -457,29 +475,14 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         if dtype == 'nominal':
             # typically a 'nominal' raster would be an int type, but we replaced
             # nodata with nan, so the array is now a float.
-            values, counts = numpy.unique(arr[~numpy.isnan(arr)], return_counts=True)
-            values = values[numpy.argsort(-counts)].astype(int)  # descending order
-            # We need enough colors to cover the full range of values.
-            # If there is only one color per unique value, and the range of
-            # values is larger than the number of unique values, matplotlib's
-            # normalization can cause multiple values to be represented by the
-            # same color.
-            # (Future work may involve writing a custom normalizer to prevent
-            # this problem and generate only one color for each unique value.)
-            num_colors = numpy.max(values) - numpy.min(values) + 1
-            # If > 20 colors needed, generate colormap to override default.
-            if num_colors > 20:
-                # Values of pastel_factor and rng have been chosen specifically
-                # for Carbon (Willamette) sample data. If/when we create a
-                # report using sample data that is ill-suited to the color
-                # palette generated with these values, we will take a different
-                # approach to customizing color palettes.
-                cmap = ListedColormap(
-                    distinctipy.get_colors(
-                        num_colors, pastel_factor=0.6, rng=0))
-
+            values = list(numpy.unique(arr[~numpy.isnan(arr)]).astype(int))
+            num_colors = len(values)
+            colors = get_categorical_colors(num_colors)
+            cmap = matplotlib.colors.ListedColormap(colors)
+            bounds = values + [max(values) + 1]
+            norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
+            imshow_kwargs['norm'] = norm
             mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
-            colors = [mappable.cmap(mappable.norm(value)) for value in values]
             patches = [matplotlib.patches.Patch(
                 color=colors[i],
                 label=f'{values[i]}') for i in range(len(values))]
@@ -665,6 +668,139 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
     return fig
 
 
+def _count_frequency(counter, block):
+    """A reducer for ``pygeoprocessing.raster_reduce``."""
+    values, counts = numpy.unique(
+        block[~numpy.isnan(block)], return_counts=True)
+    return counter + collections.Counter(dict(zip(values, counts)))
+
+
+def plot_categorical_raster_with_table(raster_path_list: list[str]):
+    """Plot one or two categorical rasters and generate an HTML table legend.
+
+    Unique pixel values are determined either from an existing
+    Raster Attribute Table or by calculating a frequency table from the array.
+
+    If two rasters are given, it is assumed the pixel values have a shared
+    meaning and the tables are joined based on the value column. All rasters
+    will share the same colormap.
+
+    Args:
+        raster_path_list (list[str]): list of filepaths to categorical rasters
+
+    Returns:
+        A tuple containing:
+            - A string representing a base64-encoded PNG
+            - An html table to use as the legend for the image
+
+    """
+    if not isinstance(raster_path_list, list):
+        raise TypeError('Expected `raster_path_list` to be a list of filepaths')
+    if len(raster_path_list) > 2:
+        raise ValueError('`raster_path_list` cannot include more than 2 items.')
+    lulc_rat_html = None
+    value_col_name = None
+    rat_list = []
+    for raster_path in raster_path_list:
+        rat_list.append(_get_raster_attribute_table(raster_path))
+    if None not in rat_list:    
+        rat_df_list = []
+        rat_value_names = set()
+        for rat in rat_list:
+            value_col = None
+            for col in rat.columns:
+                if col.usage == 'MinMax':
+                    # GeoMetaMaker assigned the MinMax usage. GDAL uses MinMax to
+                    # denote that the value is a single pixel value rather than a range.
+                    value_col = col.name
+            rat_value_names.add(value_col)
+            df = pandas.DataFrame(rat.rows)
+            # Some RATs include color tables. This is not useful to display in
+            # this context because it will be confusing.
+            # Best we can do is guess what the column names could be.
+            col_filter = df.filter(['Red', 'Green', 'Blue', 'Alpha', 'Opacity'])
+            df = df.drop(col_filter, axis=1)
+            rat_df_list.append(df)
+        if len(rat_value_names) == 1:
+            value_col_name = list(rat_value_names)[0]
+        else:
+            LOGGER.debug(
+                'default raster attribute tables do not match and will be ignored.')
+
+    # There was no RAT, or the RAT value columns were ambiguous
+    if value_col_name is None:
+        rat_df_list = []
+        value_col_name = 'value'
+        count_col_name = 'count'
+        for raster_path in raster_path_list:
+            LOGGER.info(
+                f'Calculating frequency table for classes in {raster_path}')
+            table = pygeoprocessing.raster_reduce(
+                _count_frequency, (raster_path, 1), collections.Counter())
+            rat_df_list.append(pandas.DataFrame(
+                table.items(), columns=[value_col_name, count_col_name]))
+    if len(rat_df_list) == 2:
+        # TODO: Support arbitrary length of tables with a reducer that calls
+        # merge. The tricky part is assigning appropriate suffixes.
+        rat_dataframe = pandas.merge(
+            rat_df_list[0], rat_df_list[1],
+            on=[value_col_name], how='outer',
+            suffixes=['_left', '_right'])
+    elif len(rat_df_list) == 1:
+        rat_dataframe = rat_df_list[0]
+
+    colors = get_categorical_colors(rat_dataframe.shape[0])
+    # Sort values before matching them with colors to ensure the mapping is
+    # the same here as in imshow.
+    colors_dict = dict(zip(sorted(rat_dataframe[value_col_name]), colors))
+    legend_col_name = 'color'  # the color swatch column needs no label
+    rat_dataframe.insert(
+        0, legend_col_name, [matplotlib.colors.to_hex(c) for c in colors])
+    styler = rat_dataframe.style.format(na_rep='').map(
+        lambda val: f"background-color: {val}; color: {val}",
+        subset=[legend_col_name])
+    classes = 'datatable legend-table'
+    if rat_dataframe.shape[0] >= 20:
+        classes += ' paginate'
+    if rat_dataframe.shape[1] >= 5:
+        # 3 or 4 columns will be typical (color, value, count, name/desc)
+        # But we have no idea how many there might be.
+        classes += ' colvis'
+    lulc_rat_html = styler.hide(axis='index').to_html(
+        table_attributes=f'class="{classes}"')
+    
+    resample_alg = RESAMPLE_ALGS['nominal']
+    raster_info = pygeoprocessing.get_raster_info(raster_path_list[0])
+    bbox = raster_info['bounding_box']
+    xy_ratio = _get_aspect_ratio(bbox)
+    n_plots = len(raster_path_list)
+    small_plots = False
+    if n_plots == 1:
+        # If 1 plot, make an extra column for the html table.
+        # If > 1 map, the table will always go on its own row.
+        small_plots = True
+    fig, axs = _figure_subplots(
+        xy_ratio, n_plots=n_plots, small_plots=small_plots)
+    imshow_kwargs = {}
+    imshow_kwargs['interpolation'] = 'none'
+
+    for ax, raster_path in zip(axs, raster_path_list):
+        arr, resampled = _read_masked_array(raster_path, resample_alg)
+        ax.set_title(**_get_title_kwargs(
+            os.path.basename(raster_path), resampled, 100))
+
+        categories = sorted(colors_dict.keys())
+        colors = [colors_dict[cat] for cat in categories]
+        colormap = matplotlib.colors.ListedColormap(colors)
+        bounds = categories + [max(categories) + 1]
+        norm = matplotlib.colors.BoundaryNorm(bounds, colormap.N)
+        imshow_kwargs['norm'] = norm
+
+        ax.imshow(arr, cmap=colormap, **imshow_kwargs)
+        ax.set_axis_off()
+    return base64_encode(fig), lulc_rat_html
+
+
 # TODO: this may end up in the geometamaker API
 # https://github.com/natcap/geometamaker/issues/111
 def geometamaker_load(filepath):
@@ -710,13 +846,27 @@ def _get_raster_metadata(filepath):
         return resource
 
 
+def _get_raster_attribute_table(filepath):
+    rat = None
+    resource = _get_raster_metadata(filepath)
+    if resource is None:
+        # if no metadata already exists, generate it
+        resource = geometamaker.describe(filepath)
+    if isinstance(resource, geometamaker.models.RasterResource):
+        rat = resource.get_rat(1)
+    return rat
+
+
 def _get_raster_units(filepath):
     resource = _get_raster_metadata(filepath)
     return resource.get_band_description(1).units if resource else None
 
 
 def raster_workspace_summary(file_registry):
-    """Create a table of stats for all rasters in a file_registry."""
+    """Create a table of stats for all rasters in a file_registry.
+
+    Metadata docs were already created by invest for files in the workspace.
+    """
     raster_summary = {}
 
     def _summarize_output(item):
@@ -747,6 +897,8 @@ def raster_inputs_summary(args_dict, model_spec):
     paths_to_check.extend(_parse_csv_paths_from_spec(args_dict, model_spec))
 
     for v in paths_to_check:
+        # Generate metadata but do not write to disk because we
+        # don't know if we have write permission
         resource = geometamaker.describe(v, compute_stats=True)
         if isinstance(resource, geometamaker.models.RasterResource):
             filename = os.path.basename(resource.path)

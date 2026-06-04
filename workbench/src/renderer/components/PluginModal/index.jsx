@@ -9,6 +9,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
 import { MdCheckCircleOutline, MdClose } from 'react-icons/md';
 
+import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -251,8 +252,29 @@ export default function PluginModal(props) {
     );
   }
 
+  const pluginDocsURL = "https://invest.readthedocs.io/en/latest/plugins.html";
+  const pluginRegistryURL = "https://natcap.github.io/invest-plugin-registry/";
   let modalBody = (
     <Modal.Body>
+      <div>
+        <p>
+          {t('Explore available plugins on our ')}
+          <a
+            href={pluginRegistryURL}
+            title={pluginRegistryURL}
+            aria-label={t("Community Plugin Registry (opens in web browser)")}
+            onClick={openLinkInBrowser}
+          >{t("Community Plugin Registry")}</a>.
+          {t(' For more information about creating a plugin, read our ')}
+          <a
+            href={pluginDocsURL}
+            title={pluginDocsURL}
+            aria-label={t("Plugins Developer's Guide (opens in web browser)")}
+            onClick={openLinkInBrowser}
+          >{t("Developer's Guide")}</a>.
+        </p>
+      </div>
+      <hr />
       <Form aria-labelledby="add-plugin-form-title">
         <Form.Group>
           <h5 id="add-plugin-form-title" className="mb-3">{t('Add a plugin')}</h5>
