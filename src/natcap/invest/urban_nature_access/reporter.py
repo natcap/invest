@@ -295,7 +295,8 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     lulc_img_src, lulc_legend_html = raster_utils.plot_categorical_raster_with_table(
         [args_dict['lulc_raster_path']])
-    lulc_caption = f"{os.path.basename(args_dict['lulc_raster_path'])}:{model_spec.get_input('lulc_raster_path').about}"
+    lulc_caption = [
+        f"{os.path.basename(args_dict['lulc_raster_path'])}:{model_spec.get_input('lulc_raster_path').about}"]
 
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_config_list)
@@ -357,7 +358,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             intermediates_img_src=intermediates_img_src,
             intermediates_caption=intermediates_caption,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
-            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
             stats_table_note=report_constants.STATS_TABLE_NOTE,
