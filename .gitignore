@@ -39,7 +39,7 @@ src/natcap/invest/seasonal_water_yield/*.cpp
 
 #################################################################################
 # Random frustrating files
-.DS_Store  # oh mac OS
+.DS_Store
 
 #################################################################################
 # Files related to python and python tooling
