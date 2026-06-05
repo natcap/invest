@@ -109,6 +109,9 @@ Annual Water Yield
 ==================
 * Allow watershed input to have a POLYGON or MULTIPOLYGON geometry type.
   (`#2513 <https://github.com/natcap/invest/issues/2513>`_)
+* The model now generates a report, a visual summary of results, available in
+  the output workspace and also viewable from the Workbench after the model run
+  completes. (`#2533 <https://github.com/natcap/invest/issues/2533>`_)
 
 SDR
 ===

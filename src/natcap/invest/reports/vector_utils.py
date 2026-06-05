@@ -1,3 +1,4 @@
+import altair
 import geopandas
 import pandas
 
@@ -5,6 +6,8 @@ from natcap.invest import gettext
 from natcap.invest.reports.report_constants import TABLE_PAGINATION_THRESHOLD
 from natcap.invest.spec import format_unit, Output, VectorOutput
 from natcap.invest.unit_registry import u
+
+MAP_WIDTH = 450 #pixels
 
 LEGEND_CONFIG = {
     'labelFontSize': 14,
@@ -49,6 +52,49 @@ def get_geojson_bbox(geodataframe):
         "properties": {}
     }
     return extent_feature, xy_ratio
+
+
+def create_aggregate_map(geodataframe, xy_ratio, attribute,
+                         colorscheme, title, divergent=False):
+    """Generate Altair choropleth map JSON of a vector attribute.
+
+    Args:
+        geodataframe (geodataframe): The source data for the plots, as a geodataframe.
+        xy_ratio (float): The aspect ratio of the bounding box (width/height).
+        attribute (str): The name of the vector attribute to plot.
+        colorscheme (str): The Altair color scheme to use.
+        title (str): The title for the plot.
+        divergent (bool): Whether the data are divergent. If divergent, ``domainMid``
+            is set to 0.
+
+    Returns:
+        Altair chart JSON, to be passed to the report template.
+
+    """
+    if divergent:
+        scale_config = altair.Scale(domainMid=0, scheme=colorscheme)
+    else:
+        scale_config = altair.Scale(scheme=colorscheme)
+
+    attr_map = altair.Chart(geodataframe).mark_geoshape(
+        stroke="white",
+        strokeWidth=0.5
+    ).project(
+        type='identity',
+        reflectY=True
+    ).encode(
+        color=altair.Color(
+            attribute,
+            scale=scale_config
+        ),
+        tooltip=[altair.Tooltip(attribute, title=attribute)]
+    ).properties(
+        width=MAP_WIDTH,
+        height=MAP_WIDTH / xy_ratio,
+        title=title
+    ).configure_legend(**LEGEND_CONFIG)
+
+    return attr_map.to_json()
 
 
 def get_vector_attr_table_caption(
