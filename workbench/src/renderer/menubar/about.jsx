@@ -1,8 +1,10 @@
 import React from 'react';
 import ReactDom from 'react-dom';
+import {createRoot} from 'react-dom/client';
 import { Translation } from 'react-i18next';
 
 import i18n from '../i18n/i18n';
+
 import { handleClickExternalURL } from './handlers';
 import { ipcMainChannels } from '../../main/ipcMainChannels';
 import investLogo from '../static/invest-logo.png';
@@ -16,187 +18,91 @@ async function getInvestVersion() {
 
 await i18n.changeLanguage(window.Workbench.LANGUAGE);
 const investVersion = await getInvestVersion();
-ReactDom.render(
+
+const ariaLabelSuffix = '(opens in web browser)';
+const linkDefs = [
+  {
+    name: 'InVEST User Guide',
+    href: 'http://releases.naturalcapitalproject.org/invest-userguide/latest/en/index.html',
+  },
+  {
+    name: 'InVEST Data Collection Notice',
+    href: 'https://naturalcapitalalliance.stanford.edu/software/invest/invest-downloads-data#invest-data-collection-notice',
+  },
+  {
+    name: 'InVEST Attribution Guidelines',
+    href: 'https://naturalcapitalalliance.stanford.edu/software/invest/invest-downloads-data#invest-attribution-guidelines',
+  },
+  {
+    name: 'InVEST Trademark and Logo Use Policy',
+    href: 'https://naturalcapitalalliance.stanford.edu/software/invest/invest-trademark-and-logo-use-policy',
+  },
+  {
+    name: 'InVEST License',
+    href: 'https://github.com/natcap/invest/blob/main/LICENSE.txt',
+  },
+  {
+    name: 'InVEST on GitHub',
+    href: 'https://github.com/natcap/invest',
+  },
+  {
+    name: 'InVEST Developer Documentation',
+    href: `https://invest.readthedocs.io/en/${investVersion}/`,
+  },
+  {
+    name: 'Natural Capital Alliance',
+    href: 'https://naturalcapitalalliance.stanford.edu/',
+  },
+];
+const linkListItems = linkDefs.map(({name, href}) => (
+  <Translation>
+    {(t, { i18n }) => (
+      <li><a href={href} title={href} aria-label={`${t(name)} ${t(ariaLabelSuffix)}`}>{t(name)}</a></li>
+    )}
+  </Translation>
+));
+
+const root = createRoot(document.getElementById('content'));
+root.render(
   <Translation>
     {(t, { i18n }) => (
       <React.Fragment>
-        <div id="header">
+        <h1 class="visually-hidden">About InVEST</h1>
+        <div class="header">
           <img
             src={investLogo}
             width="191"
             height="159"
             alt="InVEST logo"
           />
-          <div id="invest-version">
-            <p>{t('version:')}</p>
-            <span id="version-string" />
+          <div class="version-and-copyright">
+            <span>
+              {t('Version:')} <span class="version-string">{ investVersion }</span>
+            </span>
+            <span>
+              {t('Copyright 2026, Natural Capital Alliance')}
+            </span>
           </div>
-          <p id="invest-copyright">
-            {t('Copyright 2026, The Natural Capital Alliance')}
-          </p>
         </div>
-        <br />
-        <div id="links">
-          <table>
-            <tbody>
-              <tr>
-                <td>{t('Documentation')}</td>
-                <td>
-                  <a
-                    href="http://releases.naturalcapitalproject.org/invest-userguide/latest/"
-                  >
-                    http://releases.naturalcapitalproject.org/invest-userguide/latest/
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>{t('Homepage')}</td>
-                <td>
-                  <a
-                    href="https://naturalcapitalalliance.stanford.edu/"
-                  >
-                    https://naturalcapitalalliance.stanford.edu/
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>{t('Project page')}</td>
-                <td>
-                  <a
-                    href="https://github.com/natcap/invest"
-                  >
-                    https://github.com/natcap/invest
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>{t('License')}</td>
-                <td>
-                  <a
-                    href="https://github.com/natcap/invest/blob/main/LICENSE.txt"
-                  >
-                    Apache 2.0
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>{t('InVEST Trademark and Logo Use Policy')}</td>
-                <td>
-                  <a
-                    href="https://naturalcapitalalliance.stanford.edu/invest-trademark-and-logo-use-policy"
-                  >
-                    Trademark and Logo Policy
-                  </a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div id="licenses">
-          <h4>{t('Open-Source Licenses:')}</h4>
-          <table>
-            <tbody>
-              <tr>
-                <td>geometamaker</td>
-                <td>Apache 2.0</td>
-                <td>
-                  <a
-                    href="https://github.com/natcap/geometamaker"
-                  >
-                    https://github.com/natcap/geometamaker
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>GDAL</td>
-                <td>{t('MIT and others')}</td>
-                <td>
-                  <a
-                    href="http://gdal.org"
-                  >
-                    http://gdal.org
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>numpy</td>
-                <td>BSD</td>
-                <td>
-                  <a
-                    href="http://numpy.org"
-                  >
-                    http://numpy.org
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>pygeoprocessing</td>
-                <td>BSD</td>
-                <td>
-                  <a
-                    href="https://github.com/natcap/pygeoprocessing"
-                  >
-                    https://github.com/natcap/pygeoprocessing
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>PyInstaller</td>
-                <td>GPL</td>
-                <td>
-                  <a
-                    href="http://pyinstaller.org"
-                  >
-                    http://pyinstaller.org
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>rtree</td>
-                <td>MIT</td>
-                <td>
-                  <a
-                    href="https://github.com/Toblerity/rtree"
-                  >
-                    https://github.com/Toblerity/rtree
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>scipy</td>
-                <td>BSD</td>
-                <td>
-                  <a
-                    href="http://www.scipy.org/"
-                  >
-                    http://www.scipy.org/
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td>shapely</td>
-                <td>BSD</td>
-                <td>
-                  <a
-                    href="http://github.com/Toblerity/Shapely"
-                  >
-                    http://github.com/Toblerity/Shapely
-                  </a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <section>
+          <p>{t('InVEST® is free and open-source software used to map and value the goods and services from nature that sustain and fulfill human life.')}</p>
+        </section>
+        <section>
+          <h2 class="section-heading" id="link-list-heading">{t('Resources')}</h2>
+          <ul role="list" className="links" aria-describedby="link-list-heading">
+            {linkListItems}
+          </ul>
+        </section>
+        <section>
+          <h2 class="section-heading">{t('Data Collection')}</h2>
+          <p>{t('The Natural Capital Alliance software team collects certain non-personal data each time an InVEST model or InVEST plugin is run via the InVEST Workbench. These data help inform future work on InVEST and support our mission to maintain InVEST as free and open-source software.')}</p>
+        </section>
       </React.Fragment>
     )}
-  </Translation>,
-  document.getElementById('content')
+  </Translation>
 );
 document.querySelectorAll('a').forEach(
   (element) => {
     element.addEventListener('click', handleClickExternalURL);
   }
 );
-const node = document.getElementById('version-string');
-const text = document.createTextNode(investVersion);
-node.appendChild(text);
