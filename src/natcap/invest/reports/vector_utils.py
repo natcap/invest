@@ -1,3 +1,4 @@
+import altair
 import geopandas
 import pandas
 
