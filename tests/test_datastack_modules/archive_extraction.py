@@ -16,11 +16,12 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
         columns=[
             spec.IntegerInput(id='ID'),
             spec.RasterOrVectorInput(
-                id='path',
+                id='spatial_path',
                 fields=[],
                 geometry_types={'POINT', 'POLYGON'},
                 units=None
-            )
+            ),
+            spec.FileInput(id='nonspatial_path')
         ]
     )],
     outputs=[],

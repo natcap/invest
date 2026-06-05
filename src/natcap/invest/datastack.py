@@ -158,10 +158,6 @@ def build_datastack_archive(args, model_id, datastack_path):
     files_found = {}
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
 
-    spatial_types = {spec.SingleBandRasterInput, spec.VectorInput,
-                     spec.RasterOrVectorInput}
-    file_based_types = spatial_types.union({
-        spec.CSVInput, spec.FileInput, spec.DirectoryInput})
     rewritten_args = {}
     for key in args:
         # Allow the model to override specific arguments in datastack archive
@@ -198,7 +194,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
         input_spec = module.MODEL_SPEC.get_input(key)
-        if type(input_spec) in file_based_types:
+        if isinstance(input_spec, spec.FileInput) or isinstance(input_spec, spec.DirectoryInput):
             if args[key] in {None, ''}:
                 LOGGER.info(
                     f'Skipping key {key}, value is empty and cannot point to '
@@ -222,36 +218,34 @@ def build_datastack_archive(args, model_id, datastack_path):
             # check the CSV for columns that may be spatial.
             # But also, the columns specification might not be listed, so don't
             # require that 'columns' exists in the MODEL_SPEC.
-            spatial_columns = []
+            file_column_specs = []
             if input_spec.columns:
                 for col_spec in input_spec.columns:
-                    if type(col_spec) in spatial_types:
-                        spatial_columns.append(col_spec.id)
+                    if isinstance(col_spec, spec.FileInput):
+                        file_column_specs.append(col_spec)
 
-            LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
+            LOGGER.debug(f'Detected columns that reference other files: {file_column_specs}')
 
             csv_dir = os.path.join(data_dir, f'{key}_csv')
             os.makedirs(csv_dir)
-
             target_csv_path = os.path.join(
                 csv_dir, os.path.basename(source_path))
-            if not spatial_columns:
+            if not file_column_specs:
                 LOGGER.debug(
                     f'No spatial columns, copying to {target_csv_path}')
                 shutil.copyfile(source_path, target_csv_path)
             else:
-                contained_files_dir = os.path.join(
-                    csv_dir, f'{key}_csv_data')
+                contained_files_dir = os.path.join(csv_dir, f'{key}_csv_data')
 
                 dataframe = input_spec.get_validated_dataframe(source_path)
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
-                for spatial_column_name in spatial_columns:
-                    # Iterate through the spatial columns, identify the set of
+                for column_spec in file_column_specs:
+                    # Iterate through the columns, identify the set of
                     # unique files and copy them out.
                     # if a string is not a filepath, assume it's supposed to be
                     # there and skip it
                     for row_index, column_value in dataframe[
-                            spatial_column_name.lower()].items():
+                            column_spec.id.lower()].items():
                         if ((isinstance(column_value, float) and
                                 math.isnan(column_value)) or
                                 column_value == ''):
@@ -284,16 +278,25 @@ def build_datastack_archive(args, model_id, datastack_path):
                             target_dir = os.path.join(
                                 contained_files_dir,
                                 f'{row_index}_{basename}')
-                            target_filepath = utils.copy_spatial_files(
-                                source_filepath, target_dir)
-                            target_filepath = os.path.relpath(
-                                target_filepath, csv_dir)
+                            os.makedirs(target_dir)
+                            if isinstance(column_spec, spec.SpatialFileInput):
+                                target_filepath = utils.copy_spatial_files(
+                                    source_filepath, target_dir)
+                                target_filepath = os.path.relpath(
+                                    target_filepath, csv_dir)
+                            else:
+                                target_filepath = os.path.join(target_dir,
+                                    os.path.basename(source_filepath))
+                                shutil.copyfile(source_filepath, target_filepath)
+                                target_filepath = os.path.relpath(
+                                    target_filepath, csv_dir)
+
 
                         LOGGER.debug(
-                            'Spatial file in CSV copied from '
+                            'File referenced in CSV copied from '
                             f'{source_filepath} --> {target_filepath}')
                         dataframe.at[
-                            row_index, spatial_column_name] = target_filepath
+                            row_index, column_spec.id] = target_filepath
                         files_found[source_filepath] = target_filepath
 
                 LOGGER.debug(
@@ -330,7 +333,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_directory
             files_found[source_path] = target_arg_value
 
-        elif type(input_spec) in spatial_types:
+        elif isinstance(input_spec, spec.SpatialFileInput):
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
             spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.type}')
