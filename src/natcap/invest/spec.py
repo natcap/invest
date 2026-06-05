@@ -1854,27 +1854,26 @@ class NumberOutput(Output):
     """The units of measurement for this numeric value"""
 
 
-class IntegerOutput(Output):
+class IntegerOutput(NumberOutput):
     """An integer output, or result, of an invest model."""
-    pass
 
 
-class RatioOutput(Output):
+class RatioOutput(NumberOutput):
     """A ratio output, or result, of an invest model.
 
     A ratio is a proportion expressed as a value from 0 to 1 (in contrast to a
     percent, which ranges from 0 to 100).
     """
-    pass
 
 
-class PercentOutput(Output):
+class PercentOutput(NumberOutput):
     """A percent output, or result, of an invest model.
 
     A percent is a proportion expressed as a value from 0 to 100 (in contrast to
     a ratio, which ranges from 0 to 1).
     """
-    pass
+    units: typing.Union[pint.Unit, None] = u.percent
+    """The units of measurement for this numeric value"""
 
 
 class StringOutput(Output):
