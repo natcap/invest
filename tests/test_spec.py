@@ -239,7 +239,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         dir_spec = spec.WorkspaceInput()
         out = dir_spec.describe_rst()
         expected_rst = ([
-            f'**workspace** (`workspace directory <input_types.html#workspace>`__, *required*): {dir_spec.about}'
+            f'**workspace directory** (`workspace directory <input_types.html#workspace>`__, *required*): {dir_spec.about}'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
