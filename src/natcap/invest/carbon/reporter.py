@@ -62,11 +62,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     Returns:
         ``None``
     """
-    input_raster_config_list = [
-        RasterPlotConfig(
-            raster_path=args_dict['lulc_bas_path'],
-            datatype=RasterDatatype.nominal,
-            spec=model_spec.get_input('lulc_bas_path'))]
+    lulc_raster_list = [args_dict['lulc_bas_path']]
+    lulc_caption = [
+        f"{os.path.basename(args_dict['lulc_bas_path'])}:{model_spec.get_input('lulc_bas_path').about}"]
 
     output_raster_config_list = [
         RasterPlotConfig(
@@ -82,11 +80,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
         for pool_type in _CARBON_POOLS]]
 
     if args_dict['calc_sequestration']:
-        input_raster_config_list.append(
-            RasterPlotConfig(
-                raster_path=args_dict['lulc_alt_path'],
-                datatype=RasterDatatype.nominal,
-                spec=model_spec.get_input('lulc_alt_path')))
+        lulc_raster_list.append(args_dict['lulc_alt_path'])
+        lulc_caption.append(
+            f"{os.path.basename(args_dict['lulc_alt_path'])}:{model_spec.get_input('lulc_alt_path').about}")
 
         output_raster_config_list.extend([
             RasterPlotConfig(
@@ -116,11 +112,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                 datatype=RasterDatatype.divergent,
                 spec=model_spec.get_output('npv_alt')))
 
-    inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        input_raster_config_list)
-    input_raster_caption = raster_utils.caption_raster_list(
-        input_raster_config_list)
-
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_config_list)
     output_raster_caption = raster_utils.caption_raster_list(
@@ -141,6 +132,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
                intermediate_img_srcs,
                intermediate_raster_captions)
     ]
+
+    lulc_img_src, lulc_legend_html = raster_utils.plot_categorical_raster_with_table(
+        lulc_raster_list)
 
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict, model_spec).to_html(na_rep='')
@@ -164,9 +158,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             args_dict=args_dict,
             agg_results_table=agg_results_table,
-            inputs_img_src=inputs_img_src,
-            inputs_caption=input_raster_caption,
-            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
+            lulc_caption=lulc_caption,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,
             intermediate_raster_sections=intermediate_raster_sections,

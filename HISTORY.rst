@@ -83,6 +83,14 @@ General
 * Fixed an issue with Windows binary builds where users would see runtime
   warnings saying ``GDAL_DATA`` is not defined.
   (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
+* Reports now display a Raster Attribute Table for Land Use/Land Cover
+  input rasters. (`#2333 <https://github.com/natcap/invest/issues/2333>`_)
+* When saving a datastack, CSVs are now copied into argument-named
+  subfolders, which preserves original filenames and ensures metadata
+  compatibility. (`#2442 <https://github.com/natcap/invest/issues/2442>`_)
+* Added the ``--no-report`` flag to the command line interface, which allows
+  users to disable report generation.
+  (`#2573 <https://github.com/natcap/invest/issues/2573>`_)
 
 Workbench
 =========
@@ -96,6 +104,14 @@ Workbench
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+
+Annual Water Yield
+==================
+* Allow watershed input to have a POLYGON or MULTIPOLYGON geometry type.
+  (`#2513 <https://github.com/natcap/invest/issues/2513>`_)
+* The model now generates a report, a visual summary of results, available in
+  the output workspace and also viewable from the Workbench after the model run
+  completes. (`#2533 <https://github.com/natcap/invest/issues/2533>`_)
 
 Carbon Storage and Sequestration
 ================================
@@ -112,6 +128,20 @@ SDR
   because they can still be rasterized and used in zonal_statistics.
   (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
 
+Urban Cooling
+=============
+* The Urban Cooling model now generates a report, a visual summary of results,
+  available in the output workspace and also viewable from the Workbench after
+  the model run completes.
+  (`#2322 <https://github.com/natcap/invest/issues/2322>`_)
+* The ``T_air`` and ``cc`` outputs have been moved out of the intermediate
+  directory and into the main output workspace.
+  (`#2564 <https://github.com/natcap/invest/issues/2564>`_)
+
+Urban Nature Access
+===================
+* The model now generates a report which displays a visual summary of results
+  and metadata. (`#2534 <https://github.com/natcap/invest/issues/2534>`_)
 
 3.19.0 (2026-04-16)
 -------------------
