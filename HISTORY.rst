@@ -114,11 +114,20 @@ SDR
   because they can still be rasterized and used in zonal_statistics.
   (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
 
+Urban Cooling
+=============
+* The Urban Cooling model now generates a report, a visual summary of results,
+  available in the output workspace and also viewable from the Workbench after
+  the model run completes.
+  (`#2322 <https://github.com/natcap/invest/issues/2322>`_)
+* The ``T_air`` and ``cc`` outputs have been moved out of the intermediate
+  directory and into the main output workspace.
+  (`#2564 <https://github.com/natcap/invest/issues/2564>`_)
+
 Urban Nature Access
 ===================
 * The model now generates a report which displays a visual summary of results
   and metadata. (`#2534 <https://github.com/natcap/invest/issues/2534>`_)
-
 
 3.19.0 (2026-04-16)
 -------------------
