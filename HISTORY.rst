@@ -124,6 +124,11 @@ Urban Cooling
   directory and into the main output workspace.
   (`#2564 <https://github.com/natcap/invest/issues/2564>`_)
 
+Urban Nature Access
+===================
+* The model now generates a report which displays a visual summary of results
+  and metadata. (`#2534 <https://github.com/natcap/invest/issues/2534>`_)
+
 3.19.0 (2026-04-16)
 -------------------
 
