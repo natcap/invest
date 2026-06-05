@@ -108,6 +108,11 @@ Workbench
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+* Added a disclosure about InVEST data collection to the Workbench installer
+  and to the in-Workbench "About InVEST" page. For more details, refer to the
+  (`InVEST Data Collection Notice <https://naturalcapitalalliance.stanford.edu/
+  software/invest/invest-downloads-data#invest-data-collection-notice>`_).
+  (`#2553 <https://github.com/natcap/invest/issues/2553>`_)
 
 Annual Water Yield
 ==================
