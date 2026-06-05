@@ -88,6 +88,9 @@ General
 * When saving a datastack, CSVs are now copied into argument-named
   subfolders, which preserves original filenames and ensures metadata
   compatibility. (`#2442 <https://github.com/natcap/invest/issues/2442>`_)
+* Added the ``--no-report`` flag to the command line interface, which allows
+  users to disable report generation.
+  (`#2573 <https://github.com/natcap/invest/issues/2573>`_)
 
 Workbench
 =========
