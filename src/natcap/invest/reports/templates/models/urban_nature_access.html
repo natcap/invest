@@ -145,7 +145,7 @@
 
 {% block scripts %}
   {{ super() }}
-  {% include 'datatable-styles.html' %}
+  {% include 'datatable-js.html' %}
   {% include "vega-dependencies.html" %}
   {% include 'vega-embed-js.html' %}
   {% set chart_spec_id_list = [(admin_map_json, "Admin_Units_Plots")] %}
