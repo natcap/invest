@@ -124,6 +124,14 @@ def get_datastack_info(filepath, extract_path=None):
     return 'logfile', extract_parameters_from_logfile(filepath)
 
 
+class Datastack():
+
+    def __init__(self, target_dir):
+        self.target_dir = target_dir
+        self.files_found = {}
+        self.args = {}
+
+
 def build_datastack_archive(args, model_id, datastack_path):
     """Build an InVEST datastack from an arguments dict.
 
@@ -155,11 +163,9 @@ def build_datastack_archive(args, model_id, datastack_path):
     archive_filehandler.setLevel(logging.NOTSET)
     logging.getLogger().addHandler(archive_filehandler)
 
-    # For tracking existing files so we don't copy files in twice
-    files_found = {}
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
 
-    rewritten_args = {}
+    datastack = Datastack(data_dir)
     for key in args:
         # Allow the model to override specific arguments in datastack archive
         # prep.  This is useful for tables (like HRA) that are too complicated
@@ -177,8 +183,8 @@ def build_datastack_archive(args, model_id, datastack_path):
             #     decide.
             #   * The override function is responsible for logging whatever is
             #     useful to include in the logfile.
-            rewritten_args[key] = getattr(module, override_funcname)(
-                args[key], data_dir, files_found)
+            datastack.args[key] = getattr(module, override_funcname)(
+                args[key], datastack.target_dir, datastack.files_found)
             continue
 
         # We don't want to accidentally archive a user's complete workspace
@@ -188,172 +194,33 @@ def build_datastack_archive(args, model_id, datastack_path):
                 f"Skipping workspace directory: {args['workspace_dir']}")
             continue
 
-        LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
         if key not in module.MODEL_SPEC.inputs:
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
-        input_spec = module.MODEL_SPEC.get_input(key)
-        if isinstance(input_spec, spec.FileInput) or isinstance(input_spec, spec.DirectoryInput):
-            if args[key] in {None, ''}:
-                LOGGER.info(
-                    f'Skipping key {key}, value is empty and cannot point to '
-                    'a file.')
-                rewritten_args[key] = ''
-                continue
-
-            # Python can't handle mixed file separators, so let's just
-            # standardize on linux filepaths.
-            source_path = args[key].replace('\\', '/')
-
-            # If we already know about the parameter, then we can just reuse it
-            # and skip the file copying.
-            if source_path in files_found:
-                LOGGER.debug(
-                    f'Key {key} is known: using {files_found[source_path]}')
-                rewritten_args[key] = files_found[source_path]
-                continue
-
-        if type(input_spec) is spec.CSVInput:
-            # check the CSV for columns that may be spatial.
-            # But also, the columns specification might not be listed, so don't
-            # require that 'columns' exists in the MODEL_SPEC.
-
-            csv_dir = os.path.join(data_dir, f'{key}_csv')
-            os.makedirs(csv_dir)
-            target_csv_path = os.path.join(
-                csv_dir, os.path.basename(source_path))
-
-            if input_spec.columns:
-                dataframe = input_spec.get_validated_dataframe(source_path)
-
-                for column_spec in [c for c in input_spec.columns if isinstance(c, spec.FileInput)]:
-
-                    # Iterate through the columns, identify the set of
-                    # unique files and copy them out.
-                    # if a string is not a filepath, assume it's supposed to be
-                    # there and skip it
-                    for row_index, value in dataframe[column_spec.id.lower()].items():
-                        if pandas.isna(value) or value == '':
-                            continue  # skip empty cells
-
-                        # file paths in a csv may be absolute, or relative to the
-                        # csv location
-                        if os.path.isabs(value):
-                            source_filepath = value
-                        else:
-                            source_filepath = os.path.join(os.path.abspath(
-                                os.path.dirname(source_path)), value)
-
-                        # If the file path doesn't exist, assume it's supposed to be
-                        # that way and leave it alone.
-                        if not os.path.exists(source_filepath):
-                            continue
-
-                        if source_filepath in files_found:
-                            # the file was already copied into the target dir,
-                            # so refer to the existing copy
-                            target_filepath = files_found[source_filepath]
-                        else:
-                            basename = os.path.splitext(
-                                os.path.basename(source_filepath))[0]
-                            target_dir = os.path.join(
-                                csv_dir, f'{key}_csv_data',
-                                f'{row_index}_{basename}')
-                            os.makedirs(target_dir)
-                            if isinstance(column_spec, spec.SpatialFileInput):
-                                target_filepath = utils.copy_spatial_files(
-                                    source_filepath, target_dir)
-                                target_filepath = os.path.relpath(
-                                    target_filepath, csv_dir)
-                            else:
-                                target_filepath = os.path.join(target_dir,
-                                    os.path.basename(source_filepath))
-                                shutil.copyfile(source_filepath, target_filepath)
-                                target_filepath = os.path.relpath(
-                                    target_filepath, csv_dir)
-
-
-                        LOGGER.debug(
-                            'File referenced in CSV copied from '
-                            f'{source_filepath} --> {target_filepath}')
-                        dataframe.at[
-                            row_index, column_spec.id] = target_filepath
-                        files_found[source_filepath] = target_filepath
-
-                    LOGGER.debug(
-                        f'Rewritten spatial CSV written to {target_csv_path}')
-                    dataframe.to_csv(target_csv_path)
-            else:
-                shutil.copyfile(source_path, target_csv_path)
-            target_arg_value = target_csv_path
-            files_found[source_path] = target_arg_value
-
-        elif type(input_spec) is spec.FileInput:
-            target_filepath = os.path.join(
-                data_dir, f'{key}_file')
-            shutil.copyfile(source_path, target_filepath)
-            target_arg_value = target_filepath
-            files_found[source_path] = target_arg_value
-
-        elif type(input_spec) is spec.DirectoryInput:
-            # copy the whole folder
-            target_directory = os.path.join(data_dir, f'{key}_directory')
-            os.makedirs(target_directory)
-
-            # We want to copy the directory contents into the directory
-            # directly, not copy the parent folder into the directory.
-            for filename in os.listdir(source_path):
-                src_path = os.path.join(source_path, filename)
-                dest_path = os.path.join(target_directory, filename)
-                if os.path.isdir(src_path):
-                    shutil.copytree(src_path, dest_path)
-                else:
-                    shutil.copyfile(src_path, dest_path)
-
-            LOGGER.debug(
-                f'Directory copied from {source_path} --> {target_directory}')
-            target_arg_value = target_directory
-            files_found[source_path] = target_arg_value
-
-        elif isinstance(input_spec, spec.SpatialFileInput):
-            # Create a directory with a readable name, something like
-            # "aoi_path_vector" or "lulc_cur_path_raster".
-            spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.type}')
-            target_arg_value = utils.copy_spatial_files(
-                source_path, spatial_dir)
-            files_found[source_path] = target_arg_value
-
-        else:
-            LOGGER.debug(
-                f"Type {type(input_spec)} is not filesystem-based; "
-                "recording value directly")
-            # not a filesystem-based type
-            # Record the value directly
-            target_arg_value = args[key]
-        rewritten_args[key] = target_arg_value
+        LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
+        module.MODEL_SPEC.get_input(key).archive_for_datastack(args[key], datastack)
 
     LOGGER.info('Args preprocessing complete')
-
-    LOGGER.debug(f'found files: \n{pprint.pformat(files_found)}')
-    LOGGER.debug(f'new arguments: \n{pprint.pformat(rewritten_args)}')
+    LOGGER.debug(f'found files: \n{pprint.pformat(datastack.files_found)}')
+    LOGGER.debug(f'new arguments: \n{pprint.pformat(datastack.args)}')
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
     parameter_set = build_parameter_set(
-        rewritten_args, model_id, param_file_uri, relative=True)
+        datastack.args, model_id, param_file_uri, relative=True)
 
     # write metadata for all files in args
-    keywords = [module.MODEL_SPEC.model_id, 'InVEST']
     for k, v in args.items():
         if isinstance(v, str) and os.path.isfile(v):
-            this_arg_spec = module.MODEL_SPEC.get_input(k)
             # write metadata file to target location (in temp dir)
-            subdir = os.path.dirname(parameter_set['args'][k])
-            target_location = os.path.join(temp_workspace, subdir)
-            spec.write_metadata_file(v, this_arg_spec, keywords,
-                                     out_workspace=target_location)
+            spec.write_metadata_file(
+                datasource_path=v,
+                spec=module.MODEL_SPEC.get_input(k),
+                keywords_list=[module.MODEL_SPEC.model_id, 'InVEST'],
+                out_workspace=os.path.join(
+                    temp_workspace, os.path.dirname(parameter_set['args'][k])))
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
@@ -361,10 +228,9 @@ def build_datastack_archive(args, model_id, datastack_path):
 
     # archive the workspace.
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_archive = os.path.join(temp_dir, 'invest_archive')
         archive_name = shutil.make_archive(
-            temp_archive, 'gztar', root_dir=temp_workspace,
-            logger=LOGGER, verbose=True)
+            os.path.join(temp_dir, 'invest_archive'), 'gztar',
+            root_dir=temp_workspace, logger=LOGGER, verbose=True)
         shutil.move(archive_name, datastack_path)
 
 

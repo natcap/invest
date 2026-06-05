@@ -8,6 +8,7 @@ import os
 import pprint
 import queue
 import re
+import shutil
 import threading
 import types
 import typing
@@ -303,6 +304,11 @@ class Input(IOModel):
 
         return [rst_line]
 
+    def archive_for_datastack(self, value, datastack):
+        # not a filesystem-based type
+        # Record the value directly
+        datastack.args[self.id] = value
+
 
 class Output(IOModel):
     """A data output, or result, of an invest model.
@@ -392,6 +398,33 @@ class FileInput(Input):
 
         return col.apply(format_path).astype(pandas.StringDtype())
 
+    def archive_for_datastack(self, value, datastack):
+
+        if value in {None, ''}:
+            LOGGER.info(
+                f'Skipping key {self.id}, value is empty and cannot point to '
+                'a file.')
+            datastack.args[self.id] = ''
+            return
+
+        # Python can't handle mixed file separators, so let's just
+        # standardize on linux filepaths.
+        source_path = value.replace('\\', '/')
+
+        # If we already know about the parameter, then we can just reuse it
+        # and skip the file copying.
+        if source_path in datastack.files_found:
+            LOGGER.debug(
+                f'Key {self.id} is known: using {datastack.files_found[source_path]}')
+            datastack.args[self.id] = datastack.files_found[source_path]
+            return
+
+        target_filepath = os.path.join(datastack.target_dir, f'{self.id}_file')
+        shutil.copyfile(source_path, target_filepath)
+        datastack.args[self.id] = target_filepath
+        datastack.files_found[source_path] = target_filepath
+
+
 
 class SpatialFileInput(FileInput):
     """Base class for raster and vector spatial inputs."""
@@ -453,6 +486,32 @@ class SpatialFileInput(FileInput):
             return utils._GDALPath.from_uri(p).to_normalized_path()
 
         return col.apply(format_path).astype(pandas.StringDtype())
+
+    def archive_for_datastack(self, value, datastack):
+
+        if value in {None, ''}:
+            datastack.args[self.id] = ''
+            return
+
+        # Python can't handle mixed file separators, so let's just
+        # standardize on linux filepaths.
+        source_path = value.replace('\\', '/')
+
+        # If we already know about the parameter, then we can just reuse it
+        # and skip the file copying.
+        if source_path in datastack.files_found:
+            LOGGER.debug(
+                f'Key {self.id} is known: using {datastack.files_found[source_path]}')
+            datastack.args[self.id] = datastack.files_found[source_path]
+            return
+
+        # Create a directory with a readable name, something like
+        # "aoi_path_vector" or "lulc_cur_path_raster".
+        spatial_dir = os.path.join(datastack.target_dir, f'{self.id}_{self.type}')
+        target_arg_value = utils.copy_spatial_files(
+            source_path, spatial_dir)
+        datastack.args[self.id] = target_arg_value
+        datastack.files_found[source_path] = target_arg_value
 
 
 class RasterBand(IOModel):
@@ -1064,6 +1123,98 @@ class CSVInput(FileInput):
                 ' Please see the sample data table for details on the format.')
 
         return [rst_line]
+
+    def archive_for_datastack(self, value, datastack):
+
+        if value in {None, ''}:
+            datastack.args[self.id] = ''
+            return
+
+        # Python can't handle mixed file separators, so let's just
+        # standardize on linux filepaths.
+        source_path = value.replace('\\', '/')
+
+        # If we already know about the parameter, then we can just reuse it
+        # and skip the file copying.
+        if source_path in datastack.files_found:
+            LOGGER.debug(
+                f'Key {self.id} is known: using {datastack.files_found[source_path]}')
+            datastack.args[self.id] = datastack.files_found[source_path]
+            return
+
+        # check the CSV for columns that may be spatial.
+        # But also, the columns specification might not be listed, so don't
+        # require that 'columns' exists in the MODEL_SPEC.
+
+        csv_dir = os.path.join(datastack.target_dir, f'{self.id}_csv')
+        os.makedirs(csv_dir)
+        target_csv_path = os.path.join(
+            csv_dir, os.path.basename(source_path))
+
+        if self.columns:
+            dataframe = self.get_validated_dataframe(source_path)
+
+            for column_spec in [c for c in self.columns if isinstance(c, FileInput)]:
+
+                # Iterate through the columns, identify the set of
+                # unique files and copy them out.
+                # if a string is not a filepath, assume it's supposed to be
+                # there and skip it
+                for row_index, value in dataframe[column_spec.id.lower()].items():
+                    if pandas.isna(value) or value == '':
+                        continue  # skip empty cells
+
+                    # file paths in a csv may be absolute, or relative to the
+                    # csv location
+                    if os.path.isabs(value):
+                        source_filepath = value
+                    else:
+                        source_filepath = os.path.join(os.path.abspath(
+                            os.path.dirname(source_path)), value)
+
+                    # If the file path doesn't exist, assume it's supposed to be
+                    # that way and leave it alone.
+                    if not os.path.exists(source_filepath):
+                        continue
+
+                    if source_filepath in datastack.files_found:
+                        # the file was already copied into the target dir,
+                        # so refer to the existing copy
+                        target_filepath = datastack.files_found[source_filepath]
+                    else:
+                        basename = os.path.splitext(
+                            os.path.basename(source_filepath))[0]
+                        target_dir = os.path.join(
+                            csv_dir, f'{self.id}_csv_data',
+                            f'{row_index}_{basename}')
+                        os.makedirs(target_dir)
+                        if isinstance(column_spec, SpatialFileInput):
+                            target_filepath = utils.copy_spatial_files(
+                                source_filepath, target_dir)
+                            target_filepath = os.path.relpath(
+                                target_filepath, csv_dir)
+                        else:
+                            target_filepath = os.path.join(target_dir,
+                                os.path.basename(source_filepath))
+                            shutil.copyfile(source_filepath, target_filepath)
+                            target_filepath = os.path.relpath(
+                                target_filepath, csv_dir)
+
+
+                    LOGGER.debug(
+                        'File referenced in CSV copied from '
+                        f'{source_filepath} --> {target_filepath}')
+                    dataframe.at[
+                        row_index, column_spec.id] = target_filepath
+                    datastack.files_found[source_filepath] = target_filepath
+
+                LOGGER.debug(
+                    f'Rewritten spatial CSV written to {target_csv_path}')
+                dataframe.to_csv(target_csv_path)
+        else:
+            shutil.copyfile(source_path, target_csv_path)
+        datastack.args[self.id] = target_csv_path
+        datastack.files_found[source_path] = target_csv_path
 
 
 class DirectoryInput(Input):
