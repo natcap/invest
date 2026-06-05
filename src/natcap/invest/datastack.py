@@ -34,6 +34,7 @@ from natcap.invest import models
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest.utils import base_model_id
+import pandas
 
 LOGGER = logging.getLogger(__name__)
 DATASTACK_EXTENSION = '.invest.tar.gz'
@@ -218,65 +219,47 @@ def build_datastack_archive(args, model_id, datastack_path):
             # check the CSV for columns that may be spatial.
             # But also, the columns specification might not be listed, so don't
             # require that 'columns' exists in the MODEL_SPEC.
-            file_column_specs = []
-            if input_spec.columns:
-                for col_spec in input_spec.columns:
-                    if isinstance(col_spec, spec.FileInput):
-                        file_column_specs.append(col_spec)
-
-            LOGGER.debug(f'Detected columns that reference other files: {file_column_specs}')
 
             csv_dir = os.path.join(data_dir, f'{key}_csv')
             os.makedirs(csv_dir)
             target_csv_path = os.path.join(
                 csv_dir, os.path.basename(source_path))
-            if not file_column_specs:
-                LOGGER.debug(
-                    f'No spatial columns, copying to {target_csv_path}')
-                shutil.copyfile(source_path, target_csv_path)
-            else:
-                contained_files_dir = os.path.join(csv_dir, f'{key}_csv_data')
 
+            if input_spec.columns:
                 dataframe = input_spec.get_validated_dataframe(source_path)
-                csv_source_dir = os.path.abspath(os.path.dirname(source_path))
-                for column_spec in file_column_specs:
+
+                for column_spec in [c for c in input_spec.columns if isinstance(c, spec.FileInput)]:
+
                     # Iterate through the columns, identify the set of
                     # unique files and copy them out.
                     # if a string is not a filepath, assume it's supposed to be
                     # there and skip it
-                    for row_index, column_value in dataframe[
-                            column_spec.id.lower()].items():
-                        if ((isinstance(column_value, float) and
-                                math.isnan(column_value)) or
-                                column_value == ''):
-                            # The table cell is blank, so skip it.
-                            # We can't compare nan values directly in a way
-                            # that also works for strings, so skip it.
+                    for row_index, value in dataframe[column_spec.id.lower()].items():
+                        if pandas.isna(value) or value == '':
+                            continue  # skip empty cells
+
+                        # file paths in a csv may be absolute, or relative to the
+                        # csv location
+                        if os.path.isabs(value):
+                            source_filepath = value
+                        else:
+                            source_filepath = os.path.join(os.path.abspath(
+                                os.path.dirname(source_path)), value)
+
+                        # If the file path doesn't exist, assume it's supposed to be
+                        # that way and leave it alone.
+                        if not os.path.exists(source_filepath):
                             continue
 
-                        source_filepath = None
-                        for possible_filepath in (
-                                column_value,
-                                os.path.join(csv_source_dir, column_value)):
-                            if os.path.exists(possible_filepath):
-                                source_filepath = possible_filepath
-                                break
-
-                        # If we didn't end up finding a valid source filepath
-                        # for the field value, assume it's supposed to be that
-                        # way and leave it alone.
-                        if not source_filepath:
-                            continue
-
-                        try:
-                            # This path is already relative to the data
-                            # directory
+                        if source_filepath in files_found:
+                            # the file was already copied into the target dir,
+                            # so refer to the existing copy
                             target_filepath = files_found[source_filepath]
-                        except KeyError:
+                        else:
                             basename = os.path.splitext(
                                 os.path.basename(source_filepath))[0]
                             target_dir = os.path.join(
-                                contained_files_dir,
+                                csv_dir, f'{key}_csv_data',
                                 f'{row_index}_{basename}')
                             os.makedirs(target_dir)
                             if isinstance(column_spec, spec.SpatialFileInput):
@@ -299,10 +282,11 @@ def build_datastack_archive(args, model_id, datastack_path):
                             row_index, column_spec.id] = target_filepath
                         files_found[source_filepath] = target_filepath
 
-                LOGGER.debug(
-                    f'Rewritten spatial CSV written to {target_csv_path}')
-                dataframe.to_csv(target_csv_path)
-
+                    LOGGER.debug(
+                        f'Rewritten spatial CSV written to {target_csv_path}')
+                    dataframe.to_csv(target_csv_path)
+            else:
+                shutil.copyfile(source_path, target_csv_path)
             target_arg_value = target_csv_path
             files_found[source_path] = target_arg_value
 

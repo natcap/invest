@@ -484,7 +484,6 @@ class DatastackArchiveTests(unittest.TestCase):
         ).get_validated_dataframe(
             archive_params['spatial_table']
         ).to_dict(orient='index')
-        print(spatial_csv_dict)
         spatial_csv_dir = os.path.dirname(archive_params['spatial_table'])
         # assert paths inside CSV are relative to CSV folder
         contained_files_dir = os.path.join(
