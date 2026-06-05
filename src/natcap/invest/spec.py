@@ -305,8 +305,31 @@ class Input(IOModel):
         return [rst_line]
 
     def archive_for_datastack(self, value, datastack):
-        # not a filesystem-based type
-        # Record the value directly
+        """Archive a given value of this input into a datastack.
+
+        This method can be overridden to handle specific types of input data,
+        or even for specific model inputs that need custom handling.
+        This is useful for tables (like HRA) that are too complicated
+        to describe in the MODEL_SPEC format, but use a common specification
+        for the other args keys.
+        Notes about overriding this method:
+          - should add the archived value to datastack.args
+          - should update datastack.files_found if any new files are included
+          - if this function copies data into datastack.target_dir, it _should_
+            be within its own folder (e.g.
+            {data_dir}/criteria_table_path_data/) to minimize chances of
+            stomping on other data.  But this is up to the function to
+            decide.
+          - The override function is responsible for logging whatever is
+            useful to include in the logfile.
+
+        Args:
+            value (object): value of this input
+            datastack (natcap.invest.datastack.Datastack): Datastack instance
+
+        Returns:
+            None
+        """
         datastack.args[self.id] = value
 
 

@@ -45,6 +45,91 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
+class HRACriteriaTableInput(spec.CSVInput):
+
+    def archive_for_datastack(self, value, datastack):
+        """Prepare the HRA criteria_table_path input for archiving in a datastack.
+
+        This function rewrites a criteria table (which may contain spatial ratings
+        layers), copying any spatial layers into the data directory provided, which
+        will be included in the datastack archive.
+
+        Args:
+            criteria_table_path (string): The path to the criteria table provided
+                by the user.
+            data_dir (string): the path to where data files will be written.
+            known_files (dict): a dict mapping original source files to their
+                location within the ``data_dir``.
+
+        Note:
+            The ``known_files`` dict may be modified by this function.
+
+        Returns:
+            The path to where the rewritten criteria table path is located within
+            the data dir.
+        """
+        criteria_table_array = utils.read_csv_to_dataframe(
+            value, header=None).to_numpy()
+        contained_data_dir = os.path.join(
+            datastack.target_dir, f'{self.id}_csv', f'{self.id}_csv_data')
+
+        known_rating_cols = set()
+        for row in range(1, len(criteria_table_array)):  # skip named habitats
+            # When we encounter an empty row, reset the known ratings columns in
+            # case one of the sub-tables changes the order around.
+            try:
+                if numpy.all(numpy.isnan(
+                        criteria_table_array[row].astype(numpy.float32))):
+                    known_rating_cols = set()
+                    continue
+            except ValueError:
+                # ValueError when there are any string values in the row
+                pass
+
+            if not known_rating_cols:
+                for col in range(1, len(criteria_table_array[0])):
+                    if criteria_table_array[row, col] == 'RATING':
+                        known_rating_cols.add(col)
+                continue  # skip the RATING headers row.
+
+            for col in known_rating_cols:
+                cell_value = criteria_table_array[row, col]
+                try:
+                    float(cell_value)
+                    continue
+                except ValueError:
+                    # When value is obviously not a number.
+                    pass
+
+                # Expand the path if it's not absolute
+                cell_value = utils.expand_path(cell_value, value)
+                if not os.path.exists(cell_value):
+                    LOGGER.warning(f'File not found: {cell_value}')
+                    continue
+                if cell_value in datastack.files_found:
+                    LOGGER.info(
+                        f"File {cell_value} already known, perhaps from another "
+                        f"cell or table.  Reusing {datastack.files_found[cell_value]}")
+                    criteria_table_array[row, col] = datastack.files_found[cell_value]
+                else:
+                    dir_for_this_spatial_data = os.path.join(
+                        contained_data_dir,
+                        os.path.splitext(os.path.basename(cell_value))[0])
+                    LOGGER.info(f"Copying spatial file {cell_value} --> "
+                                f"{dir_for_this_spatial_data}")
+                    new_path = utils.copy_spatial_files(
+                        cell_value, dir_for_this_spatial_data)
+                    criteria_table_array[row, col] = new_path
+                    datastack.files_found[cell_value] = new_path
+
+        target_output_path = os.path.join(datastack.target_dir, f'{self.id}_csv',
+                                          os.path.basename(value))
+        os.makedirs(os.path.dirname(target_output_path), exist_ok=True)
+        numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',
+                      fmt="%s", encoding="UTF-8")
+        return target_output_path
+
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="habitat_risk_assessment",
     model_title=gettext("Habitat Risk Assessment"),
@@ -127,7 +212,7 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="name",
             na_allowed=["stressor buffer (meters)"]
         ),
-        spec.CSVInput(
+        HRACriteriaTableInput(
             id="criteria_table_path",
             name=gettext("criteria scores table"),
             about=gettext("A table of criteria scores for all habitats and stressors."),
@@ -2365,91 +2450,6 @@ def _sum_rasters(raster_path_list, target_nodata, target_datatype,
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in raster_path_list],
         _sum_op, target_result_path, target_datatype, target_nodata)
-
-
-def _override_datastack_archive_criteria_table_path(
-        criteria_table_path, data_dir, known_files):
-    """Prepare the HRA criteria_table_path input for archiving in a datastack.
-
-    This function rewrites a criteria table (which may contain spatial ratings
-    layers), copying any spatial layers into the data directory provided, which
-    will be included in the datastack archive.
-
-    Args:
-        criteria_table_path (string): The path to the criteria table provided
-            by the user.
-        data_dir (string): the path to where data files will be written.
-        known_files (dict): a dict mapping original source files to their
-            location within the ``data_dir``.
-
-    Note:
-        The ``known_files`` dict may be modified by this function.
-
-    Returns:
-        The path to where the rewritten criteria table path is located within
-        the data dir.
-    """
-    args_key = 'criteria_table_path'
-    criteria_table_array = utils.read_csv_to_dataframe(
-        criteria_table_path, header=None).to_numpy()
-    contained_data_dir = os.path.join(data_dir, f'{args_key}_csv',
-                                      f'{args_key}_csv_data')
-
-    known_rating_cols = set()
-    for row in range(1, len(criteria_table_array)):  # skip named habitats
-        # When we encounter an empty row, reset the known ratings columns in
-        # case one of the sub-tables changes the order around.
-        try:
-            if numpy.all(numpy.isnan(
-                    criteria_table_array[row].astype(numpy.float32))):
-                known_rating_cols = set()
-                continue
-        except ValueError:
-            # ValueError when there are any string values in the row
-            pass
-
-        if not known_rating_cols:
-            for col in range(1, len(criteria_table_array[0])):
-                if criteria_table_array[row, col] == 'RATING':
-                    known_rating_cols.add(col)
-            continue  # skip the RATING headers row.
-
-        for col in known_rating_cols:
-            value = criteria_table_array[row, col]
-            try:
-                float(value)
-                continue
-            except ValueError:
-                # When value is obviously not a number.
-                pass
-
-            # Expand the path if it's not absolute
-            value = utils.expand_path(value, criteria_table_path)
-            if not os.path.exists(value):
-                LOGGER.warning(f'File not found: {value}')
-                continue
-            if value in known_files:
-                LOGGER.info(
-                    f"File {value} already known, perhaps from another "
-                    f"cell or table.  Reusing {known_files[value]}")
-                criteria_table_array[row, col] = known_files[value]
-            else:
-                dir_for_this_spatial_data = os.path.join(
-                    contained_data_dir,
-                    os.path.splitext(os.path.basename(value))[0])
-                LOGGER.info(f"Copying spatial file {value} --> "
-                            f"{dir_for_this_spatial_data}")
-                new_path = utils.copy_spatial_files(
-                    value, dir_for_this_spatial_data)
-                criteria_table_array[row, col] = new_path
-                known_files[value] = new_path
-
-    target_output_path = os.path.join(data_dir, f'{args_key}_csv',
-                                      os.path.basename(criteria_table_path))
-    os.makedirs(os.path.dirname(target_output_path), exist_ok=True)
-    numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',
-                  fmt="%s", encoding="UTF-8")
-    return target_output_path
 
 
 @validation.invest_validator

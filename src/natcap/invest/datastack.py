@@ -167,32 +167,6 @@ def build_datastack_archive(args, model_id, datastack_path):
 
     datastack = Datastack(data_dir)
     for key in args:
-        # Allow the model to override specific arguments in datastack archive
-        # prep.  This is useful for tables (like HRA) that are too complicated
-        # to describe in the MODEL_SPEC format, but use a common specification
-        # for the other args keys.
-        override_funcname = f'_override_datastack_archive_{key}'
-        if hasattr(module, override_funcname):
-            LOGGER.debug(f'Using model override function for key {key}')
-            # Notes about the override function:
-            #   * Function may modify files_found
-            #   * If this function copies data into the data dir, it _should_
-            #     be within its own folder (e.g.
-            #     {data_dir}/criteria_table_path_data/) to minimize chances of
-            #     stomping on other data.  But this is up to the function to
-            #     decide.
-            #   * The override function is responsible for logging whatever is
-            #     useful to include in the logfile.
-            datastack.args[key] = getattr(module, override_funcname)(
-                args[key], datastack.target_dir, datastack.files_found)
-            continue
-
-        # We don't want to accidentally archive a user's complete workspace
-        # directory, complete with prior runs there.
-        if key == 'workspace_dir':
-            LOGGER.debug(
-                f"Skipping workspace directory: {args['workspace_dir']}")
-            continue
 
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
