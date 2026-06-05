@@ -2237,16 +2237,10 @@ class ModelSpec(ImmutableBaseModel):
             if not isinstance(registry, dict):
                 msg = "`execute` was called with {kwargs}, but no" \
                       " file registry dictionary was returned from `execute`."
-                kwargs_used = []
-                if check_outputs:
-                    kwargs_used.append('check_outputs=True')
-                if generate_metadata:
-                    kwargs_used.append('generate_metadata=True')
-                if save_file_registry:
-                    kwargs_used.append('save_file_registry=True')
-                if generate_report:
-                    kwargs_used.append('generate_report=True')
-                if len(kwargs_used):
+                kwargs_used = [f'{kwarg}=True' for kwarg in [
+                    'check_outputs', 'generate_metadata', 'save_file_registry',
+                    'generate_report'] if locals()[kwarg]]
+                if kwargs_used:
                     LOGGER.warning(msg.format(kwargs=', '.join(kwargs_used)))
                 return
 
