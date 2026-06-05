@@ -117,6 +117,14 @@ Annual Water Yield
   the output workspace and also viewable from the Workbench after the model run
   completes. (`#2533 <https://github.com/natcap/invest/issues/2533>`_)
 
+Carbon Storage and Sequestration
+================================
+* Added a new output, ``raster_values_summary.csv``, which provides a summary
+  of the model's raster outputs. This table already appeared at the top of the
+  Carbon report but is now created by the model module itself rather than the
+  reporter, in order to make it available as a CSV in the output directory.
+  (`#2531 <https://github.com/natcap/invest/issues/2531>`_)
+
 SDR
 ===
 * Added exception-handling when checking if watershed geoemtries overlap.
