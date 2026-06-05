@@ -212,10 +212,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     }
     if is_continuous:
         common_kwargs["special_values"] = SpecialValueConfig(
-            extend="min",
-            threshold=NEAR_ZERO_RANGE[1],
-            label=str(NEAR_ZERO_RANGE[0]),
-            color='#FEE0B6'  # light orange
+            thresholds=(NEAR_ZERO_RANGE[1], None),
+            labels=("<" + str(NEAR_ZERO_RANGE[1]), None),
+            colors=('#FEE0B6', None)  # light orange
         )
         common_kwargs["colormap"] = 'Purples'
 
