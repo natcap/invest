@@ -21,7 +21,7 @@ coverage.xml
 cover/
 *.egg-info/
 env
-requirements-all.yml  # Generated in make env
+requirements-all.yml
 workbench/build
 workbench/node_modules/
 workbench/coverage/
