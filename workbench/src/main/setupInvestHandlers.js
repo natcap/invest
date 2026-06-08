@@ -191,9 +191,6 @@ export function setupInvestRunHandlers() {
           if (e) { logger.error(e); }
         });
       });
-      if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
-        usageLogger.exit(investStdErr, port);
-      }
     });
   });
 }
