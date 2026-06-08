@@ -55,9 +55,16 @@ const linkDefs = [
   },
 ];
 const linkListItems = linkDefs.map(({name, href}) => (
-  <Translation>
+  <Translation key={name}>
     {(t, { i18n }) => (
-      <li><a href={href} title={href} aria-label={`${t(name)} ${t(ariaLabelSuffix)}`}>{t(name)}</a></li>
+      <li>
+        <a
+          href={href}
+          title={href}
+          aria-label={`${t(name)} ${t(ariaLabelSuffix)}`}
+          onClick={handleClickExternalURL}
+        >{t(name)}</a>
+      </li>
     )}
   </Translation>
 ));
@@ -67,17 +74,17 @@ root.render(
   <Translation>
     {(t, { i18n }) => (
       <React.Fragment>
-        <h1 class="visually-hidden">About InVEST</h1>
-        <div class="header">
+        <h1 className="visually-hidden">About InVEST</h1>
+        <div className="header">
           <img
             src={investLogo}
             width="191"
             height="159"
             alt="InVEST logo"
           />
-          <div class="version-and-copyright">
+          <div className="version-and-copyright">
             <span>
-              {t('Version:')} <span class="version-string">{ investVersion }</span>
+              {t('Version:')} <span className="version-string">{ investVersion }</span>
             </span>
             <span>
               {t('Copyright 2026, Natural Capital Alliance')}
@@ -88,21 +95,16 @@ root.render(
           <p>{t('InVEST® is free and open-source software used to map and value the goods and services from nature that sustain and fulfill human life.')}</p>
         </section>
         <section>
-          <h2 class="section-heading" id="link-list-heading">{t('Resources')}</h2>
+          <h2 className="section-heading" id="link-list-heading">{t('Resources')}</h2>
           <ul role="list" className="links" aria-describedby="link-list-heading">
             {linkListItems}
           </ul>
         </section>
         <section>
-          <h2 class="section-heading">{t('Data Collection')}</h2>
+          <h2 className="section-heading">{t('Data Collection')}</h2>
           <p>{t('The Natural Capital Alliance software team collects certain non-personal data each time an InVEST model or InVEST plugin is run via the InVEST Workbench. These data help inform future work on InVEST and support our mission to maintain InVEST as free and open-source software.')}</p>
         </section>
       </React.Fragment>
     )}
   </Translation>
-);
-document.querySelectorAll('a').forEach(
-  (element) => {
-    element.addEventListener('click', handleClickExternalURL);
-  }
 );
