@@ -469,7 +469,7 @@ class UCMTests(unittest.TestCase):
                 header='column', header_name='building_intensity'))]
         self.assertEqual(result, expected)
 
-    def test_do_energy_valuation_option(self):
+    def test_do_energy_valuation_option(self): 
         """UCM: test separate valuation options."""
         import natcap.invest.urban_cooling_model
         args = {
@@ -679,7 +679,7 @@ class UCMTests(unittest.TestCase):
              [0.11133333, 0.11697778, 0.1956, 0.062, 0.062, 0.75542223]]
             )
 
-        cc_tif = gdal.Open(os.path.join(args["workspace_dir"],
+        cc_tif = gdal.Open(os.path.join(args["workspace_dir"], "intermediate",
                                         f"cc{args['results_suffix']}.tif"))
         band_cc = cc_tif.GetRasterBand(1)
         actual_cc = band_cc.ReadAsArray()

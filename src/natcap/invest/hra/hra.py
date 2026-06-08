@@ -2392,8 +2392,7 @@ def _override_datastack_archive_criteria_table_path(
     args_key = 'criteria_table_path'
     criteria_table_array = utils.read_csv_to_dataframe(
         criteria_table_path, header=None).to_numpy()
-    contained_data_dir = os.path.join(data_dir, f'{args_key}_csv',
-                                      f'{args_key}_csv_data')
+    contained_data_dir = os.path.join(data_dir, f'{args_key}_data')
 
     known_rating_cols = set()
     for row in range(1, len(criteria_table_array)):  # skip named habitats
@@ -2444,9 +2443,7 @@ def _override_datastack_archive_criteria_table_path(
                 criteria_table_array[row, col] = new_path
                 known_files[value] = new_path
 
-    target_output_path = os.path.join(data_dir, f'{args_key}_csv',
-                                      os.path.basename(criteria_table_path))
-    os.makedirs(os.path.dirname(target_output_path), exist_ok=True)
+    target_output_path = os.path.join(data_dir, f'{args_key}.csv')
     numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',
                   fmt="%s", encoding="UTF-8")
     return target_output_path

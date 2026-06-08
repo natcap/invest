@@ -18,7 +18,6 @@ import { openLinkInBrowser } from '../../utils';
 
 function AboutMetadataDiv() {
   const { t } = useTranslation();
-  const gmmURL = "https://github.com/natcap/geometamaker";
 
   return (
     <div>
@@ -44,9 +43,7 @@ function AboutMetadataDiv() {
       <p>
         {t('InVEST uses GeoMetaMaker to generate metadata. Learn more about ')}
         <a
-          href={gmmURL}
-          title={gmmURL}
-          aria-label={t('GeoMetaMaker GitHub repository (opens in web browser)')}
+          href="https://github.com/natcap/geometamaker"
           onClick={openLinkInBrowser}
         >GeoMetaMaker on Github</a>.
       </p>

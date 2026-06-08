@@ -16,18 +16,17 @@ def _get_render_args(model_spec):
     report_filepath = 'carbon_report_test.html'
     invest_version = '987.65.0'
     timestamp = '1970-01-01'
-    args_dict = {'calc_sequestration': True}
+    args_dict = {'suffix': 'test'}
     img_src = 'bAse64eNcoDEdIMagE'
     output_stats_table = '<table class="test__output-stats-table"></table>'
     input_stats_table = '<table class="test__input-stats-table"></table>'
     stats_table_note = 'This is a test!'
     inputs_caption = ['input.tif:Input map.']
+    lulc_pre_caption = 'This is a test of the LULC broadcasting system!'
     outputs_caption = ['results.tif:Results map.']
     intermediate_raster_sections = []
     raster_group_caption = 'This is another test!'
     agg_results_table = '<table class="test__agg-results-table"></table>'
-    lulc_legend_html = '<table class="test__lulc-legend-table"></table>'
-    lulc_caption = ['lulc.tif: LULC map']
 
     return {
         'locale': locale,
@@ -43,9 +42,7 @@ def _get_render_args(model_spec):
         'agg_results_table': agg_results_table,
         'inputs_img_src': img_src,
         'inputs_caption': inputs_caption,
-        'lulc_caption': lulc_caption,
-        'lulc_img_src': img_src,
-        'lulc_legend_html': lulc_legend_html,
+        'lulc_pre_caption': lulc_pre_caption,
         'outputs_img_src': img_src,
         'outputs_caption': outputs_caption,
         'intermediate_raster_sections': intermediate_raster_sections,

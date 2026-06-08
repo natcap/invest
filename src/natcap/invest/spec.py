@@ -1853,26 +1853,27 @@ class NumberOutput(Output):
     """The units of measurement for this numeric value"""
 
 
-class IntegerOutput(NumberOutput):
+class IntegerOutput(Output):
     """An integer output, or result, of an invest model."""
+    pass
 
 
-class RatioOutput(NumberOutput):
+class RatioOutput(Output):
     """A ratio output, or result, of an invest model.
 
     A ratio is a proportion expressed as a value from 0 to 1 (in contrast to a
     percent, which ranges from 0 to 100).
     """
+    pass
 
 
-class PercentOutput(NumberOutput):
+class PercentOutput(Output):
     """A percent output, or result, of an invest model.
 
     A percent is a proportion expressed as a value from 0 to 100 (in contrast to
     a ratio, which ranges from 0 to 1).
     """
-    units: typing.Union[pint.Unit, None] = u.percent
-    """The units of measurement for this numeric value"""
+    pass
 
 
 class StringOutput(Output):
@@ -2232,19 +2233,6 @@ class ModelSpec(ImmutableBaseModel):
 
             model_module = importlib.import_module(self.module_name)
             registry = model_module.execute(args)
-
-            if not isinstance(registry, dict):
-                msg = "`execute` was called with {kwargs}, but no" \
-                      " file registry dictionary was returned from `execute`."
-                kwargs_used = []
-                for kwarg in [
-                        'check_outputs', 'generate_metadata',
-                        'save_file_registry', 'generate_report']:
-                    if locals()[kwarg]:
-                        kwargs_used.append(f'{kwarg}=True')
-                if kwargs_used:
-                    LOGGER.warning(msg.format(kwargs=', '.join(kwargs_used)))
-                return
 
             preprocessed_args = self.preprocess_inputs(args)
 

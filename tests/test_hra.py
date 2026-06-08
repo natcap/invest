@@ -954,17 +954,14 @@ class HRAUnitTests(unittest.TestCase):
                 SRS_WKT, mgmt_path)
 
         data_dir = os.path.join(self.workspace_dir, 'datastack_data')
-        csv_dir = os.path.join(data_dir, 'criteria_table_path_csv')
         known_files = {}
 
         new_csv_path = hra._override_datastack_archive_criteria_table_path(
             criteria_table_path, data_dir, known_files)
         self.assertEqual(
-            new_csv_path,
-            os.path.join(csv_dir, os.path.basename(criteria_table_path))
-        )
+            new_csv_path, os.path.join(data_dir, 'criteria_table_path.csv'))
         output_criteria_data_dir = os.path.join(
-            csv_dir, 'criteria_table_path_csv_data')
+            data_dir, 'criteria_table_path_data')
         self.maxDiff = None
 
         self.assertEqual(

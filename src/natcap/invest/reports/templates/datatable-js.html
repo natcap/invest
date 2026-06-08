@@ -18,17 +18,13 @@
 <script type="text/javascript">
   document.querySelectorAll('.datatable').forEach(table => {
     const enablePaginationAndSearch = table.classList.contains('paginate');
-    const buttons = [];
-    if (table.classList.contains('colvis')) {
-      buttons.push('colvis')
-    }
     let options = {};
     if (enablePaginationAndSearch) {
       options = {
         paging: true,
         layout: {
           topStart: {
-            buttons: buttons
+            buttons: ['colvis']
           },
           topEnd: 'search',
           bottomStart: 'info',
@@ -42,17 +38,11 @@
         paging: false,
         layout: {
           topStart: {
-            buttons: buttons
+            buttons: ['colvis']
           },
           topEnd: null,
         },
       };
-    }
-    if (table.classList.contains('legend-table')) {
-      options = {
-        ...options,
-        order: [[1, 'asc']]
-      }
     }
     new DataTable(table, options);
   });

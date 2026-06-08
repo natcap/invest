@@ -70,31 +70,12 @@ General
 * To ensure consistent raster plot sizing in reports, padding is now added to
   the top of raster plots if an adjacent raster plot has a units subheading.
   (`#2471 <https://github.com/natcap/invest/issues/2471>`_)
-* The ``deploy_dist`` Makefile target was split into ``deploy_wheel`` and
-  ``deploy_sdist``.
 * ``Input, Output, and ModelSpec`` classes now create immutable objects.
   Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
   (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
 * Made some styling and usability improvements to the Vega-Lite visualizations
   (e.g., vector plots, histograms) that appear in some InVEST reports.
   (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
-* Added a `.gitignore` for InVEST build files and common editor files.
-  (`#258 <https://github.com/natcap/invest/issues/258>`_)
-* Fixed an issue with Windows binary builds where users would see runtime
-  warnings saying ``GDAL_DATA`` is not defined.
-  (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
-* Avoid logging a Python traceback and avoid attempting to generate metadata
-  and an html report if a model's ``execute`` function does not return a
-  ``FileRegistry.registry`` dictionary.
-  (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
-* Reports now display a Raster Attribute Table for Land Use/Land Cover
-  input rasters. (`#2333 <https://github.com/natcap/invest/issues/2333>`_)
-* When saving a datastack, CSVs are now copied into argument-named
-  subfolders, which preserves original filenames and ensures metadata
-  compatibility. (`#2442 <https://github.com/natcap/invest/issues/2442>`_)
-* Added the ``--no-report`` flag to the command line interface, which allows
-  users to disable report generation.
-  (`#2573 <https://github.com/natcap/invest/issues/2573>`_)
 
 Workbench
 =========
@@ -106,46 +87,6 @@ Workbench
   doesn't recognize (such as the ID of a plugin that isn't installed, or an
   otherwise malformed model ID) now presents an error message instead of
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
-* Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
-  Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
-
-Annual Water Yield
-==================
-* Allow watershed input to have a POLYGON or MULTIPOLYGON geometry type.
-  (`#2513 <https://github.com/natcap/invest/issues/2513>`_)
-* The model now generates a report, a visual summary of results, available in
-  the output workspace and also viewable from the Workbench after the model run
-  completes. (`#2533 <https://github.com/natcap/invest/issues/2533>`_)
-
-Carbon Storage and Sequestration
-================================
-* Added a new output, ``raster_values_summary.csv``, which provides a summary
-  of the model's raster outputs. This table already appeared at the top of the
-  Carbon report but is now created by the model module itself rather than the
-  reporter, in order to make it available as a CSV in the output directory.
-  (`#2531 <https://github.com/natcap/invest/issues/2531>`_)
-
-SDR
-===
-* Added exception-handling when checking if watershed geoemtries overlap.
-  Invalid geometries will no longer raise an exception during this check
-  because they can still be rasterized and used in zonal_statistics.
-  (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
-
-Urban Cooling
-=============
-* The Urban Cooling model now generates a report, a visual summary of results,
-  available in the output workspace and also viewable from the Workbench after
-  the model run completes.
-  (`#2322 <https://github.com/natcap/invest/issues/2322>`_)
-* The ``T_air`` and ``cc`` outputs have been moved out of the intermediate
-  directory and into the main output workspace.
-  (`#2564 <https://github.com/natcap/invest/issues/2564>`_)
-
-Urban Nature Access
-===================
-* The model now generates a report which displays a visual summary of results
-  and metadata. (`#2534 <https://github.com/natcap/invest/issues/2534>`_)
 
 3.19.0 (2026-04-16)
 -------------------
@@ -169,15 +110,6 @@ General
   ``deploy_data``, ``deploy_userguide``, ``deploy_workbench``) and updated
   these targets to fail on missing artifacts instead of silently ignoring
   errors. (`#831 <https://github.com/natcap/invest/issues/813>`_)
-* Pre-built wheels are now constrained to require one specific minor version of
-  GDAL in an attempt to ensure compatibility of the compiled extensions with
-  the version of ``libgdal`` available. Users who need a different GDAL version
-  may install ``natcap.invest`` from conda-forge or build their own wheel from
-  source. (`#2206 <https://github.com/natcap/invest/issues/2206>`_)
-* The ``manylinux_2_39`` wheels have been replaced with ``linux`` wheels built
-  on Ubuntu. This reduces the size of the wheels and avoids licensing concerns
-  around redistributing libraries.
-  (`#2483 <https://github.com/natcap/invest/issues/2483>`_)
 
 Workbench
 =========

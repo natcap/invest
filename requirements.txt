@@ -30,7 +30,7 @@ geometamaker>=0.3.1
 pydantic
 certifi
 docutils
-altair>=6.0.0
+altair
 fiona
 geopandas
 jinja2

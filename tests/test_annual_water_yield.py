@@ -221,13 +221,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
 
-        execute_kwargs = {
-            'generate_report': bool(annual_water_yield.MODEL_SPEC.reporter),
-            'save_file_registry': True
-        }
-        annual_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
-        assert_complete_execute(
-            args, annual_water_yield.MODEL_SPEC, **execute_kwargs)
+        annual_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
         for raster_path in raster_results:
@@ -267,13 +261,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
 
-        execute_kwargs = {
-            'generate_report': bool(annual_water_yield.MODEL_SPEC.reporter),
-            'save_file_registry': True
-        }
-        annual_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
-        assert_complete_execute(
-            args, annual_water_yield.MODEL_SPEC, **execute_kwargs)
+        annual_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
         for raster_path in raster_results:

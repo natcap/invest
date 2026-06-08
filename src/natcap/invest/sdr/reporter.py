@@ -32,7 +32,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         RasterPlotConfig(
             raster_path=args_dict['erosivity_path'],
             datatype=RasterDatatype.continuous,
-            spec=model_spec.get_input('erosivity_path'))
+            spec=model_spec.get_input('erosivity_path')),
+        RasterPlotConfig(
+            raster_path=args_dict['lulc_path'],
+            datatype=RasterDatatype.nominal,
+            spec=model_spec.get_input('lulc_path'))
     ]
 
     output_raster_plot_configs = [
