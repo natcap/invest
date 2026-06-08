@@ -119,33 +119,6 @@ def _calculate_args_bounding_box(args, model_spec):
     return bb_intersection, bb_union
 
 
-def _log_exit_status(session_id, status):
-    """Log the completion of a model with the given status.
-
-    Args:
-        session_id (string): a unique string that can be used to identify
-            the current session between the model initial start and exit.
-        status (string): a string describing the exit status of the model,
-            'success' would indicate the successful completion while an
-            exception string could indicate a failure.
-
-    Returns:
-        None
-    """
-    logger = logging.getLogger('natcap.invest.usage._log_exit_status')
-
-    try:
-        log_finish_url = requests.get(_ENDPOINTS_INDEX_URL).json()['FINISH']
-        requests.post(log_finish_url, data={
-            'session_id': session_id,
-            'status': status,
-        })
-    except Exception as exception:
-        # An exception was thrown, we don't care.
-        logger.warning(
-            f'an exception encountered in _log_exit_status: {str(exception)}')
-
-
 def _log_model(pyname, model_args, invest_interface, type, source, session_id=None):
     """Log information about a model run to a remote server.
 

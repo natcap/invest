@@ -280,15 +280,6 @@ def log_model_start():
     return 'OK'
 
 
-@app.route(f'/{PREFIX}/log_model_exit', methods=['POST'])
-def log_model_exit():
-    payload = request.get_json()
-    usage._log_exit_status(
-        payload['session_id'],
-        payload['status'])
-    return 'OK'
-
-
 @app.route(f'/{PREFIX}/languages', methods=['GET'])
 def get_supported_languages():
     """Return a mapping of supported languages to their display names."""

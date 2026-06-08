@@ -43,24 +43,7 @@ export default function investUsageLogger() {
       .catch((error) => logger.error(error));
   }
 
-  function exit(status, port) {
-    logger.debug('logging model exit');
-    fetch(`${HOSTNAME}:${port}/${PREFIX}/log_model_exit`, {
-      method: 'post',
-      body: JSON.stringify({
-        session_id: sessionId,
-        status: status,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then(async (response) => {
-        if (!response.ok) { logger.error(await response.text()); }
-      })
-      .catch((error) => logger.error(error));
-  }
-
   return {
     start: start,
-    exit: exit,
   };
 }

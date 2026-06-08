@@ -255,16 +255,10 @@ describe('investUsageLogger', () => {
     expect(fetch.mock.calls[0][0]).toBe(expectedURL);
     const startPayload = JSON.parse(fetch.mock.calls[0][1].body);
 
-    usageLogger.exit(investStdErr, PORT);
-    expect(fetch.mock.calls).toHaveLength(2);
-    const exitPayload = JSON.parse(fetch.mock.calls[1][1].body);
-
     expect(startPayload.type).toBe('core');
-    expect(startPayload.session_id).toBe(exitPayload.session_id);
     expect(startPayload.model_id).toBe(modelID);
     expect(JSON.parse(startPayload.model_args)).toMatchObject(args);
     expect(startPayload.invest_interface).toContain('Workbench');
-    expect(exitPayload.status).toBe(investStdErr);
   });
 
   test('logs plugin usage correctly', () => {
