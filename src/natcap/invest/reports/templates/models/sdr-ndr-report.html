@@ -78,7 +78,17 @@
   )}}
 
   {{ accordion_section(
-    gettext('Raster Inputs'),
+    gettext('Land Use/Land Cover Input'),
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(lulc_img_src, gettext('LULC Input')), 60),
+      (lulc_legend_html | safe, 40),
+      (caption(lulc_caption, definition_list=True), 100),
+    ])
+  )}}
+
+  {{ accordion_section(
+    gettext('Other Inputs'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
       (raster_plot_img(inputs_img_src, gettext('Raster Inputs')), 100),
