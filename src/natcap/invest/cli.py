@@ -489,7 +489,7 @@ def main(user_args=None):
                 generate_metadata=True,
                 save_file_registry=True,
                 check_outputs=False,
-                generate_report=model_module.MODEL_SPEC.reporter and args.generate_report)
+                generate_report=generate_report and args.generate_report)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)
