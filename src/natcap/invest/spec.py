@@ -1073,7 +1073,7 @@ class WorkspaceInput(Input):
     """
     id: typing.ClassVar[str] = 'workspace_dir'
     name: typing.ClassVar[str] = 'workspace directory'
-    about: typing.ClassVar[str] = gettext(
+    about: str = gettext(
         "The folder where all the model's output files will be written."
         " If this folder does not exist, it will be created. If data"
         " already exists in the folder, it will be overwritten.")
