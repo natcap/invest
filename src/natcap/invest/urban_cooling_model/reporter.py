@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 import altair
@@ -281,21 +282,26 @@ def report(file_registry: dict[str, str], args_dict: dict,
     """
 
     # Input rasters: LULC, reference evapotranspiration
-    input_raster_heading = gettext(
-        'Input Rasters: LULC and Reference Evapotranspiration')
-    input_raster_plot_configs = [
-        RasterPlotConfig(args_dict['lulc_raster_path'],
-                         RasterDatatype.nominal,
-                         model_spec.get_input('lulc_raster_path')),
+    lulc_raster_heading = gettext('Land Use/Land Cover Input')
+    (lulc_img_src,
+     lulc_legend_html) = raster_utils.plot_categorical_raster_with_table(
+        [args_dict['lulc_raster_path']])
+    lulc_filename = os.path.basename(args_dict['lulc_raster_path'])
+    lulc_desc = model_spec.get_input('lulc_raster_path').about
+    lulc_caption = f'{lulc_filename}:{lulc_desc}'
+
+    et0_raster_heading = gettext(
+        'Reference Evapotranspiration Input')
+    et0_raster_plot_configs = [
         RasterPlotConfig(args_dict['ref_eto_raster_path'],
                          RasterDatatype.continuous,
                          model_spec.get_input('ref_eto_raster_path'),
                          colormap='Greens'),
     ]
-    inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        input_raster_plot_configs)
-    input_raster_caption = raster_utils.caption_raster_list(
-        input_raster_plot_configs)
+    et0_img_src = raster_utils.plot_and_base64_encode_rasters(
+        et0_raster_plot_configs)
+    et0_raster_caption = raster_utils.caption_raster_list(
+        et0_raster_plot_configs)
 
     # Primary raster outputs: air temperature, heat mitigation index
     output_raster_heading = gettext(
@@ -411,10 +417,13 @@ def report(file_registry: dict[str, str], args_dict: dict,
             bldg_map_json=bldg_map_json,
             bldg_map_caption=bldg_map_caption,
             bldg_map_source_list=bldg_map_source_list,
-            input_raster_heading=input_raster_heading,
-            inputs_img_src=inputs_img_src,
-            inputs_caption=input_raster_caption,
-            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
+            lulc_raster_heading=lulc_raster_heading,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
+            lulc_caption=lulc_caption,
+            et0_raster_heading=et0_raster_heading,
+            et0_img_src=et0_img_src,
+            et0_caption=et0_raster_caption,
             output_raster_heading=output_raster_heading,
             outputs_img_src=outputs_img_src,
             outputs_caption=output_raster_caption,

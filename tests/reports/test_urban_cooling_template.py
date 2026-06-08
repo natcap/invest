@@ -22,7 +22,6 @@ def _get_render_args(model_spec):
     input_stats_table = '<table class="test__input-stats-table"></table>'
     stats_table_note = 'This is a test!'
     inputs_caption = ['input.tif:Input map.']
-    lulc_pre_caption = 'This is a test of the LULC broadcasting system!'
     outputs_caption = ['results.tif:Results map.']
     raster_group_caption = 'This is another test!'
     uhi_table = '<table class="test__uhi-table"></table>'
@@ -30,6 +29,7 @@ def _get_render_args(model_spec):
     bldg_totals_table = '<table class="test__bldg-table-totals"></table>'
     vector_caption = [
         'field_1:Things. (Units: unitless)', 'field_2:Stuff. (Units: kg)']
+    lulc_legend_html = '<table class="test__lulc-legend-table"></table>'
 
     return {
         'report_script': model_spec.reporter,
@@ -52,10 +52,13 @@ def _get_render_args(model_spec):
         'bldg_map_json': mock_json,
         'bldg_map_caption': vector_caption,
         'bldg_map_source_list': ['bldg.shp'],
-        'input_raster_heading': 'LULC and Reference Evapotranspiration',
-        'inputs_img_src': img_src,
-        'inputs_caption': inputs_caption,
-        'lulc_pre_caption': lulc_pre_caption,
+        'lulc_raster_heading': 'Land Use/Land Cover Input',
+        'lulc_img_src': img_src,
+        'lulc_legend_html': lulc_legend_html,
+        'lulc_caption': inputs_caption,
+        'et0_raster_heading': 'Reference Evapotranspiration Input',
+        'et0_img_src': img_src,
+        'et0_caption': inputs_caption,
         'output_raster_heading': 'Air Temperature',
         'outputs_img_src': img_src,
         'outputs_caption': outputs_caption,
@@ -83,7 +86,7 @@ class UrbanCoolingTemplateTests(unittest.TestCase):
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 9)
+        self.assertEqual(len(sections), 10)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
@@ -97,8 +100,8 @@ class UrbanCoolingTemplateTests(unittest.TestCase):
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
-        # 9 default sections plus 2 for building stats.
-        self.assertEqual(len(sections), 11)
+        # 10 default sections plus 2 for building stats.
+        self.assertEqual(len(sections), 12)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')

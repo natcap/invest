@@ -115,12 +115,21 @@
   {% endif %}
 
   {{ accordion_section(
-    input_raster_heading,
+    lulc_raster_heading,
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (caption(lulc_pre_caption, pre_caption=True), 100),
-      (raster_plot_img(inputs_img_src, input_raster_heading), 100),
-      (caption(inputs_caption, definition_list=True), 100)
+      (raster_plot_img(lulc_img_src, lulc_raster_heading), 60),
+      (wide_table(lulc_legend_html | safe), 40),
+      (caption(lulc_caption, definition_list=True), 100),
+    ])
+  )}}
+
+  {{ accordion_section(
+    et0_raster_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(et0_img_src, et0_raster_heading), 100),
+      (caption(et0_caption, definition_list=True), 100)
     ])
   )}}
 
