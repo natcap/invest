@@ -113,6 +113,8 @@ Workbench
   `InVEST Data Collection Notice <https://naturalcapitalalliance.stanford.edu/
   software/invest/invest-downloads-data#invest-data-collection-notice>`_.
   (`#2553 <https://github.com/natcap/invest/issues/2553>`_)
+* Removed outdated usage-logging code to reflect current data collection
+  practices. (`#2600 <https://github.com/natcap/invest/issues/2600>`_)
 
 Annual Water Yield
 ==================
