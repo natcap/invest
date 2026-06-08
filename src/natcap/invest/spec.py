@@ -191,9 +191,86 @@ class ImmutableBaseModel(BaseModel):
 class IOModel(ImmutableBaseModel):
     """Base class for both `Input` and `Output`."""
 
+    id: str
+    """Input/output identifier that should be unique within a model"""
+
+    about: typing.Union[str, None] = None
+    """User-facing description of the input/output"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     """Allow fields to have arbitrary types that don't inherit from BaseModel
     (needed for pint.Unit)."""
+
+    def write_metadata_file(self, datasource_path, keywords_list,
+                            lineage_statement='', out_workspace=None):
+        """Write a metadata sidecar file for an invest dataset.
+
+        Create metadata for invest model inputs or outputs, taking care to
+        preserve existing human-modified attributes.
+
+        Note: We do not want to overwrite any existing metadata so if there is
+        invalid metadata for the datasource (i.e., doesn't pass geometamaker
+        validation in ``describe``), this function will NOT create new metadata.
+
+        Args:
+            datasource_path (str) - filepath to the data to describe
+            keywords_list (list) - sequence of strings
+            lineage_statement (str, optional) - string to describe origin of
+                the dataset
+            out_workspace (str, optional) - where to write metadata if different
+                from data location
+        Returns:
+            None
+
+        """
+        try:
+            resource = geometamaker.describe(datasource_path, compute_stats=True)
+        except ValueError as e:
+            # Don't want function to fail bc can't create metadata due to invalid filetype
+            LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
+            return None
+        resource.set_lineage(lineage_statement)
+        # a pre-existing metadata doc could have keywords
+        words = resource.get_keywords()
+        resource.set_keywords(set(words + keywords_list))
+
+        if self.about:
+            resource.set_description(self.about)
+        attr_specs = None
+        if hasattr(self, 'columns') and self.columns:
+            attr_specs = self.columns
+        if hasattr(self, 'fields') and self.fields:
+            attr_specs = self.fields
+        if attr_specs:
+            # field names in attr_spec might not match the case of the
+            # actual fieldname in the data because
+            # invest does not require case-sensitive fieldnames
+            field_lookup = {
+                field.name.lower(): field for field in resource._get_fields()}
+            for nested_spec in attr_specs:
+                try:
+                    field_metadata = field_lookup[nested_spec.id.lower()]
+                    # Field description only gets set if its empty, i.e. ''
+                    if len(field_metadata.description.strip()) < 1:
+                        resource.set_field_description(
+                            field_metadata.name, description=nested_spec.about)
+                    # units only get set if empty
+                    if len(field_metadata.units.strip()) < 1:
+                        units = format_unit(nested_spec.units) if hasattr(
+                            nested_spec, 'units') else ''
+                        resource.set_field_description(
+                            field_metadata.name, units=units)
+                except KeyError as error:
+                    # fields that are in the spec but missing
+                    # from model results because they are conditional.
+                    LOGGER.debug(error)
+        if isinstance(self, SingleBandRasterInput) or isinstance(
+                self, SingleBandRasterOutput):
+            if len(resource.get_band_description(1).units) < 1:
+                units = format_unit(self.units)
+                resource.set_band_description(1, units=units)
+
+        resource.write(workspace=out_workspace)
 
 
 class Input(IOModel):
@@ -203,9 +280,6 @@ class Input(IOModel):
     input field in the InVEST workbench. This does not store the value of the
     parameter for a specific run of the model.
     """
-    id: str
-    """Input identifier that should be unique within a model"""
-
     name: typing.Union[str, None] = None
     """The user-facing name of the input. The workbench UI displays this
     property as a label for each input. The name should be as short as
@@ -217,9 +291,6 @@ class Input(IOModel):
 
     Bad examples: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
     """
-
-    about: typing.Union[str, None] = None
-    """User-facing description of the input"""
 
     required: typing.Union[bool, str] = True
     """Whether the input is required to be provided. Defaults to True. Set to
@@ -340,11 +411,6 @@ class Output(IOModel):
     an invest model. This does not store the value of the output for a specific
     run of the model.
     """
-    id: str
-    """Output identifier that should be unique within a model"""
-
-    about: typing.Union[str, None] = None
-    """User-facing description of the output"""
 
     created_if: typing.Union[bool, str] = True
     """Defaults to True. If the input is only created under a certain condition
@@ -2282,9 +2348,8 @@ class ModelSpec(ImmutableBaseModel):
                     if 'taskgraph.db' in value:
                         return
                     try:
-                        write_metadata_file(
-                            value, self.get_output(root_key),
-                            keywords, lineage_statement)
+                        self.get_output(root_key).write_metadata_file(
+                            value, keywords, lineage_statement)
                     except ValueError as error:
                         # Some unsupported file formats, e.g. html
                         LOGGER.debug(error)
@@ -2726,76 +2791,3 @@ def format_type_string(_input):
             f'`{_input._single_band_raster_input.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
             f'`{_input._vector_input.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
     return f'`{_input.display_name} <{INPUT_TYPES_HTML_FILE}#{_input.rst_section}>`__'
-
-
-def write_metadata_file(datasource_path, spec, keywords_list,
-                        lineage_statement='', out_workspace=None):
-    """Write a metadata sidecar file for an invest dataset.
-
-    Create metadata for invest model inputs or outputs, taking care to
-    preserve existing human-modified attributes.
-
-    Note: We do not want to overwrite any existing metadata so if there is
-    invalid metadata for the datasource (i.e., doesn't pass geometamaker
-    validation in ``describe``), this function will NOT create new metadata.
-
-    Args:
-        datasource_path (str) - filepath to the data to describe
-        spec (dict) - the invest specification for ``datasource_path``
-        keywords_list (list) - sequence of strings
-        lineage_statement (str, optional) - string to describe origin of
-            the dataset
-        out_workspace (str, optional) - where to write metadata if different
-            from data location
-    Returns:
-        None
-
-    """
-    try:
-        resource = geometamaker.describe(datasource_path, compute_stats=True)
-    except ValueError as e:
-        # Don't want function to fail bc can't create metadata due to invalid filetype
-        LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
-        return None
-    resource.set_lineage(lineage_statement)
-    # a pre-existing metadata doc could have keywords
-    words = resource.get_keywords()
-    resource.set_keywords(set(words + keywords_list))
-
-    if spec.about:
-        resource.set_description(spec.about)
-    attr_specs = None
-    if hasattr(spec, 'columns') and spec.columns:
-        attr_specs = spec.columns
-    if hasattr(spec, 'fields') and spec.fields:
-        attr_specs = spec.fields
-    if attr_specs:
-        # field names in attr_spec might not match the case of the
-        # actual fieldname in the data because
-        # invest does not require case-sensitive fieldnames
-        field_lookup = {
-            field.name.lower(): field for field in resource._get_fields()}
-        for nested_spec in attr_specs:
-            try:
-                field_metadata = field_lookup[nested_spec.id.lower()]
-                # Field description only gets set if its empty, i.e. ''
-                if len(field_metadata.description.strip()) < 1:
-                    resource.set_field_description(
-                        field_metadata.name, description=nested_spec.about)
-                # units only get set if empty
-                if len(field_metadata.units.strip()) < 1:
-                    units = format_unit(nested_spec.units) if hasattr(
-                        nested_spec, 'units') else ''
-                    resource.set_field_description(
-                        field_metadata.name, units=units)
-            except KeyError as error:
-                # fields that are in the spec but missing
-                # from model results because they are conditional.
-                LOGGER.debug(error)
-    if isinstance(spec, SingleBandRasterInput) or isinstance(
-            spec, SingleBandRasterOutput):
-        if len(resource.get_band_description(1).units) < 1:
-            units = format_unit(spec.units)
-            resource.set_band_description(1, units=units)
-
-    resource.write(workspace=out_workspace)

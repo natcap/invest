@@ -189,9 +189,8 @@ def build_datastack_archive(args, model_id, datastack_path):
     for k, v in args.items():
         if isinstance(v, str) and os.path.isfile(v):
             # write metadata file to target location (in temp dir)
-            spec.write_metadata_file(
+            module.MODEL_SPEC.get_input(k).write_metadata_file(
                 datasource_path=v,
-                spec=module.MODEL_SPEC.get_input(k),
                 keywords_list=[module.MODEL_SPEC.model_id, 'InVEST'],
                 out_workspace=os.path.join(
                     temp_workspace, os.path.dirname(parameter_set['args'][k])))
