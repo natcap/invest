@@ -1,12 +1,8 @@
-"""Module to that provides functions for usage logging."""
-import contextlib
+"""Module that provides functions for usage logging."""
 import locale
 import logging
 import platform
 import sys
-import threading
-import traceback
-import uuid
 import importlib
 
 from osgeo import osr
@@ -23,44 +19,6 @@ LOGGER = logging.getLogger(__name__)
 _ENDPOINTS_INDEX_URL = (
     'http://data.naturalcapitalproject.org/server_registry/'
     'invest_usage_logger_v2/index.html')
-
-# This is defined here because it's very useful to know the thread name ahead
-# of time so we can exclude any log messages it generates from the logging.
-# Python doesn't care about having multiple threads have the same name.
-_USAGE_LOGGING_THREAD_NAME = 'usage-logging-thread'
-
-
-@contextlib.contextmanager
-def log_run(model_pyname, args):
-    """Context manager to log an InVEST model run and exit status.
-
-    Args:
-        model_pyname (string): The string module name that identifies the model.
-        args (dict): The full args dictionary.
-
-    Returns:
-        ``None``
-    """
-    invest_interface = 'Qt'  # this cm is only used by the Qt interface
-    session_id = str(uuid.uuid4())
-    log_thread = threading.Thread(
-        target=_log_model,
-        args=(model_pyname, args, invest_interface, session_id),
-        name=_USAGE_LOGGING_THREAD_NAME)
-    log_thread.start()
-
-    try:
-        yield
-    except Exception:
-        exit_status_message = traceback.format_exc()
-        raise
-    else:
-        exit_status_message = ':)'
-    finally:
-        log_exit_thread = threading.Thread(
-            target=_log_exit_status, args=(session_id, exit_status_message),
-            name=_USAGE_LOGGING_THREAD_NAME)
-        log_exit_thread.start()
 
 
 def _calculate_args_bounding_box(args, model_spec):
