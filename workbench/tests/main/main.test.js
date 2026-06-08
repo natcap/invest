@@ -255,7 +255,7 @@ describe('investUsageLogger', () => {
     expect(fetch.mock.calls[0][0]).toBe(expectedURL);
     const startPayload = JSON.parse(fetch.mock.calls[0][1].body);
 
-    expect(startPayload.type).toBe('core');
+    expect(startPayload.model_type).toBe('core');
     expect(startPayload.model_id).toBe(modelID);
     expect(JSON.parse(startPayload.model_args)).toMatchObject(args);
     expect(startPayload.invest_interface).toContain('Workbench');
@@ -281,14 +281,14 @@ describe('investUsageLogger', () => {
 
     usageLogger.start('pluginA', args, PORT);
     let startPayload = JSON.parse(fetch.mock.calls[0][1].body);
-    expect(startPayload.type).toBe('plugin');
+    expect(startPayload.model_type).toBe('plugin');
     expect(startPayload.model_id).toBe('pluginA');
-    expect(startPayload.source).toBe('git+https://plugin');
+    expect(startPayload.plugin_source).toBe('git+https://plugin');
 
     usageLogger.start('pluginB', args, PORT);
     startPayload = JSON.parse(fetch.mock.calls[1][1].body);
-    expect(startPayload.type).toBe('plugin');
+    expect(startPayload.model_type).toBe('plugin');
     expect(startPayload.model_id).toBe('pluginB');
-    expect(startPayload.source).toBe('local');
+    expect(startPayload.plugin_source).toBe('local');
   });
 });

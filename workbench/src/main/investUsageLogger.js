@@ -21,12 +21,12 @@ export default function investUsageLogger() {
 
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelID)) {
-      body.type = 'plugin';
-      const source = plugins[modelID].source;
+      body.model_type = 'plugin';
+      const plugin_source = plugins[modelID].source;
       // don't log the path to a local plugin, just log that it's local
-      body.source = source.startsWith('git+') ? source : 'local';
+      body.plugin_source = plugin_source.startsWith('git+') ? plugin_source : 'local';
     } else {
-      body.type = 'core';
+      body.model_type = 'core';
     }
     fetch(`${HOSTNAME}:${port}/${PREFIX}/log_model_start`, {
       method: 'post',

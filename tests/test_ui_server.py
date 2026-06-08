@@ -221,7 +221,7 @@ class EndpointFunctionTests(unittest.TestCase):
                 'workspace_dir': 'foo'
             }),
             'invest_interface': 'Workbench',
-            'type': 'core'
+            'model_type': 'core'
         }
         response = test_client.post(
             f'{ROUTE_PREFIX}/log_model_start', json=payload)
@@ -257,7 +257,7 @@ class EndpointFunctionTests(unittest.TestCase):
                 'workspace_dir': 'sample_workspace'
             }),
             'invest_interface': 'Workbench',
-            'type': 'plugin'
+            'model_type': 'plugin'
         }
 
         # Mock ``importlib.import_module`` because ``usage._log_model`` will

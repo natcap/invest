@@ -119,7 +119,8 @@ def _calculate_args_bounding_box(args, model_spec):
     return bb_intersection, bb_union
 
 
-def _log_model(pyname, model_args, invest_interface, type, source):
+def _log_model(
+        pyname, model_args, invest_interface, model_type, plugin_source):
     """Log information about a model run to a remote server.
 
     Args:
@@ -127,9 +128,9 @@ def _log_model(pyname, model_args, invest_interface, type, source):
         model_args (dict): the traditional InVEST argument dictionary.
         invest_interface (string): a string identifying the calling UI,
             e.g. `Qt` or 'Workbench'.
-        type (string): 'core' or 'plugin'
-        source (string): For plugins, a string identifying the source of the
-            plugin (e.g. 'git+https://github.com/foo/bar' or 'local'). For
+        model_type (string): 'core' or 'plugin'
+        plugin_source (string): For plugins, a string identifying the source of
+            the plugin (e.g. 'git+https://github.com/foo/bar' or 'local'). For
             core models, this is None.
 
     Returns:
@@ -152,8 +153,8 @@ def _log_model(pyname, model_args, invest_interface, type, source):
             'system_default_language': locale.getdefaultlocale()[0],
             'bounding_box_intersection': str(bounding_box_intersection),
             'bounding_box_union': str(bounding_box_union),
-            'type': type,
-            'source': source
+            'type': model_type,
+            'source': plugin_source
         })
     except Exception as exception:
         # An exception was thrown, we don't care.
