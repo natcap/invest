@@ -119,7 +119,7 @@ def _calculate_args_bounding_box(args, model_spec):
     return bb_intersection, bb_union
 
 
-def _log_model(pyname, model_args, invest_interface, type, source, session_id=None):
+def _log_model(pyname, model_args, invest_interface, type, source):
     """Log information about a model run to a remote server.
 
     Args:
@@ -152,7 +152,6 @@ def _log_model(pyname, model_args, invest_interface, type, source, session_id=No
             'system_default_language': locale.getdefaultlocale()[0],
             'bounding_box_intersection': str(bounding_box_intersection),
             'bounding_box_union': str(bounding_box_union),
-            'session_id': session_id,
             'type': type,
             'source': source
         })

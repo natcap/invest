@@ -1,5 +1,3 @@
-import crypto from 'crypto';
-
 import fetch from 'node-fetch';
 
 import { logger } from './logger';
@@ -11,7 +9,6 @@ const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
 
 export default function investUsageLogger() {
-  const sessionId = crypto.randomUUID();
 
   function start(modelID, args, port) {
     logger.debug('logging model start');
@@ -20,7 +17,6 @@ export default function investUsageLogger() {
       model_id: modelID,
       model_args: JSON.stringify(args),
       invest_interface: `Workbench ${WORKBENCH_VERSION}`,
-      session_id: sessionId,
     };
 
     const plugins = settingsStore.get('plugins');

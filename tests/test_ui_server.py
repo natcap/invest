@@ -221,7 +221,6 @@ class EndpointFunctionTests(unittest.TestCase):
                 'workspace_dir': 'foo'
             }),
             'invest_interface': 'Workbench',
-            'session_id': '12345',
             'type': 'core'
         }
         response = test_client.post(
@@ -237,9 +236,6 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(
             mock_post.call_args.kwargs['data']['invest_interface'],
             payload['invest_interface'])
-        self.assertEqual(
-            mock_post.call_args.kwargs['data']['session_id'],
-            payload['session_id'])
 
     @patch('natcap.invest.ui_server.usage.requests.post')
     @patch('natcap.invest.ui_server.usage.requests.get')
@@ -261,7 +257,6 @@ class EndpointFunctionTests(unittest.TestCase):
                 'workspace_dir': 'sample_workspace'
             }),
             'invest_interface': 'Workbench',
-            'session_id': '12345',
             'type': 'plugin'
         }
 
@@ -282,9 +277,6 @@ class EndpointFunctionTests(unittest.TestCase):
             self.assertEqual(
                 mock_post.call_args.kwargs['data']['invest_interface'],
                 payload['invest_interface'])
-            self.assertEqual(
-                mock_post.call_args.kwargs['data']['session_id'],
-                payload['session_id'])
 
     @patch('natcap.invest.ui_server.geometamaker.config.platformdirs.user_config_dir')
     def test_get_geometamaker_profile(self, mock_user_config_dir):
