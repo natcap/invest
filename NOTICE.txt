@@ -1,8 +1,6 @@
-InVEST is a registered trademark of Stanford University. Stanford University
-owns and maintains the trademark, and cooperates with the Natural Capital
-Alliance to develop this policy and any trademark licensing. Visit
-naturalcapitalalliance.stanford.edu/invest-trademark-and-logo-use-policy for the
-complete trademark and logo policy.
+InVEST is a registered trademark of Stanford University. Stanford University owns and maintains the trademark, and cooperates with the Natural Capital Alliance to develop this policy and any trademark licensing. Visit naturalcapitalalliance.stanford.edu/invest-trademark-and-logo-use-policy for the complete trademark and logo policy.
+
+The Natural Capital Alliance software team collects certain non-personal data each time an InVEST model or InVEST plugin is run via the InVEST Workbench. These data help inform future work on InVEST and support our mission to maintain InVEST as free and open-source software. For more details, visit naturalcapitalalliance.stanford.edu/invest-data-collection-notice.
 
 Copyright (c) 2026, Natural Capital Alliance
 
