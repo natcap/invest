@@ -20,7 +20,7 @@ dist/
 coverage.xml
 cover/
 *.egg-info/
-env
+env/
 requirements-all.yml
 workbench/build
 workbench/node_modules/
