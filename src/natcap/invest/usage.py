@@ -1,10 +1,7 @@
 """Module to that provides functions for usage logging."""
 import contextlib
-import hashlib
-import json
 import locale
 import logging
-import os
 import platform
 import sys
 import threading
@@ -209,19 +206,6 @@ def _log_model(pyname, model_args, invest_interface, type, source, session_id=No
     """
     logger = logging.getLogger('natcap.invest.usage._log_model')
 
-    def _node_hash():
-        """Return a hash for the current computational node."""
-        data = {
-            'os': platform.platform(),
-            'hostname': platform.node(),
-            'userdir': os.path.expanduser('~')
-        }
-        md5 = hashlib.md5()
-        # a json dump will handle non-ascii encodings
-        # but then data must be encoded before hashing in Python 3.
-        md5.update(json.dumps(data).encode('utf-8'))
-        return md5.hexdigest()
-
     model_spec = importlib.import_module(pyname).MODEL_SPEC
 
     try:
@@ -232,7 +216,6 @@ def _log_model(pyname, model_args, invest_interface, type, source, session_id=No
             'model_name': pyname,
             'invest_release': natcap.invest.__version__,
             'invest_interface': invest_interface,
-            'node_hash': _node_hash(),
             'system_full_platform_string': platform.platform(),
             'system_preferred_encoding': locale.getdefaultlocale()[1],
             'system_default_language': locale.getdefaultlocale()[0],
