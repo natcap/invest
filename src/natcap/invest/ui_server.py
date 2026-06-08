@@ -274,7 +274,7 @@ def log_model_start():
         pyname=models.model_id_to_pyname[modelID],
         model_args=json.loads(payload['model_args']),
         invest_interface=payload['invest_interface'],
-        type=payload['type'],
+        type=payload['type'],  # 'core' or 'plugin'
         source=payload.get('source', None))  # source only used for plugins
     return 'OK'
 
