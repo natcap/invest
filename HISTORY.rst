@@ -75,6 +75,11 @@ General
 * ``Input, Output, and ModelSpec`` classes now create immutable objects.
   Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
   (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
+* Replaced ``natcap.invest.spec.DirectoryInput`` with
+  ``natcap.invest.spec.WorkspaceInput`` (for workspace directories only). Input
+  data that was previously grouped in a directory should instead use an individual
+  ``Input`` for each file, or a ``CSVInput`` to list out multiple files.
+  (`#2179 <https://github.com/natcap/invest/issues/2179>`_)
 * Made some styling and usability improvements to the Vega-Lite visualizations
   (e.g., vector plots, histograms) that appear in some InVEST reports.
   (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
