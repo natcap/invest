@@ -6,7 +6,7 @@ import geopandas
 import pandas
 
 from natcap.invest import __version__
-from natcap.invest import gettext
+from natcap.invest import gettext, get_locale
 from natcap.invest.reports import jinja_env
 from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
@@ -203,6 +203,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
+            locale=get_locale(),
             report_script=model_spec.reporter,
             invest_version=__version__,
             report_filepath=target_html_filepath,

@@ -11,7 +11,7 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
-
+    locale = 'en'
     report_filepath = 'urban_cooling_report_test.html'
     invest_version = '987.65.0'
     timestamp = '1970-01-01'
@@ -32,6 +32,7 @@ def _get_render_args(model_spec):
     lulc_legend_html = '<table class="test__lulc-legend-table"></table>'
 
     return {
+        'locale': locale,
         'report_script': model_spec.reporter,
         'invest_version': invest_version,
         'report_filepath': report_filepath,

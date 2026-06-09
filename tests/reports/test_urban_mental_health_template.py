@@ -20,12 +20,12 @@ def _get_render_args(model_spec):
     input_stats_table = '<table class="test__input-stats-table"></table>'
     stats_table_note = 'This is a test!'
     inputs_caption = ['input.tif:Input map.']
-    lulc_pre_caption = 'This is a test of the LULC broadcasting system!'
     outputs_caption = ['results.tif:Results map.']
     vegalite_json = '{}'
     test_caption = 'This is another test!'
     agg_results_table = '<table class="test__agg-results-table"></table>'
     agg_map_source_list = ['/source/file.shp']
+    lulc_legend_html = '<table class="test__lulc-legend-table"></table>'
 
     return {
         'locale': locale,
@@ -47,10 +47,12 @@ def _get_render_args(model_spec):
         'intermediate_baseline_img_caption': test_caption,
         'intermediate_delta_ndvi_img_src': img_src,
         'intermediate_delta_ndvi_img_caption': test_caption,
-        'intermediate_reclass_lulc_img_src': img_src,
-        'intermediate_reclass_lulc_img_caption': test_caption,
+        'intermediate_reclass_lulc_to_ndvi_img_src': img_src,
+        'intermediate_reclass_lulc_to_ndvi_img_caption': test_caption,
+        'lulc_img_src': img_src,
+        'lulc_legend_html': lulc_legend_html,
+        'lulc_caption': test_caption,
         'raster_group_caption': test_caption,
-        'lulc_pre_caption': lulc_pre_caption,
         'output_raster_stats_table': output_stats_table,
         'input_raster_stats_table': input_stats_table,
         'stats_table_note': stats_table_note,
@@ -77,13 +79,16 @@ class UrbanMentalHealthTemplateTests(unittest.TestCase):
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 11)
+        self.assertEqual(len(sections), 12)
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
 
         # should only have plot for preventable cases, not preventable cost
-        vega_plots = soup.find_all(class_='vega-fit-horizontal')
-        self.assertEqual(len(vega_plots), 1)
+        cases_plot = soup.select('#cases_map')
+        self.assertEqual(len(cases_plot), 1)
+
+        cost_plot = soup.select('#cost_map')
+        self.assertEqual(len(cost_plot), 0)
 
     def test_render_lulc_option_with_ndvi(self):
         """Test report rendering with LULC option with baseline NDVI input"""
@@ -94,7 +99,7 @@ class UrbanMentalHealthTemplateTests(unittest.TestCase):
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
-        self.assertEqual(len(sections), 11)
+        self.assertEqual(len(sections), 12)
 
     def test_render_ndvi_option_with_cost(self):
         """Test report rendering with NDVI model option with cost"""
@@ -104,8 +109,11 @@ class UrbanMentalHealthTemplateTests(unittest.TestCase):
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
         sections = soup.find_all(class_='accordion-section')
         # Does not have reclassified LULC to NDVI section
-        self.assertEqual(len(sections), 10)
+        self.assertEqual(len(sections), 11)
 
         # should have plots for both preventable cases and cost
-        vega_plots = soup.find_all(class_='vega-fit-horizontal')
-        self.assertEqual(len(vega_plots), 2)
+        cases_plot = soup.select('#cases_map')
+        self.assertEqual(len(cases_plot), 1)
+
+        cost_plot = soup.select('#cost_map')
+        self.assertEqual(len(cost_plot), 1)
