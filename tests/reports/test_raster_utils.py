@@ -705,6 +705,21 @@ class PlotCategoricalRastersTest(unittest.TestCase):
         # Our RAT has 3 columns, a 4th was added for the color swatch
         self.assertEqual(df.shape, (num_vals, 4))
 
+    def test_plot_single_raster_with_rat_color_table(self):
+        """Test that the RAT color table will be filtered out."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        add_raster_attribute_table(
+            target_filepath,
+            extra_cols=['RED', 'green', 'Blue', 'ALPHA', 'opacity'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        df = self.html_string_to_dataframe(table)
+        # All the RGBA (and opacity) columns should be filtered out
+        self.assertEqual(df.shape, (num_vals, 3))
+
     def test_plot_single_raster_without_rat(self):
         """Test single raster without RAT."""
         target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
