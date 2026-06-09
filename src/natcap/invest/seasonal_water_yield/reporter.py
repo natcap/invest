@@ -21,32 +21,6 @@ LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/seasonal_water_yield.html')
 
-MAP_WIDTH = 450  # pixels
-
-
-def _create_aggregate_map(geodataframe, xy_ratio, attribute,
-                          title):
-    attr_map = altair.Chart(geodataframe).mark_geoshape(
-        stroke="white",
-        strokeWidth=0.5
-    ).project(
-        type='identity',
-        reflectY=True
-    ).encode(
-        color=altair.Color(
-            attribute,
-            scale=altair.Scale(domainMid=0, scheme="brownbluegreen")
-        ),
-        tooltip=[altair.Tooltip(attribute, title=attribute)]
-    ).properties(
-        width=MAP_WIDTH,
-        height=MAP_WIDTH / xy_ratio,
-        title=title
-    ).configure_legend(**vector_utils.LEGEND_CONFIG)
-
-    return attr_map.to_json()
-
-
 def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     map_df = geopandas.read_file(aoi_vector_path)
     values_df = pandas.read_csv(aggregate_csv_path)
@@ -68,8 +42,8 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
         ),
         tooltip=[altair.Tooltip("geom_id", title="Feature")]
     ).properties(
-        width=MAP_WIDTH*1.25,
-        height=MAP_WIDTH*1.25 / xy_ratio,
+        width=vector_utils.MAP_WIDTH*1.25,
+        height=vector_utils.MAP_WIDTH*1.25 / xy_ratio,
         title="AOI"
     ).add_params(
         feat_select
@@ -150,19 +124,21 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     aggregated_results = geopandas.read_file(file_registry['aggregate_vector'])
     _, xy_ratio = vector_utils.get_geojson_bbox(aggregated_results)
 
-    qb_map_json = _create_aggregate_map(
-        aggregated_results, xy_ratio, 'qb',
+    qb_map_json = vector_utils.create_aggregate_map(
+        aggregated_results, xy_ratio, 'qb', 'brownbluegreen',
         gettext("Mean local recharge value within the watershed "
-                f"({model_spec.get_output('aggregate_vector').get_field('qb').units})"))
+                f"({model_spec.get_output('aggregate_vector').get_field('qb').units})"),
+        divergent=True)
     qb_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('qb').about,
         gettext('Values are in millimeters, but should be interpreted as '
                 'relative values, not absolute values.')]
 
-    vri_sum_map_json = _create_aggregate_map(
-        aggregated_results, xy_ratio, 'vri_sum',
+    vri_sum_map_json = vector_utils.create_aggregate_map(
+        aggregated_results, xy_ratio, 'vri_sum', 'brownbluegreen',
         gettext("Total recharge contribution of the watershed "
-                f"({model_spec.get_output('aggregate_vector').get_field('vri_sum').units})"))
+                f"({model_spec.get_output('aggregate_vector').get_field('vri_sum').units})"),
+        divergent=True)
     vri_sum_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('vri_sum').about,
         gettext('The sum of ``Vri_[suffix].tif`` pixel values within the watershed.')]

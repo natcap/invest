@@ -167,7 +167,7 @@ def build_datastack_archive(args, model_id, datastack_path):
 
     datastack = Datastack(data_dir)
     for key in args:
-
+        LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
         if key not in module.MODEL_SPEC.inputs:

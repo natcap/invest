@@ -291,23 +291,10 @@ class DatastackArchiveTests(unittest.TestCase):
         from natcap.invest import datastack
 
         params = {
-            'some_file': os.path.join(self.workspace, 'foo.txt'),
-            'data_dir': os.path.join(self.workspace, 'data_dir')
+            'some_file': os.path.join(self.workspace, 'foo.txt')
         }
         with open(params['some_file'], 'w') as textfile:
             textfile.write('some text here!')
-
-        os.makedirs(params['data_dir'])
-        for filename in ('foo.txt', 'bar.txt', 'baz.txt'):
-            data_filepath = os.path.join(params['data_dir'], filename)
-            with open(data_filepath, 'w') as textfile:
-                textfile.write(filename)
-
-        # make a folder within the data folder.
-        nested_folder = os.path.join(params['data_dir'], 'nested')
-        os.makedirs(nested_folder)
-        with open(os.path.join(nested_folder, 'nested.txt'), 'w') as textfile:
-            textfile.write('hello, world!')
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
@@ -328,16 +315,7 @@ class DatastackArchiveTests(unittest.TestCase):
             params['some_file'],
             os.path.join(out_directory, archived_params['some_file']),
             shallow=False))
-        self.assertEqual(len(archived_params), 2)  # sanity check
-
-        common_files = ['foo.txt', 'bar.txt', 'baz.txt', 'nested/nested.txt']
-        matched_files, mismatch_files, error_files = filecmp.cmpfiles(
-            params['data_dir'],
-            os.path.join(out_directory, archived_params['data_dir']),
-            common_files, shallow=False)
-        if mismatch_files or error_files:
-            self.fail('Directory mismatch or error. The mismatches are'
-                      f' {mismatch_files} ; and the errors are {error_files}')
+        self.assertEqual(len(archived_params), 1)  # sanity check
 
     def test_duplicate_filepaths(self):
         """Datastack: test duplicate filepaths."""
@@ -393,18 +371,11 @@ class DatastackArchiveTests(unittest.TestCase):
             'c': 'plain bytestring',
             'foo': os.path.join(self.workspace, 'foo.txt'),
             'bar': os.path.join(self.workspace, 'foo.txt'),
-            'data_dir': os.path.join(self.workspace, 'data_dir'),
             'raster': os.path.join(DATA_DIR, 'dem'),
             'vector': os.path.join(DATA_DIR, 'watersheds.shp'),
             'simple_table': os.path.join(DATA_DIR, 'carbon_pools_samp.csv'),
             'spatial_table': os.path.join(self.workspace, 'spatial_table.csv'),
         }
-        # synthesize sample data
-        os.makedirs(params['data_dir'])
-        for filename in ('foo.txt', 'bar.txt', 'baz.txt'):
-            data_filepath = os.path.join(params['data_dir'], filename)
-            with open(data_filepath, 'w') as textfile:
-                textfile.write(filename)
 
         with open(params['foo'], 'w') as textfile:
             textfile.write('hello world!')

@@ -99,7 +99,7 @@ describe('Arguments form input types', () => {
   });
 
   test.each([
-    ['directory'],
+    ['workspace'],
     ['csv'],
     ['vector'],
     ['raster'],
@@ -258,7 +258,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Change value & get feedback on a required input', async () => {
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText,
@@ -289,7 +289,7 @@ describe('Arguments form interactions', () => {
 
   test('Type fast & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
@@ -305,7 +305,7 @@ describe('Arguments form interactions', () => {
 
   test('Type slow & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
@@ -360,7 +360,7 @@ describe('Arguments form interactions', () => {
   test('Open info dialog, expect text & link', async () => {
     const spy = jest.spyOn(ipcRenderer, 'send')
       .mockImplementation(() => Promise.resolve());
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     const { findByText, findByRole } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
@@ -374,7 +374,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Open info dialog, expect text but no link if model is a plugin', async () => {
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     const { findByText, findByRole, queryByRole } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER, undefined, false);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
@@ -666,7 +666,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -764,7 +764,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -815,7 +815,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -941,7 +941,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -986,7 +986,7 @@ describe('loadParametersFromFile', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
