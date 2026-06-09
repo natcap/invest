@@ -55,18 +55,12 @@ class HRACriteriaTableInput(spec.CSVInput):
         will be included in the datastack archive.
 
         Args:
-            criteria_table_path (string): The path to the criteria table provided
-                by the user.
-            data_dir (string): the path to where data files will be written.
-            known_files (dict): a dict mapping original source files to their
-                location within the ``data_dir``.
-
-        Note:
-            The ``known_files`` dict may be modified by this function.
+            value (string): The path to the criteria table provided by the user.
+            datastack (natcap.invest.datastack.Datastack): datastack object to be
+                updated with the archived value
 
         Returns:
-            The path to where the rewritten criteria table path is located within
-            the data dir.
+            None
         """
         criteria_table_array = utils.read_csv_to_dataframe(
             value, header=None).to_numpy()
@@ -127,7 +121,7 @@ class HRACriteriaTableInput(spec.CSVInput):
         os.makedirs(os.path.dirname(target_output_path), exist_ok=True)
         numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',
                       fmt="%s", encoding="UTF-8")
-        return target_output_path
+        datastack.args[self.id] = target_output_path
 
 
 MODEL_SPEC = spec.ModelSpec(

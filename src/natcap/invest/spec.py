@@ -1382,6 +1382,10 @@ class WorkspaceInput(Input):
             'about': self.about
         }
 
+    def archive_for_datastack(self, value, datastack):
+        """Skip the workspace directory when building a datastack archive"""
+        pass
+
 
 class NumberInput(Input):
     """A floating-point number input, or parameter, of an invest model.
