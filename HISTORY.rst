@@ -65,6 +65,16 @@
 Unreleased Changes
 ------------------
 
+Highlights
+==========
+* InVEST Reports are now available for these additional models:
+    * Annual Water Yield
+    * Urban Cooling
+    * Urban Nature Access
+
+  Reports are visual summaries of model results. `View sample reports.
+  <http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/>`_
+
 General
 =======
 * To ensure consistent raster plot sizing in reports, padding is now added to
