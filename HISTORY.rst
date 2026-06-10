@@ -75,6 +75,11 @@ General
 * ``Input, Output, and ModelSpec`` classes now create immutable objects.
   Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
   (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
+* Replaced ``natcap.invest.spec.DirectoryInput`` with
+  ``natcap.invest.spec.WorkspaceInput`` (for workspace directories only). Input
+  data that was previously grouped in a directory should instead use an individual
+  ``Input`` for each file, or a ``CSVInput`` to list out multiple files.
+  (`#2179 <https://github.com/natcap/invest/issues/2179>`_)
 * Made some styling and usability improvements to the Vega-Lite visualizations
   (e.g., vector plots, histograms) that appear in some InVEST reports.
   (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
@@ -108,6 +113,13 @@ Workbench
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+* Added a disclosure about InVEST data collection to the Workbench installer
+  and to the in-Workbench "About InVEST" page. For more details, refer to the
+  `InVEST Data Collection Notice <https://naturalcapitalalliance.stanford.edu/
+  software/invest/invest-downloads-data#invest-data-collection-notice>`_.
+  (`#2553 <https://github.com/natcap/invest/issues/2553>`_)
+* Removed outdated usage-logging code to reflect current data collection
+  practices. (`#2600 <https://github.com/natcap/invest/issues/2600>`_)
 
 Annual Water Yield
 ==================
