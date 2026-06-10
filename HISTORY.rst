@@ -72,7 +72,7 @@ Highlights
     * Urban Cooling
     * Urban Nature Access
 
-  Reports are visual summaries of model results. `View sample results.
+  Reports are visual summaries of model results. `View sample reports.
   <http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/>`_
 
 General
