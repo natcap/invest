@@ -1,7 +1,6 @@
 import time
 import unittest
 
-import pandas
 from bs4 import BeautifulSoup
 
 from natcap.invest.seasonal_water_yield import MODEL_SPEC
@@ -29,6 +28,8 @@ def _get_render_args(model_spec):
     vegalite_json = '{}'
     caption = 'figure caption'
     agg_map_source_list = ['/source/file.shp']
+    lulc_legend_html = '<table class="test__lulc-legend-table"></table>'
+    lulc_caption = ['lulc.tif: LULC map']
 
     return {
         'report_script': model_spec.reporter,
@@ -53,6 +54,9 @@ def _get_render_args(model_spec):
         'input_raster_stats_table': input_stats_table,
         'inputs_img_src': img_src,
         'inputs_caption': inputs_caption,
+        'lulc_caption': lulc_caption,
+        'lulc_img_src': img_src,
+        'lulc_legend_html': lulc_legend_html,
         'qf_b_charts': None,
         'qb_map_json': vegalite_json,
         'qb_map_caption': caption,
@@ -61,6 +65,7 @@ def _get_render_args(model_spec):
         'aggregate_map_source_list': agg_map_source_list,
         'model_spec_outputs': model_spec.outputs
     }
+
 
 class SeasonalWaterYieldTemplateTests(unittest.TestCase):
     """Unit tests for SWY template."""
@@ -85,7 +90,7 @@ class SeasonalWaterYieldTemplateTests(unittest.TestCase):
 
         sections = soup.find_all(class_='accordion-section')
         # Includes quickflow raster section and monthly qf + b charts section
-        self.assertEqual(len(sections), 10)
+        self.assertEqual(len(sections), 11)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
@@ -99,7 +104,7 @@ class SeasonalWaterYieldTemplateTests(unittest.TestCase):
 
         sections = soup.find_all(class_='accordion-section')
         # No quickflow raster section or monthly qf + b charts section
-        self.assertEqual(len(sections), 8)
+        self.assertEqual(len(sections), 9)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')

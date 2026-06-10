@@ -103,7 +103,7 @@ class ArgsForm extends React.Component {
   async selectFile(event) {
     /** Handle clicks on browse-button inputs */
     const { name, value } = event.currentTarget; // the arg's key and type
-    const prop = (value === 'directory') ? 'openDirectory' : 'openFile';
+    const prop = (value === 'workspace') ? 'openDirectory' : 'openFile';
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const data = await ipcRenderer.invoke(
       ipcMainChannels.SHOW_OPEN_DIALOG, { properties: [prop] }

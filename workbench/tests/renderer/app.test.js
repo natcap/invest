@@ -38,7 +38,7 @@ const SAMPLE_SPEC = {
     workspace_dir: {
       name: 'Workspace',
       about: 'help text',
-      type: 'directory',
+      type: 'workspace',
     },
     carbon_pools_path: {
       name: 'Carbon Pools',

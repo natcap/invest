@@ -1,5 +1,3 @@
-import crypto from 'crypto';
-
 import fetch from 'node-fetch';
 
 import { logger } from './logger';
@@ -11,7 +9,6 @@ const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
 
 export default function investUsageLogger() {
-  const sessionId = crypto.randomUUID();
 
   function start(modelID, args, port) {
     logger.debug('logging model start');
@@ -20,17 +17,16 @@ export default function investUsageLogger() {
       model_id: modelID,
       model_args: JSON.stringify(args),
       invest_interface: `Workbench ${WORKBENCH_VERSION}`,
-      session_id: sessionId,
     };
 
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelID)) {
-      body.type = 'plugin';
-      const source = plugins[modelID].source;
+      body.model_type = 'plugin';
+      const plugin_source = plugins[modelID].source;
       // don't log the path to a local plugin, just log that it's local
-      body.source = source.startsWith('git+') ? source : 'local';
+      body.plugin_source = plugin_source.startsWith('git+') ? plugin_source : 'local';
     } else {
-      body.type = 'core';
+      body.model_type = 'core';
     }
     fetch(`${HOSTNAME}:${port}/${PREFIX}/log_model_start`, {
       method: 'post',
@@ -43,24 +39,7 @@ export default function investUsageLogger() {
       .catch((error) => logger.error(error));
   }
 
-  function exit(status, port) {
-    logger.debug('logging model exit');
-    fetch(`${HOSTNAME}:${port}/${PREFIX}/log_model_exit`, {
-      method: 'post',
-      body: JSON.stringify({
-        session_id: sessionId,
-        status: status,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then(async (response) => {
-        if (!response.ok) { logger.error(await response.text()); }
-      })
-      .catch((error) => logger.error(error));
-  }
-
   return {
     start: start,
-    exit: exit,
   };
 }

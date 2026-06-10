@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 828eb570dab6a84751fcbe0eff430ec66e4a1621
+GIT_SAMPLE_DATA_REPO_REV    := 098183806c0c715e6422d4d0570db91321c0f4e8
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 246909bb6f72a7b18f3afb08c82c2310ecfaa5a4
+GIT_TEST_DATA_REPO_REV      := 5f425e83579b1754139724a7dd4ee13287dcd396
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 3954f327f0519c884e05a60a9d3d0a3b307bbb6f
+GIT_UG_REPO_REV             := 1c4f285e49a13fbac15d92f80d85aac752328c97
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -64,7 +64,7 @@ PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) -m setuptools_scm)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 
-GSUTIL := gsutil
+GCLOUD_STORAGE := gcloud storage
 SIGNTOOL := SignTool
 RST2HTML5 := rst2html5
 
@@ -124,7 +124,7 @@ INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DAT
 
 
 .PHONY: fetch install binaries apidocs userguide changelog sampledata \
-sampledata_single test clean help check python_packages purge deploy \
+test clean help check python_packages purge deploy \
 deploy_wheel deploy_sdist deploy_data deploy_userguide deploy_workbench codesign \
 validate_sampledata validate_userguide_filenames invest_autotest deploy_autotest_reports \
 $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
@@ -153,7 +153,6 @@ help:
 	@echo "  python_packages              to build natcap.invest wheel and source distributions"
 	@echo "  codesign                     to enqueue a built binary for signing using our codesigning service"
 	@echo "  sampledata                   to build sample data zipfiles"
-	@echo "  sampledata_single            to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test                         to run pytest on the tests directory"
 	@echo "  validate_sampledata          to run invest model validation on sampledata datastacks"
 	@echo "  validate_userguide_filenames to validate that userguide filenames exist"
@@ -186,7 +185,7 @@ invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
 
 deploy_autotest_reports:
-	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(REPORTS_BASE_URL)
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GCLOUD_STORAGE) cp -I $(REPORTS_BASE_URL)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
@@ -343,12 +342,6 @@ sampledata: $(ZIPTARGETS)
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "$(ZIP) -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
-SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
-sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
-
-$(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git"
-
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
@@ -356,27 +349,27 @@ codesign:
 	python codesigning/enqueue-current-installer.py
 
 deploy:
-	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
-	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
-	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-	-$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
+	-$(GCLOUD_STORAGE) rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GCLOUD_STORAGE) rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	-$(GCLOUD_STORAGE) rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	-$(GCLOUD_STORAGE) rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)"
 
 deploy_wheel:
-	$(GSUTIL) -m cp $(DIST_DIR)/*.whl $(DIST_URL_BASE)
+	$(GCLOUD_STORAGE) cp $(DIST_DIR)/*.whl $(DIST_URL_BASE)
 
 deploy_sdist:
-	$(GSUTIL) -m cp $(DIST_DIR)/*.tar.gz $(DIST_URL_BASE)
+	$(GCLOUD_STORAGE) cp $(DIST_DIR)/*.tar.gz $(DIST_URL_BASE)
 
 deploy_data:
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	$(GCLOUD_STORAGE) rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 
 deploy_userguide:
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	$(GCLOUD_STORAGE) rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 
 deploy_workbench:
-	$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
+	$(GCLOUD_STORAGE) rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 
 changelog:
 	$(RST2HTML5) $(CHANGELOG_SRC) $(CHANGELOG_DEST)
