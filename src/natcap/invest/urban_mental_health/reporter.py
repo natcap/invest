@@ -1,3 +1,4 @@
+import os
 import logging
 import time
 
@@ -124,23 +125,17 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     ndvi_colorramp = 'viridis_r'
 
     input_raster_config_list = []
+    lulc_raster_list = []
+    lulc_caption = []
     if args_dict['lulc_base']:
-        input_raster_config_list.append(
-            RasterPlotConfig(
-                raster_path=args_dict['lulc_base'],
-                datatype=RasterDatatype.nominal,
-                spec=model_spec.get_input('lulc_base')
-            )
-        )
+        lulc_raster_list.append(args_dict['lulc_base'])
+        lulc_caption.append(
+            f"{os.path.basename(args_dict['lulc_base'])}:{model_spec.get_input('lulc_base').about}")
 
     if args_dict['lulc_alt']:
-        input_raster_config_list.append(
-            RasterPlotConfig(
-                raster_path=args_dict['lulc_alt'],
-                datatype=RasterDatatype.nominal,
-                spec=model_spec.get_input('lulc_alt')
-            )
-        )
+        lulc_raster_list.append(args_dict['lulc_alt'])
+        lulc_caption.append(
+            f"{os.path.basename(args_dict['lulc_alt'])}:{model_spec.get_input('lulc_alt').about}")
 
     if args_dict["model_option"] == 'ndvi':
         input_raster_config_list.insert(0,
@@ -160,7 +155,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             )
         )
     else:
-        intermediate_reclass_lulc_list = [
+        intermediate_lulc_to_ndvi_config_list = [
             RasterPlotConfig(
                 raster_path=file_registry['ndvi_base_aligned_masked'],
                 datatype=RasterDatatype.continuous,
@@ -222,10 +217,9 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     }
     if is_continuous:
         common_kwargs["special_values"] = SpecialValueConfig(
-            extend="min",
-            threshold=NEAR_ZERO_RANGE[1],
-            label=str(NEAR_ZERO_RANGE[0]),
-            color='#FEE0B6'  # light orange
+            thresholds=(NEAR_ZERO_RANGE[1], None),
+            labels=("<" + str(NEAR_ZERO_RANGE[1]), None),
+            colors=('#FEE0B6', None)  # light orange
         )
         common_kwargs["colormap"] = 'Purples'
 
@@ -245,11 +239,6 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             )
         )
 
-    inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
-        input_raster_config_list)
-    input_raster_caption = raster_utils.caption_raster_list(
-        input_raster_config_list)
-
     outputs_img_src = raster_utils.plot_and_base64_encode_rasters(
         output_raster_config_list)
     output_raster_caption = raster_utils.caption_raster_list(
@@ -265,15 +254,23 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
     intermediate_delta_ndvi_img_caption = raster_utils.caption_raster_list(
         intermediate_delta_ndvi_list)
 
+    intermediate_lulc_to_ndvi_img_src = None
+    intermediate_lulc_to_ndvi_img_caption = None
     if args_dict["model_option"] == 'lulc':
-        intermediate_reclass_lulc_img_src = raster_utils.plot_and_base64_encode_rasters(
-            intermediate_reclass_lulc_list)
-        intermediate_reclass_lulc_img_caption = raster_utils.caption_raster_list(
-            intermediate_reclass_lulc_list)
-    else:
-        intermediate_reclass_lulc_img_src = None
-        intermediate_reclass_lulc_img_caption = None
+        intermediate_lulc_to_ndvi_img_src = raster_utils.plot_and_base64_encode_rasters(
+            intermediate_lulc_to_ndvi_config_list)
+        intermediate_lulc_to_ndvi_img_caption = raster_utils.caption_raster_list(
+            intermediate_lulc_to_ndvi_config_list)
 
+    lulc_img_src = None
+    lulc_legend_html = None
+    if len(lulc_raster_list):
+        lulc_img_src, lulc_legend_html = \
+            raster_utils.plot_categorical_raster_with_table(lulc_raster_list)
+    inputs_img_src = raster_utils.plot_and_base64_encode_rasters(
+        input_raster_config_list)
+    input_raster_caption = raster_utils.caption_raster_list(
+        input_raster_config_list)
     input_raster_stats_table = raster_utils.raster_inputs_summary(
         args_dict, model_spec).to_html(na_rep='')
 
@@ -343,10 +340,12 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
             intermediate_baseline_img_caption=intermediate_baseline_img_caption,
             intermediate_delta_ndvi_img_src=intermediate_delta_ndvi_img_src,
             intermediate_delta_ndvi_img_caption=intermediate_delta_ndvi_img_caption,
-            intermediate_reclass_lulc_img_src=intermediate_reclass_lulc_img_src,
-            intermediate_reclass_lulc_img_caption=intermediate_reclass_lulc_img_caption,
+            intermediate_reclass_lulc_to_ndvi_img_src=intermediate_lulc_to_ndvi_img_src,
+            intermediate_reclass_lulc_to_ndvi_img_caption=intermediate_lulc_to_ndvi_img_caption,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
+            lulc_caption=lulc_caption,
             raster_group_caption=report_constants.RASTER_GROUP_CAPTION,
-            lulc_pre_caption=report_constants.LULC_PRE_CAPTION,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
             stats_table_note=report_constants.STATS_TABLE_NOTE,

@@ -1,21 +1,13 @@
-import calendar
-import csv
 import logging
 import os
 import time
 
 import altair
 import geopandas
-import numpy
 import pandas
-import pygeoprocessing
-from matplotlib.colors import LinearSegmentedColormap
-from osgeo import gdal
-from osgeo import ogr
 
 from natcap.invest import __version__
 from natcap.invest import gettext, get_locale
-import natcap.invest.spec
 from natcap.invest.reports import jinja_env
 from natcap.invest.reports import raster_utils
 from natcap.invest.reports import report_constants
@@ -23,38 +15,11 @@ from natcap.invest.reports import vector_utils
 from natcap.invest.reports.raster_utils import RasterDatatype
 from natcap.invest.reports.raster_utils import RasterPlotConfig
 from natcap.invest.reports.raster_utils import RasterTransform
-from natcap.invest.unit_registry import u
 
 
 LOGGER = logging.getLogger(__name__)
 
 TEMPLATE = jinja_env.get_template('models/seasonal_water_yield.html')
-
-MAP_WIDTH = 450 # pixels
-
-
-def _create_aggregate_map(geodataframe, xy_ratio, attribute,
-                          title):
-    attr_map = altair.Chart(geodataframe).mark_geoshape(
-        stroke="white",
-        strokeWidth=0.5
-    ).project(
-        type='identity',
-        reflectY=True
-    ).encode(
-        color=altair.Color(
-            attribute,
-            scale=altair.Scale(domainMid=0, scheme="brownbluegreen")
-        ),
-        tooltip=[altair.Tooltip(attribute, title=attribute)]
-    ).properties(
-        width=MAP_WIDTH,
-        height=MAP_WIDTH / xy_ratio,
-        title=title
-    ).configure_legend(**vector_utils.LEGEND_CONFIG)
-
-    return attr_map.to_json()
-
 
 def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     map_df = geopandas.read_file(aoi_vector_path)
@@ -77,8 +42,8 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
         ),
         tooltip=[altair.Tooltip("geom_id", title=gettext("Feature"))]
     ).properties(
-        width=MAP_WIDTH*1.25,
-        height=MAP_WIDTH*1.25 / xy_ratio,
+        width=vector_utils.MAP_WIDTH*1.25,
+        height=vector_utils.MAP_WIDTH*1.25 / xy_ratio,
         title=gettext("AOI")
     ).add_params(
         feat_select
@@ -105,7 +70,7 @@ def _create_linked_monthly_plots(aoi_vector_path, aggregate_csv_path, xy_ratio):
     )
 
     precip_chart = base_chart.mark_line().encode(
-            altair.X("month", sort=[i for i in range(1, 13)]).title(gettext("Month")),
+        altair.X("month", sort=[i for i in range(1, 13)]).title(gettext("Month")),
         altair.Y(
             "sum(precipitation)",
             axis=altair.Axis(orient="right")
@@ -158,19 +123,21 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     aggregated_results = geopandas.read_file(file_registry['aggregate_vector'])
     _, xy_ratio = vector_utils.get_geojson_bbox(aggregated_results)
 
-    qb_map_json = _create_aggregate_map(
-        aggregated_results, xy_ratio, 'qb',
+    qb_map_json = vector_utils.create_aggregate_map(
+        aggregated_results, xy_ratio, 'qb', 'brownbluegreen',
         gettext("Mean local recharge value within the watershed ({units})").format(
-                units=model_spec.get_output('aggregate_vector').get_field('qb').units))
+                units=model_spec.get_output('aggregate_vector').get_field('qb').units),
+        divergent=True)
     qb_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('qb').about,
         gettext('Values are in millimeters, but should be interpreted as '
                 'relative values, not absolute values.')]
 
-    vri_sum_map_json = _create_aggregate_map(
-        aggregated_results, xy_ratio, 'vri_sum',
+    vri_sum_map_json = vector_utils.create_aggregate_map(
+        aggregated_results, xy_ratio, 'vri_sum', 'brownbluegreen',
         gettext("Total recharge contribution of the watershed ({units})").format(
-                units=model_spec.get_output('aggregate_vector').get_field('vri_sum').units))
+                units=model_spec.get_output('aggregate_vector').get_field('vri_sum').units),
+        divergent=True)
     vri_sum_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('vri_sum').about,
         gettext('The sum of ``Vri_[suffix].tif`` pixel values within the watershed.')]
@@ -227,11 +194,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         RasterPlotConfig(
             raster_path=args_dict['dem_raster_path'],
             datatype=RasterDatatype.continuous,
-            spec=model_spec.get_input('dem_raster_path')),
-        RasterPlotConfig(
-            raster_path=args_dict['lulc_raster_path'],
-            datatype=RasterDatatype.nominal,
-            spec=model_spec.get_input('lulc_raster_path'))
+            spec=model_spec.get_input('dem_raster_path'))
     ]
 
     if args_dict['user_defined_local_recharge']:
@@ -350,6 +313,10 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     inputs_raster_caption = raster_utils.caption_raster_list(
             input_raster_config_list)
 
+    lulc_img_src, lulc_legend_html = raster_utils.plot_categorical_raster_with_table(
+        [args_dict['lulc_raster_path']])
+    lulc_caption = f"{os.path.basename(args_dict['lulc_raster_path'])}:{model_spec.get_input('lulc_raster_path').about}"
+
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
             locale=get_locale(),
@@ -375,6 +342,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             input_raster_stats_table=input_raster_stats_table,
             inputs_img_src=inputs_img_src,
             inputs_caption=inputs_raster_caption,
+            lulc_img_src=lulc_img_src,
+            lulc_legend_html=lulc_legend_html,
+            lulc_caption=lulc_caption,
             qf_b_charts=qf_b_charts,
             qb_map_json=qb_map_json,
             qb_map_caption=qb_map_caption,

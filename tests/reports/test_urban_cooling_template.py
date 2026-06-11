@@ -2,32 +2,34 @@ import unittest
 
 from bs4 import BeautifulSoup
 
-from natcap.invest.carbon import MODEL_SPEC
+from natcap.invest.urban_cooling_model import MODEL_SPEC
 from natcap.invest.reports import jinja_env
 
-TEMPLATE = jinja_env.get_template('models/carbon.html')
+TEMPLATE = jinja_env.get_template('models/urban_cooling.html')
 
 BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
-
     locale = 'en'
-    report_filepath = 'carbon_report_test.html'
+    report_filepath = 'urban_cooling_report_test.html'
     invest_version = '987.65.0'
     timestamp = '1970-01-01'
-    args_dict = {'calc_sequestration': True}
+    args_dict = {'suffix': 'test'}
     img_src = 'bAse64eNcoDEdIMagE'
+    mock_json = '{"property": "value"}'
     output_stats_table = '<table class="test__output-stats-table"></table>'
     input_stats_table = '<table class="test__input-stats-table"></table>'
     stats_table_note = 'This is a test!'
     inputs_caption = ['input.tif:Input map.']
     outputs_caption = ['results.tif:Results map.']
-    intermediate_raster_sections = []
     raster_group_caption = 'This is another test!'
-    agg_results_table = '<table class="test__agg-results-table"></table>'
+    uhi_table = '<table class="test__uhi-table"></table>'
+    bldg_table = '<table class="test__bldg-table"></table>'
+    bldg_totals_table = '<table class="test__bldg-table-totals"></table>'
+    vector_caption = [
+        'field_1:Things. (Units: unitless)', 'field_2:Stuff. (Units: kg)']
     lulc_legend_html = '<table class="test__lulc-legend-table"></table>'
-    lulc_caption = ['lulc.tif: LULC map']
 
     return {
         'locale': locale,
@@ -40,15 +42,30 @@ def _get_render_args(model_spec):
         'userguide_page': model_spec.userguide,
         'timestamp': timestamp,
         'args_dict': args_dict,
-        'agg_results_table': agg_results_table,
-        'inputs_img_src': img_src,
-        'inputs_caption': inputs_caption,
-        'lulc_caption': lulc_caption,
+        'uhi_table': uhi_table,
+        'uhi_table_caption': vector_caption,
+        'aoi_map_json': mock_json,
+        'aoi_map_caption': vector_caption,
+        'aoi_map_source_list': ['aoi.shp'],
+        'bldg_table': bldg_table,
+        'bldg_totals_table': bldg_totals_table,
+        'bldg_table_caption': vector_caption,
+        'bldg_map_json': mock_json,
+        'bldg_map_caption': vector_caption,
+        'bldg_map_source_list': ['bldg.shp'],
+        'lulc_raster_heading': 'Land Use/Land Cover Input',
         'lulc_img_src': img_src,
         'lulc_legend_html': lulc_legend_html,
+        'lulc_caption': inputs_caption,
+        'et0_raster_heading': 'Reference Evapotranspiration Input',
+        'et0_img_src': img_src,
+        'et0_caption': inputs_caption,
+        'output_raster_heading': 'Air Temperature',
         'outputs_img_src': img_src,
         'outputs_caption': outputs_caption,
-        'intermediate_raster_sections': intermediate_raster_sections,
+        'biophysical_heading': 'Biophysical Maps',
+        'biophysical_img_src': img_src,
+        'biophysical_raster_caption': outputs_caption,
         'raster_group_caption': raster_group_caption,
         'output_raster_stats_table': output_stats_table,
         'input_raster_stats_table': input_stats_table,
@@ -57,50 +74,35 @@ def _get_render_args(model_spec):
     }
 
 
-def _mock_intermediate_output_sections(num_sections):
-    return [
-        {
-            'heading': f'Intermediate Outputs {i + 1}',
-            'img_src': 'bAse64eNcoDEdIMagE',
-            'caption': ['map1.tif:Map of baseline-scenario carbon values.',
-                        'map2.tif:Map of alternate-scenario carbon values.'],
-        } for i in range(num_sections)
-    ]
+class UrbanCoolingTemplateTests(unittest.TestCase):
+    """Unit tests for Urban Cooling template."""
 
-
-class CarbonTemplateTests(unittest.TestCase):
-    """Unit tests for Carbon template."""
-
-    def test_render_without_alt_scenario(self):
-        """Test report rendering without alternate scenario."""
+    def test_render_without_valuation(self):
+        """Test report rendering without valuation."""
 
         render_args = _get_render_args(MODEL_SPEC)
-        render_args['intermediate_raster_sections'] = (
-            _mock_intermediate_output_sections(1))
+        render_args['bldg_table'] = None
 
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
-        # 7 default sections plus 1 section for intermediate outputs.
-        self.assertEqual(len(sections), 8)
+        self.assertEqual(len(sections), 10)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')
 
-    def test_render_with_alt_scenario(self):
-        """Test report rendering with alternate scenario."""
+    def test_render_with_valuation(self):
+        """Test report rendering with energy savings valuation."""
 
         render_args = _get_render_args(MODEL_SPEC)
-        render_args['intermediate_raster_sections'] = (
-            _mock_intermediate_output_sections(4))
 
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)
 
         sections = soup.find_all(class_='accordion-section')
-        # 7 default sections plus 4 sections for intermediate outputs.
-        self.assertEqual(len(sections), 11)
+        # 10 default sections plus 2 for building stats.
+        self.assertEqual(len(sections), 12)
 
         self.assertEqual(
             soup.h1.string, f'InVEST Results: {MODEL_SPEC.model_title}')

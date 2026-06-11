@@ -57,7 +57,7 @@ describe('Run status Alert renders with status from a recent run', () => {
     args: {
       workspace: {
         name: 'Workspace',
-        type: 'directory',
+        type: 'workspace',
         about: 'this is a workspace',
       },
     },
@@ -217,7 +217,7 @@ describe('Sidebar Buttons', () => {
     args: {
       workspace: {
         name: 'Workspace',
-        type: 'directory',
+        type: 'workspace',
         about: 'this is a workspace',
       },
       port: {

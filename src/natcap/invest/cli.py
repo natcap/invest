@@ -304,6 +304,10 @@ def main(user_args=None):
             help=('The workspace in which outputs will be saved. '
                   'Required if using --headless'))
         run_subparser.add_argument(
+            '--no-report', action='store_false', dest='generate_report',
+            help=('Skip generating the report at the end of the model run. Only '
+                  'affects models for which a reporter is defined.'))
+        run_subparser.add_argument(
             'model', action=SelectModelAction,  # Assert valid model name
             help=('The model to run.  Use "invest list" to list the available '
                   'models.'))
@@ -485,7 +489,7 @@ def main(user_args=None):
                 generate_metadata=True,
                 save_file_registry=True,
                 check_outputs=False,
-                generate_report=generate_report)
+                generate_report=generate_report and args.generate_report)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)

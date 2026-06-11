@@ -148,6 +148,7 @@ function parseArgType(argtype) {
       break;
     case 'boolean':
     case 'option_string':
+    case 'workspace':
       userFriendlyArgType = '';
       break;
     default:
@@ -232,7 +233,7 @@ export default function ArgInput(props) {
   }
 
   let fileSelector = <React.Fragment />;
-  if (['csv', 'vector', 'raster', 'directory', 'file'].includes(argSpec.type)) {
+  if (['csv', 'vector', 'raster', 'file', 'workspace'].includes(argSpec.type)) {
     fileSelector = (
       <Button
         aria-label={`browse for ${argSpec.name}`}

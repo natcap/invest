@@ -28,11 +28,11 @@
       {% for paragraph in text %}
         <p>{{ paragraph }}</p>
       {% endfor %}
-      {% if source_list %}
-        <p class="sources">
-          {% trans %}Sources:{% endtrans %} {{ source_list | join('; ') }}
-        </p>
-      {% endif %}
+    {% endif %}
+    {% if source_list %}
+      <p class="sources">
+        {% trans %}Sources:{% endtrans %} {{ source_list | join('; ') }}
+      </p>
     {% endif %}
   </div>
 {%- endmacro %}
