@@ -135,8 +135,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     vri_sum_map_json = vector_utils.create_aggregate_map(
         aggregated_results, xy_ratio, 'vri_sum', 'brownbluegreen',
-        gettext("Total recharge contribution of the watershed "
-                f"({model_spec.get_output('aggregate_vector').get_field('vri_sum').units})"),
+        gettext("Total recharge contribution of the watershed ({units})").format(
+                units=model_spec.get_output('aggregate_vector').get_field('vri_sum').units),
         divergent=True)
     vri_sum_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('vri_sum').about,
