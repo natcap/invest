@@ -17,7 +17,12 @@
   {% from 'wide-table.html' import wide_table %}
 
   <h2 class="section-header">
-    {% trans %}Results{% endtrans %} <span style="font-weight: normal;">{% trans %}(Search Radius Mode: {{ args_dict['search_radius_mode'] }}{% endtrans %})</span>
+    {% trans %}Results{% endtrans %}
+    <span style="font-weight: normal;">
+      {% trans mode=args_dict['search_radius_mode'] %}
+      (Search Radius Mode: {{ mode }})
+      {% endtrans %}
+    </span>
   </h2>
 
 
