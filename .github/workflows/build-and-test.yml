@@ -301,7 +301,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15-intel, windows-latest]
+        os: [windows-latest, macos-15-intel]
         include:
           - os: macos-15-intel
             puppeteer-log: ~/Library/Logs/invest-workbench/
