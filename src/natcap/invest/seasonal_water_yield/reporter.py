@@ -125,8 +125,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     qb_map_json = vector_utils.create_aggregate_map(
         aggregated_results, xy_ratio, 'qb', 'brownbluegreen',
-        gettext("Mean local recharge value within the watershed "
-                f"({model_spec.get_output('aggregate_vector').get_field('qb').units})"),
+        gettext("Mean local recharge value within the watershed ({units})").format(
+                units=model_spec.get_output('aggregate_vector').get_field('qb').units),
         divergent=True)
     qb_map_caption = [
         model_spec.get_output('aggregate_vector').get_field('qb').about,
