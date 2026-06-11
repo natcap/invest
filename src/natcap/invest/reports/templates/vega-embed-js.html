@@ -12,7 +12,7 @@
       `);
       throw error;
     }
-    let el = document.getElementById(elId);
+    const el = document.getElementById(elId);
     vegaEmbed(`#${elId}`, chart_spec, {
       // https://vega.github.io/vega-embed/#options
       mode: 'vega-lite',
@@ -25,6 +25,11 @@
         source: false,
       },
       downloadFileName: `InVEST-${elId}`,
+      i18n: {
+        EDITOR_ACTION: "{{ gettext('Open in Vega Editor') }}",
+        PNG_ACTION: "{{ gettext('Save as PNG') }}",
+        SVG_ACTION: "{{ gettext('Save as SVG') }}",
+      },
     })
     .then(function (_result) {
       if (el.classList.contains('loading')) {

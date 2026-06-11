@@ -5,7 +5,7 @@ import time
 import pandas
 
 from natcap.invest import __version__
-from natcap.invest import gettext
+from natcap.invest import gettext, get_locale
 from natcap.invest.reports import jinja_env, raster_utils, report_constants
 from natcap.invest.reports.raster_utils import RasterDatatype, RasterPlotConfig
 from natcap.invest.spec import ModelSpec
@@ -149,6 +149,7 @@ def report(file_registry: dict, args_dict: dict, model_spec: ModelSpec,
 
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
+            locale=get_locale(),
             report_script=model_spec.reporter,
             invest_version=__version__,
             report_filepath=target_html_filepath,

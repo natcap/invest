@@ -40,7 +40,7 @@ describe('InVEST subprocess testing', () => {
     args: {
       workspace_dir: {
         name: 'Workspace',
-        type: 'directory',
+        type: 'workspace',
       },
       results_suffix: {
         name: 'Suffix',

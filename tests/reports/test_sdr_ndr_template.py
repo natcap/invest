@@ -10,6 +10,7 @@ BSOUP_HTML_PARSER = 'html.parser'
 
 
 def _get_render_args(model_spec):
+    locale = 'en'
     report_filepath = 'sdr_ndr_report_test.html'
     invest_version = '987.65.0'
     timestamp = '1970-01-01'
@@ -29,6 +30,7 @@ def _get_render_args(model_spec):
     lulc_caption = ['lulc.tif: LULC map']
 
     return {
+        'locale': locale,
         'report_script': model_spec.reporter,
         'invest_version': invest_version,
         'report_filepath': report_filepath,

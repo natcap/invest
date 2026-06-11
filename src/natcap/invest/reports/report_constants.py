@@ -1,5 +1,6 @@
 from natcap.invest import gettext
 
+
 STATS_TABLE_NOTE = gettext(
     '"Valid percent" indicates the percent of pixels that are not '
     'nodata. Comparing "valid percent" values across rasters may help '
