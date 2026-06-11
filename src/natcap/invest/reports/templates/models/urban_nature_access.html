@@ -17,15 +17,20 @@
   {% from 'wide-table.html' import wide_table %}
 
   <h2 class="section-header">
-    Results <span style="font-weight: normal;">(Search Radius Mode: {{ args_dict['search_radius_mode'] }})</span>
+    {% trans %}Results{% endtrans %}
+    <span style="font-weight: normal;">
+      {% trans mode=args_dict['search_radius_mode'] %}
+      (Search Radius Mode: {{ mode }})
+      {% endtrans %}
+    </span>
   </h2>
 
 
   {{ accordion_section(
-    'Primary Outputs',
+    gettext('Primary Outputs'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (raster_plot_img(outputs_img_src, gettext('Primary Outputs')), 100),
       (caption(outputs_caption, definition_list=True), 100)
     ])
   )}}
@@ -33,7 +38,7 @@
 
 
   {{ accordion_section(
-    'Aggregated Vector Outputs',
+    gettext('Aggregated Vector Outputs'),
     content_grid([
       ('<div id="Admin_Units_Plots"></div>', 100),
       (caption(vector_plot_captions, admin_boundaries_map_source_list, definition_list=True), 100)
@@ -41,45 +46,45 @@
   ) }}
 
   {{ accordion_section(
-    'Urban Nature Accessibility Outputs',
+    gettext('Urban Nature Accessibility Outputs'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(output_accessible_img_src, 'Urban Nature Accessibility Outputs'), 100),
+      (raster_plot_img(output_accessible_img_src, gettext('Urban Nature Accessibility Outputs')), 100),
       (caption(output_accessible_raster_caption, definition_list=True), 100)
     ])
   )}}
 
   {% if args_dict['search_radius_mode'] == 'radius per population group' %}
     {{ accordion_section(
-      'Urban Nature Balance Outputs',
+      gettext('Urban Nature Balance Outputs'),
       content_grid([
         (caption(raster_group_caption, pre_caption=True), 100),
-        (raster_plot_img(output_balance_img_src, 'Accessible Urban Nature Outputs'), 100),
+        (raster_plot_img(output_balance_img_src, gettext('Urban Nature Balance Outputs')), 100),
         (caption(output_balance_raster_caption, definition_list=True), 100)
       ])
     )}}
 
     {{ accordion_section(
-      'Urban Nature Balance Percapita Outputs',
+      gettext('Urban Nature Balance Percapita Outputs'),
       content_grid([
         (caption(raster_group_caption, pre_caption=True), 100),
-        (raster_plot_img(output_balance_percapita_img_src, 'Accessible Urban Nature Outputs'), 100),
+        (raster_plot_img(output_balance_percapita_img_src, gettext('Urban Nature Balance Percapita Outputs')), 100),
         (caption(output_balance_percapita_raster_caption, definition_list=True), 100)
       ])
     )}}
 
     {{ accordion_section(
-      'Select Intermediate Outputs',
+      gettext('Select Intermediate Outputs'),
       content_grid([
         (caption(raster_group_caption, pre_caption=True), 100),
-        (raster_plot_img(intermediates_img_src, 'Select Intermediate Outputs'), 100),
+        (raster_plot_img(intermediates_img_src, gettext('Select Intermediate Outputs')), 100),
         (caption(intermediates_caption, definition_list=True), 100)
       ])
     )}}
   {% endif %}
 
   {{ accordion_section(
-    'Output Raster Stats',
+    gettext('Output Raster Stats'),
     content_grid([
       (stats_table_note, 100),
       (wide_table(
@@ -89,36 +94,36 @@
     ])
   )}}
 
-  <h2 class="section-header">Inputs</h2>
+  <h2 class="section-header">{% trans %}Inputs{% endtrans %}</h2>
 
   {% if args_dict != None %}
     {{ accordion_section(
-      'Arguments',
+      gettext('Arguments'),
       args_table(args_dict)
     )}}
   {% endif %}
 
   {{ accordion_section(
-    'Land Use/Land Cover Input',
+    gettext('Land Use/Land Cover Input'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(lulc_img_src, 'LULC Input'), 60),
+      (raster_plot_img(lulc_img_src, gettext('LULC Input')), 60),
       (wide_table(lulc_legend_html | safe), 40),
       (caption(lulc_caption, definition_list=True), 100),
     ])
   )}}
 
   {{ accordion_section(
-    'Population Input',
+    gettext('Population Input'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (raster_plot_img(inputs_img_src, gettext('Population Input')), 100),
       (caption(inputs_caption, definition_list=True), 100)
     ])
   )}}
 
   {{ accordion_section(
-    'Input Raster Stats',
+    gettext('Input Raster Stats'),
     content_grid([
       (stats_table_note, 100),
       (wide_table(
@@ -128,11 +133,11 @@
     ])
   )}}
 
-  <h2 class="section-header">Metadata</h2>
+  <h2 class="section-header">{% trans %}Metadata{% endtrans %}</h2>
 
   {{
     accordion_section(
-      'Output Filenames and Descriptions',
+      gettext('Output Filenames and Descriptions'),
       list_metadata(model_spec_outputs),
       expanded=False
     )
