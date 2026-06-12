@@ -301,7 +301,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15-intel, windows-latest]
+        os: [windows-latest, macos-15-intel]
         include:
           - os: macos-15-intel
             puppeteer-log: ~/Library/Logs/invest-workbench/
@@ -489,7 +489,7 @@ jobs:
         # dependencies of setup.py, needed to get the version string
         run: pip install babel cython numpy setuptools setuptools_scm wheel
 
-      - run: make sampledata
+      - run: make sampledata sampledata_single
 
       - name: Upload sample data artifact
         uses: actions/upload-artifact@v4
