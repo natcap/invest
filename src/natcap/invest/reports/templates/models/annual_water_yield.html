@@ -14,15 +14,16 @@
   {% from 'raster-plot-img.html' import raster_plot_img %}
   {% from 'wide-table.html' import wide_table %}
 
-  <h2 class="section-header">Results</h2>
+  <h2 class="section-header">{% trans %}Results{% endtrans %}</h2>
   {{ accordion_section(
-    'Water Yield',
+    gettext('Water Yield'),
     content_grid([
       (content_grid([
         (caption(raster_group_caption, pre_caption=True), 100),
-        (raster_plot_img(wyield_img_src, 'Estimated water yield'), 100),
+        (raster_plot_img(wyield_img_src,
+                         gettext('Estimated water yield')), 100),
         (raster_plot_img(precip_aet_img_src,
-                         'Precipitation and Actual Evapotranspiration'), 100),
+                         gettext('Precipitation and Actual Evapotranspiration')), 100),
         (caption(wyield_raster_caption, definition_list=True), 100),
       ]), 100),
     ])
@@ -58,13 +59,13 @@
   {% endif %}
 
   {{ accordion_section(
-    'Results Aggregated by Watershed',
+    gettext('Results Aggregated by Watershed'),
     content_grid(watershed_results_inner)
   ) }}
 
   {% if subwatershed_results %}
     {{ accordion_section(
-      'Results Aggregated by Subwatershed',
+      gettext('Results Aggregated by Subwatershed'),
       content_grid([
         (content_grid([
           (wide_table(subwatershed_results['table'] | safe, font_size_px=16), 100),
@@ -82,7 +83,7 @@
   {% endif %}
 
   {{ accordion_section(
-    'Output Raster Stats',
+    gettext('Output Raster Stats'),
     content_grid([
       (stats_table_note, 100),
       (wide_table(
@@ -92,33 +93,33 @@
     ])
   )}}
 
-  <h2 class="section-header">Inputs</h2>
+  <h2 class="section-header">{% trans %}Inputs{% endtrans %}</h2>
   {{ accordion_section(
-    'Arguments',
+    gettext('Arguments'),
     args_table(args_dict),
   )}}
 
   {{ accordion_section(
-    'Land Use/Land Cover Input',
+    gettext('Land Use/Land Cover Input'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(lulc_img_src, 'LULC Input'), 60),
+      (raster_plot_img(lulc_img_src, gettext('LULC Input')), 60),
       (wide_table(lulc_legend_html | safe), 40),
       (caption(lulc_caption, definition_list=True), 100),
     ])
   )}}
 
   {{ accordion_section(
-    'Other Raster Inputs',
+    gettext('Other Raster Inputs'),
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (raster_plot_img(inputs_img_src, gettext('Raster Inputs')), 100),
       (caption(inputs_caption, definition_list=True), 100)
     ])
   ) }}
 
   {{ accordion_section(
-    'Input Raster Stats',
+    gettext('Input Raster Stats'),
     content_grid([
       (stats_table_note, 100),
       (wide_table(
@@ -128,10 +129,10 @@
     ])
   )}}
 
-  <h2 class="section-header">Metadata</h2>
+  <h2 class="section-header">{% trans %}Metadata{% endtrans %}</h2>
   {{
     accordion_section(
-      'Output Filenames and Descriptions',
+      gettext('Output Filenames and Descriptions'),
       list_metadata(model_spec_outputs),
       expanded=False
     )
