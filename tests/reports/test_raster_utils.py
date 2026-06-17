@@ -93,6 +93,8 @@ def add_raster_attribute_table(target_filepath, value_name='value',
 
 
 def compare_snapshots(reference, actual):
+    # with open('mpl_rcParams_310.txt', 'w') as file:
+    #     file.write(str(matplotlib.rcParams))
     ref, ext = os.path.splitext(reference)
     new_reference = f'{ref}_fail{ext}'
     try:
