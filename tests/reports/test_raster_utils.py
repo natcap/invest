@@ -27,7 +27,7 @@ projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
-REFS_DIR = os.path.join('data', 'invest-test-data', 'reports', 'snapshots')
+REFS_DIR = os.path.join('../../data', 'invest-test-data', 'reports', 'snapshots')
 
 
 def setUpModule():
@@ -477,6 +477,27 @@ class RasterSpecialValueConfigTests(unittest.TestCase):
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_special_values_adds_threshold_ticks(self):
+        """Test plot_raster_list adds special values as colorbar ticks."""
+        thresholds = (-.8, .9)
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.continuous,
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=thresholds,
+                labels=('low', 'high'),
+                colors=('red', 'blue')))
+        make_simple_raster(raster_config.raster_path, shape)
+
+        fig = raster_utils.plot_raster_list([raster_config])
+        colorbar_ax = fig.axes[1]
+        ticks = list(colorbar_ax.get_yticks())
+
+        self.assertIn(thresholds[0], ticks)
+        self.assertIn(thresholds[1], ticks)
 
 
 class RasterPlotLegendTests(unittest.TestCase):
