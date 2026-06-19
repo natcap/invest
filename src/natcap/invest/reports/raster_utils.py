@@ -419,14 +419,14 @@ def _configure_special_values(
     text_specs = []
 
     if lower_threshold is not None:
-        cmap.set_under(lower_color)
+        cmap = cmap.with_extremes(under=lower_color)
         extend = 'min'
         thresholds.append(lower_threshold)
         labels.append(lower_label)
         text_specs.append((0, -0.05, 'top'))
 
     if upper_threshold is not None:
-        cmap.set_over(upper_color)
+        cmap = cmap.with_extremes(over=upper_color)
         extend = 'max' if extend == 'neither' else 'both'
         thresholds.append(upper_threshold)
         labels.append(upper_label)
