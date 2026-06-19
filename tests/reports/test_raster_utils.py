@@ -27,7 +27,7 @@ projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
-REFS_DIR = os.path.join('../../data', 'invest-test-data', 'reports', 'snapshots')
+REFS_DIR = os.path.join('data', 'invest-test-data', 'reports', 'snapshots')
 
 
 def setUpModule():
