@@ -34,5 +34,5 @@ altair>=6.0.0
 fiona
 geopandas
 jinja2
-matplotlib>=3.11.0
+matplotlib
 distinctipy

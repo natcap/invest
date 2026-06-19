@@ -28,6 +28,7 @@ projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
 REFS_DIR = os.path.join('data', 'invest-test-data', 'reports', 'snapshots')
+MPL_VERSION = tuple(int(_) for _ in matplotlib.__version__.split('.'))
 
 
 def setUpModule():
@@ -93,8 +94,6 @@ def add_raster_attribute_table(target_filepath, value_name='value',
 
 
 def compare_snapshots(reference, actual):
-    # with open('mpl_rcParams_310.txt', 'w') as file:
-    #     file.write(str(matplotlib.rcParams))
     ref, ext = os.path.splitext(reference)
     new_reference = f'{ref}_fail{ext}'
     try:
@@ -119,6 +118,8 @@ def compare_snapshots(reference, actual):
     raise AssertionError(comparison, f'actual image saved to {new_reference}')
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotLayoutTests(unittest.TestCase):
     """Snapshot tests for matplotlib figure layouts."""
 
@@ -233,6 +234,8 @@ class RasterPlotLayoutTests(unittest.TestCase):
             self.assertEqual((bottom, top), expected_ylim)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
     """Snapshot tests for datatype and transform options."""
 
@@ -327,43 +330,9 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
-    def test_special_value_config(self):
-        """Should pass when only index 0 (lower bound) is fully populated."""
-        config = SpecialValueConfig(
-            thresholds=(0.0, 100.0),
-            labels=("Low", "High"),
-            colors=("blue", "red")
-        )
-        self.assertEqual(config.thresholds, (0.0, 100.0))
 
-        config = SpecialValueConfig(
-            thresholds=(0.0, None),
-            labels=("Low", None),
-            colors=("blue", None)
-        )
-        self.assertEqual(config.colors, ("blue", None))
-
-        with self.assertRaises(ValidationError) as context:
-            SpecialValueConfig(
-                thresholds=(0.0, None),
-                labels=(None, None),  # missing lower label
-                colors=("blue", None)
-            )
-        self.assertTrue(
-            "If index 0 is `None` in any of the special config tuples" in
-            str(context.exception))
-
-        with self.assertRaises(ValidationError) as context:
-            SpecialValueConfig(
-                thresholds=(0.0, None),  # missing upper threshold
-                labels=("Low", "High"),
-                colors=("blue", None)  # missing upper color
-            )
-        self.assertTrue(
-            "If index 1 is `None` in any of the special config tuples" in
-            str(context.exception))
-
-
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotLegendTests(unittest.TestCase):
     """Snapshot tests for legend placement on nominal rasters."""
 
@@ -425,6 +394,8 @@ class RasterPlotLegendTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotFacetsTests(unittest.TestCase):
     """Snapshot tests for plotting multiple rasters on the same colorscale."""
 
@@ -513,6 +484,8 @@ class RasterPlotFacetsTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotTitleTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with various titles."""
 
@@ -584,6 +557,8 @@ class RasterPlotTitleTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotUnitTextTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with unit text."""
 
@@ -628,6 +603,46 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
+
+
+class SpecialConfigValueUnitTests(unittest.TestCase):
+    """Unit tests for SpecialConfigValue constructions."""
+
+    def test_special_value_config(self):
+        """Should pass when only index 0 (lower bound) is fully populated."""
+        config = SpecialValueConfig(
+            thresholds=(0.0, 100.0),
+            labels=("Low", "High"),
+            colors=("blue", "red")
+        )
+        self.assertEqual(config.thresholds, (0.0, 100.0))
+
+        config = SpecialValueConfig(
+            thresholds=(0.0, None),
+            labels=("Low", None),
+            colors=("blue", None)
+        )
+        self.assertEqual(config.colors, ("blue", None))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),
+                labels=(None, None),  # missing lower label
+                colors=("blue", None)
+            )
+        self.assertTrue(
+            "If index 0 is `None` in any of the special config tuples" in
+            str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),  # missing upper threshold
+                labels=("Low", "High"),
+                colors=("blue", None)  # missing upper color
+            )
+        self.assertTrue(
+            "If index 1 is `None` in any of the special config tuples" in
+            str(context.exception))
 
 
 class RasterCaptionTests(unittest.TestCase):
