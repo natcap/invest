@@ -23,7 +23,7 @@ from natcap.invest.unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 MISSING_CONVERT_OPTION_MSG = gettext(
-    'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
+    'One or more of "convert nearest to edge" or "convert farthest from edge" '
     'must be selected')
 
 MODEL_SPEC = spec.ModelSpec(
@@ -71,7 +71,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("focal landcover codes"),
             about=(
                 "A space-separated list of LULC codes that are used to determine the"
-                " proximity when referring to 'towards' or 'away' from the base landcover"
+                " proximity when referring to 'towards' or 'away from' the base landcover"
                 " codes"
             ),
             regexp="[0-9 ]+"

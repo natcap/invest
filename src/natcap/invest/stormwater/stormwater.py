@@ -144,8 +144,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "If true, adjust retention ratios. The adjustment algorithm accounts for"
                 " drainage effects of nearby impervious surfaces which are directly"
                 " connected to artifical urban drainage channels (typically roads,"
-                " parking lots, etc.) Connected impervious surfaces are indicated by the"
-                " is_connected columnin the biophysical table and/or the road centerlines"
+                " parking lots, etc.). Connected impervious surfaces are indicated by the"
+                " is_connected column in the biophysical table and/or the road centerlines"
                 " vector."
             )
         ),
