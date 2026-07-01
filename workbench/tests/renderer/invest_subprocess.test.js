@@ -178,7 +178,7 @@ describe('InVEST subprocess testing', () => {
     await waitFor(() => expect(execute).toBeEnabled());
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: 'InVEST' }));
+    await userEvent.click(getByRole('button', { name: /^InVEST/ }));
     const homeTab = getByRole('tabpanel', { name: 'home tab' });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
@@ -236,7 +236,7 @@ describe('InVEST subprocess testing', () => {
     expect(queryByText('View Results')).toBeNull(); // did not write report
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: 'InVEST' }));
+    await userEvent.click(getByRole('button', { name: /^InVEST/ }));
     const homeTab = getByRole('tabpanel', { name: 'home tab' });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
@@ -291,7 +291,7 @@ describe('InVEST subprocess testing', () => {
       .toHaveTextContent('Run Canceled');
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: 'InVEST' }));
+    await userEvent.click(getByRole('button', { name: /^InVEST/ }));
     const homeTab = getByRole('tabpanel', { name: 'home tab' });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
