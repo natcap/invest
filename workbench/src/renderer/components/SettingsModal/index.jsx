@@ -117,7 +117,6 @@ class SettingsModal extends React.Component {
             <Button
               variant="secondary-outline"
               onClick={close}
-              className="float-end"
               aria-label="close modal"
             >
               <MdClose />

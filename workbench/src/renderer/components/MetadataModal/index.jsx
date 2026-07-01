@@ -144,7 +144,6 @@ export default function MetadataModal(props) {
         <Button
           variant="secondary-outline"
           onClick={props.close}
-          className="float-end"
           aria-label="Close modal"
         >
           <MdClose />
@@ -153,7 +152,7 @@ export default function MetadataModal(props) {
       <Modal.Body>
         <AboutMetadataDiv />
         <hr />
-        <Form onSubmit={handleSubmit} onChange={handleChange}>
+        <Form onSubmit={handleSubmit} onChange={handleChange} className="metadata-form">
           <fieldset>
             <legend>{t('Contact Information')}</legend>
             <Form.Group controlId="name">
@@ -178,25 +177,22 @@ export default function MetadataModal(props) {
               {FormRow('URL', licenseURL, setLicenseURL)}
             </Form.Group>
           </fieldset>
-          <Row>
-            <Button
-              type="submit"
-              variant="primary"
-              className="my-1 py2 mx-2"
-            >
-              {t('Save Metadata')}
-            </Button>
-            {
-              (alertMsg) && (
-                <Alert
-                  className="my-1 py-2"
-                  variant={alertError ? 'danger' : 'success'}
-                >
-                  {alertMsg}
-                </Alert>
-              )
-            }
-          </Row>
+          <Button
+            type="submit"
+            variant="primary"
+          >
+            {t('Save Metadata')}
+          </Button>
+          {
+            (alertMsg) && (
+              <Alert
+                className="my-1 py-2"
+                variant={alertError ? 'danger' : 'success'}
+              >
+                {alertMsg}
+              </Alert>
+            )
+          }
         </Form>
       </Modal.Body>
     </Modal>

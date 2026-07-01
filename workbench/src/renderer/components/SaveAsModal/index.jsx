@@ -112,7 +112,6 @@ class SaveAsModal extends React.Component {
             <Button
               variant="secondary-outline"
               onClick={this.handleClose}
-              className="float-end"
               aria-label="close save-as dialog"
             >
               <MdClose />

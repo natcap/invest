@@ -1,6 +1,7 @@
 :root {
   font-size: 16px;
   --invest-green: #148F68;
+  --invest-green-opacity-50: #148F6880; /* Equivalent to InVEST Green with 50% opacity (for Bootstrap-style focus indicators) */
   --digital-green: #008566; /* From Stanford brand guidelines. Better contrast for text than invest-green. */
   --digital-red: #B1040E; /* From Stanford brand guidelines. */
   --secondary-gray: #585858;
@@ -8,7 +9,7 @@
   --bootstrap-gray-100: #f8f9fa;
   --bootstrap-gray-300: #dee2e6;
   --lagunita-light: #009AB4; /* From Stanford brand guidelines. Suitable for non-text elements only. */
-  --lagunita-light-opacity-50: rgba(0, 154, 180, 0.5); /* Equivalent to Lagunita Light with 50% opacity (for focus indicators). */
+  --lagunita-light-opacity-50: #009AB480; /* Equivalent to Lagunita Light with 50% opacity (for Bootstrap-style focus indicators). */
 }
 
 /*
@@ -53,12 +54,12 @@ button {
 .btn-outline-info {
   color: var(--lagunita-light);
   border-color: var(--lagunita-light);
-  &:hover {
+  &:hover, &:focus {
     color: ghostwhite;
     background: var(--lagunita-light);
     border-color: var(--lagunita-light);
   }
-  &:focus {
+  &:focus, &:focus-visible {
     box-shadow: 0 0 0 .25rem var(--lagunita-light-opacity-50);
   }
 }
@@ -72,8 +73,25 @@ button {
   height: var(--header-height);
 }
 
-.navbar .row {
-  align-items: end;
+.navbar {
+  /* For top nav buttons & tabs, override Bootstrap-style box-shadow on focus. */
+  .navbar-brand .nav-link,
+  .nav-item [role="tab"] {
+    &:focus-visible {
+      box-shadow: none;
+    }
+  }
+  .navbar-brand .nav-link,
+  .app-menu-button {
+    &:focus, &:focus-visible {
+      outline: revert;
+      outline-color: var(--invest-green);
+    }
+  }
+  .nav-item [role="tab"]:focus-visible {
+    color: #000;
+    font-weight: 600;
+  }
 }
 
 .navbar-brand {
@@ -85,6 +103,7 @@ button {
   align-self: flex-end;
   flex-shrink: 1;
   min-width: 0;
+  margin-left: 0.25rem;
   padding: 0;
 }
 
@@ -92,7 +111,7 @@ button {
   display: flex;
   max-width: fit-content;
   margin-left: 0.5rem;
-  padding: 0;
+  padding: 0 0.5rem 0 0;
 }
 
 .navbar-brand .nav-link {
@@ -155,6 +174,9 @@ button {
   border: 3px solid var(--invest-green);
   border-bottom: 0;
   background-color: ghostwhite;
+  .nav-link {
+    color: #000;
+  }
 }
 
 [role="tab"] {
@@ -189,8 +211,9 @@ button {
 }
 
 .progress {
-  display: inline-flex;
+  align-self: center;
   height: 2rem;
+  margin-right: 0.5rem;
   font-size: 1rem;
   background-color: #aeb1b3;
 }
@@ -213,7 +236,6 @@ button {
   background-color: transparent;
   border: none;
   font-size: 2rem;
-  margin-right: 2px;
   display: flex;
   align-items: center;
   padding-left: 0.75rem;
@@ -460,10 +482,11 @@ exceed 100% of window.*/
 }
 
 .invest-sidebar-col .nav-link {
+  --outline-width: 0.125rem;
   color: #000;
-  border-left-width: 8px;
-  border-left-style: solid;
-  border-left-color: transparent;
+  border-width: 0 var(--outline-width) 0 0.5rem;
+  border-style: solid;
+  border-color: transparent;
   border-radius: 0;
   font-size: 1.3125rem;
   font-weight: 550;
@@ -471,20 +494,26 @@ exceed 100% of window.*/
   justify-content: space-between;
   align-items: center;
   padding-right: 0;
-}
-
-.invest-sidebar-col .nav-link svg {
-  font-size: 2rem;
-}
-
-.invest-sidebar-col .nav-link.disabled {
-  color: #888888;
-}
-
-.invest-sidebar-col .nav-link.active {
-  color: #000;
-  background-color: ghostwhite;
-  border-left-color: var(--invest-green);
+  &.active {
+    color: #000;
+    background-color: ghostwhite;
+    border-left-color: var(--invest-green);
+  }
+  &.disabled {
+    color: var(--bootstrap-secondary-gray);
+  }
+  &:focus, &:focus-visible {
+    box-shadow: none;
+    outline: var(--outline-width) auto var(--invest-green);
+    margin-right: var(--outline-width);
+    svg {
+      margin: 0;
+    }
+  }
+  svg {
+    font-size: 2rem;
+    margin-right: 2px;
+  }
 }
 
 .sidebar-row {
@@ -560,7 +589,7 @@ exceed 100% of window.*/
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 0.5rem;
+  padding: 0 1.5rem;
 }
 
 /* InVEST Argument Forms */
@@ -590,10 +619,6 @@ exceed 100% of window.*/
 
 .args-form .form-control:disabled {
   color: #888888;
-}
-
-.args-form .form-group {
-  align-items: flex-start;
 }
 
 .argname {
@@ -666,16 +691,13 @@ input[type=text]::placeholder {
 
 /* InVEST Log Tab */
 #log-display {
+  height: var(--content-height);
   overflow: auto;
   white-space: pre-wrap;
-  height: var(--content-height);
-}
-
-#log-display {
   font-family: monospace;
-  font-size:1rem;
+  font-size: 1rem;
   color: #000;
-  padding-right: 0;
+  padding: 0 1rem;
 }
 
 #log-display .invest-log-primary {
@@ -700,6 +722,15 @@ input[type=text]::placeholder {
 .download-data-modal .modal-body {
   height: 80vh;
   overflow-y: auto;
+}
+
+/* Modals: common styles regardless of content */
+.modal-header {
+  justify-content: space-between;
+  button:focus {
+    outline: revert;
+    outline-color: var(--invest-green);
+  }
 }
 
 /* Settings Modal */
@@ -727,32 +758,11 @@ input[type=text]::placeholder {
   }
 }
 
-#metadata-form {
-  /*This div toggles between a form and some help text.
-  position and static height ensure no resizing to content.*/
-  position: relative;
-  height: 460px;
-  background-color: ghostwhite;
-  border: dotted;
-  border-width: thin;
-  padding: 0.5rem;
-}
-
-/* This button should also not move as content is toggled*/
-#metadata-form .info-toggle {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-}
-
-#metadata-form legend {
-  font-size: 1.1rem;
-  text-decoration-line: underline;
-}
-
-#metadata-form .form-group {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+/* Metadata modal */
+.metadata-form {
+  .row, button {
+    margin-top: 1rem;
+  }
 }
 
 /* Save As modal */
@@ -824,6 +834,12 @@ input[type=text]::placeholder {
 /* Manage Plugins modal */
 .plugin-modal {
   width: 34rem;
+  form {
+    & > div,
+    & > button {
+      margin-top: 1rem;
+    }
+  }
 }
 
 .plugin-spinner {
@@ -866,6 +882,7 @@ input[type=text]::placeholder {
 }
 
 .plugin-form-text {
+  display: block;
   font-size: 0.875rem;
 }
 

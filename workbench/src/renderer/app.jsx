@@ -349,14 +349,13 @@ export default function App(props) {
             </Col>
             <Col className="text-end navbar-right">
               {
-                (downloadedNofN)
-                  ? (
+                downloadedNofN
+                && (
                     <DownloadProgressBar
                       downloadedNofN={downloadedNofN}
                       expireAfter={5000} // milliseconds
                     />
-                  )
-                  : <div />
+                )
               }
               <AppMenu
                 openDownloadModal={() => toggleDownloadModal(true)}

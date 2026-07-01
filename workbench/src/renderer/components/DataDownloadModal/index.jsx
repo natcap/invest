@@ -280,7 +280,6 @@ class DataDownloadModal extends React.Component {
             <Button
               variant="secondary-outline"
               onClick={this.closeDialog}
-              className="float-end"
               aria-label="Close modal"
             >
               <MdClose />
