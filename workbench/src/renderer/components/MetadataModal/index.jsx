@@ -144,7 +144,7 @@ export default function MetadataModal(props) {
         <Button
           variant="secondary-outline"
           onClick={props.close}
-          className="float-right"
+          className="float-end"
           aria-label="Close modal"
         >
           <MdClose />
@@ -178,7 +178,7 @@ export default function MetadataModal(props) {
               {FormRow('URL', licenseURL, setLicenseURL)}
             </Form.Group>
           </fieldset>
-          <Form.Row>
+          <Row>
             <Button
               type="submit"
               variant="primary"
@@ -196,7 +196,7 @@ export default function MetadataModal(props) {
                 </Alert>
               )
             }
-          </Form.Row>
+          </Row>
         </Form>
       </Modal.Body>
     </Modal>

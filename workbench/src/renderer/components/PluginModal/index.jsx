@@ -5,6 +5,7 @@ import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import Row from 'react-bootstrap/Row';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
 import { MdCheckCircleOutline, MdClose } from 'react-icons/md';
@@ -172,7 +173,7 @@ export default function PluginModal(props) {
   let pluginFields;
   if (installFrom === 'url') {
     pluginFields = (
-      <Form.Row>
+      <Row>
         <Form.Group as={Col} xs={7}>
           <Form.Label htmlFor="url">{t('Git URL')}</Form.Label>
           <Form.Control
@@ -221,7 +222,7 @@ export default function PluginModal(props) {
             {t('Optional')}
           </Form.Text>
         </Form.Group>
-      </Form.Row>
+      </Row>
     );
   } else {
     pluginFields = (
@@ -280,15 +281,14 @@ export default function PluginModal(props) {
           <h5 id="add-plugin-form-title" className="mb-3">{t('Add a plugin')}</h5>
           <Form.Group>
             <Form.Label htmlFor="installFrom">{t('Install from')}</Form.Label>
-            <Form.Control
+            <Form.Select
               id="installFrom"
-              as="select"
               onChange={(event) => setInstallFrom(event.target.value)}
               className="w-auto"
             >
               <option value="url">{t('git URL')}</option>
               <option value="path">{t('local path')}</option>
-            </Form.Control>
+            </Form.Select>
           </Form.Group>
           {pluginFields}
           <Form.Group>
@@ -333,7 +333,7 @@ export default function PluginModal(props) {
               installLoading ? (
                 <div className="adding-button">
                   <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                    <span className="sr-only">{t('Adding plugin')}</span>
+                    <span className="visually-hidden">{t('Adding plugin')}</span>
                   </Spinner>
                   {t(statusMessage)}
                 </div>
@@ -366,9 +366,8 @@ export default function PluginModal(props) {
         <Form.Group>
           <h5 id="remove-plugin-form-title" className="mb-3">{t('Remove a plugin')}</h5>
           <Form.Label htmlFor="selectPluginToRemove">{t('Plugin name')}</Form.Label>
-          <Form.Control
+          <Form.Select
             id="selectPluginToRemove"
-            as="select"
             value={pluginToRemove}
             onChange={(event) => setPluginToRemove(event.currentTarget.value)}
           >
@@ -384,7 +383,7 @@ export default function PluginModal(props) {
                 )
               )
             }
-          </Form.Control>
+          </Form.Select>
           <Button
             disabled={uninstallLoading || !Object.keys(plugins).length}
             className="mt-3"
@@ -394,7 +393,7 @@ export default function PluginModal(props) {
               uninstallLoading ? (
                 <div className="adding-button">
                   <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                    <span className="sr-only">{t('Removing...')}</span>
+                    <span className="visually-hidden">{t('Removing...')}</span>
                   </Spinner>
                   {t('Removing...')}
                 </div>
@@ -477,7 +476,7 @@ export default function PluginModal(props) {
         <Button
           variant="secondary-outline"
           onClick={handleModalClose}
-          className="float-right"
+          className="float-end"
           aria-label={t('Close modal')}
         >
           <MdClose />

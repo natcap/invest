@@ -3,9 +3,13 @@
   --invest-green: #148F68;
   --digital-green: #008566; /* From Stanford brand guidelines. Better contrast for text than invest-green. */
   --digital-red: #B1040E; /* From Stanford brand guidelines. */
+  --secondary-gray: #585858;
   --bootstrap-secondary-gray:#6c757d;
+  --bootstrap-gray-100: #f8f9fa;
+  --bootstrap-gray-300: #dee2e6;
+  --lagunita-light: #009AB4; /* From Stanford brand guidelines. Suitable for non-text elements only. */
+  --lagunita-light-opacity-50: rgba(0, 154, 180, 0.5); /* Equivalent to Lagunita Light with 50% opacity (for focus indicators). */
 }
-
 
 /*
 --header-height: fixed height applied to the top navbar.
@@ -28,22 +32,42 @@ body {
    Bootstrap-styled buttons have different focus styles, based on element/background colors.
    This is a fallback, to be applied to elements whose focus styles are not defined by Bootstrap. */
 a,
-button,
-.btn-link {
+button {
   &:focus {
     outline-color: var(--invest-green);
   }
 }
 
-.btn-link:focus {
-  outline-style: auto;
-  outline-width: 0.25rem;
+.btn-link {
+  text-decoration: none;
+  &:hover, &:focus {
+    text-decoration: underline;
+  }
+}
+
+/* Bootstrap button style overrides.
+   This is not the recommended way to apply custom theming to Bootstrap
+   components, but since there's currently only one button style in need of
+   customization (the "info" color became too light in Bootstrap 5), a more
+   complex approach doesn't seem worthwhile. */
+.btn-outline-info {
+  color: var(--lagunita-light);
+  border-color: var(--lagunita-light);
+  &:hover {
+    color: ghostwhite;
+    background: var(--lagunita-light);
+    border-color: var(--lagunita-light);
+  }
+  &:focus {
+    box-shadow: 0 0 0 .25rem var(--lagunita-light-opacity-50);
+  }
 }
 
 /*Top Navigation*/
 
 .navbar {
   border-bottom: 3px solid var(--invest-green);
+  border-top: 3px solid transparent;
   padding: 0;
   height: var(--header-height);
 }
@@ -53,42 +77,46 @@ button,
 }
 
 .navbar-brand {
-  padding-bottom: 0;
-  margin-right: 0;
-}
-
-.navbar-brand:hover {
-  text-decoration-line: underline;
-  text-decoration-thickness: 3px;
-  text-decoration-color: var(--invest-green);
+  padding: 0;
+  margin: 0;
 }
 
 .navbar-middle {
+  align-self: flex-end;
   flex-shrink: 1;
   min-width: 0;
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0;
 }
 
 .navbar-right {
   display: flex;
   max-width: fit-content;
   margin-left: 0.5rem;
-  margin-right: -15px;
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0;
 }
 
 .navbar-brand .nav-link {
-  color: var(--invest-green);
-  font-weight: 600;
-  font-size: 2.0rem;
-  letter-spacing: 1px;
-  padding-bottom: 0;
-  padding-left: 0.7rem;
-  padding-right: 0;
   display: flex;
   align-items: center;
+  padding: 0 0.5rem;
+  margin-left: 0.25rem;
+  width: fit-content;
+  color: var(--invest-green);
+  font-weight: 600;
+  font-size: 2rem;
+  letter-spacing: 1px;
+  &:hover {
+    .nav-link-text {
+      text-decoration-line: underline;
+      text-decoration-thickness: 3px;
+      text-decoration-color: var(--invest-green);
+    }
+  }
+}
+
+.navbar-brand .nav-link,
+.app-menu-button {
+  height: 3rem;
 }
 
 /*tricky to align icon with text*/
@@ -96,11 +124,11 @@ button,
   margin-bottom: -0.2rem;
 }
 
-/*registered trademark icon styling*/
+/*registered trademark superscript styling*/
 .rtm {
   color: var(--invest-green);
-  font-size: 0.5rem;
-  margin-bottom: 0.3rem;
+  font-size: 1.25rem;
+  font-weight: 300;
 }
 
 .navbar-nav.nav-tabs {
@@ -129,14 +157,17 @@ button,
   background-color: ghostwhite;
 }
 
+[role="tab"] {
+  cursor: pointer;
+}
+
 .navbar-light .navbar-nav .nav-link {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
   background-color: transparent;
-  color: #999999;
-  border: 0;
-  border-bottom: 0;
+  color: var(--bootstrap-secondary-gray);
+  border: none;
   font-size: 1.1rem;
 }
 
@@ -183,7 +214,6 @@ button,
   border: none;
   font-size: 2rem;
   margin-right: 2px;
-  height: 2.75rem;
   display: flex;
   align-items: center;
   padding-left: 0.75rem;
@@ -219,6 +249,7 @@ otherwise the bar will make overall width of content
 exceed 100% of window.*/
 #home-tab-content {
   padding-right:  16px;
+  padding-left: 4px; /* add left padding for balance and to better accommodate visible focus indicators */
 }
 
 /* Home Tab */
@@ -234,6 +265,7 @@ exceed 100% of window.*/
   display: block;
   column-count: 2;
   white-space: nowrap;
+  border-radius: 0;
 }
 
 .invest-list-group .list-group-item {
@@ -300,10 +332,8 @@ exceed 100% of window.*/
 }
 
 .card-body {
-  padding-top: 1rem;
-  padding-left: 0rem;
-  padding-right: 0rem;
-  padding-bottom: 0rem;
+  margin: 0.125rem 0 0 0;
+  padding: 1rem 0 0 0;
   width: inherit;
   background-color: transparent;
 }
@@ -371,6 +401,7 @@ exceed 100% of window.*/
 }
 
 .card-footer {
+  color: var(--secondary-gray);
   display: flex;
   justify-content: space-between;
   white-space: nowrap;
@@ -430,9 +461,11 @@ exceed 100% of window.*/
 
 .invest-sidebar-col .nav-link {
   color: #000;
-  border-right: 5px solid transparent;
+  border-left-width: 8px;
+  border-left-style: solid;
+  border-left-color: transparent;
   border-radius: 0;
-  font-size: 1.3rem;
+  font-size: 1.3125rem;
   font-weight: 550;
   display: flex;
   justify-content: space-between;
@@ -444,12 +477,6 @@ exceed 100% of window.*/
   font-size: 2rem;
 }
 
-.invest-sidebar-col .nav-link:hover, .invest-sidebar-col .nav-link:focus {
-  background-color: rgb(240, 240, 240);
-  border-right: 5px solid rgb(240, 240, 240);
-  border-radius: 0;
-}
-
 .invest-sidebar-col .nav-link.disabled {
   color: #888888;
 }
@@ -457,8 +484,7 @@ exceed 100% of window.*/
 .invest-sidebar-col .nav-link.active {
   color: #000;
   background-color: ghostwhite;
-  border-right: 5px solid var(--invest-green);
-  border-radius: 0;
+  border-left-color: var(--invest-green);
 }
 
 .sidebar-row {
@@ -478,18 +504,20 @@ exceed 100% of window.*/
 
 .sidebar-buttons .btn {
   white-space: nowrap;
-  background: none;
   border: none;
   color: black;
-  padding-left: 0;
+  svg {
+    font-size: 1.25rem;
+  }
 }
 
 .sidebar-buttons .alert {
   margin-top: 1rem;
 }
 
+.sidebar-buttons .btn,
 .sidebar-links a {
-  padding-top: 0.5rem;
+  padding: 0.5rem 0;
 }
 
 .sidebar-footer {
@@ -532,8 +560,7 @@ exceed 100% of window.*/
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-left: 2rem;
-  padding-right: 1rem;
+  padding-right: 0.5rem;
 }
 
 /* InVEST Argument Forms */
@@ -542,14 +569,15 @@ exceed 100% of window.*/
 }
 
 .arg-group {
-  margin-top: 1.0rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 1rem 0;
   border-bottom: 1px dotted;
-}
-
-.arg-group:last-of-type {
-  border-bottom: none;
+  &:last-of-type {
+    border-bottom: none;
+  }
 }
 
 .arg-hide {
@@ -573,10 +601,12 @@ exceed 100% of window.*/
   font-weight: 600;
 }
 
-.args-form .form-control,
-.custom-select {
-  font-family: monospace;
-  font-size: 1.3rem;
+.args-form {
+  .form-control,
+  .form-select {
+    font-family: monospace;
+    font-size: 1.25rem;
+  }
 }
 
 .args-form {
@@ -621,15 +651,17 @@ input[type=text]::placeholder {
   font-size: 1.5rem;
 }
 
-.custom-select,
-.custom-select.is-valid {
-  --caret-width: 1.875rem;
-  padding-right: var(--form-field-padding-right);
-  /* Custom dropdown icon is react-icons/md/MdKeyboardArrowDown, as a URL-encoded SVG */
-  background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" height="200px" width="200px"%3E%3Cpath fill="none" d="M0 0h24v24H0V0z"%3E%3C/path%3E%3Cpath d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"%3E%3C/path%3E%3C/svg%3E');
-  background-repeat: no-repeat;
-  background-position: center right calc((var(--form-field-padding-right) - var(--caret-width)) / 2);
-  background-size: var(--caret-width);
+.args-form .input-group {
+  .form-select,
+  .form-select.is-valid {
+    --caret-width: 1.875rem;
+    padding-right: var(--form-field-padding-right);
+    /* Custom dropdown icon is react-icons/md/MdKeyboardArrowDown, as a URL-encoded SVG */
+    background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" height="200px" width="200px"%3E%3Cpath fill="none" d="M0 0h24v24H0V0z"%3E%3C/path%3E%3Cpath d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"%3E%3C/path%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: center right calc((var(--form-field-padding-right) - var(--caret-width)) / 2);
+    background-size: var(--caret-width);
+  }
 }
 
 /* InVEST Log Tab */
@@ -678,14 +710,21 @@ input[type=text]::placeholder {
   max-width: 600px;
 }
 
-.settings-modal .accordion:has(.show) button svg {
-  transform: rotate(180deg);
+.settings-modal-row-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-modal .accordion {
+  padding: 1rem 3rem;
 }
 
 .settings-modal .accordion button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  &[aria-expanded="true"] {
+    color: initial;
+  }
 }
 
 #metadata-form {
@@ -717,8 +756,37 @@ input[type=text]::placeholder {
 }
 
 /* Save As modal */
-.save-as-modal svg {
-  margin-bottom: 0.2rem;
+.save-as-modal {
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .save-as-option {
+    background: var(--bootstrap-gray-100);
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    &:has(input:hover, input:checked) {
+      background: var(--bootstrap-gray-300);
+    }
+    &:has(input:focus) {
+      outline: 3px solid var(--invest-green);
+      outline-offset: 3px;
+    }
+  }
+  .form-text {
+    display: block;
+    color: var(--secondary-gray);
+  }
+  button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  svg {
+    font-size: 1.125rem;
+  }
 }
 
 .confirm-modal .modal-content {

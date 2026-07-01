@@ -15,7 +15,6 @@ import Spinner from 'react-bootstrap/Spinner';
 import Tooltip from 'react-bootstrap/Tooltip';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import { MdClose, MdHome } from 'react-icons/md';
-import { AiOutlineTrademarkCircle } from 'react-icons/ai';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -217,7 +216,7 @@ export default function App(props) {
     if (investList) {
       const modelType = investList[job.modelID].type;
       if (modelType === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+        badge = <Badge className="me-1" bg="secondary">Plugin</Badge>;
       }
     }
 
@@ -321,34 +320,34 @@ export default function App(props) {
       <TabContainer activeKey={activeTab}>
         <Navbar
           onDragOver={dragOverHandlerNone}
+          onSelect={setActiveTab}
         >
           <Row
-            className="w-100 flex-nowrap"
+            className="w-100 h-100 flex-nowrap align-items-center"
           >
             <Col sm={3}>
               <Navbar.Brand>
                 <Nav.Link
-                  onSelect={setActiveTab}
                   eventKey="home"
                 >
                   <MdHome />
-                  InVEST
+                  <span className="nav-link-text">InVEST</span>
+                  <sup className="rtm">®</sup>
                 </Nav.Link>
               </Navbar.Brand>
-              <AiOutlineTrademarkCircle className="rtm" />
             </Col>
             <Col className="navbar-middle">
               <Nav
                 justify
                 variant="tabs"
-                className="mr-auto"
+                className="me-auto"
                 activeKey={activeTab}
                 onSelect={setActiveTab}
               >
                 {investNavItems}
               </Nav>
             </Col>
-            <Col className="text-right navbar-right">
+            <Col className="text-end navbar-right">
               {
                 (downloadedNofN)
                   ? (
@@ -377,6 +376,7 @@ export default function App(props) {
           <TabPane
             eventKey="home"
             aria-label="home tab"
+            className="container-fluid p-0"
           >
             {(investList)
               ? (

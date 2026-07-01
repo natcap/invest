@@ -77,7 +77,7 @@ export default function Changelog(props) {
         <Button
           variant="secondary-outline"
           onClick={props.close}
-          className="float-right"
+          className="float-end"
           aria-label="Close modal"
         >
           <MdClose />

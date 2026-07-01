@@ -117,7 +117,7 @@ class SettingsModal extends React.Component {
             <Button
               variant="secondary-outline"
               onClick={close}
-              className="float-right"
+              className="float-end"
               aria-label="close modal"
             >
               <MdClose />
@@ -132,9 +132,8 @@ class SettingsModal extends React.Component {
                     {t('Language')}
                   </Form.Label>
                   <Col sm="4">
-                    <Form.Control
+                    <Form.Select
                       id="language-select"
-                      as="select"
                       name="language"
                       value={window.Workbench.LANGUAGE}
                       onChange={
@@ -147,101 +146,92 @@ class SettingsModal extends React.Component {
                         const [value, displayName] = entry;
                         return <option value={value} key={value}>{displayName}</option>;
                       })}
-                    </Form.Control>
+                    </Form.Select>
                   </Col>
                 </Form.Group>
               ) : <React.Fragment />
             }
             <hr />
-            <Form.Group as={Row}>
-              <Form.Label column sm="6" htmlFor="logging-select">
-                {t('Logging threshold')}
-              </Form.Label>
-              <Col sm="6">
-                <Form.Control
-                  id="logging-select"
-                  as="select"
-                  name="loggingLevel"
-                  value={loggingLevel}
-                  onChange={this.handleChange}
-                >
-                  {Object.entries(logLevelOptions).map(
-                    ([opt, displayName]) => <option value={opt} key={opt}>{displayName}</option>
-                  )}
-                </Form.Control>
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row}>
-              <Form.Label column sm="6" htmlFor="taskgraph-logging-select">
-                {t('Taskgraph logging threshold')}
-              </Form.Label>
-              <Col sm="6">
-                <Form.Control
-                  id="taskgraph-logging-select"
-                  as="select"
-                  name="taskgraphLoggingLevel"
-                  value={taskgraphLoggingLevel}
-                  onChange={this.handleChange}
-                >
-                  {Object.entries(logLevelOptions).map(
-                    ([opt, displayName]) => <option value={opt} key={opt}>{displayName}</option>
-                  )}
-                </Form.Control>
-              </Col>
-            </Form.Group>
-            {
-              (nWorkersOptions)
-                ? (
-                  <Form.Group as={Row}>
-                    <Col sm="6">
-                      <Form.Label htmlFor="nworkers-select">
-                        {t('Taskgraph n_workers parameter')}
-                      </Form.Label>
-                    </Col>
-                    <Col sm="6">
-                      <Form.Control
-                        id="nworkers-select"
-                        as="select"
-                        name="nWorkers"
-                        type="text"
-                        value={nWorkers}
-                        onChange={this.handleChangeNumber}
-                      >
-                        {nWorkersOptions.map(
-                          (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
-                        )}
-                      </Form.Control>
-                    </Col>
+            <div className="settings-modal-row-group">
+              <Form.Group as={Row}>
+                <Form.Label column sm="6" htmlFor="logging-select">
+                  {t('Logging threshold')}
+                </Form.Label>
+                <Col sm="6">
+                  <Form.Select
+                    id="logging-select"
+                    name="loggingLevel"
+                    value={loggingLevel}
+                    onChange={this.handleChange}
+                  >
+                    {Object.entries(logLevelOptions).map(
+                      ([opt, displayName]) => <option value={opt} key={opt}>{displayName}</option>
+                    )}
+                  </Form.Select>
+                </Col>
+              </Form.Group>
+              <Form.Group as={Row}>
+                <Form.Label column sm="6" htmlFor="taskgraph-logging-select">
+                  {t('Taskgraph logging threshold')}
+                </Form.Label>
+                <Col sm="6">
+                  <Form.Select
+                    id="taskgraph-logging-select"
+                    name="taskgraphLoggingLevel"
+                    value={taskgraphLoggingLevel}
+                    onChange={this.handleChange}
+                  >
+                    {Object.entries(logLevelOptions).map(
+                      ([opt, displayName]) => <option value={opt} key={opt}>{displayName}</option>
+                    )}
+                  </Form.Select>
+                </Col>
+              </Form.Group>
+              {
+                nWorkersOptions
+                &&
+                <Form.Group as={Row}>
+                  <Col sm="6">
+                    <Form.Label htmlFor="nworkers-select">
+                      {t('Taskgraph n_workers parameter')}
+                    </Form.Label>
+                  </Col>
+                  <Col sm="6">
+                    <Form.Select
+                      id="nworkers-select"
+                      name="nWorkers"
+                      type="text"
+                      value={nWorkers}
+                      onChange={this.handleChangeNumber}
+                    >
+                      {nWorkersOptions.map(
+                        (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
+                      )}
+                    </Form.Select>
+                  </Col>
+                  <Col sm="12">
                     <Accordion>
-                      <Accordion.Toggle
-                        as={Button}
-                        variant="secondary-outline"
-                        eventKey="0"
-                        className="pt-0"
-                      >
-                        <BsChevronDown className="mx-1" />
-                        <span className="small"><u>{t('more info')}</u></span>
-                      </Accordion.Toggle>
-                      <Accordion.Collapse eventKey="0" className="pr-1">
-                        <ul>
-                          <li>{t('synchronous task execution is most reliable')}</li>
-                          <li>
-                            {t('threaded task management: tasks execute only ' +
-                               'in the main process, using multiple threads.')}
-                          </li>
-                          <li>
-                            {t('n CPUs: depending on the InVEST model, tasks ' +
-                               'may execute in parallel using up to this many processes.')}
-                          </li>
-                        </ul>
-                      </Accordion.Collapse>
+                      <Accordion.Item eventKey="more-info">
+                        <Accordion.Header as="span">{t('more info about n_workers')}</Accordion.Header>
+                        <Accordion.Body>
+                          <ul>
+                            <li>{t('synchronous task execution is most reliable')}</li>
+                            <li>
+                              {t('threaded task management: tasks execute only ' +
+                                  'in the main process, using multiple threads.')}
+                            </li>
+                            <li>
+                              {t('n CPUs: depending on the InVEST model, tasks ' +
+                                  'may execute in parallel using up to this many processes.')}
+                            </li>
+                          </ul>
+                        </Accordion.Body>
+                      </Accordion.Item>
                     </Accordion>
-                  </Form.Group>
-                )
-                : <div />
-            }
-            <hr />
-
+                  </Col>
+                </Form.Group>
+              }
+            </div>
           </Modal.Body>
         </Modal>
         {
