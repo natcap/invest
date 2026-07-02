@@ -106,7 +106,6 @@ export default class HomeTab extends React.Component {
             {investButtons}
             <ListGroup.Item
               key="browse"
-              className="px-0 py-2 border-0"
             >
               <OpenButton
                 className="open-button text-wrap"
