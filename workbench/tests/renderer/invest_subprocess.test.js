@@ -178,8 +178,8 @@ describe('InVEST subprocess testing', () => {
     await waitFor(() => expect(execute).toBeEnabled());
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: /^InVEST/ }));
-    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    await userEvent.click(getByRole('tab', { name: /^InVEST/ }));
+    const homeTab = getByRole('tabpanel', { name: /^InVEST/ });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();
@@ -236,8 +236,8 @@ describe('InVEST subprocess testing', () => {
     expect(queryByText('View Results')).toBeNull(); // did not write report
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: /^InVEST/ }));
-    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    await userEvent.click(getByRole('tab', { name: /^InVEST/ }));
+    const homeTab = getByRole('tabpanel', { name: /^InVEST/ });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();
@@ -291,8 +291,8 @@ describe('InVEST subprocess testing', () => {
       .toHaveTextContent('Run Canceled');
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: /^InVEST/ }));
-    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    await userEvent.click(getByRole('tab', { name: /^InVEST/ }));
+    const homeTab = getByRole('tabpanel', { name: /^InVEST/ });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();

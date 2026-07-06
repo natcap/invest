@@ -268,7 +268,6 @@ export default function App(props) {
       <TabPane
         key={id}
         eventKey={id}
-        aria-label={`${job.modelTitle} tab`}
       >
         <InvestTab
           job={job}
@@ -368,7 +367,6 @@ export default function App(props) {
         >
           <TabPane
             eventKey="home"
-            aria-label="home tab"
             className="container-fluid p-0"
           >
             {
