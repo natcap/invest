@@ -62,9 +62,16 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+
+Workbench
+=========
+* Bootstrap and React Bootstrap dependencies have been updated to their latest
+  stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
+  (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
+
 
 3.20.0 (2026-06-11)
 -------------------
