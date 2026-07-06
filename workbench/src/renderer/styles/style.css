@@ -65,6 +65,13 @@ button {
   }
 }
 
+/* Bootstrap form control style overrides. */
+.form-control,
+.form-select,
+.form-check-input {
+  border-color: var(--bootstrap-secondary-gray);
+}
+
 /*Top Navigation*/
 .navbar {
   --home-link-padding-left-right: 0.5rem;
@@ -913,6 +920,10 @@ input[type=text]::placeholder {
 .plugin-form-text {
   display: block;
   font-size: 0.875rem;
+}
+
+.browse-button svg {
+  font-size: 1.5rem;
 }
 
 code {

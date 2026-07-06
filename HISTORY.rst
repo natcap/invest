@@ -68,10 +68,12 @@ Unreleased Changes
 
 Workbench
 =========
+* Added a file browse button to the input field for selecting a
+  local plugin directory to install.
+  (`#2641 <https://github.com/natcap/invest/issues/2641>`_)
 * Bootstrap and React Bootstrap dependencies have been updated to their latest
   stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
   (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
-
 
 3.20.0 (2026-06-11)
 -------------------
