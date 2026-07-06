@@ -28,6 +28,7 @@ projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
 REFS_DIR = os.path.join('data', 'invest-test-data', 'reports', 'snapshots')
+MPL_VERSION = tuple(int(_) for _ in matplotlib.__version__.split('.'))
 
 
 def setUpModule():
@@ -117,6 +118,8 @@ def compare_snapshots(reference, actual):
     raise AssertionError(comparison, f'actual image saved to {new_reference}')
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotLayoutTests(unittest.TestCase):
     """Snapshot tests for matplotlib figure layouts."""
 
@@ -231,6 +234,8 @@ class RasterPlotLayoutTests(unittest.TestCase):
             self.assertEqual((bottom, top), expected_ylim)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
     """Snapshot tests for datatype and transform options."""
 
@@ -326,8 +331,282 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
-class RasterSpecialValueConfigTests(unittest.TestCase):
-    """Snapshot tests for special values in RasterConfig."""
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+class RasterPlotLegendTests(unittest.TestCase):
+    """Snapshot tests for legend placement on nominal rasters."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.raster_config = RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'foo.tif'),
+            RasterDatatype.nominal,
+            spec.Output(id='foo'))
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_plot_raster_list_tall_nominal(self):
+        """Test legend is single column on right side."""
+        figname = 'plot_raster_list_tall_nominal.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        make_simple_nominal_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_wide_nominal(self):
+        """Test legend is multi-column below plot."""
+        figname = 'plot_raster_list_wide_nominal.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (2, 8)
+        make_simple_nominal_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_tall_nominal_many_classes(self):
+        """Test legend is multi-column on right side and has enough colors."""
+        figname = 'plot_raster_list_tall_nominal_many_classes.png'
+        reference = os.path.join(REFS_DIR, figname)
+        # More than 20 values will require a distinctipy-generated palette.
+        # More than 30 values will result in a multi-column legend.
+        num_unique_vals = 40
+        # We need a unique number of pixels for each unique value to ensure the
+        # sort order in the legend is deterministic (otherwise we see variance
+        # across platforms).
+        make_nominal_raster_with_distinct_counts(
+            self.raster_config.raster_path, num_unique_vals)
+
+        config_list = [self.raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+class RasterPlotFacetsTests(unittest.TestCase):
+    """Snapshot tests for plotting multiple rasters on the same colorscale."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    @patch('natcap.invest.reports.raster_utils._get_raster_units')
+    def create_small_plots_grid(workspace_dir, shape, mock_get_raster_units,
+                                supertitle=None):
+        raster_paths = [os.path.join(workspace_dir, f'{s}.tif')
+                        for s in ['a', 'b', 'c', 'd']]
+        arrays = [numpy.linspace(
+            i, i+1, num=numpy.multiply(*shape)).reshape(*shape) for i in range(4)]
+        for raster_path, array in zip(raster_paths, arrays):
+            pygeoprocessing.numpy_array_to_raster(
+                array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+                projection_wkt=PROJ_WKT, target_path=raster_path)
+
+        mock_get_raster_units.return_value = 'flux capacitrons'
+        return raster_utils.plot_raster_facets(
+            raster_paths, RasterDatatype.continuous, small_plots=True,
+            supertitle=supertitle)
+
+    def test_plot_raster_facets(self):
+        """Test rasters share a common colorscale."""
+        figname = 'plot_raster_facets.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        a_raster_filepath = os.path.join(self.workspace_dir, 'a.tif')
+        b_raster_filepath = os.path.join(self.workspace_dir, 'b.tif')
+        a_array = numpy.linspace(
+            0, 1, num=numpy.multiply(*shape)).reshape(*shape)
+        b_array = numpy.linspace(
+            1, 2, num=numpy.multiply(*shape)).reshape(*shape)
+        pygeoprocessing.numpy_array_to_raster(
+            a_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+            projection_wkt=PROJ_WKT, target_path=a_raster_filepath)
+        pygeoprocessing.numpy_array_to_raster(
+            b_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+            projection_wkt=PROJ_WKT, target_path=b_raster_filepath)
+
+        fig = raster_utils.plot_raster_facets(
+            [a_raster_filepath, b_raster_filepath], RasterDatatype.continuous)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_facets_small_plots(self):
+        """Test small plots: standard AOI width should have 4 columns."""
+        figname = 'plot_raster_facets_small_plots.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape)
+
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_facets_small_plots_wide_aoi(self):
+        """Test small plots: wide AOI width should have 3 columns."""
+        figname = 'plot_raster_facets_small_plots_wide_aoi.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (6, 12)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape)
+
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_facets_small_plots_supertitle(self):
+        """Test small plots with optional supertitle."""
+        figname = 'plot_raster_facets_small_plots_supertitle.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (2, 10)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape,
+                                           supertitle="Custom Title")
+
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+class RasterPlotTitleTests(unittest.TestCase):
+    """Snapshot tests for plotting rasters with various titles."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.raster_config = RasterPlotConfig(
+            os.path.join(
+                self.workspace_dir,
+                'raster_with_extra_long_filename-for_testing_text_wrapping_in_images_for_reports.tif'),
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_plot_raster_list_long_title_extra_wide_1_col(self):
+        """Test title wraps appropriately for 1-col layout, extra-wide AOI."""
+        figname = 'plot_raster_list_long_title_extra_wide_1_col.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (2, 10)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_long_title_wide_2_col(self):
+        """Test title wraps appropriately for 2-col layout, wide AOI."""
+        figname = 'plot_raster_list_long_title_wide_2_col.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (3, 8)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]*2
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_long_title_square_3_col(self):
+        """Test title wraps appropriately for 3-col layout, square AOI."""
+        figname = 'plot_raster_list_long_title_3_col.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]*3
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_override_title(self):
+        """Test default title can be overriden."""
+        figname = 'plot_raster_list_override_title.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        self.raster_config.title = 'Special Title'
+        config_list = [self.raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+class RasterPlotUnitTextTests(unittest.TestCase):
+    """Snapshot tests for plotting rasters with unit text."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.raster_config = RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'test.tif'),
+            RasterDatatype.continuous,
+            spec.Output(id='foo'))
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    @patch('natcap.invest.reports.raster_utils._get_raster_units')
+    def test_plot_raster_list_unit_text_tall_aoi(self, mock_get_raster_units):
+        """Test unit text is above raster plot and not overlapping."""
+        mock_get_raster_units.return_value = 'flux capacitrons'
+        figname = 'plot_raster_list_unit_text_tall_aoi.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (8, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]*3
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    @patch('natcap.invest.reports.raster_utils._get_raster_units')
+    def test_plot_raster_list_unit_text_wide_aoi(self, mock_get_raster_units):
+        """Test unit text is above raster plot and not overlapping."""
+        mock_get_raster_units.return_value = 'flux capacitrons'
+        figname = 'plot_raster_list_unit_text_wide_aoi.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (6, 12)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]*2
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
+class SpecialConfigValueUnitTests(unittest.TestCase):
+    """Unit tests for SpecialConfigValue constructions."""
 
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
@@ -498,272 +777,6 @@ class RasterSpecialValueConfigTests(unittest.TestCase):
 
         self.assertIn(thresholds[0], ticks)
         self.assertIn(thresholds[1], ticks)
-
-
-class RasterPlotLegendTests(unittest.TestCase):
-    """Snapshot tests for legend placement on nominal rasters."""
-
-    def setUp(self):
-        """Override setUp function to create temp workspace directory."""
-        self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = RasterPlotConfig(
-            os.path.join(self.workspace_dir, 'foo.tif'),
-            RasterDatatype.nominal,
-            spec.Output(id='foo'))
-
-    def tearDown(self):
-        """Override tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
-
-    def test_plot_raster_list_tall_nominal(self):
-        """Test legend is single column on right side."""
-        figname = 'plot_raster_list_tall_nominal.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (4, 4)
-        make_simple_nominal_raster(self.raster_config.raster_path, shape)
-
-        config_list = [self.raster_config]
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    def test_plot_raster_list_wide_nominal(self):
-        """Test legend is multi-column below plot."""
-        figname = 'plot_raster_list_wide_nominal.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (2, 8)
-        make_simple_nominal_raster(self.raster_config.raster_path, shape)
-
-        config_list = [self.raster_config]
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    def test_plot_raster_list_tall_nominal_many_classes(self):
-        """Test legend is multi-column on right side and has enough colors."""
-        figname = 'plot_raster_list_tall_nominal_many_classes.png'
-        reference = os.path.join(REFS_DIR, figname)
-        # More than 20 values will require a distinctipy-generated palette.
-        # More than 30 values will result in a multi-column legend.
-        num_unique_vals = 40
-        # We need a unique number of pixels for each unique value to ensure the
-        # sort order in the legend is deterministic (otherwise we see variance
-        # across platforms).
-        make_nominal_raster_with_distinct_counts(
-            self.raster_config.raster_path, num_unique_vals)
-
-        config_list = [self.raster_config]
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-
-class RasterPlotFacetsTests(unittest.TestCase):
-    """Snapshot tests for plotting multiple rasters on the same colorscale."""
-
-    def setUp(self):
-        """Override setUp function to create temp workspace directory."""
-        self.workspace_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        """Override tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
-
-    @staticmethod
-    @patch('natcap.invest.reports.raster_utils._get_raster_units')
-    def create_small_plots_grid(workspace_dir, shape, mock_get_raster_units,
-                                supertitle=None):
-        raster_paths = [os.path.join(workspace_dir, f'{s}.tif')
-                        for s in ['a', 'b', 'c', 'd']]
-        arrays = [numpy.linspace(
-            i, i+1, num=numpy.multiply(*shape)).reshape(*shape) for i in range(4)]
-        for raster_path, array in zip(raster_paths, arrays):
-            pygeoprocessing.numpy_array_to_raster(
-                array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
-                projection_wkt=PROJ_WKT, target_path=raster_path)
-
-        mock_get_raster_units.return_value = 'flux capacitrons'
-        return raster_utils.plot_raster_facets(
-            raster_paths, RasterDatatype.continuous, small_plots=True,
-            supertitle=supertitle)
-
-    def test_plot_raster_facets(self):
-        """Test rasters share a common colorscale."""
-        figname = 'plot_raster_facets.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (4, 4)
-        a_raster_filepath = os.path.join(self.workspace_dir, 'a.tif')
-        b_raster_filepath = os.path.join(self.workspace_dir, 'b.tif')
-        a_array = numpy.linspace(
-            0, 1, num=numpy.multiply(*shape)).reshape(*shape)
-        b_array = numpy.linspace(
-            1, 2, num=numpy.multiply(*shape)).reshape(*shape)
-        pygeoprocessing.numpy_array_to_raster(
-            a_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
-            projection_wkt=PROJ_WKT, target_path=a_raster_filepath)
-        pygeoprocessing.numpy_array_to_raster(
-            b_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
-            projection_wkt=PROJ_WKT, target_path=b_raster_filepath)
-
-        fig = raster_utils.plot_raster_facets(
-            [a_raster_filepath, b_raster_filepath], RasterDatatype.continuous)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    def test_plot_raster_facets_small_plots(self):
-        """Test small plots: standard AOI width should have 4 columns."""
-        figname = 'plot_raster_facets_small_plots.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (4, 4)
-        fig = self.create_small_plots_grid(self.workspace_dir, shape)
-
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    def test_plot_raster_facets_small_plots_wide_aoi(self):
-        """Test small plots: wide AOI width should have 3 columns."""
-        figname = 'plot_raster_facets_small_plots_wide_aoi.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (6, 12)
-        fig = self.create_small_plots_grid(self.workspace_dir, shape)
-
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    def test_plot_raster_facets_small_plots_supertitle(self):
-        """Test small plots with optional supertitle."""
-        figname = 'plot_raster_facets_small_plots_supertitle.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (2, 10)
-        fig = self.create_small_plots_grid(self.workspace_dir, shape,
-                                           supertitle="Custom Title")
-
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-
-class RasterPlotTitleTests(unittest.TestCase):
-    """Snapshot tests for plotting rasters with various titles."""
-
-    def setUp(self):
-        """Override setUp function to create temp workspace directory."""
-        self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = RasterPlotConfig(
-            os.path.join(
-                self.workspace_dir,
-                'raster_with_extra_long_filename-for_testing_text_wrapping_in_images_for_reports.tif'),
-            RasterDatatype.continuous,
-            spec.Output(id='foo'))
-
-    def tearDown(self):
-        """Override tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
-
-    def test_plot_raster_list_long_title_extra_wide_1_col(self):
-        """Test title wraps appropriately for 1-col layout, extra-wide AOI."""
-        figname = 'plot_raster_list_long_title_extra_wide_1_col.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (2, 10)
-        make_simple_raster(self.raster_config.raster_path, shape)
-
-        config_list = [self.raster_config]
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    def test_plot_raster_list_long_title_wide_2_col(self):
-        """Test title wraps appropriately for 2-col layout, wide AOI."""
-        figname = 'plot_raster_list_long_title_wide_2_col.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (3, 8)
-        make_simple_raster(self.raster_config.raster_path, shape)
-
-        config_list = [self.raster_config]*2
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    def test_plot_raster_list_long_title_square_3_col(self):
-        """Test title wraps appropriately for 3-col layout, square AOI."""
-        figname = 'plot_raster_list_long_title_3_col.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (4, 4)
-        make_simple_raster(self.raster_config.raster_path, shape)
-
-        config_list = [self.raster_config]*3
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    def test_plot_raster_list_override_title(self):
-        """Test default title can be overriden."""
-        figname = 'plot_raster_list_override_title.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (4, 4)
-        make_simple_raster(self.raster_config.raster_path, shape)
-
-        self.raster_config.title = 'Special Title'
-        config_list = [self.raster_config]
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-
-class RasterPlotUnitTextTests(unittest.TestCase):
-    """Snapshot tests for plotting rasters with unit text."""
-
-    def setUp(self):
-        """Override setUp function to create temp workspace directory."""
-        self.workspace_dir = tempfile.mkdtemp()
-        self.raster_config = RasterPlotConfig(
-            os.path.join(self.workspace_dir, 'test.tif'),
-            RasterDatatype.continuous,
-            spec.Output(id='foo'))
-
-    def tearDown(self):
-        """Override tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
-
-    @patch('natcap.invest.reports.raster_utils._get_raster_units')
-    def test_plot_raster_list_unit_text_tall_aoi(self, mock_get_raster_units):
-        """Test unit text is above raster plot and not overlapping."""
-        mock_get_raster_units.return_value = 'flux capacitrons'
-        figname = 'plot_raster_list_unit_text_tall_aoi.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (8, 4)
-        make_simple_raster(self.raster_config.raster_path, shape)
-
-        config_list = [self.raster_config]*3
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
-
-    @patch('natcap.invest.reports.raster_utils._get_raster_units')
-    def test_plot_raster_list_unit_text_wide_aoi(self, mock_get_raster_units):
-        """Test unit text is above raster plot and not overlapping."""
-        mock_get_raster_units.return_value = 'flux capacitrons'
-        figname = 'plot_raster_list_unit_text_wide_aoi.png'
-        reference = os.path.join(REFS_DIR, figname)
-        shape = (6, 12)
-        make_simple_raster(self.raster_config.raster_path, shape)
-
-        config_list = [self.raster_config]*2
-        fig = raster_utils.plot_raster_list(config_list)
-        actual_png = os.path.join(self.workspace_dir, figname)
-        save_figure(fig, actual_png)
-        compare_snapshots(reference, actual_png)
 
 
 class RasterCaptionTests(unittest.TestCase):
