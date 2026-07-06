@@ -432,7 +432,7 @@ def _configure_special_values(
         labels.append(upper_label)
         text_specs.append((0, 1.05, 'bottom'))
 
-    return extend, thresholds, labels, text_specs
+    return cmap, extend, thresholds, labels, text_specs
 
 
 def plot_raster_list(raster_list: list[RasterPlotConfig]):
@@ -535,7 +535,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
                 fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
             else:
-                extend, thresholds, labels, text_specs = \
+                cmap, extend, thresholds, labels, text_specs = \
                     _configure_special_values(cmap, config.special_values)
                 mappable = ax.imshow(
                         arr, cmap=cmap,

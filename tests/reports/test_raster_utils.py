@@ -604,7 +604,8 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
-
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class SpecialConfigValueUnitTests(unittest.TestCase):
     """Unit tests for SpecialConfigValue constructions."""
 
@@ -686,7 +687,7 @@ class SpecialConfigValueUnitTests(unittest.TestCase):
             labels=('low', 'high'),
             colors=('red', 'blue'))
 
-        extend, thresholds, labels, text_specs = (
+        cmap, extend, thresholds, labels, text_specs = (
             raster_utils._configure_special_values(cmap, special_values))
 
         self.assertEqual(extend, 'both')
