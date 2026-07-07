@@ -59,6 +59,15 @@ The order of groups should be as follows:
     <!-- Unreleased Changes
 ------------------ -->
     <section id="section-1">
+        <h1>3.20.1 (2026-07-07)</h1>
+        <section id="workbench">
+            <h2>Workbench</h2>
+            <ul>
+                <li>Added a file browse button to the input field for selecting a local plugin directory to install. (<a href="https://github.com/natcap/invest/issues/2641">#2641</a>)</li>
+            </ul>
+        </section>
+    </section>
+    <section id="section-2">
         <h1>3.20.0 (2026-06-11)</h1>
         <section id="highlights">
             <h2>Highlights</h2>
@@ -94,7 +103,7 @@ The order of groups should be as follows:
                 <li>Added the <code>--no-report</code> flag to the command line interface, which allows users to disable report generation. (<a href="https://github.com/natcap/invest/issues/2573">#2573</a>)</li>
             </ul>
         </section>
-        <section id="workbench">
+        <section id="workbench-1">
             <h2>Workbench</h2>
             <ul>
                 <li>Fixed a bug in Workbench application logs where the label referring to the origin of the log message was inaccurate. Messages are now labeled as from either the "main" or "renderer" process. (<a href="https://github.com/natcap/invest/issues/2522">#2522</a>)</li>
@@ -137,7 +146,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-2">
+    <section id="section-3">
         <h1>3.19.0 (2026-04-16)</h1>
         <section id="highlights-1">
             <h2>Highlights</h2>
@@ -154,7 +163,7 @@ The order of groups should be as follows:
                 <li>The <code>manylinux_2_39</code> wheels have been replaced with <code>linux</code> wheels built on Ubuntu. This reduces the size of the wheels and avoids licensing concerns around redistributing libraries. (<a href="https://github.com/natcap/invest/issues/2483">#2483</a>)</li>
             </ul>
         </section>
-        <section id="workbench-1">
+        <section id="workbench-2">
             <h2>Workbench</h2>
             <ul>
                 <li>The Workbench now filters model args to include only those whose corresponding form fields are enabled at the time a model is run. (<a href="https://github.com/natcap/invest/issues/2436">#2436</a>)</li>
@@ -195,7 +204,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-3">
+    <section id="section-4">
         <h1>3.18.0 (2026-02-25)</h1>
         <section id="highlights-2">
             <h2>Highlights</h2>
@@ -244,7 +253,7 @@ The order of groups should be as follows:
                 <li>Docker container builds now include the InVEST license and NOTICES.txt. (<a href="https://github.com/natcap/invest/issues/2422">#2422</a>)</li>
             </ul>
         </section>
-        <section id="workbench-2">
+        <section id="workbench-3">
             <h2>Workbench</h2>
             <ul>
                 <li>Fixed a bug where trying to save a datastack with an invalid filepath would result in the "archiving" message hanging forever. Now all types of datastack archiving errors will be indicated in the sidebar. (<a href="https://github.com/natcap/invest/issues/1995">#1995</a>)</li>
@@ -292,7 +301,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-4">
+    <section id="section-5">
         <h1>3.17.2 (2025-12-02)</h1>
         <section id="general-3">
             <h2>General</h2>
@@ -308,7 +317,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-5">
+    <section id="section-6">
         <h1>3.17.1 (2025-11-06)</h1>
         <section id="general-4">
             <h2>General</h2>
@@ -331,7 +340,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-6">
+    <section id="section-7">
         <h1>3.17.0 (2025-10-16)</h1>
         <section id="highlights-3">
             <h2>Highlights</h2>
@@ -447,7 +456,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-7">
+    <section id="section-8">
         <h1>3.16.2 (2025-08-13)</h1>
         <section id="general-6">
             <h2>General</h2>
@@ -456,7 +465,7 @@ The order of groups should be as follows:
                 <li>Fixed a bug in <code>build_datastack_archive</code> where the raster filepath included in a datastack JSON for an ArcGIS GRID would be unusable. (<a href="https://github.com/natcap/invest/issues/2103">#2103</a>)</li>
             </ul>
         </section>
-        <section id="workbench-3">
+        <section id="workbench-4">
             <h2>Workbench</h2>
             <ul>
                 <li>Fixed a bug where the Workbench showed the incorrect status of a recently completed model run. (<a href="https://github.com/natcap/invest/issues/2072">#2072</a>)</li>
@@ -472,7 +481,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-8">
+    <section id="section-9">
         <h1>3.16.1 (2025-07-01)</h1>
         <section id="general-7">
             <h2>General</h2>
@@ -481,7 +490,7 @@ The order of groups should be as follows:
                 <li>Pull requests into the InVEST repository now verify that committers to the PR have signed the InVEST Contributor License Agreement, with the results viewable as a check alongside the tests that normally execute on GitHub Actions. To review and sign the CLA, please visit <a href="https://natcap.github.io/invest-cla/">https://natcap.github.io/invest-cla/</a>. (<a href="https://github.com/natcap/invest/issues/1593">#1593</a>)</li>
             </ul>
         </section>
-        <section id="workbench-4">
+        <section id="workbench-5">
             <h2>Workbench</h2>
             <ul>
                 <li>Fixed a bug where recent jobs from models that no longer exist, or from plugins that are no longer installed, could appear in the Recent Jobs list (<a href="https://github.com/natcap/invest/issues/2028">#2028</a>).</li>
@@ -514,7 +523,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-9">
+    <section id="section-10">
         <h1>3.16.0 (2025-06-04)</h1>
         <section id="highlights-4">
             <h2>Highlights</h2>
@@ -533,7 +542,7 @@ The order of groups should be as follows:
                 <li>InVEST now has a file, CITATION.cff, which includes information needed for a citation, including a DOI for the 3.16.0 release, <a href="https://doi.org/10.60793/natcap-invest-3.16.0">https://doi.org/10.60793/natcap-invest-3.16.0</a>. (<a href="https://github.com/natcap/invest/issues/1548">#1548</a>)</li>
             </ul>
         </section>
-        <section id="workbench-5">
+        <section id="workbench-6">
             <h2>Workbench</h2>
             <ul>
                 <li>Fixed a bug where extracting and loading parameters from a datastack archive would overwrite data in the extraction location. Now, a new directory will be created in the chosen extraction location. (<a href="https://github.com/natcap/invest/issues/1996">#1996</a>)</li>
@@ -605,7 +614,7 @@ The order of groups should be as follows:
                 <li>The workbench and the natcap.invest python package now support plugins.</li>
             </ul>
         </section>
-        <section id="workbench-6">
+        <section id="workbench-7">
             <h2>Workbench</h2>
             <ul>
                 <li>Metadata is now generated for files when creating a datastack (with any existing user-added metadata preserved) (<a href="https://github.com/natcap/invest/issues/1774">#1774</a>).</li>
@@ -658,7 +667,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-10">
+    <section id="section-11">
         <h1>3.15.1 (2025-05-06)</h1>
         <section id="general-11">
             <h2>General</h2>
@@ -666,7 +675,7 @@ The order of groups should be as follows:
                 <li>Handle exceptions that can arise during <code>validation.check_spatial_overlap</code> when a layer's bounding box cannot be transformed to EPSG:4326. (<a href="https://github.com/natcap/invest/issues/1849">#1849</a>).</li>
             </ul>
         </section>
-        <section id="workbench-7">
+        <section id="workbench-8">
             <h2>Workbench</h2>
             <ul>
                 <li>Fixed a bug that did not allow users to select a folder as the location to extract a datastack archive. (<a href="https://github.com/natcap/invest/issues/1879">#1879</a>).</li>
@@ -693,7 +702,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-11">
+    <section id="section-12">
         <h1>3.15.0 (2025-04-03)</h1>
         <section id="highlights-5">
             <h2>Highlights</h2>
@@ -724,7 +733,7 @@ The order of groups should be as follows:
                 <li>Removed the warning about <code>gdal.UseExceptions()</code>. Python API users should still call <code>gdal.UseExceptions()</code>, but no longer need to do so before importing <code>natcap.invest</code>. <a href="https://github.com/natcap/invest/issues/1702">https://github.com/natcap/invest/issues/1702</a></li>
             </ul>
         </section>
-        <section id="workbench-8">
+        <section id="workbench-9">
             <h2>Workbench</h2>
             <ul>
                 <li>Auto-scrolling of log output is halted on user-initiated scrolling, enabling easier inspection of log output while a model is running (<a href="https://github.com/natcap/invest/issues/1533">InVEST #1533</a>).</li>
@@ -836,7 +845,7 @@ The order of groups should be as follows:
             </ul>
         </section>
     </section>
-    <section id="section-12">
+    <section id="section-13">
         <h1>3.14.3 (2024-12-19)</h1>
         <ul>
             <li>
@@ -946,7 +955,7 @@ The order of groups should be as follows:
             </li>
         </ul>
     </section>
-    <section id="section-13">
+    <section id="section-14">
         <h1>3.14.2 (2024-05-29)</h1>
         <ul>
             <li>
@@ -1067,7 +1076,7 @@ The order of groups should be as follows:
             </li>
         </ul>
     </section>
-    <section id="section-14">
+    <section id="section-15">
         <h1>3.14.1 (2023-12-18)</h1>
         <ul>
             <li>
@@ -1198,7 +1207,7 @@ The order of groups should be as follows:
             </li>
         </ul>
     </section>
-    <section id="section-15">
+    <section id="section-16">
         <h1>3.14.0 (2023-09-08)</h1>
         <ul>
             <li>
@@ -1403,7 +1412,7 @@ The order of groups should be as follows:
             </li>
         </ul>
     </section>
-    <section id="section-16">
+    <section id="section-17">
         <h1>3.13.0 (2023-03-17)</h1>
         <ul>
             <li>
@@ -1536,7 +1545,7 @@ The order of groups should be as follows:
             </li>
         </ul>
     </section>
-    <section id="section-17">
+    <section id="section-18">
         <h1>3.12.1 (2022-12-16)</h1>
         <ul>
             <li>
@@ -1609,7 +1618,7 @@ The order of groups should be as follows:
             </li>
         </ul>
     </section>
-    <section id="section-18">
+    <section id="section-19">
         <h1>3.12.0 (2022-08-31)</h1>
         <ul>
             <li>
@@ -1733,7 +1742,7 @@ The order of groups should be as follows:
             </li>
         </ul>
     </section>
-    <section id="section-19">
+    <section id="section-20">
         <h1>3.11.0 (2022-05-24)</h1>
         <ul>
             <li>
@@ -1831,7 +1840,7 @@ The order of groups should be as follows:
             </li>
         </ul>
     </section>
-    <section id="section-20">
+    <section id="section-21">
         <h1>3.10.2 (2022-02-08)</h1>
         <ul>
             <li>
@@ -1933,7 +1942,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-21">
+    <section id="section-22">
         <h1>3.10.1 (2022-01-06)</h1>
         <ul>
             <li>
@@ -1948,7 +1957,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-22">
+    <section id="section-23">
         <h1>3.10.0 (2022-01-04)</h1>
         <ul>
             <li>
@@ -2132,7 +2141,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-23">
+    <section id="section-24">
         <h1>3.9.2 (2021-10-29)</h1>
         <ul>
             <li>
@@ -2193,7 +2202,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-24">
+    <section id="section-25">
         <h1>3.9.1 (2021-09-22)</h1>
         <ul>
             <li>
@@ -2342,7 +2351,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-25">
+    <section id="section-26">
         <h1>3.9.0 (2020-12-11)</h1>
         <ul>
             <li>
@@ -2530,7 +2539,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-26">
+    <section id="section-27">
         <h1>3.8.9 (2020-09-15)</h1>
         <ul>
             <li>
@@ -2555,7 +2564,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-27">
+    <section id="section-28">
         <h1>3.8.8 (2020-09-04)</h1>
         <ul>
             <li>
@@ -2655,7 +2664,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-28">
+    <section id="section-29">
         <h1>3.8.7 (2020-07-17)</h1>
         <ul>
             <li>
@@ -2694,7 +2703,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-29">
+    <section id="section-30">
         <h1>3.8.6 (2020-07-03)</h1>
         <ul>
             <li>
@@ -2709,7 +2718,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-30">
+    <section id="section-31">
         <h1>3.8.5 (2020-06-26)</h1>
         <ul>
             <li>
@@ -2760,7 +2769,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-31">
+    <section id="section-32">
         <h1>3.8.4 (2020-06-05)</h1>
         <ul>
             <li>
@@ -2795,7 +2804,7 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-32">
+    <section id="section-33">
         <h1>3.8.3 (2020-05-29)</h1>
         <ul>
             <li>
@@ -2810,13 +2819,13 @@ setuptools_scm</code> from the project root.</li>
             </li>
         </ul>
     </section>
-    <section id="section-33">
+    <section id="section-34">
         <h1>3.8.2 (2020-05-15)</h1>
         <ul>
             <li>InVEST's CSV encoding requirements are now described in the validation error message displayed when a CSV cannot be opened.</li>
         </ul>
     </section>
-    <section id="section-34">
+    <section id="section-35">
         <h1>3.8.1 (2020-05-08)</h1>
         <ul>
             <li>Fixed a compilation issue on Mac OS X Catalina.</li>
@@ -2840,7 +2849,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Update api-docs conf file to mock sdr.sdr_core and to use updated unittest mock</li>
         </ul>
     </section>
-    <section id="section-35">
+    <section id="section-36">
         <h1>3.8.0 (2020-02-07)</h1>
         <ul>
             <li>Created a sub-directory for the sample data in the installation directory.</li>
@@ -2896,7 +2905,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Added a new InVEST model: Urban Cooling Model.</li>
         </ul>
     </section>
-    <section id="section-36">
+    <section id="section-37">
         <h1>3.7.0 (2019-05-09)</h1>
         <ul>
             <li>Refactoring Coastal Vulnerability (CV) model. CV now uses TaskGraph and Pygeoprocessing &gt;=1.6.1. The model is now largely vector-based instead of raster-based. Fewer input datasets are required for the same functionality. Runtime in sycnhronous mode is similar to previous versions, but runtime can be reduced with multiprocessing. CV also supports avoided recomputation for successive runs in the same workspace, even if a different file suffix is used. Output vector files are in CSV and geopackage formats.</li>
@@ -2917,7 +2926,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Adding encoding='utf-8-sig' to pandas.read_csv() to support utils.build_lookup_from_csv() to read CSV files encoded with UTF-8 BOM (byte-order mark) properly.</li>
         </ul>
     </section>
-    <section id="section-37">
+    <section id="section-38">
         <h1>3.6.0 (2019-01-30)</h1>
         <ul>
             <li>Correcting an issue with the InVEST Carbon Storage and Sequestration model where filepaths containing non-ASCII characters would cause the model's report generation to crash. The output report is now a UTF-8 document.</li>
@@ -2947,7 +2956,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixing a case where a zero discount rate and rate of change in the carbon model would cause a divide by zero error.</li>
         </ul>
     </section>
-    <section id="section-38">
+    <section id="section-39">
         <h1>3.5.0 (2018-08-14)</h1>
         <ul>
             <li>Bumped pygeoprocessing requirement to <code>pygeoprocessing&gt;=1.2.3</code>.</li>
@@ -2969,7 +2978,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed an issue in the model data of the crop production model where some crops were using incorrect climate bin rasters. Since the error was in the data and not the code, users will need to download the most recent version of InVEST's crop model data during the installation step to get the fix.</li>
         </ul>
     </section>
-    <section id="section-39">
+    <section id="section-40">
         <h1>3.4.4 (2018-03-26)</h1>
         <ul>
             <li>InVEST now requires GDAL 2.0.0 and has been tested up to GDAL 2.2.3. Any API users of InVEST will need to use GDAL version &gt;= 2.0. When upgrading GDAL we noticed slight numerical differences in our test suite in both numerical raster differences, geometry transforms, and occasionally a single pixel difference when using <cite>gdal.RasterizeLayer</cite>. Each of these differences in the InVEST test suite is within a reasonable numerical tolerance and we have updated our regression test suite appropriately. Users comparing runs between previous versions of InVEST may also notice reasonable numerical differences between runs.</li>
@@ -2979,7 +2988,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed a broken link to local and online user documentation from the Seasonal Water Yield model from the model's user interface.</li>
         </ul>
     </section>
-    <section id="section-40">
+    <section id="section-41">
         <h1>3.4.3 (2018-03-26)</h1>
         <ul>
             <li>Fixed a critical issue in the carbon model UI that would incorrectly state the user needed a "REDD Priority Raster" when none was required.</li>
@@ -2987,7 +2996,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed an issue in wind energy UI that was incorrectly validating most of the inputs.</li>
         </ul>
     </section>
-    <section id="section-41">
+    <section id="section-42">
         <h1>3.4.2 (2017-12-15)</h1>
         <ul>
             <li>Fixed a cross-platform issue with the UI where logfiles could not be dropped onto UI windows.</li>
@@ -2997,7 +3006,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixing an issue with the <code>FileSystemRunDialog</code> where pressing the 'X' button in the corner of the window would close the window, but not reset its state. The window's state is now reset whenever the window is closed (and the window cannot be closed when the model is running)</li>
         </ul>
     </section>
-    <section id="section-42">
+    <section id="section-43">
         <h1>3.4.1 (2017-12-11)</h1>
         <ul>
             <li>In the Coastal Blue Carbon model, the <code>interest_rate</code> parameter has been renamed to <code>inflation_rate</code>.</li>
@@ -3005,7 +3014,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Added better error checking to the SDR model for missing <cite>ws_id</cite> and invalid <cite>ws_id</cite> values such as <cite>None</cite> or some non-integer value. Also added tests for the <cite>SDR</cite> validation module.</li>
         </ul>
     </section>
-    <section id="section-43">
+    <section id="section-44">
         <h1>3.4.0 (2017-12-03)</h1>
         <ul>
             <li>Fixed an issue with most InVEST models where the suffix was not being reflected in the output filenames. This was due to a bug in the InVEST UI, where the suffix args key was assumed to be <code>'suffix'</code>. Instances of <code>InVESTModel</code> now accept a keyword argument to defined the suffix args key.</li>
@@ -3037,7 +3046,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Updated the erodibility sample raster that ships with InVEST for the SDR model. The old version was in US units, in this version we convert to SI units as the model requires, and clipped the raster to the extents of the other stack to save disk space.</li>
         </ul>
     </section>
-    <section id="section-44">
+    <section id="section-45">
         <h1>3.3.3 (2017-02-06)</h1>
         <ul>
             <li>Fixed an issue in the UI where the carbon model wouldn't accept negative numbers in the price increase of carbon.</li>
@@ -3057,7 +3066,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Updated branding and usability of the InVEST installer for Windows, and the Mac Disk Image (.dmg).</li>
         </ul>
     </section>
-    <section id="section-45">
+    <section id="section-46">
         <h1>3.3.2 (2016-10-17)</h1>
         <ul>
             <li>Partial test coverage for HRA model.</li>
@@ -3096,7 +3105,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed an issue in SDR that reported runtime overflow errors during normal processing even though the model completed without other errors.</li>
         </ul>
     </section>
-    <section id="section-46">
+    <section id="section-47">
         <h1>3.3.1 (2016-06-13)</h1>
         <ul>
             <li>Refactored API documentation for readability, organization by relevant topics, and to allow docs to build on <a href="http://invest.readthedocs.io">invest.readthedocs.io</a>,</li>
@@ -3122,7 +3131,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Updated Crop Production model to add a simplified UI, faster runtime, and more testing.</li>
         </ul>
     </section>
-    <section id="section-47">
+    <section id="section-48">
         <h1>3.3.0 (2016-03-14)</h1>
         <ul>
             <li>Refactored Wind Energy model to use a CSV input for wind data instead of a Binary file.</li>
@@ -3176,7 +3185,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Documentation to the GLOBIO code base including the large docstring for 'execute'.</li>
         </ul>
     </section>
-    <section id="section-48">
+    <section id="section-49">
         <h1>3.2.0 (2015-05-31)</h1>
         <p>InVEST 3.2.0 is a major release with the addition of several experimental models and tools as well as an upgrade to the PyGeoprocessing core:</p>
         <ul>
@@ -3189,11 +3198,11 @@ setuptools_scm</code> from the project root.</li>
             <li>Miscelaneous performance patches and bug fixes.</li>
         </ul>
     </section>
-    <section id="section-49">
+    <section id="section-50">
         <h1>3.1.3 (2015-04-23)</h1>
         <p>InVEST 3.1.3 is a hotfix release patching a memory blocking issue resolved in PyGeoprocessing version 0.2.1. Users might have experienced slow runtimes on SDR or other routed models.</p>
     </section>
-    <section id="section-50">
+    <section id="section-51">
         <h1>3.1.2 (2015-04-15)</h1>
         <p>InVEST 3.1.2 is a minor release patching issues mostly related to the freshwater routing models and signed GDAL Byte datasets.</p>
         <ul>
@@ -3209,7 +3218,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed an issue in the Blue Carbon model that prevented the report from being generated in the outputs file.</li>
         </ul>
     </section>
-    <section id="section-51">
+    <section id="section-52">
         <h1>3.1.1 (2015-03-13)</h1>
         <p>InVEST 3.1.1 is a major performance and memory bug patch to the InVEST toolsuite. We recommend all users upgrade to this version.</p>
         <ul>
@@ -3232,7 +3241,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed a bug in Habitat Quality where the future output "quality_out_f.tif" was not reflecting the habitat value given in the sensitivity table for the specified landcover types.</li>
         </ul>
     </section>
-    <section id="section-52">
+    <section id="section-53">
         <h1>3.1.0 (2014-11-19)</h1>
         <p>InVEST 3.1.0 (<a href="http://www.naturalcapitalproject.org/download.html">http://www.naturalcapitalproject.org/download.html</a>) is a major software and science milestone that includes an overhauled sedimentation model, long awaited fixes to exponential decay routines in habitat quality and pollination, and a massive update to the underlying hydrological routing routines. The updated sediment model, called SDR (sediment delivery ratio), is part of our continuing effort to improve the science and capabilities of the InVEST tool suite. The SDR model inputs are backwards comparable with the InVEST 3.0.1 sediment model with two additional global calibration parameters and removed the need for the retention efficiency parameter in the biophysical table; most users can run SDR directly with the data they have prepared for previous versions. The biophysical differences between the models are described in a section within the SDR user's guide and represent a superior representation of the hydrological connectivity of the watershed, biophysical parameters that are independent of cell size, and a more accurate representation of sediment retention on the landscape. Other InVEST improvements to include standard bug fixes, performance improvements, and usability features which in part are described below:</p>
         <ul>
@@ -3273,7 +3282,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed an issue where the data type of the nodata value in a raster might be different than the values in the raster. This was common in the case of 64 bit floating point values as nodata when the underlying raster was 32 bit. Now nodata values are cast to the underlying types which improves the reliability of many of the InVEST models.</li>
         </ul>
     </section>
-    <section id="section-53">
+    <section id="section-54">
         <h1>3.0.1 (2014-05-19)</h1>
         <ul>
             <li>Blue Carbon model released.</li>
@@ -3295,7 +3304,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed an issue in Marine Water Quality where the UV points were supposed to be optional, but instead raised an exception when not passed in.</li>
         </ul>
     </section>
-    <section id="section-54">
+    <section id="section-55">
         <h1>3.0.0 (2014-03-23)</h1>
         <p>The 3.0.0 release of InVEST represents a shift away from the ArcGIS to the InVEST standalone computational platform. The only exception to this shift is the marine coastal protection tier 1 model which is still supported in an ArcGIS toolbox and has no InVEST 3.0 standalone at the moment. Specific changes are detailed below</p>
         <ul>
@@ -3314,7 +3323,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Numerous other minor bug fixes and performance enhacnements.</li>
         </ul>
     </section>
-    <section id="section-55">
+    <section id="section-56">
         <h1>2.6.0 (2013-12-16)</h1>
         <p>The 2.6.0 release of InVEST removes most of the old InVEST models from the Arc toolbox in favor of the new InVEST standalone models. While we have been developing standalone equivalents for the InVEST Arc models since version 2.3.0, this is the first release in which we removed support for the deprecated ArcGIS versions after an internal review of correctness, performance, and stability on the standalones. Additionally, this is one of the last milestones before the InVEST 3.0.0 release later next year which will transition InVEST models away from strict ArcGIS dependence to a standalone form.</p>
         <p>Specifically, support for the following models have been moved from the ArcGIS toolbox to their Windows based standalones: (1) hydropower/water yield, (2) finfish aquaculture, (3) coastal protection tier 0/coastal vulnerability, (4) wave energy, (5) carbon, (6) habitat quality/biodiversity, (7) pollination, (8) timber, and (9) overlap analysis. Additionally, documentation references to ArcGIS for those models have been replaced with instructions for launching standalone InVEST models from the Windows start menu.</p>
@@ -3337,7 +3346,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Changing support from <a href="mailto:richsharp@stanford.edu">richsharp@stanford.edu</a> to the user support forums at <a href="http://ncp-yamato.stanford.edu/natcapforums">http://ncp-yamato.stanford.edu/natcapforums</a>.</li>
         </ul>
     </section>
-    <section id="section-56">
+    <section id="section-57">
         <h1>2.5.6 (2013-09-06)</h1>
         <p>The 2.5.6 release of InVEST that addresses minor bugs, performance tweaks, and new functionality of the InVEST standalone models. Including:</p>
         <ul>
@@ -3363,7 +3372,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Added an infrastructure feature so that temporary files are created in the user's workspace rather than at the system level folder. This lets users work in a secondary workspace on a USB attached hard drive and use the space of that drive, rather than the primary operating system drive.</li>
         </ul>
     </section>
-    <section id="section-57">
+    <section id="section-58">
         <h1>2.5.5 (2013-08-06)</h1>
         <p>The 2.5.5 release of InVEST that addresses minor bugs, performance tweaks, and new functionality of the InVEST standalone models. Including:</p>
         <blockquote>
@@ -3457,7 +3466,7 @@ setuptools_scm</code> from the project root.</li>
             </ul>
         </blockquote>
     </section>
-    <section id="section-58">
+    <section id="section-59">
         <h1>2.5.4 (2013-06-07)</h1>
         <p>This is a minor release of InVEST that addresses numerous minor bugs and performance tweaks in the InVEST 3.0 models. Including:</p>
         <blockquote>
@@ -3507,15 +3516,15 @@ setuptools_scm</code> from the project root.</li>
             </ul>
         </blockquote>
     </section>
-    <section id="section-59">
+    <section id="section-60">
         <h1>2.5.3 (2013-03-21)</h1>
         <p>This is a minor release of InVEST that fixes an issue with the HRA model that caused ArcGIS versions of the model to fail when calculating habitat maps for risk hotspots. This upgrade is strongly recommended for users of InVEST 2.5.1 or 2.5.2.</p>
     </section>
-    <section id="section-60">
+    <section id="section-61">
         <h1>2.5.2 (2013-03-17)</h1>
         <p>This is a minor release of InVEST that fixes an issue with the HRA sample data that caused ArcGIS versions of the model to fail on the training data. There is no need to upgrade for most users unless you are doing InVEST training.</p>
     </section>
-    <section id="section-61">
+    <section id="section-62">
         <h1>2.5.1 (2013-03-12)</h1>
         <p>This is a minor release of InVEST that does not add any new models, but does add additional functionality, stability, and increased performance to one of the InVEST 3.0 standalones:</p>
         <blockquote>
@@ -3534,7 +3543,7 @@ setuptools_scm</code> from the project root.</li>
         </blockquote>
         <p>Additionally, this minor release fixes a bug in the InVEST user interface where collapsible containers became entirely non-interactive.</p>
     </section>
-    <section id="section-62">
+    <section id="section-63">
         <h1>2.5.0 (2013-03-08)</h1>
         <p>This a major release of InVEST that includes new standalone versions (ArcGIS is not required) our models as well as additional functionality, stability, and increased performance to many of the existing models. This release is timed to support our group's annual training event at Stanford University. We expect to release InVEST 2.5.1 a couple of weeks after to address any software issues that arise during the training. See the release notes below for details of the release, and please contact <a href="mailto:richsharp@stanford.edu">richsharp@stanford.edu</a> for any issues relating to software:</p>
         <blockquote>
@@ -3621,7 +3630,7 @@ setuptools_scm</code> from the project root.</li>
             </blockquote>
         </blockquote>
     </section>
-    <section id="section-63">
+    <section id="section-64">
         <h1>2.4.5 (2013-02-01)</h1>
         <p>This is a minor release of InVEST that does not add any new models, but does add additional functionality, stability, and increased performance to many of the InVEST 3.0 standalones:</p>
         <blockquote>
@@ -3681,7 +3690,7 @@ setuptools_scm</code> from the project root.</li>
             </ul>
         </blockquote>
     </section>
-    <section id="section-64">
+    <section id="section-65">
         <h1>2.4.4 (2012-10-24)</h1>
         <ul>
             <li>Fixes memory errors experienced by some users in the Carbon Valuation 3.0 Beta model.</li>
@@ -3689,7 +3698,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixes an issue importing packages for some officially-unreleased InVEST models.</li>
         </ul>
     </section>
-    <section id="section-65">
+    <section id="section-66">
         <h1>2.4.3 (2012-10-19)</h1>
         <ul>
             <li>Fixed a minor issue with hydropower output vaulation rasters whose statistics were not pre-calculated. This would cause the range in ArcGIS to show ther rasters at -3e38 to 3e38.</li>
@@ -3700,20 +3709,20 @@ setuptools_scm</code> from the project root.</li>
             <li>Added a feature to all InVEST 3.0 models to list disk usage before and after each run and in most cases report a low free space error if relevant.</li>
         </ul>
     </section>
-    <section id="section-66">
+    <section id="section-67">
         <h1>2.4.2 (2012-10-15)</h1>
         <ul>
             <li>Fixed an issue with the ArcMap document where the paths to default data were not saved as relative paths. This caused the default data in the document to not be found by ArcGIS.</li>
             <li>Introduced some more memory-efficient processing for Biodiversity 3.0 Beta. This fixes an out-of-memory issue encountered by some users when using very large raster datasets as inputs.</li>
         </ul>
     </section>
-    <section id="section-67">
+    <section id="section-68">
         <h1>2.4.1 (2012-10-08)</h1>
         <ul>
             <li>Fixed a compatibility issue with ArcGIS 9.3 where the ArcMap and ArcToolbox were unable to be opened by Arc 9.3.</li>
         </ul>
     </section>
-    <section id="section-68">
+    <section id="section-69">
         <h1>2.4.0 (2012-10-05)</h1>
         <p>Changes in InVEST 2.4.0</p>
         <p>General:</p>
@@ -3793,7 +3802,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Fixed a visualization bug with wave energy where output rasters did not have the min/max/stdev calculations on them. This made the default visualization in arc be a gray blob.</li>
         </ul>
     </section>
-    <section id="section-69">
+    <section id="section-70">
         <h1>2.3.0 (2012-08-02)</h1>
         <p>Changes in InVEST 2.3.0</p>
         <p>General:</p>
@@ -3859,7 +3868,7 @@ setuptools_scm</code> from the project root.</li>
             <li>Other minor bug fixes and runtime performance tweaks in the 3.0 framework.</li>
         </ul>
     </section>
-    <section id="section-70">
+    <section id="section-71">
         <h1>2.2.2 (2012-03-03)</h1>
         <p>Changes in InVEST 2.2.2</p>
         <p>General:</p>
@@ -3880,14 +3889,14 @@ setuptools_scm</code> from the project root.</li>
             <dd>toolbox if the workspace name is too long.</dd>
         </dl>
     </section>
-    <section id="section-71">
+    <section id="section-72">
         <h1>2.2.1 (2012-01-26)</h1>
         <p>Changes in InVEST 2.2.1</p>
         <p>General:</p>
         <p>This is a minor release which fixes the following defects:</p>
         <p>-A variety of miscellaneous bugs were fixed that were causing crashes of the Coastal Protection model in Arc 9.3. -Fixed an issue in the Pollination model that was looking for an InVEST1005 directory. -The InVEST "models only" release had an entry for the InVEST 3.0 Beta tools, but was missing the underlying runtime. This has been added to the models only 2.2.1 release at the cost of a larger installer. -The default InVEST ArcMap document wouldn't open in ArcGIS 9.3. It can now be opened by Arc 9.3 and above. -Minor updates to the Coastal Protection user's guide.</p>
     </section>
-    <section id="section-72">
+    <section id="section-73">
         <h1>2.2.0 (2011-12-22)</h1>
         <p>In this release we include updates to the habitat risk assessment model, updates to Coastal Vulnerability Tier 0 (previously named Coastal Protection), and a new tier 1 Coastal Vulnerability tool. Additionally, we are releasing a beta version of our 3.0 platform that includes the terrestrial timber and carbon models.</p>
         <p>See the "Marine Models" and "InVEST 3.0 Beta" sections below for more details.</p>
@@ -3941,7 +3950,7 @@ setuptools_scm</code> from the project root.</li>
             </dd>
         </dl>
     </section>
-    <section id="section-73">
+    <section id="section-74">
         <h1>2.1.1 (2011-10-17)</h1>
         <p>Changes in InVEST 2.1.1</p>
         <p>General:</p>
