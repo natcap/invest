@@ -213,7 +213,7 @@ test('Run a real invest model', async () => {
   const argsForm = await page.waitForSelector('.args-form');
 
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace (directory)"][role="textbox"]');
+    'aria/[name="Workspace Directory"][role="textbox"]');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const aoi = await argsForm.waitForSelector(
     'aria/[name="Area Of Interest (vector)"][role="textbox"]');
@@ -244,9 +244,9 @@ test('Run a real invest model', async () => {
   await sidebar.waitForSelector('text/Run Canceled');
   await page.waitForSelector('aria/[name="Open Workspace"][role="button"]');
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
-}, 3600000); // >2x the sum of all the max timeouts within this test
+}, 360000); // >2x the sum of all the max timeouts within this test
 
-test.skip('Open each model and each local userguide', async () => {
+test('Open each model and each local userguide', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
