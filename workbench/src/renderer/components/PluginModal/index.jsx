@@ -4,10 +4,12 @@ import PropTypes from 'prop-types';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
+import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
+import Row from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
-import { MdCheckCircleOutline, MdClose } from 'react-icons/md';
+import { MdCheckCircleOutline, MdClose, MdFolderOpen } from 'react-icons/md';
 
 import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
@@ -26,6 +28,7 @@ export default function PluginModal(props) {
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
+  const [condaPath, setCondaPath] = useState('');
   const [installErr, setInstallErr] = useState('');
   const [uninstallErr, setUninstallErr] = useState('');
   const [pluginToRemove, setPluginToRemove] = useState('');
@@ -56,6 +59,15 @@ export default function PluginModal(props) {
     setUserAcknowledgmentError(false);
     setPluginSourceMissingError(false);
   };
+
+  useEffect(() => {
+    ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'micromamba'
+    ).then((data) => {
+      console.log('path', data);
+      setCondaPath(data);
+    });
+  }, [])
 
   useEffect(() => {
     clearFormErrors();
@@ -144,6 +156,30 @@ export default function PluginModal(props) {
     );
   };
 
+  const handleCondaPathChange = (event) => {
+    console.log('handle path change');
+    ipcRenderer.send(
+      ipcMainChannels.SET_SETTING, 'micromamba', event.target.value
+    );
+    setCondaPath(event.target.value);
+  }
+
+  const resetCondaPath = () => {
+    console.log('reset conda path');
+    ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'defaultMicromamba'
+    ).then((data) => {
+      ipcRenderer.send(
+        ipcMainChannels.SET_SETTING, 'micromamba', data
+      );
+      setCondaPath(data);
+    });
+  }
+
+  const handleChangePluginEnv = (pluginID, value) => {
+    console.log('change plugin env');
+  }
+
   useEffect(() => {
     ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
     if (show) {
@@ -168,6 +204,18 @@ export default function PluginModal(props) {
   }, [installLoading, uninstallLoading]);
 
   const { t } = useTranslation();
+
+  const selectDirectory = async (event) => {
+    const data = await ipcRenderer.invoke(
+      ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openDirectory'] }
+    );
+    if (data.filePaths.length) {
+      // dialog defaults allow only 1 selection
+      setPath(data.filePaths[0]);
+    }
+  }
+
+  console.log(plugins);
 
   let pluginFields;
   if (installFrom === 'url') {
@@ -413,6 +461,80 @@ export default function PluginModal(props) {
             </Form.Text>
           }
         </div>
+      </Form>
+      <hr />
+      <Form aria-labelledby="configure-conda-form-title">
+        <Form.Group>
+          <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable')}</h5>
+          <Form.Label htmlFor="condaPath">{t('Conda or mamba executable')}</Form.Label>
+          <div className="d-flex flex-nowrap w-100">
+            <Form.Control
+              id="condaPath"
+              type="text"
+              value={condaPath}
+              onChange={handleCondaPathChange}
+              className="mr-1"
+            />
+            <Button
+              aria-label="browse for env"
+              className="ml-1 mr-1"
+              id="browse-env-button"
+              variant="outline-dark"
+              onClick={selectDirectory}
+            >
+              <MdFolderOpen />
+            </Button>
+            <Button onClick={resetCondaPath} className="text-nowrap ml-1">
+              {t('Reset')}
+            </Button>
+          </div>
+        </Form.Group>
+      </Form>
+      <hr />
+      <Form aria-labelledby="configure-plugin-envs-form-title">
+        <Form.Group>
+        <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments')}</h5>
+        {Object.keys(plugins).map((pluginID) => (
+          <div
+            className="d-flex flex-nowrap w-100"
+          >
+            <Form.Label
+              column
+              sm={3}
+              htmlFor={pluginID}
+              className="text-nowrap overflow-auto w-30 mr-2 d-block"
+              style={{
+                scrollbarWidth: 'thin',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              {pluginID}
+            </Form.Label>
+            <Form.Control
+              id="condaPath2"
+              type="text"
+              value={plugins[pluginID].env}
+              onChange={handleCondaPathChange}
+              className="ml-1 mr-1"
+            />
+            <Button
+              aria-label="browse for env"
+              className="ml-1 mr-2"
+              id="browse-env-button"
+              variant="outline-dark"
+              onClick={selectDirectory}
+            >
+              <MdFolderOpen />
+            </Button>
+            <Button
+              onClick={() => resetCondaPath(pluginID)}
+              className="text-nowrap"
+            >
+              {t('Reset')}
+            </Button>
+          </div>
+        ))}
+      </Form.Group>
       </Form>
     </Modal.Body>
   );
