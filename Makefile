@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 828eb570dab6a84751fcbe0eff430ec66e4a1621
+GIT_SAMPLE_DATA_REPO_REV    := 098183806c0c715e6422d4d0570db91321c0f4e8
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 246909bb6f72a7b18f3afb08c82c2310ecfaa5a4
+GIT_TEST_DATA_REPO_REV      := 5b9754d1b3aa7742ae52071b61f1d52ff9e83394
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 3954f327f0519c884e05a60a9d3d0a3b307bbb6f
+GIT_UG_REPO_REV             := 0ccc3e4bf473f7a11a829e0513850506c43933a8
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -64,7 +64,7 @@ PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) -m setuptools_scm)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 
-GSUTIL := gsutil
+GCLOUD_STORAGE := gcloud storage
 SIGNTOOL := SignTool
 RST2HTML5 := rst2html5
 
@@ -186,7 +186,7 @@ invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
 	$(INVEST_AUTOTESTER)
 
 deploy_autotest_reports:
-	find $(AUTOTEST_DIR) -name "*report*.html" | $(GSUTIL) -m cp -I $(REPORTS_BASE_URL)
+	find $(AUTOTEST_DIR) -name "*report*.html" | $(GCLOUD_STORAGE) cp -I $(REPORTS_BASE_URL)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
@@ -356,27 +356,27 @@ codesign:
 	python codesigning/enqueue-current-installer.py
 
 deploy:
-	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
-	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
-	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-	-$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
+	-$(GCLOUD_STORAGE) rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GCLOUD_STORAGE) rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	-$(GCLOUD_STORAGE) rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	-$(GCLOUD_STORAGE) rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)"
 
 deploy_wheel:
-	$(GSUTIL) -m rsync $(DIST_DIR)/*.whl $(DIST_URL_BASE)
+	$(GCLOUD_STORAGE) cp $(DIST_DIR)/*.whl $(DIST_URL_BASE)
 
 deploy_sdist:
-	$(GSUTIL) -m rsync $(DIST_DIR)/*.tar.gz $(DIST_URL_BASE)
+	$(GCLOUD_STORAGE) cp $(DIST_DIR)/*.tar.gz $(DIST_URL_BASE)
 
 deploy_data:
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	$(GCLOUD_STORAGE) rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 
 deploy_userguide:
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	$(GCLOUD_STORAGE) rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 
 deploy_workbench:
-	$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
+	$(GCLOUD_STORAGE) rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 
 changelog:
 	$(RST2HTML5) $(CHANGELOG_SRC) $(CHANGELOG_DEST)

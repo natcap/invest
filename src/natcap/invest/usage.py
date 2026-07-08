@@ -1,15 +1,8 @@
-"""Module to that provides functions for usage logging."""
-import contextlib
-import hashlib
-import json
+"""Module that provides functions for usage logging."""
 import locale
 import logging
-import os
 import platform
 import sys
-import threading
-import traceback
-import uuid
 import importlib
 
 from osgeo import osr
@@ -26,44 +19,6 @@ LOGGER = logging.getLogger(__name__)
 _ENDPOINTS_INDEX_URL = (
     'http://data.naturalcapitalproject.org/server_registry/'
     'invest_usage_logger_v2/index.html')
-
-# This is defined here because it's very useful to know the thread name ahead
-# of time so we can exclude any log messages it generates from the logging.
-# Python doesn't care about having multiple threads have the same name.
-_USAGE_LOGGING_THREAD_NAME = 'usage-logging-thread'
-
-
-@contextlib.contextmanager
-def log_run(model_pyname, args):
-    """Context manager to log an InVEST model run and exit status.
-
-    Args:
-        model_pyname (string): The string module name that identifies the model.
-        args (dict): The full args dictionary.
-
-    Returns:
-        ``None``
-    """
-    invest_interface = 'Qt'  # this cm is only used by the Qt interface
-    session_id = str(uuid.uuid4())
-    log_thread = threading.Thread(
-        target=_log_model,
-        args=(model_pyname, args, invest_interface, session_id),
-        name=_USAGE_LOGGING_THREAD_NAME)
-    log_thread.start()
-
-    try:
-        yield
-    except Exception:
-        exit_status_message = traceback.format_exc()
-        raise
-    else:
-        exit_status_message = ':)'
-    finally:
-        log_exit_thread = threading.Thread(
-            target=_log_exit_status, args=(session_id, exit_status_message),
-            name=_USAGE_LOGGING_THREAD_NAME)
-        log_exit_thread.start()
 
 
 def _calculate_args_bounding_box(args, model_spec):
@@ -164,34 +119,8 @@ def _calculate_args_bounding_box(args, model_spec):
     return bb_intersection, bb_union
 
 
-def _log_exit_status(session_id, status):
-    """Log the completion of a model with the given status.
-
-    Args:
-        session_id (string): a unique string that can be used to identify
-            the current session between the model initial start and exit.
-        status (string): a string describing the exit status of the model,
-            'success' would indicate the successful completion while an
-            exception string could indicate a failure.
-
-    Returns:
-        None
-    """
-    logger = logging.getLogger('natcap.invest.usage._log_exit_status')
-
-    try:
-        log_finish_url = requests.get(_ENDPOINTS_INDEX_URL).json()['FINISH']
-        requests.post(log_finish_url, data={
-            'session_id': session_id,
-            'status': status,
-        })
-    except Exception as exception:
-        # An exception was thrown, we don't care.
-        logger.warning(
-            f'an exception encountered in _log_exit_status: {str(exception)}')
-
-
-def _log_model(pyname, model_args, invest_interface, type, source, session_id=None):
+def _log_model(
+        pyname, model_args, invest_interface, model_type, plugin_source):
     """Log information about a model run to a remote server.
 
     Args:
@@ -199,28 +128,15 @@ def _log_model(pyname, model_args, invest_interface, type, source, session_id=No
         model_args (dict): the traditional InVEST argument dictionary.
         invest_interface (string): a string identifying the calling UI,
             e.g. `Qt` or 'Workbench'.
-        type (string): 'core' or 'plugin'
-        source (string): For plugins, a string identifying the source of the
-            plugin (e.g. 'git+https://github.com/foo/bar' or 'local'). For
+        model_type (string): 'core' or 'plugin'
+        plugin_source (string): For plugins, a string identifying the source of
+            the plugin (e.g. 'git+https://github.com/foo/bar' or 'local'). For
             core models, this is None.
 
     Returns:
         None
     """
     logger = logging.getLogger('natcap.invest.usage._log_model')
-
-    def _node_hash():
-        """Return a hash for the current computational node."""
-        data = {
-            'os': platform.platform(),
-            'hostname': platform.node(),
-            'userdir': os.path.expanduser('~')
-        }
-        md5 = hashlib.md5()
-        # a json dump will handle non-ascii encodings
-        # but then data must be encoded before hashing in Python 3.
-        md5.update(json.dumps(data).encode('utf-8'))
-        return md5.hexdigest()
 
     model_spec = importlib.import_module(pyname).MODEL_SPEC
 
@@ -232,15 +148,13 @@ def _log_model(pyname, model_args, invest_interface, type, source, session_id=No
             'model_name': pyname,
             'invest_release': natcap.invest.__version__,
             'invest_interface': invest_interface,
-            'node_hash': _node_hash(),
             'system_full_platform_string': platform.platform(),
             'system_preferred_encoding': locale.getdefaultlocale()[1],
             'system_default_language': locale.getdefaultlocale()[0],
             'bounding_box_intersection': str(bounding_box_intersection),
             'bounding_box_union': str(bounding_box_union),
-            'session_id': session_id,
-            'type': type,
-            'source': source
+            'type': model_type,
+            'source': plugin_source
         })
     except Exception as exception:
         # An exception was thrown, we don't care.

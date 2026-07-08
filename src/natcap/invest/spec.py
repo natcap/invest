@@ -23,7 +23,7 @@ import pint
 import pygeoprocessing
 from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_validator, model_validator
+    field_validator, model_serializer, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
@@ -1203,57 +1203,23 @@ class CSVInput(FileInput):
         return [rst_line]
 
 
-class DirectoryInput(Input):
-    """A directory input, or parameter, of an invest model.
+class WorkspaceInput(Input):
+    """A workspace directory path input to an invest model.
 
-    Use this type when you need to specify a group of many file-based inputs,
-    or an unknown number of file-based inputs, by grouping them together in a
-    directory. This may also be used to describe an empty directory where model
-    outputs will be written to.
+    This is used to describe a directory where model outputs will be written.
     """
-    contents: list[Input]
-    """An iterable of `Input`s representing the contents of this directory. The
-    `key` of each input must be the file name or pattern."""
-
-    permissions: typing.Annotated[str, AfterValidator(
-        validate_permissions_string)] = ''
-    """A string that includes the lowercase characters ``r``, ``w`` and/or ``x``,
-    indicating read, write, and execute permissions (respectively) required for
-    this directory."""
-
-    must_exist: bool = True
-    """Defaults to True, indicating the directory must already exist before
-    running the model. Set to False if the directory will be created."""
-
-    type: typing.ClassVar[str] = 'directory'
-
-    rst_section: typing.ClassVar[str] = 'directory'
-
-    _contents_dict: dict[str, Input] = {}
-
-    @model_validator(mode='after')
-    def check_contents_types(self):
-        allowed_types = {
-            CSVInput, DirectoryInput, FileInput, RasterOrVectorInput,
-            SingleBandRasterInput, VectorInput}
-        for content in (self.contents or []):
-            for input_type in allowed_types:
-                if isinstance(content, input_type):
-                    break
-            else:
-                raise ValueError(
-                    f'Directory contents {content} is not an allowed type')
-        return self
-
-    def model_post_init(self, context):
-        self._contents_dict = {x.id: x for x in self.contents}
+    id: typing.ClassVar[str] = 'workspace_dir'
+    name: typing.ClassVar[str] = 'workspace directory'
+    about: str = gettext(
+        "The folder where all the model's output files will be written."
+        " If this folder does not exist, it will be created. If data"
+        " already exists in the folder, it will be overwritten.")
+    type: typing.ClassVar[str] = 'workspace'
+    rst_section: typing.ClassVar[str] = 'workspace'
 
     @property
     def display_name(self):
-        return gettext('directory')
-
-    def get_contents(self, key: str) -> Input:
-        return self._contents_dict[key]
+        return gettext('workspace directory')
 
     @timeout
     def validate(self, dirpath: str):
@@ -1265,13 +1231,6 @@ class DirectoryInput(Input):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        if not utils._GDALPath.from_uri(dirpath).is_local:
-            return  # Don't check paths and permissions for remote paths
-
-        if self.must_exist:
-            if not os.path.exists(dirpath):
-                return validation_messages.DIR_NOT_FOUND
-
         if os.path.exists(dirpath):
             if not os.path.isdir(dirpath):
                 return validation_messages.NOT_A_DIR
@@ -1287,31 +1246,38 @@ class DirectoryInput(Input):
                     dirpath = parent
                     break
 
-        if 'r' in self.permissions:
-            try:
-                os.scandir(dirpath).close()
-            except OSError:
-                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read')
+        try:  # check for read permissions
+            os.scandir(dirpath).close()
+        except OSError:
+            return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read')
 
-        # Check for x access before checking for w,
+        # Check for execute permissions before checking for write,
         # since w operations to a dir are dependent on x access
-        if 'x' in self.permissions:
-            try:
-                cwd = os.getcwd()
-                os.chdir(dirpath)
-            except OSError:
-                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='execute')
-            finally:
-                os.chdir(cwd)
+        try:
+            cwd = os.getcwd()
+            os.chdir(dirpath)
+        except OSError:
+            return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='execute')
+        finally:
+            os.chdir(cwd)
 
-        if 'w' in self.permissions:
-            try:
-                temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
-                with open(temp_path, 'w') as temp:
-                    temp.close()
-                    os.remove(temp_path)
-            except OSError:
-                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='write')
+        try:  # check for write permissions
+            temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
+            with open(temp_path, 'w') as temp:
+                temp.close()
+                os.remove(temp_path)
+        except OSError:
+            return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='write')
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler):
+        """Custom serializer to include static class attributes in the dict representation"""
+        return {
+            **handler(self),
+            'id': self.id,
+            'name': self.name,
+            'about': self.about
+        }
 
 
 class NumberInput(Input):
@@ -2010,27 +1976,26 @@ class NumberOutput(Output):
     """The units of measurement for this numeric value"""
 
 
-class IntegerOutput(Output):
+class IntegerOutput(NumberOutput):
     """An integer output, or result, of an invest model."""
-    pass
 
 
-class RatioOutput(Output):
+class RatioOutput(NumberOutput):
     """A ratio output, or result, of an invest model.
 
     A ratio is a proportion expressed as a value from 0 to 1 (in contrast to a
     percent, which ranges from 0 to 100).
     """
-    pass
 
 
-class PercentOutput(Output):
+class PercentOutput(NumberOutput):
     """A percent output, or result, of an invest model.
 
     A percent is a proportion expressed as a value from 0 to 100 (in contrast to
     a ratio, which ranges from 0 to 1).
     """
-    pass
+    units: typing.Union[pint.Unit, None] = u.percent
+    """The units of measurement for this numeric value"""
 
 
 class StringOutput(Output):
@@ -2464,6 +2429,19 @@ class ModelSpec(ImmutableBaseModel):
             model_module = importlib.import_module(self.module_name)
             registry = model_module.execute(args)
 
+            if not isinstance(registry, dict):
+                msg = "`execute` was called with {kwargs}, but no" \
+                      " file registry dictionary was returned from `execute`."
+                kwargs_used = []
+                for kwarg in [
+                        'check_outputs', 'generate_metadata',
+                        'save_file_registry', 'generate_report']:
+                    if locals()[kwarg]:
+                        kwargs_used.append(f'{kwarg}=True')
+                if kwargs_used:
+                    LOGGER.warning(msg.format(kwargs=', '.join(kwargs_used)))
+                return
+
             preprocessed_args = self.preprocess_inputs(args)
             preprocessed_args = self.preprocess_spatial_reference_args(preprocessed_args)
 
@@ -2519,18 +2497,7 @@ class ModelSpec(ImmutableBaseModel):
 
 
 # Specs for common arg types ##################################################
-WORKSPACE = DirectoryInput(
-    id="workspace_dir",
-    name="workspace",
-    about=(
-        "The folder where all the model's output files will be written."
-        " If this folder does not exist, it will be created. If data"
-        " already exists in the folder, it will be overwritten."
-    ),
-    contents=[],
-    permissions="rwx",
-    must_exist=False,
-)
+WORKSPACE = WorkspaceInput()
 SUFFIX = ResultsSuffixInput(
     id="results_suffix",
     name=gettext("file suffix"),

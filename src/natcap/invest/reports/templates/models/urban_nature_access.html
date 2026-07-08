@@ -6,7 +6,9 @@
 {% endblock styles %}
 
 {% block content %}
+
   {{ super() }}
+
   {% from 'args-table.html' import args_table %}
   {% from 'caption.html' import caption %}
   {% from 'content-grid.html' import content_grid %}
@@ -14,60 +16,67 @@
   {% from 'raster-plot-img.html' import raster_plot_img %}
   {% from 'wide-table.html' import wide_table %}
 
-  <h2 class="section-header">Results</h2>
-  {% if qf_rasters %}
-    {{ accordion_section(
-      'Annual and Monthly Quickflow (QF)',
-      content_grid([
-        (caption(raster_group_caption, pre_caption=True), 100),
-        (raster_plot_img(qf_rasters['annual_qf_img_src'], 'Annual Quickflow values'), 100),
-        (raster_plot_img(qf_rasters['monthly_qf_img_src'], 'Monthly Quickflow values'), 100),
-        (caption(qf_rasters['qf_caption'], definition_list=True), 100)
-      ])
-    )}}
-  {% endif %}
+  <h2 class="section-header">
+    Results <span style="font-weight: normal;">(Search Radius Mode: {{ args_dict['search_radius_mode'] }})</span>
+  </h2>
 
-  {% if qf_b_charts %}
-    {{ accordion_section(
-      'Average Quickflow and Baseflow by Month',
-      content_grid([
-        ('<div id="qf_b_charts"></div>', 100),
-        (caption(qf_b_charts['caption'], qf_b_charts['sources']), 100)
-      ])
-    ) }}
-  {% endif %}
 
   {{ accordion_section(
-    outputs_heading,
+    'Primary Outputs',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
       (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
       (caption(outputs_caption, definition_list=True), 100)
     ])
-  ) }}
+  )}}
+
+
 
   {{ accordion_section(
-    'Results Aggregated by AOI Feature',
+    'Aggregated Vector Outputs',
     content_grid([
-      (content_grid([
-        ('<div id="qb_map"></div>', 100),
-        (caption(qb_map_caption, aggregate_map_source_list), 100)
-      ]), 50),
-      (content_grid([
-        ('<div id="vri_sum_map"></div>', 100),
-        (caption(vri_sum_map_caption, aggregate_map_source_list), 100)
-      ]), 50),
+      ('<div id="Admin_Units_Plots"></div>', 100),
+      (caption(vector_plot_captions, admin_boundaries_map_source_list, definition_list=True), 100)
     ])
   ) }}
 
   {{ accordion_section(
-    stream_outputs_heading,
+    'Urban Nature Accessibility Outputs',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (raster_plot_img(stream_img_src, stream_outputs_heading), 100),
-      (caption(stream_caption, definition_list=True), 100)
+      (raster_plot_img(output_accessible_img_src, 'Urban Nature Accessibility Outputs'), 100),
+      (caption(output_accessible_raster_caption, definition_list=True), 100)
     ])
   )}}
+
+  {% if args_dict['search_radius_mode'] == 'radius per population group' %}
+    {{ accordion_section(
+      'Urban Nature Balance Outputs',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(output_balance_img_src, 'Accessible Urban Nature Outputs'), 100),
+        (caption(output_balance_raster_caption, definition_list=True), 100)
+      ])
+    )}}
+
+    {{ accordion_section(
+      'Urban Nature Balance Percapita Outputs',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(output_balance_percapita_img_src, 'Accessible Urban Nature Outputs'), 100),
+        (caption(output_balance_percapita_raster_caption, definition_list=True), 100)
+      ])
+    )}}
+
+    {{ accordion_section(
+      'Select Intermediate Outputs',
+      content_grid([
+        (caption(raster_group_caption, pre_caption=True), 100),
+        (raster_plot_img(intermediates_img_src, 'Select Intermediate Outputs'), 100),
+        (caption(intermediates_caption, definition_list=True), 100)
+      ])
+    )}}
+  {% endif %}
 
   {{ accordion_section(
     'Output Raster Stats',
@@ -81,10 +90,13 @@
   )}}
 
   <h2 class="section-header">Inputs</h2>
-  {{ accordion_section(
-    'Arguments',
-    args_table(args_dict),
-  )}}
+
+  {% if args_dict != None %}
+    {{ accordion_section(
+      'Arguments',
+      args_table(args_dict)
+    )}}
+  {% endif %}
 
   {{ accordion_section(
     'Land Use/Land Cover Input',
@@ -97,13 +109,13 @@
   )}}
 
   {{ accordion_section(
-    'Other Inputs',
+    'Population Input',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
       (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
       (caption(inputs_caption, definition_list=True), 100)
     ])
-  ) }}
+  )}}
 
   {{ accordion_section(
     'Input Raster Stats',
@@ -117,6 +129,7 @@
   )}}
 
   <h2 class="section-header">Metadata</h2>
+
   {{
     accordion_section(
       'Output Filenames and Descriptions',
@@ -127,18 +140,14 @@
 
 {% endblock content %}
 
+
 {% from 'vegalite-plot.html' import embed_vega %}
+
 {% block scripts %}
   {{ super() }}
   {% include 'datatable-js.html' %}
   {% include "vega-dependencies.html" %}
   {% include 'vega-embed-js.html' %}
-  {% set chart_spec_id_list = [
-    (qb_map_json, 'qb_map'),
-    (vri_sum_map_json, 'vri_sum_map'),
-  ] %}
+  {% set chart_spec_id_list = [(admin_map_json, "Admin_Units_Plots")] %}
   {{ embed_vega(chart_spec_id_list) }}
-  {% if qf_b_charts %}
-    {{ embed_vega([(qf_b_charts['json'], 'qf_b_charts')]) }}
-  {% endif %}
 {% endblock scripts %}

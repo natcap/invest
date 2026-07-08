@@ -15,6 +15,7 @@ import pygeoprocessing
 import pygeoprocessing.routing
 from osgeo import gdal
 from osgeo import ogr
+from shapely.errors import GEOSException
 
 from natcap.invest import gettext
 from natcap.invest import spec
@@ -1574,8 +1575,12 @@ def _generate_report(
     # It's worth it to check if the geometries don't significantly overlap.
     # On large rasters, this can save a TON of time rasterizing even a
     # relatively simple vector.
-    geometries_might_overlap = urban_nature_access._geometries_overlap(
-        watershed_results_sdr_path)
+    try:
+        geometries_might_overlap = urban_nature_access._geometries_overlap(
+            watershed_results_sdr_path)
+    except GEOSException as error:
+        geometries_might_overlap = True
+        LOGGER.warning(error)
     fields_and_rasters = [
         ('usle_tot', usle_path), ('sed_export', sed_export_path),
         ('sed_dep', sed_deposition_path), ('avoid_exp', avoided_export_path),

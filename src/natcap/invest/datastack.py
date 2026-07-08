@@ -161,7 +161,7 @@ def build_datastack_archive(args, model_id, datastack_path):
     spatial_types = {spec.SingleBandRasterInput, spec.VectorInput,
                      spec.RasterOrVectorInput}
     file_based_types = spatial_types.union({
-        spec.CSVInput, spec.FileInput, spec.DirectoryInput})
+        spec.CSVInput, spec.FileInput, spec.WorkspaceInput})
     rewritten_args = {}
     for key in args:
         # Allow the model to override specific arguments in datastack archive
@@ -184,13 +184,6 @@ def build_datastack_archive(args, model_id, datastack_path):
                 args[key], data_dir, files_found)
             continue
 
-        # We don't want to accidentally archive a user's complete workspace
-        # directory, complete with prior runs there.
-        if key == 'workspace_dir':
-            LOGGER.debug(
-                f"Skipping workspace directory: {args['workspace_dir']}")
-            continue
-
         LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
@@ -198,6 +191,13 @@ def build_datastack_archive(args, model_id, datastack_path):
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
         input_spec = module.MODEL_SPEC.get_input(key)
+        # We don't want to accidentally archive a user's complete workspace
+        # directory, complete with prior runs there.
+        if isinstance(input_spec, spec.WorkspaceInput):
+            LOGGER.debug(
+                f"Skipping workspace directory: {args['workspace_dir']}")
+            continue
+
         if type(input_spec) in file_based_types:
             if args[key] in {None, ''}:
                 LOGGER.info(
@@ -230,15 +230,18 @@ def build_datastack_archive(args, model_id, datastack_path):
 
             LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
 
+            csv_dir = os.path.join(data_dir, f'{key}_csv')
+            os.makedirs(csv_dir)
+
             target_csv_path = os.path.join(
-                data_dir, f'{key}_csv.csv')
+                csv_dir, os.path.basename(source_path))
             if not spatial_columns:
                 LOGGER.debug(
                     f'No spatial columns, copying to {target_csv_path}')
                 shutil.copyfile(source_path, target_csv_path)
             else:
                 contained_files_dir = os.path.join(
-                    data_dir, f'{key}_csv_data')
+                    csv_dir, f'{key}_csv_data')
 
                 dataframe = input_spec.get_validated_dataframe(source_path)
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
@@ -284,7 +287,7 @@ def build_datastack_archive(args, model_id, datastack_path):
                             target_filepath = utils.copy_spatial_files(
                                 source_filepath, target_dir)
                             target_filepath = os.path.relpath(
-                                target_filepath, data_dir)
+                                target_filepath, csv_dir)
 
                         LOGGER.debug(
                             'Spatial file in CSV copied from '
@@ -305,26 +308,6 @@ def build_datastack_archive(args, model_id, datastack_path):
                 data_dir, f'{key}_file')
             shutil.copyfile(source_path, target_filepath)
             target_arg_value = target_filepath
-            files_found[source_path] = target_arg_value
-
-        elif type(input_spec) is spec.DirectoryInput:
-            # copy the whole folder
-            target_directory = os.path.join(data_dir, f'{key}_directory')
-            os.makedirs(target_directory)
-
-            # We want to copy the directory contents into the directory
-            # directly, not copy the parent folder into the directory.
-            for filename in os.listdir(source_path):
-                src_path = os.path.join(source_path, filename)
-                dest_path = os.path.join(target_directory, filename)
-                if os.path.isdir(src_path):
-                    shutil.copytree(src_path, dest_path)
-                else:
-                    shutil.copyfile(src_path, dest_path)
-
-            LOGGER.debug(
-                f'Directory copied from {source_path} --> {target_directory}')
-            target_arg_value = target_directory
             files_found[source_path] = target_arg_value
 
         elif type(input_spec) in spatial_types:

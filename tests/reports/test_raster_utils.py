@@ -4,26 +4,31 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from bs4 import BeautifulSoup
 import geometamaker
 import matplotlib
 import matplotlib.testing.compare
 from matplotlib.testing import set_font_settings_for_testing
 from matplotlib.testing.exceptions import ImageComparisonFailure
 import numpy
-from osgeo import osr
+from osgeo import gdal, osr
+import pandas
 import pygeoprocessing
+from pydantic import ValidationError
 
 from natcap.invest import spec
 from natcap.invest.reports import MATPLOTLIB_PARAMS, raster_utils
 from natcap.invest.reports.raster_utils import RasterDatatype
 from natcap.invest.reports.raster_utils import RasterTransform
 from natcap.invest.reports.raster_utils import RasterPlotConfig
+from natcap.invest.reports.raster_utils import SpecialValueConfig
 
 projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
 REFS_DIR = os.path.join('data', 'invest-test-data', 'reports', 'snapshots')
+MPL_VERSION = tuple(int(_) for _ in matplotlib.__version__.split('.'))
 
 
 def setUpModule():
@@ -67,6 +72,27 @@ def make_nominal_raster_with_distinct_counts(target_filepath, num_vals):
         projection_wkt=PROJ_WKT, target_path=target_filepath)
 
 
+def add_raster_attribute_table(target_filepath, value_name='value',
+                               count_name='count', extra_cols=[]):
+    raster = gdal.OpenEx(target_filepath, gdal.OF_UPDATE)
+    band = raster.GetRasterBand(1)
+    rat = gdal.RasterAttributeTable()
+    rat.CreateColumn(value_name, gdal.GFT_Integer, gdal.GFU_MinMax)
+    rat.CreateColumn(count_name, gdal.GFT_Integer, gdal.GFU_PixelCount)
+    for name in extra_cols:
+        rat.CreateColumn(name, gdal.GFT_String, gdal.GFU_Generic)
+
+    array = band.ReadAsArray()
+    values, counts = numpy.unique(array, return_counts=True)
+    for i in range(len(values)):
+        rat.SetValueAsInt(i, 0, int(values[i]))
+        rat.SetValueAsInt(i, 1, int(counts[i]))
+        for idx, name in enumerate(extra_cols):
+            rat.SetValueAsString(i, 2 + idx, 'foo')
+    band.SetDefaultRAT(rat)
+    band = raster = None
+
+
 def compare_snapshots(reference, actual):
     ref, ext = os.path.splitext(reference)
     new_reference = f'{ref}_fail{ext}'
@@ -92,6 +118,8 @@ def compare_snapshots(reference, actual):
     raise AssertionError(comparison, f'actual image saved to {new_reference}')
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotLayoutTests(unittest.TestCase):
     """Snapshot tests for matplotlib figure layouts."""
 
@@ -206,6 +234,8 @@ class RasterPlotLayoutTests(unittest.TestCase):
             self.assertEqual((bottom, top), expected_ylim)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
     """Snapshot tests for datatype and transform options."""
 
@@ -301,6 +331,8 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotLegendTests(unittest.TestCase):
     """Snapshot tests for legend placement on nominal rasters."""
 
@@ -362,6 +394,8 @@ class RasterPlotLegendTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotFacetsTests(unittest.TestCase):
     """Snapshot tests for plotting multiple rasters on the same colorscale."""
 
@@ -450,6 +484,8 @@ class RasterPlotFacetsTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotTitleTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with various titles."""
 
@@ -521,6 +557,8 @@ class RasterPlotTitleTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotUnitTextTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with unit text."""
 
@@ -567,6 +605,46 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+class SpecialConfigValueUnitTests(unittest.TestCase):
+    """Unit tests for SpecialConfigValue constructions."""
+
+    def test_special_value_config(self):
+        """Should pass when only index 0 (lower bound) is fully populated."""
+        config = SpecialValueConfig(
+            thresholds=(0.0, 100.0),
+            labels=("Low", "High"),
+            colors=("blue", "red")
+        )
+        self.assertEqual(config.thresholds, (0.0, 100.0))
+
+        config = SpecialValueConfig(
+            thresholds=(0.0, None),
+            labels=("Low", None),
+            colors=("blue", None)
+        )
+        self.assertEqual(config.colors, ("blue", None))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),
+                labels=(None, None),  # missing lower label
+                colors=("blue", None)
+            )
+        self.assertTrue(
+            "If index 0 is `None` in any of the special config tuples" in
+            str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),  # missing upper threshold
+                labels=("Low", "High"),
+                colors=("blue", None)  # missing upper color
+            )
+        self.assertTrue(
+            "If index 1 is `None` in any of the special config tuples" in
+            str(context.exception))
+
+
 class RasterCaptionTests(unittest.TestCase):
     """Unit tests for caption-generating utility."""
 
@@ -602,6 +680,165 @@ class RasterCaptionTests(unittest.TestCase):
             [raster1_config, raster2_config])
 
         self.assertEqual(generated_caption, expected_caption)
+
+
+class PlotCategoricalRastersTest(unittest.TestCase):
+    """Unit tests for plotting categorical rasters with attribute table."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def html_string_to_dataframe(html_string):
+        """Helper to convert an HTML table string to a pandas dataframe."""
+        soup = BeautifulSoup(html_string, 'html.parser')
+        rows = soup.find_all('tr')
+        header = rows[0]
+        cells = header.find_all(['th', 'td'])
+        col_names = [cell.get_text() for cell in cells]
+        df = pandas.DataFrame(columns=col_names)
+
+        for idx, row in enumerate(rows[1:]):
+            cells = row.find_all(['td'])
+            cell_values = [cell.get_text() for cell in cells]
+            df.loc[idx + 1] = cell_values
+        return df
+
+    def test_plot_single_raster_with_rat(self):
+        """Test single raster with RAT."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        add_raster_attribute_table(target_filepath, extra_cols=['foo'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        df = self.html_string_to_dataframe(table)
+        # Our RAT has 3 columns, a 4th was added for the color swatch
+        self.assertEqual(df.shape, (num_vals, 4))
+
+    def test_plot_single_raster_with_rat_color_table(self):
+        """Test that the RAT color table will be filtered out."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        add_raster_attribute_table(
+            target_filepath,
+            extra_cols=['RED', 'green', 'Blue', 'ALPHA', 'opacity'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        df = self.html_string_to_dataframe(table)
+        # All the RGBA (and opacity) columns should be filtered out
+        self.assertEqual(df.shape, (num_vals, 3))
+
+    def test_plot_single_raster_without_rat(self):
+        """Test single raster without RAT."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        # In the absence of a RAT, a frequency table was constructed
+        df = self.html_string_to_dataframe(table)
+        self.assertEqual(df.shape, (num_vals, 3))
+        self.assertCountEqual(
+            df.columns,
+            ['color', 'value', 'count'])
+
+    def test_plot_two_rasters_with_rat(self):
+        """Test two rasters with RATS and expect RATS are joined."""
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        add_raster_attribute_table(filepath_a)
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        add_raster_attribute_table(filepath_b, extra_cols=['foo'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = self.html_string_to_dataframe(table)
+        # In this example, the union of unique values in 'a' and 'b' happens to
+        # equal the unique values in 'b'
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        # and b has 1 extra column.
+        n_cols = 5
+        self.assertEqual(df.shape, (unique_values, n_cols))
+
+    def test_plot_two_rasters_one_missing_rat(self):
+        """Test two rasters with one missing a RAT."""
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        # This RAT will be ignored because the 2nd raster does not also
+        # have a RAT.
+        add_raster_attribute_table(
+            filepath_a, extra_cols=['foo', 'bar', 'baz'])
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = self.html_string_to_dataframe(table)
+        # Since one was missing a rat, we expect the plot function to ignore
+        # the existing RAT and build its own frequency table for both.
+        # In this example, the union of unique values in 'a' and 'b' happens to
+        # equal the unique values in 'b'
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        n_cols = 4
+        self.assertEqual(df.shape, (unique_values, n_cols))
+
+    def test_plot_two_rasters_with_incompatible_rat(self):
+        """Test two rasters with non-matching RATS."""
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        add_raster_attribute_table(filepath_a, value_name='VALUE')
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        add_raster_attribute_table(filepath_b, value_name='VAL')
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = self.html_string_to_dataframe(table)
+
+        # Since the two RAT do not have a common value column, they could
+        # not be joined. Expect the default frequency table instead.
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        n_cols = 4
+        self.assertEqual(df.shape, (unique_values, n_cols))
+        self.assertCountEqual(
+            df.columns,
+            ['color', 'value', 'count_left', 'count_right'])
+
+    def test_plot_three_rasters_without_rat(self):
+        """Test three rasters raises ValueError."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        with self.assertRaises(ValueError):
+            img_src, table = raster_utils.plot_categorical_raster_with_table(
+                [target_filepath] * 3)
 
 
 class RasterWorkspaceSummaryTests(unittest.TestCase):

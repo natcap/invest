@@ -141,10 +141,25 @@ WATERSHED_OUTPUT_FIELDS = [
     )
 ]
 
+_model_description = gettext(
+    """
+    The Annual Water Yield (AWY) model estimates the annual average quantity of water
+    produced by a watershed. The economic model then estimates the value of the water
+    yield for reservoir hydropower production. It calculates the relative contribution
+    of each land parcel to annual average water yield and production of hydropower,
+    values this contribution in terms of energy production, and calculates the net
+    present value of hydropower production over the life of the reservoir.
+    Spatially-explicit outputs of relative water yields can identify areas contributing
+    the most to hydropower value and inform how changes in the landscape will alter
+    that contribution.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="annual_water_yield",
     model_title=gettext("Annual Water Yield"),
     userguide="annual_water_yield.html",
+    reporter="natcap.invest.annual_water_yield.reporter",
+    about=_model_description,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["aoi_vector_path"],
@@ -226,7 +241,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " to a point of interest where hydropower production will be"
                 " analyzed."
             ),
-            geometry_types={"POLYGON"},
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
                 spec.IntegerInput(
                     id="ws_id",
