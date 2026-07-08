@@ -62,9 +62,15 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+
+Workbench
+=========
+* Added a file browse button to the input field for selecting a
+  local plugin directory to install.
+  (`#2641 <https://github.com/natcap/invest/issues/2641>`_)
 
 3.20.0 (2026-06-11)
 -------------------

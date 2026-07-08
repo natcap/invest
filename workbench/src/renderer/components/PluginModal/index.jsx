@@ -7,7 +7,11 @@ import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
-import { MdCheckCircleOutline, MdClose } from 'react-icons/md';
+import {
+  MdCheckCircleOutline,
+  MdClose,
+  MdFolderOpen
+} from 'react-icons/md';
 
 import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
@@ -144,6 +148,16 @@ export default function PluginModal(props) {
     );
   };
 
+  const selectDirectory = async (event) => {
+    const data = await ipcRenderer.invoke(
+      ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openDirectory'] }
+    );
+    if (data.filePaths.length) {
+      // dialog defaults allow only 1 selection
+      setPath(data.filePaths[0]);
+    }
+  }
+
   useEffect(() => {
     ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
     if (show) {
@@ -227,16 +241,27 @@ export default function PluginModal(props) {
     pluginFields = (
       <Form.Group>
         <Form.Label htmlFor="path">{t('Local absolute path')}</Form.Label>
-        <Form.Control
-          id="path"
-          type="text"
-          placeholder={window.Workbench.OS === 'darwin'
-            ? '/Users/username/path/to/plugin/'
-            : 'C:\\Documents\\path\\to\\plugin\\'}
-          value={path}
-          onChange={(event) => setPath(event.currentTarget.value)}
-          aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
-        />
+        <div className="d-flex flex-nowrap w-100">
+          <Form.Control
+            id="path"
+            type="text"
+            placeholder={window.Workbench.OS === 'darwin'
+              ? '/Users/username/path/to/plugin/'
+              : 'C:\\Documents\\path\\to\\plugin\\'}
+            value={path}
+            onChange={(event) => setPath(event.currentTarget.value)}
+            aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
+          />
+          <Button
+            aria-label="browse for plugin directory"
+            className="ml-2"
+            id="browse-plugin-button"
+            variant="outline-dark"
+            onClick={selectDirectory}
+          >
+            <MdFolderOpen />
+          </Button>
+        </div>
         {
           pluginSourceMissingError
           &&
