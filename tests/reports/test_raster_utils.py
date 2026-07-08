@@ -604,8 +604,7 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
-@unittest.skipIf(
-    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+
 class SpecialConfigValueUnitTests(unittest.TestCase):
     """Unit tests for SpecialConfigValue constructions."""
 
@@ -715,6 +714,8 @@ class SpecialConfigValueUnitTests(unittest.TestCase):
                 UserWarning, 'To ensure that 0 falls at the logical break'):
             raster_utils.plot_raster_list([raster_config])
 
+    @unittest.skipIf(
+        MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
     def test_plot_continuous_raster_special_values(self):
         """Test correct plot for continuous raster with special values"""
         figname = 'plot_raster_list_special_values.png'
@@ -736,6 +737,8 @@ class SpecialConfigValueUnitTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
+    @unittest.skipIf(
+        MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
     def test_plot_divergent_raster_max_special_value(self):
         """Test divergent raster plot w special value has a correct colorbar"""
         figname = 'plot_raster_list_special_max_value.png'
