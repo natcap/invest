@@ -496,17 +496,14 @@ export default function PluginModal(props) {
         <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments')}</h5>
         {Object.keys(plugins).map((pluginID) => (
           <div
-            className="d-flex flex-nowrap w-100"
+            className="d-flex flex-nowrap w-100 mb-1"
           >
             <Form.Label
               column
               sm={3}
               htmlFor={pluginID}
               className="text-nowrap overflow-auto w-30 mr-2 d-block"
-              style={{
-                scrollbarWidth: 'thin',
-                WebkitOverflowScrolling: 'touch'
-              }}
+              style={{ scrollbarWidth: 'thin' }}
             >
               {pluginID}
             </Form.Label>
