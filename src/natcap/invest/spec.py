@@ -180,7 +180,7 @@ def validate_permissions_string(permissions):
     return permissions
 
 
-def _get_spatial_inputs(args, model_spec):  # should this live in utils.py instead?
+def _get_spatial_inputs(args, model_spec):
     """Return spatial inputs and prj as dropdown Options, default first."""
     valid_spatial_inputs = [
         inp for inp in model_spec.inputs
@@ -2142,8 +2142,7 @@ class ModelSpec(ImmutableBaseModel):
                 'Exactly one spatial input must have '
                 f'is_default_projection=True, but found multiple: {ids}'
             )
-        # fine if 0 inputs have is_default_projection=True becuase not all
-        # models are spatial?
+        # fine if 0 inputs have is_default_projection=True
 
         return self
 
@@ -2231,9 +2230,8 @@ class ModelSpec(ImmutableBaseModel):
         Returns:
             dictionary mapping input keys to preprocessed input values
         """
-        # Currently, fallback behavior relies on on the input tagged with
-        # is_default_projection to be required, not optional
-        if not args.get('target_projection'):
+        inputs_ids = [i.id for i in self.inputs]
+        if 'target_projection' in inputs_ids and not args.get('target_projection'):
             #TODO: or do we want to set this just like with target pixel size?
             # pros: will find a suitable spatial input if one exists
             # cons: less transparent to user?
@@ -2247,12 +2245,10 @@ class ModelSpec(ImmutableBaseModel):
             if default_projection_inputs:
                 args['target_projection'] = default_projection_inputs[0].id
             else:
-                raise ValueError("Target projection not able to be specified and no default option.")
+                raise ValueError("Target projection not able to be specified "
+                                 "and no default option.")
 
-        # if not args.get('target_pixelsize'): #for AWY, this works
-        #     args['target_pixelsize'] = default_projection_inputs[0].id
-
-        if not args.get('target_pixelsize'):
+        if 'target_pixelsize' in inputs_ids and not args.get('target_pixelsize'):
             all_options = self.get_input(
                 'target_pixelsize').dropdown_function(args, self)
             if all_options:
@@ -2264,12 +2260,8 @@ class ModelSpec(ImmutableBaseModel):
                     "Target pixel size not able to be specified as no valid "
                     "spatial input options.")
 
-        # for input_spec in self.inputs:
-        #     if (isinstance(input_spec, OptionStringInput)
-        #             and input_spec.fallback_function
-        #             and not args.get(input_spec.id)):
-        #         args[input_spec.id] = input_spec.fallback_function(args, self)
-        # TODO need to make sure that this works for UMH i.e. pixel size doesnt fall back to same arg as target projection bc this is a vector in UMh
+        # TODO need to make sure that this works for UMH i.e. pixel size
+        # doesnt fall back to same arg as target projection bc this is a vector in UMh
         return args
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):
