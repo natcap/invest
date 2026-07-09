@@ -26,11 +26,11 @@ WORKDIR /invest
 
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml \
         python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} uv cxx-compiler git && \
-    echo $CONDA_PREFIX && \
-    micromamba clean --all --yes && \
     micromamba list && \
+    echo $CONDA_PREFIX && \
     uv pip install . && \
     uv cache clean && \
+    micromamba clean --all --yes && \
     micromamba remove -y -n base cxx-compiler git
 
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh"]
