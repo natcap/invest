@@ -381,20 +381,11 @@ class DatastackArchiveTests(unittest.TestCase):
             textfile.write('hello world!')
 
         with open(params['spatial_table'], 'w') as spatial_csv:
-            # copy existing DEM
-            # copy existing watersheds
-            # new raster
-            # new vector
-            spatial_csv.write('ID,path\n')
-            spatial_csv.write(f"1,{params['raster']}\n")
-            spatial_csv.write(f"2,{params['vector']}\n")
-
             # Create a raster only referenced by the CSV
             target_csv_raster_path = os.path.join(
                 self.workspace, 'new_raster.tif')
             pygeoprocessing.new_raster_from_base(
                 params['raster'], target_csv_raster_path, gdal.GDT_UInt16, [0])
-            spatial_csv.write(f'3,{target_csv_raster_path}\n')
 
             # Create a vector only referenced by the CSV
             target_csv_vector_path = os.path.join(
@@ -406,7 +397,20 @@ class DatastackArchiveTests(unittest.TestCase):
                     params['raster'])['projection_wkt'],
                 'GeoJSON',
                 ogr_geom_type=ogr.wkbPoint)
-            spatial_csv.write(f'4,{target_csv_vector_path}\n')
+
+            # Create a json file only referenced by the CSV
+            nonspatial_path = os.path.join(self.workspace, 'nonspatial.json')
+            with open(nonspatial_path, 'w') as f:
+                f.write('{"foo": 1}')
+            # copy existing DEM
+            # copy existing watersheds
+            # new raster
+            # new vector
+            spatial_csv.write('ID,spatial_path,nonspatial_path\n')
+            spatial_csv.write(f"1,{params['raster']},{nonspatial_path}\n")
+            spatial_csv.write(f"2,{params['vector']},{nonspatial_path}\n")
+            spatial_csv.write(f'3,{target_csv_raster_path},{nonspatial_path}\n')
+            spatial_csv.write(f'4,{target_csv_vector_path},{nonspatial_path}\n')
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         with patch('natcap.invest.datastack.models') as p:
@@ -446,7 +450,8 @@ class DatastackArchiveTests(unittest.TestCase):
             index_col='id',
             columns=[
                 spec.IntegerInput(id='id'),
-                spec.FileInput(id='path')]
+                spec.FileInput(id='spatial_path'),
+                spec.FileInput(id='nonspatial_path')]
         ).get_validated_dataframe(
             archive_params['spatial_table']
         ).to_dict(orient='index')
@@ -454,17 +459,20 @@ class DatastackArchiveTests(unittest.TestCase):
         # assert paths inside CSV are relative to CSV folder
         contained_files_dir = os.path.join(
             spatial_csv_dir, 'spatial_table_csv_data')
-        spatial_file_from_csv = spatial_csv_dict[3]['path']
+        spatial_file_from_csv = spatial_csv_dict[3]['spatial_path']
         self.assertTrue(os.path.exists(spatial_file_from_csv))
         self.assertIn(contained_files_dir, spatial_file_from_csv)
+        nonspatial_file_from_csv = spatial_csv_dict[3]['nonspatial_path']
+        self.assertTrue(os.path.exists(nonspatial_file_from_csv))
+        self.assertIn(contained_files_dir, nonspatial_file_from_csv)
 
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(
-                os.path.join(spatial_csv_dir, spatial_csv_dict[3]['path'])),
+                os.path.join(spatial_csv_dir, spatial_csv_dict[3]['spatial_path'])),
             pygeoprocessing.raster_to_numpy_array(
                 target_csv_raster_path))
         utils._assert_vectors_equal(
-            os.path.join(spatial_csv_dir, spatial_csv_dict[4]['path']),
+            os.path.join(spatial_csv_dir, spatial_csv_dict[4]['spatial_path']),
             target_csv_vector_path)
 
     def test_relative_path_failure(self):

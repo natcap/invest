@@ -8,6 +8,7 @@ import os
 import pprint
 import queue
 import re
+import shutil
 import threading
 import types
 import typing
@@ -190,9 +191,86 @@ class ImmutableBaseModel(BaseModel):
 class IOModel(ImmutableBaseModel):
     """Base class for both `Input` and `Output`."""
 
+    id: str
+    """Input/output identifier that should be unique within a model"""
+
+    about: typing.Union[str, None] = None
+    """User-facing description of the input/output"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     """Allow fields to have arbitrary types that don't inherit from BaseModel
     (needed for pint.Unit)."""
+
+    def write_metadata_file(self, datasource_path, keywords_list,
+                            lineage_statement='', out_workspace=None):
+        """Write a metadata sidecar file for an invest dataset.
+
+        Create metadata for invest model inputs or outputs, taking care to
+        preserve existing human-modified attributes.
+
+        Note: We do not want to overwrite any existing metadata so if there is
+        invalid metadata for the datasource (i.e., doesn't pass geometamaker
+        validation in ``describe``), this function will NOT create new metadata.
+
+        Args:
+            datasource_path (str) - filepath to the data to describe
+            keywords_list (list) - sequence of strings
+            lineage_statement (str, optional) - string to describe origin of
+                the dataset
+            out_workspace (str, optional) - where to write metadata if different
+                from data location
+        Returns:
+            None
+
+        """
+        try:
+            resource = geometamaker.describe(datasource_path, compute_stats=True)
+        except ValueError as e:
+            # Don't want function to fail bc can't create metadata due to invalid filetype
+            LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
+            return None
+        resource.set_lineage(lineage_statement)
+        # a pre-existing metadata doc could have keywords
+        words = resource.get_keywords()
+        resource.set_keywords(set(words + keywords_list))
+
+        if self.about:
+            resource.set_description(self.about)
+        attr_specs = None
+        if hasattr(self, 'columns') and self.columns:
+            attr_specs = self.columns
+        if hasattr(self, 'fields') and self.fields:
+            attr_specs = self.fields
+        if attr_specs:
+            # field names in attr_spec might not match the case of the
+            # actual fieldname in the data because
+            # invest does not require case-sensitive fieldnames
+            field_lookup = {
+                field.name.lower(): field for field in resource._get_fields()}
+            for nested_spec in attr_specs:
+                try:
+                    field_metadata = field_lookup[nested_spec.id.lower()]
+                    # Field description only gets set if its empty, i.e. ''
+                    if len(field_metadata.description.strip()) < 1:
+                        resource.set_field_description(
+                            field_metadata.name, description=nested_spec.about)
+                    # units only get set if empty
+                    if len(field_metadata.units.strip()) < 1:
+                        units = format_unit(nested_spec.units) if hasattr(
+                            nested_spec, 'units') else ''
+                        resource.set_field_description(
+                            field_metadata.name, units=units)
+                except KeyError as error:
+                    # fields that are in the spec but missing
+                    # from model results because they are conditional.
+                    LOGGER.debug(error)
+        if isinstance(self, SingleBandRasterInput) or isinstance(
+                self, SingleBandRasterOutput):
+            if len(resource.get_band_description(1).units) < 1:
+                units = format_unit(self.units)
+                resource.set_band_description(1, units=units)
+
+        resource.write(workspace=out_workspace)
 
 
 class Input(IOModel):
@@ -202,9 +280,6 @@ class Input(IOModel):
     input field in the InVEST workbench. This does not store the value of the
     parameter for a specific run of the model.
     """
-    id: str
-    """Input identifier that should be unique within a model"""
-
     name: typing.Union[str, None] = None
     """The user-facing name of the input. The workbench UI displays this
     property as a label for each input. The name should be as short as
@@ -216,9 +291,6 @@ class Input(IOModel):
 
     Bad examples: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
     """
-
-    about: typing.Union[str, None] = None
-    """User-facing description of the input"""
 
     required: typing.Union[bool, str] = True
     """Whether the input is required to be provided. Defaults to True. Set to
@@ -303,6 +375,34 @@ class Input(IOModel):
 
         return [rst_line]
 
+    def archive_for_datastack(self, value, datastack):
+        """Archive a given value of this input into a datastack.
+
+        This method can be overridden to handle specific types of input data,
+        or even for specific model inputs that need custom handling.
+        This is useful for tables (like HRA) that are too complicated
+        to describe in the MODEL_SPEC format, but use a common specification
+        for the other args keys.
+        Notes about overriding this method:
+          - should add the archived value to datastack.args
+          - should update datastack.files_found if any new files are included
+          - if this function copies data into datastack.target_dir, it _should_
+            be within its own folder (e.g.
+            {data_dir}/criteria_table_path_data/) to minimize chances of
+            stomping on other data.  But this is up to the function to
+            decide.
+          - The override function is responsible for logging whatever is
+            useful to include in the logfile.
+
+        Args:
+            value (object): value of this input
+            datastack (natcap.invest.datastack.Datastack): Datastack instance
+
+        Returns:
+            None
+        """
+        datastack.args[self.id] = value
+
 
 class Output(IOModel):
     """A data output, or result, of an invest model.
@@ -311,11 +411,6 @@ class Output(IOModel):
     an invest model. This does not store the value of the output for a specific
     run of the model.
     """
-    id: str
-    """Output identifier that should be unique within a model"""
-
-    about: typing.Union[str, None] = None
-    """User-facing description of the output"""
 
     created_if: typing.Union[bool, str] = True
     """Defaults to True. If the input is only created under a certain condition
@@ -392,6 +487,33 @@ class FileInput(Input):
 
         return col.apply(format_path).astype(pandas.StringDtype())
 
+    def archive_for_datastack(self, value, datastack):
+
+        if value in {None, ''}:
+            LOGGER.info(
+                f'Skipping key {self.id}, value is empty and cannot point to '
+                'a file.')
+            datastack.args[self.id] = ''
+            return
+
+        # Python can't handle mixed file separators, so let's just
+        # standardize on linux filepaths.
+        source_path = value.replace('\\', '/')
+
+        # If we already know about the parameter, then we can just reuse it
+        # and skip the file copying.
+        if source_path in datastack.files_found:
+            LOGGER.debug(
+                f'Key {self.id} is known: using {datastack.files_found[source_path]}')
+            datastack.args[self.id] = datastack.files_found[source_path]
+            return
+
+        target_filepath = os.path.join(datastack.target_dir, f'{self.id}_file')
+        shutil.copyfile(source_path, target_filepath)
+        datastack.args[self.id] = target_filepath
+        datastack.files_found[source_path] = target_filepath
+
+
 
 class SpatialFileInput(FileInput):
     """Base class for raster and vector spatial inputs."""
@@ -453,6 +575,32 @@ class SpatialFileInput(FileInput):
             return utils._GDALPath.from_uri(p).to_normalized_path()
 
         return col.apply(format_path).astype(pandas.StringDtype())
+
+    def archive_for_datastack(self, value, datastack):
+
+        if value in {None, ''}:
+            datastack.args[self.id] = ''
+            return
+
+        # Python can't handle mixed file separators, so let's just
+        # standardize on linux filepaths.
+        source_path = value.replace('\\', '/')
+
+        # If we already know about the parameter, then we can just reuse it
+        # and skip the file copying.
+        if source_path in datastack.files_found:
+            LOGGER.debug(
+                f'Key {self.id} is known: using {datastack.files_found[source_path]}')
+            datastack.args[self.id] = datastack.files_found[source_path]
+            return
+
+        # Create a directory with a readable name, something like
+        # "aoi_path_vector" or "lulc_cur_path_raster".
+        spatial_dir = os.path.join(datastack.target_dir, f'{self.id}_{self.type}')
+        target_arg_value = utils.copy_spatial_files(
+            source_path, spatial_dir)
+        datastack.args[self.id] = target_arg_value
+        datastack.files_found[source_path] = target_arg_value
 
 
 class RasterBand(IOModel):
@@ -1065,6 +1213,98 @@ class CSVInput(FileInput):
 
         return [rst_line]
 
+    def archive_for_datastack(self, value, datastack):
+
+        if value in {None, ''}:
+            datastack.args[self.id] = ''
+            return
+
+        # Python can't handle mixed file separators, so let's just
+        # standardize on linux filepaths.
+        source_path = value.replace('\\', '/')
+
+        # If we already know about the parameter, then we can just reuse it
+        # and skip the file copying.
+        if source_path in datastack.files_found:
+            LOGGER.debug(
+                f'Key {self.id} is known: using {datastack.files_found[source_path]}')
+            datastack.args[self.id] = datastack.files_found[source_path]
+            return
+
+        # check the CSV for columns that may be spatial.
+        # But also, the columns specification might not be listed, so don't
+        # require that 'columns' exists in the MODEL_SPEC.
+
+        csv_dir = os.path.join(datastack.target_dir, f'{self.id}_csv')
+        os.makedirs(csv_dir)
+        target_csv_path = os.path.join(
+            csv_dir, os.path.basename(source_path))
+
+        if self.columns:
+            dataframe = self.get_validated_dataframe(source_path)
+
+            for column_spec in [c for c in self.columns if isinstance(c, FileInput)]:
+
+                # Iterate through the columns, identify the set of
+                # unique files and copy them out.
+                # if a string is not a filepath, assume it's supposed to be
+                # there and skip it
+                for row_index, value in dataframe[column_spec.id.lower()].items():
+                    if pandas.isna(value) or value == '':
+                        continue  # skip empty cells
+
+                    # file paths in a csv may be absolute, or relative to the
+                    # csv location
+                    if os.path.isabs(value):
+                        source_filepath = value
+                    else:
+                        source_filepath = os.path.join(os.path.abspath(
+                            os.path.dirname(source_path)), value)
+
+                    # If the file path doesn't exist, assume it's supposed to be
+                    # that way and leave it alone.
+                    if not os.path.exists(source_filepath):
+                        continue
+
+                    if source_filepath in datastack.files_found:
+                        # the file was already copied into the target dir,
+                        # so refer to the existing copy
+                        target_filepath = datastack.files_found[source_filepath]
+                    else:
+                        basename = os.path.splitext(
+                            os.path.basename(source_filepath))[0]
+                        target_dir = os.path.join(
+                            csv_dir, f'{self.id}_csv_data',
+                            f'{row_index}_{basename}')
+                        os.makedirs(target_dir)
+                        if isinstance(column_spec, SpatialFileInput):
+                            target_filepath = utils.copy_spatial_files(
+                                source_filepath, target_dir)
+                            target_filepath = os.path.relpath(
+                                target_filepath, csv_dir)
+                        else:
+                            target_filepath = os.path.join(target_dir,
+                                os.path.basename(source_filepath))
+                            shutil.copyfile(source_filepath, target_filepath)
+                            target_filepath = os.path.relpath(
+                                target_filepath, csv_dir)
+
+
+                    LOGGER.debug(
+                        'File referenced in CSV copied from '
+                        f'{source_filepath} --> {target_filepath}')
+                    dataframe.at[
+                        row_index, column_spec.id] = target_filepath
+                    datastack.files_found[source_filepath] = target_filepath
+
+                LOGGER.debug(
+                    f'Rewritten spatial CSV written to {target_csv_path}')
+                dataframe.to_csv(target_csv_path)
+        else:
+            shutil.copyfile(source_path, target_csv_path)
+        datastack.args[self.id] = target_csv_path
+        datastack.files_found[source_path] = target_csv_path
+
 
 class WorkspaceInput(Input):
     """A workspace directory path input to an invest model.
@@ -1141,6 +1381,10 @@ class WorkspaceInput(Input):
             'name': self.name,
             'about': self.about
         }
+
+    def archive_for_datastack(self, value, datastack):
+        """Skip the workspace directory when building a datastack archive"""
+        pass
 
 
 class NumberInput(Input):
@@ -2073,9 +2317,8 @@ class ModelSpec(ImmutableBaseModel):
                     if 'taskgraph.db' in value:
                         return
                     try:
-                        write_metadata_file(
-                            value, self.get_output(root_key),
-                            keywords, lineage_statement)
+                        self.get_output(root_key).write_metadata_file(
+                            value, keywords, lineage_statement)
                     except ValueError as error:
                         # Some unsupported file formats, e.g. html
                         LOGGER.debug(error)
@@ -2519,76 +2762,3 @@ def format_type_string(_input):
             f'`{_input._single_band_raster_input.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
             f'`{_input._vector_input.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
     return f'`{_input.display_name} <{INPUT_TYPES_HTML_FILE}#{_input.rst_section}>`__'
-
-
-def write_metadata_file(datasource_path, spec, keywords_list,
-                        lineage_statement='', out_workspace=None):
-    """Write a metadata sidecar file for an invest dataset.
-
-    Create metadata for invest model inputs or outputs, taking care to
-    preserve existing human-modified attributes.
-
-    Note: We do not want to overwrite any existing metadata so if there is
-    invalid metadata for the datasource (i.e., doesn't pass geometamaker
-    validation in ``describe``), this function will NOT create new metadata.
-
-    Args:
-        datasource_path (str) - filepath to the data to describe
-        spec (dict) - the invest specification for ``datasource_path``
-        keywords_list (list) - sequence of strings
-        lineage_statement (str, optional) - string to describe origin of
-            the dataset
-        out_workspace (str, optional) - where to write metadata if different
-            from data location
-    Returns:
-        None
-
-    """
-    try:
-        resource = geometamaker.describe(datasource_path, compute_stats=True)
-    except ValueError as e:
-        # Don't want function to fail bc can't create metadata due to invalid filetype
-        LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
-        return None
-    resource.set_lineage(lineage_statement)
-    # a pre-existing metadata doc could have keywords
-    words = resource.get_keywords()
-    resource.set_keywords(set(words + keywords_list))
-
-    if spec.about:
-        resource.set_description(spec.about)
-    attr_specs = None
-    if hasattr(spec, 'columns') and spec.columns:
-        attr_specs = spec.columns
-    if hasattr(spec, 'fields') and spec.fields:
-        attr_specs = spec.fields
-    if attr_specs:
-        # field names in attr_spec might not match the case of the
-        # actual fieldname in the data because
-        # invest does not require case-sensitive fieldnames
-        field_lookup = {
-            field.name.lower(): field for field in resource._get_fields()}
-        for nested_spec in attr_specs:
-            try:
-                field_metadata = field_lookup[nested_spec.id.lower()]
-                # Field description only gets set if its empty, i.e. ''
-                if len(field_metadata.description.strip()) < 1:
-                    resource.set_field_description(
-                        field_metadata.name, description=nested_spec.about)
-                # units only get set if empty
-                if len(field_metadata.units.strip()) < 1:
-                    units = format_unit(nested_spec.units) if hasattr(
-                        nested_spec, 'units') else ''
-                    resource.set_field_description(
-                        field_metadata.name, units=units)
-            except KeyError as error:
-                # fields that are in the spec but missing
-                # from model results because they are conditional.
-                LOGGER.debug(error)
-    if isinstance(spec, SingleBandRasterInput) or isinstance(
-            spec, SingleBandRasterOutput):
-        if len(resource.get_band_description(1).units) < 1:
-            units = format_unit(spec.units)
-            resource.set_band_description(1, units=units)
-
-    resource.write(workspace=out_workspace)
