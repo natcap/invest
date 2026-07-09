@@ -27,7 +27,7 @@ describe('Add plugin modal', () => {
         workspace_dir: {
           name: 'Workspace',
           about: 'help text',
-          type: 'directory',
+          type: 'workspace',
         },
         input_path: {
           name: 'Input raster',
