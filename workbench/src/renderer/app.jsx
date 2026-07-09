@@ -362,12 +362,12 @@ export default function App(props) {
           </div>
         </div>
         <TabContent
-          id="home-tab-content"
+          className="main-tab-content"
           onDragOver={dragOverHandlerNone}
         >
           <TabPane
             eventKey="home"
-            className="container-fluid p-0"
+            className="home-tabpanel container-fluid"
           >
             {
               investList
