@@ -26,6 +26,7 @@ WORKDIR /invest
 
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml \
         python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} uv cxx-compiler git && \
+    echo $CONDA_PREFIX && \
     micromamba clean --all --yes && \
     micromamba list && \
     uv pip install . && \
