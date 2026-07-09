@@ -25,12 +25,11 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
 WORKDIR /invest
 
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml \
-        python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} python-build cxx-compiler git && \
+        python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} uv cxx-compiler git && \
     micromamba clean --all --yes && \
     micromamba list && \
-    /opt/conda/bin/python -m build --no-isolation && \
-    /opt/conda/bin/python -m pip install dist/*.whl && \
-    /opt/conda/bin/python -m pip cache purge && \
+    uv pip install . && \
+    uv cache clean && \
     micromamba remove -y -n base cxx-compiler git
 
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh"]

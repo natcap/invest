@@ -90,3 +90,8 @@ filterwarnings = [
     # issue on M1: https://github.com/natcap/invest/issues/1562
     "default:invalid value encountered in intersection:RuntimeWarning",
 ]
+
+[tool.uv]
+no-binary-package = ["pygeoprocessing"]
+no-cache = true
+
