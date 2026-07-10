@@ -5,9 +5,14 @@ import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import Row from 'react-bootstrap/Row';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
-import { MdCheckCircleOutline, MdClose } from 'react-icons/md';
+import {
+  MdCheckCircleOutline,
+  MdClose,
+  MdFolderOpen
+} from 'react-icons/md';
 
 import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
@@ -144,6 +149,16 @@ export default function PluginModal(props) {
     );
   };
 
+  const selectDirectory = async (event) => {
+    const data = await ipcRenderer.invoke(
+      ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openDirectory'] }
+    );
+    if (data.filePaths.length) {
+      // dialog defaults allow only 1 selection
+      setPath(data.filePaths[0]);
+    }
+  }
+
   useEffect(() => {
     ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
     if (show) {
@@ -172,7 +187,8 @@ export default function PluginModal(props) {
   let pluginFields;
   if (installFrom === 'url') {
     pluginFields = (
-      <Form.Row>
+
+      <Row>
         <Form.Group as={Col} xs={7}>
           <Form.Label htmlFor="url">{t('Git URL')}</Form.Label>
           <Form.Control
@@ -221,22 +237,32 @@ export default function PluginModal(props) {
             {t('Optional')}
           </Form.Text>
         </Form.Group>
-      </Form.Row>
+      </Row>
     );
   } else {
     pluginFields = (
       <Form.Group>
         <Form.Label htmlFor="path">{t('Local absolute path')}</Form.Label>
-        <Form.Control
-          id="path"
-          type="text"
-          placeholder={window.Workbench.OS === 'darwin'
-            ? '/Users/username/path/to/plugin/'
-            : 'C:\\Documents\\path\\to\\plugin\\'}
-          value={path}
-          onChange={(event) => setPath(event.currentTarget.value)}
-          aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
-        />
+        <div className="d-flex flex-nowrap w-100">
+          <Form.Control
+            id="path"
+            type="text"
+            placeholder={window.Workbench.OS === 'darwin'
+              ? '/Users/username/path/to/plugin/'
+              : 'C:\\Documents\\path\\to\\plugin\\'}
+            value={path}
+            onChange={(event) => setPath(event.currentTarget.value)}
+            aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
+          />
+          <Button
+            aria-label="browse for plugin directory"
+            className="browse-button ms-2"
+            variant="outline-dark"
+            onClick={selectDirectory}
+          >
+            <MdFolderOpen />
+          </Button>
+        </div>
         {
           pluginSourceMissingError
           &&
@@ -276,132 +302,125 @@ export default function PluginModal(props) {
       </div>
       <hr />
       <Form aria-labelledby="add-plugin-form-title">
+        <h5 id="add-plugin-form-title" className="mb-3">{t('Add a plugin')}</h5>
         <Form.Group>
-          <h5 id="add-plugin-form-title" className="mb-3">{t('Add a plugin')}</h5>
-          <Form.Group>
-            <Form.Label htmlFor="installFrom">{t('Install from')}</Form.Label>
-            <Form.Control
-              id="installFrom"
-              as="select"
-              onChange={(event) => setInstallFrom(event.target.value)}
-              className="w-auto"
-            >
-              <option value="url">{t('git URL')}</option>
-              <option value="path">{t('local path')}</option>
-            </Form.Control>
-          </Form.Group>
-          {pluginFields}
-          <Form.Group>
-            <Form.Text
-              as="span"
-              id="plugin-installation-risk-statement"
-              className="plugin-form-text"
-            >
-              {t('As with any third-party software, installing a plugin for use with InVEST '
-                + 'may pose a risk to your data, computer, and/or network. Please make sure '
-                + 'you trust the authors of the plugin you are installing. If you are '
-                + 'installing from a git URL, you are encouraged to review the source code, '
-                + 'which can change over time.')}
-            </Form.Text>
-          </Form.Group>
-          <Form.Group>
-            <Form.Check
-              id="user-acknowledgment-checkbox"
-              label={t('I acknowledge and accept the risks associated with installing this plugin.')}
-              value={userAcknowledgment}
-              onChange={(event) => setUserAcknowledgment(event.target.checked)}
-              aria-describedby={`plugin-installation-risk-statement${userAcknowledgmentError ? ' user-acknowledgment-error' : ''}`}
-            />
-          </Form.Group>
-          {
-            userAcknowledgmentError
-            &&
-            <Form.Text
-              as="span"
-              id="user-acknowledgment-error"
-              className="plugin-error plugin-user-acknowledgment-error"
-            >
-              {t('Error: Before installing a plugin, you must agree to the terms by selecting the checkbox.')}
-            </Form.Text>
-          }
-          <Button
-            disabled={installLoading}
-            onClick={handleAddPluginClick}
-            aria-describedby="plugin-installation-duration-notice"
+          <Form.Label htmlFor="installFrom">{t('Install from')}</Form.Label>
+          <Form.Select
+            id="installFrom"
+            onChange={(event) => setInstallFrom(event.target.value)}
+            className="w-auto"
           >
-            {
-              installLoading ? (
-                <div className="adding-button">
-                  <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                    <span className="sr-only">{t('Adding plugin')}</span>
-                  </Spinner>
-                  {t(statusMessage)}
-                </div>
-              ) : t('Add')
-            }
-          </Button>
+            <option value="url">{t('git URL')}</option>
+            <option value="path">{t('local path')}</option>
+          </Form.Select>
+        </Form.Group>
+        {pluginFields}
+        <Form.Group>
           <Form.Text
             as="span"
-            muted
-            id="plugin-installation-duration-notice"
+            id="plugin-installation-risk-statement"
             className="plugin-form-text"
           >
-            {t('This may take several minutes.')}
+            {t('As with any third-party software, installing a plugin for use with InVEST '
+              + 'may pose a risk to your data, computer, and/or network. Please make sure '
+              + 'you trust the authors of the plugin you are installing. If you are '
+              + 'installing from a git URL, you are encouraged to review the source code, '
+              + 'which can change over time.')}
           </Form.Text>
         </Form.Group>
-          <div aria-live="polite">
-            { installSuccess &&
-              <Form.Text
-                as="span"
-                className="plugin-success"
-              >
-                <MdCheckCircleOutline />
-                {t('Successfully installed plugin')}
-              </Form.Text>
-            }
-          </div>
+        <Form.Group>
+          <Form.Check
+            id="user-acknowledgment-checkbox"
+            label={t('I acknowledge and accept the risks associated with installing this plugin.')}
+            value={userAcknowledgment}
+            onChange={(event) => setUserAcknowledgment(event.target.checked)}
+            aria-describedby={`plugin-installation-risk-statement${userAcknowledgmentError ? ' user-acknowledgment-error' : ''}`}
+          />
+        </Form.Group>
+        {
+          userAcknowledgmentError
+          &&
+          <Form.Text
+            as="span"
+            id="user-acknowledgment-error"
+            className="plugin-error plugin-user-acknowledgment-error"
+          >
+            {t('Error: Before installing a plugin, you must agree to the terms by selecting the checkbox.')}
+          </Form.Text>
+        }
+        <Button
+          disabled={installLoading}
+          onClick={handleAddPluginClick}
+          aria-describedby="plugin-installation-duration-notice"
+        >
+          {
+            installLoading ? (
+              <div className="adding-button">
+                <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
+                  <span className="visually-hidden">{t('Adding plugin')}</span>
+                </Spinner>
+                {t(statusMessage)}
+              </div>
+            ) : t('Add')
+          }
+        </Button>
+        <Form.Text
+          as="span"
+          muted
+          id="plugin-installation-duration-notice"
+          className="plugin-form-text"
+        >
+          {t('This may take several minutes.')}
+        </Form.Text>
+        <div aria-live="polite">
+          { installSuccess &&
+            <Form.Text
+              as="span"
+              className="plugin-success"
+            >
+              <MdCheckCircleOutline />
+              {t('Successfully installed plugin')}
+            </Form.Text>
+          }
+        </div>
       </Form>
       <hr />
       <Form aria-labelledby="remove-plugin-form-title">
-        <Form.Group>
-          <h5 id="remove-plugin-form-title" className="mb-3">{t('Remove a plugin')}</h5>
-          <Form.Label htmlFor="selectPluginToRemove">{t('Plugin name')}</Form.Label>
-          <Form.Control
-            id="selectPluginToRemove"
-            as="select"
-            value={pluginToRemove}
-            onChange={(event) => setPluginToRemove(event.currentTarget.value)}
-          >
-            {
-              Object.keys(plugins).map(
-                (pluginID) => (
-                  <option
-                    value={pluginID}
-                    key={pluginID}
-                  >
-                    {`${plugins[pluginID].modelTitle} (${plugins[pluginID].version})`}
-                  </option>
-                )
+        <h5 id="remove-plugin-form-title" className="mb-3">{t('Remove a plugin')}</h5>
+        <Form.Label htmlFor="selectPluginToRemove">{t('Plugin name')}</Form.Label>
+        <Form.Select
+          id="selectPluginToRemove"
+          value={pluginToRemove}
+          onChange={(event) => setPluginToRemove(event.currentTarget.value)}
+        >
+          {
+            Object.keys(plugins).map(
+              (pluginID) => (
+                <option
+                  value={pluginID}
+                  key={pluginID}
+                >
+                  {`${plugins[pluginID].modelTitle} (${plugins[pluginID].version})`}
+                </option>
               )
-            }
-          </Form.Control>
-          <Button
-            disabled={uninstallLoading || !Object.keys(plugins).length}
-            className="mt-3"
-            onClick={removePlugin}
-          >
-            {
-              uninstallLoading ? (
-                <div className="adding-button">
-                  <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                    <span className="sr-only">{t('Removing...')}</span>
-                  </Spinner>
-                  {t('Removing...')}
-                </div>
-              ) : t('Remove')
-            }
-          </Button>
-        </Form.Group>
+            )
+          }
+        </Form.Select>
+        <Button
+          disabled={uninstallLoading || !Object.keys(plugins).length}
+          onClick={removePlugin}
+        >
+          {
+            uninstallLoading ? (
+              <div className="adding-button">
+                <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
+                  <span className="visually-hidden">{t('Removing...')}</span>
+                </Spinner>
+                {t('Removing...')}
+              </div>
+            ) : t('Remove')
+          }
+        </Button>
         <div aria-live="polite">
           {removalSuccess &&
             <Form.Text
@@ -477,7 +496,6 @@ export default function PluginModal(props) {
         <Button
           variant="secondary-outline"
           onClick={handleModalClose}
-          className="float-right"
           aria-label={t('Close modal')}
         >
           <MdClose />

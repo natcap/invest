@@ -80,7 +80,7 @@ export default class HomeTab extends React.Component {
       let modelTitle = investList[modelID].modelTitle;
       let badge;
       if (investList[modelID].type === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+        badge = <Badge className="me-1" bg="secondary">Plugin</Badge>;
       }
       if (nonUniqueTitles.includes(modelTitle)) {
         modelTitle = `${modelTitle} ${investList[modelID].version}`;
@@ -106,7 +106,6 @@ export default class HomeTab extends React.Component {
             {investButtons}
             <ListGroup.Item
               key="browse"
-              className="px-0 py-2 border-0"
             >
               <OpenButton
                 className="open-button text-wrap"
@@ -176,11 +175,11 @@ function RecentInvestJobs(props) {
     if (job && job.argsValues && job.modelTitle) {
       let badge;
       if (job.type === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+        badge = <Badge className="me-1" bg="secondary">Plugin</Badge>;
       }
       recentButtons.push(
         <Card
-          className="col-12 text-left recent-job-card mr-2 w-100"
+          className="col-12 text-start recent-job-card me-2 w-100"
           key={job.hash}
         >
           <Card.Header>
@@ -191,14 +190,14 @@ function RecentInvestJobs(props) {
             <Button
               variant="outline-light"
               onClick={() => deleteJob(job.hash)}
-              className="float-right border-0"
+              className="float-end border-0"
               aria-label="delete"
             >
               <BsTrash3 size="1.5rem" />
             </Button>
           </Card.Header>
           <Card.Body
-            className="text-left border-0"
+            className="text-start border-0"
             as="button"
             onClick={() => handleClick(job)}
           >
@@ -210,7 +209,7 @@ function RecentInvestJobs(props) {
               <span className="text-heading">{'Suffix: '}</span>
               <span className="text-mono">{job.argsValues.results_suffix}</span>
             </Card.Title>
-            <Card.Footer className="text-muted">
+            <Card.Footer>
               <span className="timestamp">{job.humanTime}</span>
               <span className="status">
                 {(job.status === 'success'
@@ -232,7 +231,7 @@ function RecentInvestJobs(props) {
           ? recentButtons
           : (
             <Card
-              className="col-12 text-left recent-job-card mr-2 w-100"
+              className="col-12 text-start recent-job-card me-2 w-100"
               key="placeholder"
             >
               <Card.Header>

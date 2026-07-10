@@ -89,7 +89,7 @@ jobs:
       # Test data is way, way faster by contrast (on the order of a few
       # seconds to archive).
       - name: Restore git-LFS test data cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
@@ -276,7 +276,7 @@ jobs:
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -360,7 +360,7 @@ jobs:
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -419,6 +419,8 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
         run: |
+          make print-VERSION
+          git status
           make codesign
 
       - name: Upload workbench binary artifact

@@ -239,7 +239,7 @@ class InvestTab extends React.Component {
       return (
         <div className="invest-tab-loading">
           <Spinner animation="border" role="status">
-            <span className="sr-only">Loading...</span>
+            <span className="visually-hidden">Loading...</span>
           </Spinner>
           <br />
           {t('Starting up model...')}

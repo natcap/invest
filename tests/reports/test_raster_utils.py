@@ -28,6 +28,7 @@ projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
 REFS_DIR = os.path.join('data', 'invest-test-data', 'reports', 'snapshots')
+MPL_VERSION = tuple(int(_) for _ in matplotlib.__version__.split('.'))
 
 
 def setUpModule():
@@ -49,7 +50,7 @@ def save_figure(fig, filepath):
 def make_simple_raster(target_filepath, shape):
     array = numpy.linspace(0, 1, num=numpy.multiply(*shape)).reshape(*shape)
     pygeoprocessing.numpy_array_to_raster(
-        array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+        array, target_nodata=None, pixel_size=(1, -1), origin=(0, 0),
         projection_wkt=PROJ_WKT, target_path=target_filepath)
 
 
@@ -117,6 +118,8 @@ def compare_snapshots(reference, actual):
     raise AssertionError(comparison, f'actual image saved to {new_reference}')
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotLayoutTests(unittest.TestCase):
     """Snapshot tests for matplotlib figure layouts."""
 
@@ -231,6 +234,8 @@ class RasterPlotLayoutTests(unittest.TestCase):
             self.assertEqual((bottom, top), expected_ylim)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
     """Snapshot tests for datatype and transform options."""
 
@@ -325,43 +330,9 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
-    def test_special_value_config(self):
-        """Should pass when only index 0 (lower bound) is fully populated."""
-        config = SpecialValueConfig(
-            thresholds=(0.0, 100.0),
-            labels=("Low", "High"),
-            colors=("blue", "red")
-        )
-        self.assertEqual(config.thresholds, (0.0, 100.0))
 
-        config = SpecialValueConfig(
-            thresholds=(0.0, None),
-            labels=("Low", None),
-            colors=("blue", None)
-        )
-        self.assertEqual(config.colors, ("blue", None))
-
-        with self.assertRaises(ValidationError) as context:
-            SpecialValueConfig(
-                thresholds=(0.0, None),
-                labels=(None, None),  # missing lower label
-                colors=("blue", None)
-            )
-        self.assertTrue(
-            "If index 0 is `None` in any of the special config tuples" in
-            str(context.exception))
-
-        with self.assertRaises(ValidationError) as context:
-            SpecialValueConfig(
-                thresholds=(0.0, None),  # missing upper threshold
-                labels=("Low", "High"),
-                colors=("blue", None)  # missing upper color
-            )
-        self.assertTrue(
-            "If index 1 is `None` in any of the special config tuples" in
-            str(context.exception))
-
-
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotLegendTests(unittest.TestCase):
     """Snapshot tests for legend placement on nominal rasters."""
 
@@ -423,6 +394,8 @@ class RasterPlotLegendTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotFacetsTests(unittest.TestCase):
     """Snapshot tests for plotting multiple rasters on the same colorscale."""
 
@@ -511,6 +484,8 @@ class RasterPlotFacetsTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotTitleTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with various titles."""
 
@@ -582,6 +557,8 @@ class RasterPlotTitleTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotUnitTextTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with unit text."""
 
@@ -626,6 +603,184 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
+
+
+class SpecialConfigValueUnitTests(unittest.TestCase):
+    """Unit tests for SpecialConfigValue constructions."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_special_value_config(self):
+        """Should pass when only index 0 (lower bound) is fully populated."""
+        config = SpecialValueConfig(
+            thresholds=(0.0, 100.0),
+            labels=("Low", "High"),
+            colors=("blue", "red")
+        )
+        self.assertEqual(config.thresholds, (0.0, 100.0))
+
+        config = SpecialValueConfig(
+            thresholds=(0.0, None),
+            labels=("Low", None),
+            colors=("blue", None)
+        )
+        self.assertEqual(config.colors, ("blue", None))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),
+                labels=(None, None),  # missing lower label
+                colors=("blue", None)
+            )
+        self.assertTrue(
+            "If index 0 is `None` in any of the special config tuples" in
+            str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),  # missing upper threshold
+                labels=("Low", "High"),
+                colors=("blue", None)  # missing upper color
+            )
+        self.assertTrue(
+            "If index 1 is `None` in any of the special config tuples" in
+            str(context.exception))
+
+    def test_special_values_rejected_for_nominal(self):
+        """RasterPlotConfig does not allow special values for nominal raster"""
+        with self.assertRaisesRegex(
+                ValueError, '`special_values` may only be defined'):
+            raster_utils.RasterPlotConfig(
+                raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+                datatype=raster_utils.RasterDatatype.nominal,
+                spec=spec.Output(id='foo', about='foo output'),
+                special_values=raster_utils.SpecialValueConfig(
+                    thresholds=(-1, 1),
+                    labels=('low', 'high'),
+                    colors=('red', 'blue')))
+
+    def test_special_values_rejected_for_binary(self):
+        """RasterPlotConfig does not allow special values for binary raster"""
+        with self.assertRaisesRegex(
+                ValueError, '`special_values` may only be defined'):
+            raster_utils.RasterPlotConfig(
+                raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+                datatype=raster_utils.RasterDatatype.binary,
+                spec=spec.Output(id='foo', about='foo output'),
+                special_values=raster_utils.SpecialValueConfig(
+                    thresholds=(-1, 1),
+                    labels=('low', 'high'),
+                    colors=('red', 'blue')))
+
+    def test_configure_special_values_both_bounds(self):
+        """_configure_special_values configures both colorbar extensions."""
+        cmap = matplotlib.colormaps['viridis'].copy()
+        special_values = raster_utils.SpecialValueConfig(
+            thresholds=(-1, 1),
+            labels=('low', 'high'),
+            colors=('red', 'blue'))
+
+        cmap, extend, thresholds, labels, text_specs = (
+            raster_utils._configure_special_values(cmap, special_values))
+
+        self.assertEqual(extend, 'both')
+        self.assertEqual(thresholds, [-1, 1])
+        self.assertEqual(labels, ['low', 'high'])
+        self.assertEqual(
+            text_specs, [(0, -0.05, 'top'), (0, 1.05, 'bottom')])
+
+    def test_plot_divergent_log_raster_requires_symmetric_thresholds(
+            self):
+        """Divergent log special values must be symmetric around 0."""
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.divergent,
+            transform="log",
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=(0.4, 1),
+                labels=('low', 'high'),
+                colors=('black', 'orange')))
+        make_simple_raster(raster_config.raster_path, shape)
+
+        with self.assertRaisesRegex(
+                UserWarning, 'To ensure that 0 falls at the logical break'):
+            raster_utils.plot_raster_list([raster_config])
+
+    @unittest.skipIf(
+        MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+    def test_plot_continuous_raster_special_values(self):
+        """Test correct plot for continuous raster with special values"""
+        figname = 'plot_raster_list_special_values.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.continuous,
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=(0.4, 1),
+                labels=('low', 'high'),
+                colors=('black', 'orange')))
+        make_simple_raster(raster_config.raster_path, shape)
+
+        config_list = [raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    @unittest.skipIf(
+        MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+    def test_plot_divergent_raster_max_special_value(self):
+        """Test divergent raster plot w special value has a correct colorbar"""
+        figname = 'plot_raster_list_special_max_value.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.divergent,
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=(None, 0.8),
+                labels=(None, 'high'),
+                colors=(None, 'darkblue')))
+        # Note this raster doesn't actually have negative values
+        make_simple_raster(raster_config.raster_path, shape)
+
+        config_list = [raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_special_values_adds_threshold_ticks(self):
+        """Test plot_raster_list adds special values as colorbar ticks."""
+        thresholds = (-.8, .9)
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.continuous,
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=thresholds,
+                labels=('low', 'high'),
+                colors=('red', 'blue')))
+        make_simple_raster(raster_config.raster_path, shape)
+
+        fig = raster_utils.plot_raster_list([raster_config])
+        colorbar_ax = fig.axes[1]
+        ticks = list(colorbar_ax.get_yticks())
+
+        self.assertIn(thresholds[0], ticks)
+        self.assertIn(thresholds[1], ticks)
 
 
 class RasterCaptionTests(unittest.TestCase):

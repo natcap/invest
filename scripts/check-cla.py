@@ -11,7 +11,7 @@ need to bother with API keys, but there are also rate limits in place.  There
 is not currently an option to provide an API key to the github API requests.
 
 To install dependencies, run:
-    $ pip install requests
+    $ pip install requests retrying
 
 To invoke this script on a PR in the natcap/invest repo, use
     $ python scripts/check-cla.py 1268
@@ -30,6 +30,7 @@ import re
 import sys
 
 import requests
+import retrying
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 LOGGER = logging.getLogger(os.path.basename(__file__))
@@ -54,8 +55,16 @@ UNSIGNED_MSG = (
     "    METADATA {last_checked_metadata}\n"
     "-->\n"
 )
+RETRY_NET_KWARGS = {
+    'stop_max_attempt_number': 7,
+
+    # Exponential falloff: (2^x)*1000, up to 10s
+    'wait_exponential_multiplier': 1000,
+    'wait_exponential_max': 10000,
+}
 
 
+@retrying.retry(**RETRY_NET_KWARGS)
 def check_contributor(github_username):
     """Check if a single contributor has signed the CLA.
 
@@ -93,6 +102,7 @@ def clean_and_format_commit_member_json(commit_member):
     return "JSON:" + json.dumps(output_dict, sort_keys=True)
 
 
+@retrying.retry(**RETRY_NET_KWARGS)
 def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
     """Determine who committed to a PR via the git history.
 
@@ -111,6 +121,7 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
         f"https://api.github.com/repos/{github_org}/{github_repo}/pulls/{int(pr_num)}",
         headers=GITHUB_HEADERS,
     )
+    resp.raise_for_status()
     pr_data = resp.json()
     n_commits_in_pr = pr_data['commits']
 
@@ -138,6 +149,7 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
                 "per_page": commits_per_page,
             },
         )
+        resp.raise_for_status()
 
         commits_data = resp.json()
         for c in commits_data:
@@ -198,6 +210,7 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
     return pr_committers
 
 
+@retrying.retry(**RETRY_NET_KWARGS)
 def have_we_already_commented(
         pr_num, unsigned_committers, github_org='natcap',
         github_repo='invest'):
@@ -221,6 +234,7 @@ def have_we_already_commented(
         f"https://api.github.com/repos/{github_org}/{github_repo}/pulls/{int(pr_num)}",
         headers=GITHUB_HEADERS,
     )
+    resp.raise_for_status()
     pr_data = resp.json()
     n_comments = pr_data['comments']
 
