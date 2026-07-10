@@ -814,10 +814,13 @@ input[type=text]::placeholder {
     background: var(--bootstrap-gray-100);
     padding: 0.5rem;
     border-radius: 0.25rem;
-    &:has(input:hover, input:checked) {
+    .form-check-input[type="radio"] {
+      margin-left: 0;
+    }
+    &:has(input:hover, input[type="radio"]:checked) {
       background: var(--bootstrap-gray-300);
     }
-    &:has(input:focus) {
+    &:has(input:focus-visible) {
       outline: 3px solid var(--invest-green);
       outline-offset: 3px;
     }
