@@ -95,7 +95,7 @@ export default function ResourcesTab(props) {
           aria-label={t(userGuideAriaLabel)}
           onClick={handleUGClick}
         >
-          <MdOpenInNew className="mr-1" />
+          <MdOpenInNew className="me-1" />
           {t(userGuideDisplayText)}
         </a>
       }
@@ -105,7 +105,7 @@ export default function ResourcesTab(props) {
         aria-label={t('Frequently Asked Questions (opens in web browser)')}
         onClick={openLinkInBrowser}
       >
-        <MdOpenInNew className="mr-1" />
+        <MdOpenInNew className="me-1" />
         {t('Frequently Asked Questions')}
       </a>
     </React.Fragment>
