@@ -152,11 +152,10 @@ class SettingsModal extends React.Component {
             }
             <hr />
             <div className="settings-modal-row-group">
-              <Form.Group as={Row}>
-                <Form.Label column sm="6" htmlFor="logging-select">
+              <Form.Group>
+                <Form.Label htmlFor="logging-select">
                   {t('Logging threshold')}
                 </Form.Label>
-                <Col sm="6">
                   <Form.Select
                     id="logging-select"
                     name="loggingLevel"
@@ -167,13 +166,11 @@ class SettingsModal extends React.Component {
                       ([opt, displayName]) => <option value={opt} key={opt}>{displayName}</option>
                     )}
                   </Form.Select>
-                </Col>
               </Form.Group>
-              <Form.Group as={Row}>
-                <Form.Label column sm="6" htmlFor="taskgraph-logging-select">
+              <Form.Group>
+                <Form.Label htmlFor="taskgraph-logging-select">
                   {t('Taskgraph logging threshold')}
                 </Form.Label>
-                <Col sm="6">
                   <Form.Select
                     id="taskgraph-logging-select"
                     name="taskgraphLoggingLevel"
@@ -184,50 +181,39 @@ class SettingsModal extends React.Component {
                       ([opt, displayName]) => <option value={opt} key={opt}>{displayName}</option>
                     )}
                   </Form.Select>
-                </Col>
               </Form.Group>
               {
                 nWorkersOptions
                 &&
-                <Form.Group as={Row}>
-                  <Col sm="6">
-                    <Form.Label htmlFor="nworkers-select">
-                      {t('Taskgraph n_workers parameter')}
-                    </Form.Label>
-                  </Col>
-                  <Col sm="6">
+                <Form.Group>
+                  <Form.Label htmlFor="nworkers-select">
+                    {t('Taskgraph n_workers parameter')}
+                  </Form.Label>
                     <Form.Select
                       id="nworkers-select"
                       name="nWorkers"
                       type="text"
                       value={nWorkers}
                       onChange={this.handleChangeNumber}
+                      aria-describedby="n-workers-details"
                     >
                       {nWorkersOptions.map(
                         (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
                       )}
                     </Form.Select>
-                  </Col>
-                  <Col sm="12">
-                    <Accordion>
-                      <Accordion.Item eventKey="more-info">
-                        <Accordion.Header as="span">{t('more info about n_workers')}</Accordion.Header>
-                        <Accordion.Body>
-                          <ul>
-                            <li>{t('synchronous task execution is most reliable')}</li>
-                            <li>
-                              {t('threaded task management: tasks execute only ' +
-                                  'in the main process, using multiple threads.')}
-                            </li>
-                            <li>
-                              {t('n CPUs: depending on the InVEST model, tasks ' +
-                                  'may execute in parallel using up to this many processes.')}
-                            </li>
-                          </ul>
-                        </Accordion.Body>
-                      </Accordion.Item>
-                    </Accordion>
-                  </Col>
+                    <div id="n-workers-details">
+                      <ul className="form-field-details-list">
+                        <li>{t('Synchronous task execution is most reliable.')}</li>
+                        <li>
+                          {t('Threaded task management: tasks execute only ' +
+                              'in the main process, using multiple threads.')}
+                        </li>
+                        <li>
+                          {t('n CPUs: depending on the InVEST model, tasks ' +
+                              'may execute in parallel using up to this many processes.')}
+                        </li>
+                      </ul>
+                  </div>
                 </Form.Group>
               }
             </div>
