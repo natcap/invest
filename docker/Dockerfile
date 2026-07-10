@@ -28,9 +28,9 @@ RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/env
         python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} cxx-compiler git && \
     micromamba list && \
     echo $CONDA_PREFIX && \
-    which python $$ \
+    which python && \
     pip install uv && \
-    CONDA_PREFIX=/opt/conda uv pip install . --python $CONDA_PREFIX/bin/python && \
+    CONDA_PREFIX=/opt/conda uv pip install --python $CONDA_PREFIX/bin/python . && \
     uv cache clean && \
     micromamba clean --all --yes && \
     micromamba remove -y -n base cxx-compiler git
