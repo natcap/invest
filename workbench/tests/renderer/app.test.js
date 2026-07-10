@@ -174,7 +174,7 @@ describe('Various ways to open and close InVEST models', () => {
     const openButton = await findByRole(
       'button', { name: /browse to a datastack or invest logfile/i });
     await userEvent.click(openButton);
-    const homeTab = await findByRole('tabpanel', { name: 'home tab' });
+    const homeTab = await findByRole('tabpanel', { name: /^InVEST/ });
     // expect we're on the same tab we started on instead of switching to Setup
     expect(homeTab.classList.contains('active')).toBeTruthy();
     // These are the calls that would have triggered if a file was selected
@@ -192,14 +192,14 @@ describe('Various ways to open and close InVEST models', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    const homeTab = await findByRole('tabpanel', { name: 'home tab' });
+    const homeTab = await findByRole('tabpanel', { name: /^InVEST/ });
 
     // Open a model tab and expect that it's active
     await userEvent.click(carbon);
     let modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(1); // one carbon tab open
     const tab1 = modelTabs[0];
-    const tab1EventKey = tab1.getAttribute('data-rb-event-key');
+    const tab1EventKey = tab1.getAttribute('data-rr-ui-event-key');
     expect(tab1.classList.contains('active')).toBeTruthy();
     expect(homeTab.classList.contains('active')).toBeFalsy();
 
@@ -209,7 +209,7 @@ describe('Various ways to open and close InVEST models', () => {
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(2); // 2 carbon tabs open
     const tab2 = modelTabs[1];
-    const tab2EventKey = tab2.getAttribute('data-rb-event-key');
+    const tab2EventKey = tab2.getAttribute('data-rr-ui-event-key');
     expect(tab2.classList.contains('active')).toBeTruthy();
     expect(tab1.classList.contains('active')).toBeFalsy();
     expect(homeTab.classList.contains('active')).toBeFalsy();
@@ -222,7 +222,7 @@ describe('Various ways to open and close InVEST models', () => {
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(3); // 3 carbon tabs open
     const tab3 = modelTabs[2];
-    const tab3EventKey = tab3.getAttribute('data-rb-event-key');
+    const tab3EventKey = tab3.getAttribute('data-rr-ui-event-key');
     expect(tab3.classList.contains('active')).toBeTruthy();
     expect(tab2.classList.contains('active')).toBeFalsy();
     expect(tab1.classList.contains('active')).toBeFalsy();
