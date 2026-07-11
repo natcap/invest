@@ -25,7 +25,7 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
 WORKDIR /invest
 
 RUN micromamba install -y -n base --override-channels -c conda-forge -f /tmp/environment.yml \
-        python==${PYTHON_VERSION} gdal=${GDAL_VERSION} uc cxx-compiler git && \
+        python==${PYTHON_VERSION} gdal=${GDAL_VERSION} uv cxx-compiler git && \
     micromamba list && \
     # Specify the python interpreter so that uv installs to the conda evn
     uv pip install --verbose --python $CONDA_PREFIX/bin/python . && \
