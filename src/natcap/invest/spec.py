@@ -536,9 +536,9 @@ class SpatialFileInput(FileInput):
 
     is_default_projection: bool = False
     """Whether the input has the projection and alignment to which other
-    inputs are reprojected and aligned by default. Only one input can have
-    `is_default_projection`=True, and that input must be linearly projected.
-    A user can select a different input to represent the target
+    inputs are reprojected and aligned by default. Only one ModelSpec input
+    can have ``is_default_projection=True``, and that input must be linearly
+    projected. A user can select a different input to represent the target
     projection, but this input will be selected by default.
     Defaults to False."""
 
