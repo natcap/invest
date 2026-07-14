@@ -259,7 +259,7 @@ def _get_pixel_size(args, model_spec):
     input's projection"""
     spatial_inputs = _get_spatial_inputs(args, model_spec)
     projection_input_id = args.get('target_projection')
-    if not projection_input_id:
+    if not projection_input_id or not args.get(projection_input_id):
         default_projection_inputs = [
             inp for inp in model_spec.inputs
             if isinstance(inp, SpatialFileInput) and inp.is_default_projection
@@ -1839,7 +1839,8 @@ class OptionSpatialInput(OptionStringInput):
     Defaults to None. """ #TODO - is new class needed?
 
     responsive_to: typing.Union[str, None] = None
-    """A different model input which, when changed in the workbench, will cause the option dropdown menu to re-call dropdown function"""
+    """A different model input which, when changed in the workbench,
+    will cause the option dropdown menu to re-call dropdown function"""
 
     def validate(self, value):
         message = super().validate(value)
