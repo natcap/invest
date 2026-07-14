@@ -360,9 +360,34 @@ class SetupTab extends React.Component {
       },
     };
 
+    const changedArgIsSpatial = ['raster', 'vector'].includes(
+      argsSpec[key]?.type
+    );
+  
+    let refreshDropdown = false;
     Object.keys(newArgsValues).forEach((argkey) => {
       const spec = argsSpec[argkey];
-      if (spec?.responsive_to?.includes(key)) {
+      const isTargetSpatialDropdown = [
+        'target_pixelsize',
+        'target_projection',
+      ].includes(spec?.id);
+
+      const respondsToTargetProjection = (
+        key === 'target_projection' &&
+        spec?.id === 'target_pixelsize'
+      );
+
+      const respondsToSpatialChange = (
+        changedArgIsSpatial &&
+        isTargetSpatialDropdown
+      );
+      const respondsToNamedInput = spec?.responsive_to === key;
+
+      if (respondsToSpatialChange || respondsToNamedInput || respondsToTargetProjection) {
+        refreshDropdown = true;
+      }
+
+      if (respondsToNamedInput) {
         newArgsValues[argkey] = {
           ...newArgsValues[argkey],
           value: '', //clear to allow to choose new value
@@ -377,7 +402,9 @@ class SetupTab extends React.Component {
       });
       this.debouncedValidate();
       this.debouncedArgsEnabled();
-      this.debouncedDropdownFunctions();
+      if (refreshDropdown) {
+        this.debouncedDropdownFunctions();
+      }
     });
   }
 
@@ -465,22 +492,22 @@ class SetupTab extends React.Component {
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await getDynamicDropdowns(payload);
-    Object.keys(results).forEach((argkey) => {
-      // const options = results[argkey];
-      argsDropdownOptions[argkey] = results[argkey];
-      // const currentValue = argsValues[argkey].value;
-      // const currentValueIsValid = options.some(
-      //   (option) => option.key === currentValue
-      // );
-      // if (options.length > 0 && !currentValueIsValid) {
-      //   argsValues[argkey].value = options[0].key;
-      // }
+    Object.keys(results ?? {}).forEach((argkey) => {
+      const options = results[argkey];
+      argsDropdownOptions[argkey] = options;
+      const currentValue = argsValues[argkey].value;
+      const currentValueIsValid = options.some(
+        (option) => option.key === currentValue
+      );
+      if (!currentValueIsValid) {
+        argsValues[argkey].value = options[0]?.key || '';
+      }
     });
-    this.setState({ argsDropdownOptions: argsDropdownOptions }); // ,
-    //   argsValues: argsValues,
-    //  }, () => {
-    //   this.debouncedValidate();
-    //  });
+    this.setState({ argsDropdownOptions: argsDropdownOptions,
+      argsValues: argsValues,
+     }, () => {
+      this.debouncedValidate();
+     });
   }
 
   /** Get a debounced version of investValidate.
