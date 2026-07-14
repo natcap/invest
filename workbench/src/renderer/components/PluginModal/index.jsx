@@ -184,7 +184,7 @@ export default function PluginModal(props) {
     ipcRenderer.invoke(
       ipcMainChannels.GET_SETTING, `plugins.${pluginID}.defaultEnv`
     ).then((value) => {
-      setPluginEnvs({...pluginEnvs, pluginID: value});
+      setPluginEnvs({...pluginEnvs, [pluginID]: value});
     });
   }
 
@@ -481,6 +481,18 @@ export default function PluginModal(props) {
       <Form aria-labelledby="configure-conda-form-title">
         <Form.Group>
           <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable (Advanced)')}</h5>
+          <Form.Text
+            as="span"
+            id="conda-executable-desciption"
+            className="plugin-form-text mb-3"
+          >
+            {t('InVEST is distributed with a copy of micromamba, a conda-like '
+              + 'package manager that is used to manage plugin environments. '
+              + 'If you have conda or mamba installed elsewhere on the system, '
+              + 'you can configure InVEST to use that executable instead. This '
+              + 'may be useful if you run into limitations of the included '
+              + 'micromamba distribution.')}
+          </Form.Text>
           <Form.Label htmlFor="condaPath">{t('Conda or mamba executable')}</Form.Label>
           <div className="d-flex flex-nowrap w-100">
             <Form.Control
@@ -512,6 +524,16 @@ export default function PluginModal(props) {
       <Form aria-labelledby="configure-plugin-envs-form-title">
         <Form.Group>
         <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments (Advanced)')}</h5>
+        <Form.Text
+            as="span"
+            id="plugin-env-desciption"
+            className="plugin-form-text mb-3"
+          >
+            {t('InVEST creates a separate conda environment for each installed '
+              + 'plugin. You may override this and provide a path to a different '
+              + 'conda environment, which may be useful for development and '
+              + 'debugging.')}
+          </Form.Text>
         {Object.keys(plugins).map((pluginID) => (
           <Form.Group key={`${pluginID}-env-group`}>
             <Form.Label htmlFor={pluginID}>
