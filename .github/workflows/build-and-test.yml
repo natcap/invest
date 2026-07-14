@@ -307,10 +307,12 @@ jobs:
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
+            chromediver-url: http://storage.googleapis.com/chrome-for-testing-public/144.0.7559.236/mac-x64/chromedriver-mac-x64.zip
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: InVEST-failed-windows-workspace.tar
             binary-extension: exe
+            chromediver-url: http://storage.googleapis.com/chrome-for-testing-public/144.0.7559.236/win64/chromedriver-win64.zip
     steps:
       - uses: actions/checkout@v6
         with:
@@ -460,9 +462,24 @@ jobs:
           DEST=gs://releases.naturalcapitalproject.org/invest-reports/latest
           gcloud storage rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
 
-      - name: Test electron app with puppeteer
+      # - name: Test electron app with puppeteer
+      #   working-directory: workbench
+      #   run: npx cross-env CI=true yarn run test-electron-app
+
+      - name: Test electron app with selenium
         working-directory: workbench
-        run: npx cross-env CI=true yarn run test-electron-app
+        run: |
+          yarn add --dev electron-chromedriver
+          yarn add --dev selenium-webdriver
+          curl -L ${{ matrix.chromediver-url }} -o chromedriver.zip
+          unzip chromedriver.zip -d ./chromedriver
+
+          ./chromedriver --port=9515 &
+
+          pip install selenium
+
+          pytest tests/binary_tests/plugins.py
+
 
       - name: Upload workbench logging from puppeteer
         uses: actions/upload-artifact@v4
