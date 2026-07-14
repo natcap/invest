@@ -29,6 +29,7 @@ export default function PluginModal(props) {
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
   const [condaPath, setCondaPath] = useState('');
+  const [pluginEnvs, setPluginEnvs] = useState({});
   const [installErr, setInstallErr] = useState('');
   const [uninstallErr, setUninstallErr] = useState('');
   const [pluginToRemove, setPluginToRemove] = useState('');
@@ -63,11 +64,19 @@ export default function PluginModal(props) {
   useEffect(() => {
     ipcRenderer.invoke(
       ipcMainChannels.GET_SETTING, 'micromamba'
-    ).then((data) => {
-      console.log('path', data);
-      setCondaPath(data);
-    });
-  }, [])
+    ).then((data) => setCondaPath(data));
+    ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'plugins'
+    ).then((data) => setPluginEnvs(
+      Object.fromEntries(
+        Object.keys(data).map(
+          (pluginID) => [pluginID, data[pluginID].env]
+        )
+      )
+    ))
+  }, []);
+
+  console.log(pluginEnvs);
 
   useEffect(() => {
     clearFormErrors();
@@ -156,31 +165,39 @@ export default function PluginModal(props) {
     );
   };
 
-  const handleCondaPathChange = (event) => {
-    console.log('handle path change');
-    ipcRenderer.send(
-      ipcMainChannels.SET_SETTING, 'micromamba', event.target.value
-    );
-    setCondaPath(event.target.value);
-  }
-
   const resetCondaPath = () => {
     console.log('reset conda path');
     ipcRenderer.invoke(
       ipcMainChannels.GET_SETTING, 'defaultMicromamba'
     ).then((data) => {
-      ipcRenderer.send(
-        ipcMainChannels.SET_SETTING, 'micromamba', data
-      );
       setCondaPath(data);
     });
   }
 
-  const handleChangePluginEnv = (pluginID, value) => {
-    console.log('change plugin env');
+  const saveCondaPath = () => {
+    ipcRenderer.send(
+      ipcMainChannels.SET_SETTING, 'micromamba', condaPath
+    );
+  }
+
+  const resetPluginEnv = (pluginID) => {
+    ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, `plugins.${pluginID}.defaultEnv`
+    ).then((value) => {
+      setPluginEnvs({...pluginEnvs, pluginID: value});
+    });
+  }
+
+  const savePluginEnvs = () => {
+    Object.entries(pluginEnvs).forEach(([pluginID, envPath]) => {
+      ipcRenderer.send(
+        ipcMainChannels.SET_SETTING, `plugins.${pluginID}.env`, envPath
+      );
+    });
   }
 
   useEffect(() => {
+
     ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
     if (show) {
       if (window.Workbench.OS === 'win32') {
@@ -214,8 +231,6 @@ export default function PluginModal(props) {
       setPath(data.filePaths[0]);
     }
   }
-
-  console.log(plugins);
 
   let pluginFields;
   if (installFrom === 'url') {
@@ -465,20 +480,20 @@ export default function PluginModal(props) {
       <hr />
       <Form aria-labelledby="configure-conda-form-title">
         <Form.Group>
-          <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable')}</h5>
+          <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable (Advanced)')}</h5>
           <Form.Label htmlFor="condaPath">{t('Conda or mamba executable')}</Form.Label>
           <div className="d-flex flex-nowrap w-100">
             <Form.Control
               id="condaPath"
               type="text"
               value={condaPath}
-              onChange={handleCondaPathChange}
+              onChange={(event) => setCondaPath(event.target.value)}
               className="mr-1"
             />
             <Button
-              aria-label="browse for env"
+              aria-label="browse for conda executable"
               className="ml-1 mr-1"
-              id="browse-env-button"
+              id="browse-conda-button"
               variant="outline-dark"
               onClick={selectDirectory}
             >
@@ -488,49 +503,56 @@ export default function PluginModal(props) {
               {t('Reset')}
             </Button>
           </div>
+          <Button onClick={saveCondaPath} className="text-nowrap mt-3">
+            {t('Save')}
+          </Button>
         </Form.Group>
       </Form>
       <hr />
       <Form aria-labelledby="configure-plugin-envs-form-title">
         <Form.Group>
-        <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments')}</h5>
+        <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments (Advanced)')}</h5>
         {Object.keys(plugins).map((pluginID) => (
-          <div
-            className="d-flex flex-nowrap w-100 mb-1"
-          >
-            <Form.Label
-              column
-              sm={3}
-              htmlFor={pluginID}
-              className="text-nowrap overflow-auto w-30 mr-2 d-block"
-              style={{ scrollbarWidth: 'thin' }}
-            >
+          <Form.Group key={`${pluginID}-env-group`}>
+            <Form.Label htmlFor={pluginID}>
               {pluginID}
             </Form.Label>
-            <Form.Control
-              id="condaPath2"
-              type="text"
-              value={plugins[pluginID].env}
-              onChange={handleCondaPathChange}
-              className="ml-1 mr-1"
-            />
-            <Button
-              aria-label="browse for env"
-              className="ml-1 mr-2"
-              id="browse-env-button"
-              variant="outline-dark"
-              onClick={selectDirectory}
+            <div
+              className="d-flex flex-nowrap w-100 mb-1"
             >
-              <MdFolderOpen />
-            </Button>
-            <Button
-              onClick={() => resetCondaPath(pluginID)}
-              className="text-nowrap"
-            >
-              {t('Reset')}
-            </Button>
-          </div>
+              <Form.Control
+                id={pluginID}
+                type="text"
+                value={pluginEnvs[pluginID]}
+                onChange={(event) => setPluginEnvs(
+                  {...pluginEnvs, [pluginID]: event.target.value}
+                )}
+                className="mr-1"
+              />
+              <Button
+                aria-label="browse for env"
+                className="ml-1 mr-2"
+                id="browse-env-button"
+                variant="outline-dark"
+                onClick={selectDirectory}
+              >
+                <MdFolderOpen />
+              </Button>
+              <Button
+                onClick={() => resetPluginEnv(pluginID)}
+                className="text-nowrap"
+              >
+                {t('Reset')}
+              </Button>
+            </div>
+          </Form.Group>
         ))}
+        <Button
+          onClick={savePluginEnvs}
+          className="text-nowrap mt-3"
+          disabled={!Object.keys(pluginEnvs).length}>
+            {t('Save')}
+        </Button>
       </Form.Group>
       </Form>
     </Modal.Body>

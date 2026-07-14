@@ -210,6 +210,7 @@ function storePluginMetadataSync(
       modelTitle: modelTitle,
       type: 'plugin',
       source: installString,
+      defaultEnv: pluginEnvPrefix,
       env: pluginEnvPrefix,
       version: version,
     }
