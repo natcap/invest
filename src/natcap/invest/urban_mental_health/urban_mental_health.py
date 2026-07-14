@@ -25,7 +25,9 @@ def _get_pixelsize_umh(args, model_spec):
     """Return spatial inputs and pixel size as dropdown Options, default first
 
     Pixel size units match the units specified in the current target_projection
-    input's projection"""
+    input's projection. Note that if an input is not projected, it will not
+    appear in the dropdown list so if the default input is not projected, the
+    default behavior will be different from what is expected."""
     if args['model_option'] == 'lulc':
         default_for_model_option = 'lulc_base'
     else:
@@ -33,7 +35,7 @@ def _get_pixelsize_umh(args, model_spec):
 
     spatial_inputs = spec._get_spatial_inputs(args, model_spec)
     projection_input_id = args.get('target_projection')
-    if not projection_input_id:
+    if not projection_input_id or not args.get(projection_input_id):
         default_projection_inputs = [
             inp for inp in model_spec.inputs
             if isinstance(inp, spec.SpatialFileInput) and inp.is_default_projection
