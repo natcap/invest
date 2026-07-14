@@ -80,8 +80,6 @@ export default function PluginModal(props) {
     ))
   }, []);
 
-  console.log(pluginEnvs);
-
   useEffect(() => {
     clearFormErrors();
   }, [installFrom]);
@@ -176,13 +174,13 @@ export default function PluginModal(props) {
     ).then((data) => {
       setCondaPath(data);
     });
-  }
+  };
 
   const saveCondaPath = () => {
     ipcRenderer.send(
       ipcMainChannels.SET_SETTING, 'micromamba', condaPath
     );
-  }
+  };
 
   const resetPluginEnv = (pluginID) => {
     ipcRenderer.invoke(
@@ -190,7 +188,7 @@ export default function PluginModal(props) {
     ).then((value) => {
       setPluginEnvs({...pluginEnvs, [pluginID]: value});
     });
-  }
+  };
 
   const savePluginEnvs = () => {
     Object.entries(pluginEnvs).forEach(([pluginID, envPath]) => {
@@ -198,6 +196,7 @@ export default function PluginModal(props) {
         ipcMainChannels.SET_SETTING, `plugins.${pluginID}.env`, envPath
       );
     });
+  };
 
   const selectDirectory = async (event) => {
     const data = await ipcRenderer.invoke(
@@ -207,7 +206,7 @@ export default function PluginModal(props) {
       // dialog defaults allow only 1 selection
       setPath(data.filePaths[0]);
     }
-  }
+  };
 
   useEffect(() => {
 
@@ -238,7 +237,6 @@ export default function PluginModal(props) {
   let pluginFields;
   if (installFrom === 'url') {
     pluginFields = (
-
       <Row>
         <Form.Group as={Col} xs={7}>
           <Form.Label htmlFor="url">{t('Git URL')}</Form.Label>
@@ -507,18 +505,18 @@ export default function PluginModal(props) {
               type="text"
               value={condaPath}
               onChange={(event) => setCondaPath(event.target.value)}
-              className="mr-1"
+              className="me-1"
             />
             <Button
               aria-label="browse for conda executable"
-              className="ml-1 mr-1"
+              className="ms-1 me-1"
               id="browse-conda-button"
               variant="outline-dark"
               onClick={selectDirectory}
             >
               <MdFolderOpen />
             </Button>
-            <Button onClick={resetCondaPath} className="text-nowrap ml-1">
+            <Button onClick={resetCondaPath} className="text-nowrap ms-1">
               {t('Reset')}
             </Button>
           </div>
@@ -556,11 +554,11 @@ export default function PluginModal(props) {
                 onChange={(event) => setPluginEnvs(
                   {...pluginEnvs, [pluginID]: event.target.value}
                 )}
-                className="mr-1"
+                className="me-1"
               />
               <Button
                 aria-label="browse for env"
-                className="ml-1 mr-2"
+                className="ms-1 me-2"
                 id="browse-env-button"
                 variant="outline-dark"
                 onClick={selectDirectory}
