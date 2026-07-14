@@ -1,11 +1,16 @@
 :root {
   font-size: 16px;
   --invest-green: #148F68;
+  --invest-green-opacity-50: #148F6880; /* Equivalent to InVEST Green with 50% opacity (for Bootstrap-style focus indicators) */
   --digital-green: #008566; /* From Stanford brand guidelines. Better contrast for text than invest-green. */
   --digital-red: #B1040E; /* From Stanford brand guidelines. */
+  --secondary-gray: #585858;
   --bootstrap-secondary-gray:#6c757d;
+  --bootstrap-gray-100: #f8f9fa;
+  --bootstrap-gray-300: #dee2e6;
+  --lagunita-light: #009AB4; /* From Stanford brand guidelines. Suitable for non-text elements only. */
+  --lagunita-light-opacity-50: #009AB480; /* Equivalent to Lagunita Light with 50% opacity (for Bootstrap-style focus indicators). */
 }
-
 
 /*
 --header-height: fixed height applied to the top navbar.
@@ -18,6 +23,7 @@
 body {
   --header-height: 64px;
   --content-height: calc(100vh - var(--header-height));
+  --sidebar-max-width: 25vw;
   min-height: 100vh;
   background-color: rgba(0,0,0,0);
   margin: 0;
@@ -28,88 +34,110 @@ body {
    Bootstrap-styled buttons have different focus styles, based on element/background colors.
    This is a fallback, to be applied to elements whose focus styles are not defined by Bootstrap. */
 a,
-button,
-.btn-link {
+button {
   &:focus {
     outline-color: var(--invest-green);
   }
 }
 
-.btn-link:focus {
-  outline-style: auto;
-  outline-width: 0.25rem;
+.btn-link {
+  text-decoration: none;
+  &:hover, &:focus {
+    text-decoration: underline;
+  }
+}
+
+/* Bootstrap button style overrides.
+   This is not the recommended way to apply custom theming to Bootstrap
+   components, but since there's currently only one button style in need of
+   customization (the "info" color became too light in Bootstrap 5), a more
+   complex approach doesn't seem worthwhile. */
+.btn-outline-info {
+  color: var(--lagunita-light);
+  border-color: var(--lagunita-light);
+  &:hover, &:focus {
+    color: ghostwhite;
+    background: var(--lagunita-light);
+    border-color: var(--lagunita-light);
+  }
+  &:focus, &:focus-visible {
+    box-shadow: 0 0 0 .25rem var(--lagunita-light-opacity-50);
+  }
+}
+
+/* Bootstrap form control style overrides. */
+.form-control,
+.form-select,
+.form-check-input {
+  border-color: var(--bootstrap-secondary-gray);
 }
 
 /*Top Navigation*/
-
 .navbar {
+  --home-link-padding-left-right: 0.5rem;
+  --home-link-margin-left: 0.25rem;
+  --model-tab-border-width: 0.1875rem;
   border-bottom: 3px solid var(--invest-green);
+  border-top: 3px solid transparent;
   padding: 0;
   height: var(--header-height);
-}
-
-.navbar .row {
-  align-items: end;
-}
-
-.navbar-brand {
-  padding-bottom: 0;
-  margin-right: 0;
-}
-
-.navbar-brand:hover {
-  text-decoration-line: underline;
-  text-decoration-thickness: 3px;
-  text-decoration-color: var(--invest-green);
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  .nav {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+  .nav-tabs {
+    border-bottom: 0;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: hidden;
+  }
+  .navbar-left {
+      flex: 0 0 calc(
+        var(--sidebar-max-width)
+        - (var(--home-link-margin-left)
+           + var(--home-link-padding-left-right)
+           + var(--model-tab-border-width)
+          )
+      );
+      display: flex;
+      padding: 0;
+      margin: 0;
+  }
+  .nav-link.nav-link-home {
+    padding: 0 var(--home-link-padding-left-right);
+    margin-left: var(--home-link-margin-left);
+  }
 }
 
 .navbar-middle {
+  display: flex;
+  align-self: flex-end;
   flex-shrink: 1;
   min-width: 0;
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0;
 }
 
 .navbar-right {
   display: flex;
   max-width: fit-content;
   margin-left: 0.5rem;
-  margin-right: -15px;
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0 0.5rem 0 0;
 }
 
-.navbar-brand .nav-link {
-  color: var(--invest-green);
-  font-weight: 600;
-  font-size: 2.0rem;
-  letter-spacing: 1px;
-  padding-bottom: 0;
-  padding-left: 0.7rem;
-  padding-right: 0;
-  display: flex;
-  align-items: center;
+.nav-link-home,
+.app-menu-button {
+  height: 3rem;
+  &:focus, &:focus-visible {
+    outline: revert;
+    outline-color: var(--invest-green);
+  }
 }
 
-/*tricky to align icon with text*/
-.navbar-brand .nav-link svg {
-  margin-bottom: -0.2rem;
-}
-
-/*registered trademark icon styling*/
-.rtm {
-  color: var(--invest-green);
-  font-size: 0.5rem;
-  margin-bottom: 0.3rem;
-}
-
-.navbar-nav.nav-tabs {
-  border-bottom: 0;
-  overflow-x: hidden;
-  overflow-y: hidden;
-}
-
-.navbar-nav .nav-item {
+.navbar .nav-item {
+  --border-radius: 0.375rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -118,48 +146,109 @@ button,
   flex: 1; /*size by available space, not by content*/
   min-width: 0; /*and allow it to shrink to fit container*/
   background-color: transparent;
-  border: 2px solid #999999;
-  border-bottom: 0;
-  border-radius: 5px 5px 0 0;
+  border-radius: var(--border-radius);
 }
 
-.navbar-nav .nav-item.active {
-  border: 3px solid var(--invest-green);
-  border-bottom: 0;
-  background-color: ghostwhite;
+.navbar .nav-item.model-run-tab {
+  --tab-height: 3rem;
+  --content-height: 1.5rem;
+  border: var(--model-tab-border-width) solid var(--bootstrap-secondary-gray);
+  border-bottom: none;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  align-self: flex-end;
+  height: var(--tab-height);
+  &:has(.nav-link.active) {
+    border: 3px solid var(--invest-green);
+    border-bottom: none;
+    background-color: ghostwhite;
+  }
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    background-color: transparent;
+    color: var(--bootstrap-secondary-gray);
+    font-size: 1.125rem;
+    line-height: var(--content-height);
+    --padding-top-bottom: calc((var(--tab-height) - var(--model-tab-border-width) - var(--content-height)) / 2);
+    padding: var(--padding-top-bottom) 0.25rem var(--padding-top-bottom) 0.5rem;
+    &.active {
+      background-color: ghostwhite;
+      color: #000;
+    }
+    &:focus-visible .model-name {
+      color: #000;
+      font-style: italic;
+      overflow: visible;
+    }
+    span {
+      overflow: hidden;
+      flex-shrink: 0;
+      &.model-name {
+        flex-shrink: 1;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+  .btn.close-tab {
+    display: flex;
+    height: var(--content-height);
+    margin: 0 0.375rem 0 0.125rem;
+    padding: 4px;
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--bootstrap-secondary-gray);
+    &:hover, &:focus, &:active {
+      border-color: var(--bootstrap-secondary-gray);
+      background-color: var(--bootstrap-secondary-gray);
+      color: white;
+    }
+  }
 }
 
-.navbar-light .navbar-nav .nav-link {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  background-color: transparent;
-  color: #999999;
-  border: 0;
-  border-bottom: 0;
-  font-size: 1.1rem;
+.navbar .nav-link {
+  border: none;
+  &:focus-visible {
+    box-shadow: none;
+  }
 }
 
-.close-tab.btn {
-  background-color: transparent;
-  border-color: transparent;
-  color: #6c757d;
-  margin-left: 0.1rem;
-  padding-left: 0.1rem;
-  padding-right: 0.1rem;
-  padding-top: 0.1rem;
-  padding-bottom: 0.1rem;
-  height: fit-content;
-}
-.close-tab:hover, .close-tab:focus, .close-tab:active {
-  border-color: #6c757d;
-  background-color: #6c757d;
-  color: white;
+.navbar .nav-link.nav-link-home {
+  display: flex;
+  align-items: center;
+  border-radius: inherit;
+  width: fit-content;
+  color: var(--invest-green);
+  font-weight: 600;
+  font-size: 2rem;
+  letter-spacing: 1px;
+  &.active {
+    color: var(--invest-green);
+  }
+  &:hover {
+    .nav-link-text {
+      text-decoration-line: underline;
+      text-decoration-thickness: 3px;
+      text-decoration-color: var(--invest-green);
+    }
+  }
+  svg {
+    margin-bottom: -0.2rem;
+  }
+  .rtm {
+    color: var(--invest-green);
+    font-size: 1.25rem;
+    font-weight: 300;
+  }
 }
 
 .progress {
-  display: inline-flex;
+  align-self: center;
   height: 2rem;
+  margin-right: 0.5rem;
   font-size: 1rem;
   background-color: #aeb1b3;
 }
@@ -173,17 +262,11 @@ button,
   padding: 0.4rem;
 }
 
-.navbar .row .text-right {
-  white-space: nowrap;
-}
-
 .app-menu-button {
   color: var(--bootstrap-secondary-gray);
   background-color: transparent;
   border: none;
   font-size: 2rem;
-  margin-right: 2px;
-  height: 2.75rem;
   display: flex;
   align-items: center;
   padding-left: 0.75rem;
@@ -217,11 +300,14 @@ button,
 /* add padding to accomodate the width of a scroll bar
 otherwise the bar will make overall width of content
 exceed 100% of window.*/
-#home-tab-content {
+.main-tab-content {
   padding-right:  16px;
 }
 
 /* Home Tab */
+.home-tabpanel {
+  padding: 0 0 0 0.25rem; /* add left padding to better accommodate visible focus indicators */
+}
 
 .invest-list-container {
   height: var(--content-height);
@@ -234,6 +320,7 @@ exceed 100% of window.*/
   display: block;
   column-count: 2;
   white-space: nowrap;
+  border-radius: 0;
 }
 
 .invest-list-group .list-group-item {
@@ -242,25 +329,35 @@ exceed 100% of window.*/
   border-left: none;
   border-bottom: 1px solid rgba(0,0,0,.125);
   margin-bottom: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  & .open-button {
+  &.invest-button {
+    display: flex;
+    align-items: center;
+    color: var(--invest-green);
+    font-weight: 600;
+    &:not(.active):hover {
+      color: white;
+      background-color: var(--invest-green);
+    }
+    span {
+      overflow: hidden;
+      &.badge {
+        flex-shrink: 0;
+      }
+      &:not(.badge) {
+        text-overflow: ellipsis;
+      }
+    }
+  }
+  &:has(.open-button) {
+    border: none;
+    padding: 0.5rem 0.125rem;
+  }
+  .open-button {
     font-weight: 600;
     border-width: 0.125rem;
     padding: 0.5rem 1.25rem;
+    width: 100%;
   }
-}
-
-.invest-button {
-  color: var(--invest-green);
-  font-weight: 600;
-}
-
-.invest-button:hover {
-  color: white;
-  background-color: var(--invest-green);
-  font-weight: 600;
 }
 
 .open-button-col {
@@ -300,10 +397,8 @@ exceed 100% of window.*/
 }
 
 .card-body {
-  padding-top: 1rem;
-  padding-left: 0rem;
-  padding-right: 0rem;
-  padding-bottom: 0rem;
+  margin: 0.125rem 0 0 0;
+  padding: 1rem 0 0 0;
   width: inherit;
   background-color: transparent;
 }
@@ -371,6 +466,7 @@ exceed 100% of window.*/
 }
 
 .card-footer {
+  color: var(--secondary-gray);
   display: flex;
   justify-content: space-between;
   white-space: nowrap;
@@ -418,55 +514,50 @@ exceed 100% of window.*/
 }
 
 .invest-sidebar-col {
-  /* sidebar cannot grow or shrink, main col can.
-   * sidebar width tries to be 25%.
-   */
-  flex: 0 0 25%;
+  --tab-highlight-width: 1rem;
   display: flex;
   flex-direction: column;
+  flex: 0 0 var(--sidebar-max-width);
   padding-right: 0;
   padding-bottom: 1rem;
-}
-
-.invest-sidebar-col .nav-link {
-  color: #000;
-  border-right: 5px solid transparent;
-  border-radius: 0;
-  font-size: 1.3rem;
-  font-weight: 550;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-right: 0;
-}
-
-.invest-sidebar-col .nav-link svg {
-  font-size: 2rem;
-}
-
-.invest-sidebar-col .nav-link:hover, .invest-sidebar-col .nav-link:focus {
-  background-color: rgb(240, 240, 240);
-  border-right: 5px solid rgb(240, 240, 240);
-  border-radius: 0;
-}
-
-.invest-sidebar-col .nav-link.disabled {
-  color: #888888;
-}
-
-.invest-sidebar-col .nav-link.active {
-  color: #000;
-  background-color: ghostwhite;
-  border-right: 5px solid var(--invest-green);
-  border-radius: 0;
-}
-
-.sidebar-row {
-  display: flex;
-  flex-direction: column;
-  font-size: 1rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  .nav-link {
+    border-width: 0 var(--outline-width) 0 var(--tab-highlight-width);
+    --outline-width: 0.125rem;
+    color: #000;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 0;
+    font-size: 1.3125rem;
+    font-weight: 550;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-right: 0;
+    &.active {
+      color: #000;
+      background-color: ghostwhite;
+      border-left-color: var(--invest-green);
+    }
+    &.disabled {
+      color: var(--bootstrap-secondary-gray);
+    }
+    &:focus-visible {
+      box-shadow: none;
+      background: var(--invest-green);
+      color: #fff;
+    }
+    svg {
+      font-size: 2rem;
+      margin-right: 2px;
+    }
+  }
+  .sidebar-row {
+    display: flex;
+    flex-direction: column;
+    font-size: 1rem;
+    padding-left: var(--tab-highlight-width);
+    padding-right: 1rem;
+  }
 }
 
 .sidebar-buttons {
@@ -474,22 +565,23 @@ exceed 100% of window.*/
   flex-direction: column;
   flex-wrap: nowrap;
   align-items: flex-start;
-}
-
-.sidebar-buttons .btn {
-  white-space: nowrap;
-  background: none;
-  border: none;
-  color: black;
-  padding-left: 0;
-}
-
-.sidebar-buttons .alert {
-  margin-top: 1rem;
-}
-
-.sidebar-links a {
   padding-top: 0.5rem;
+  .btn {
+    white-space: nowrap;
+    border: none;
+    color: black;
+    svg {
+      font-size: 1.25rem;
+    }
+  }
+  .alert {
+    margin-top: 1rem;
+  }
+}
+
+.sidebar-buttons .btn,
+.sidebar-links a {
+  padding: 0.5rem 1rem;
 }
 
 .sidebar-footer {
@@ -532,8 +624,7 @@ exceed 100% of window.*/
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-left: 2rem;
-  padding-right: 1rem;
+  padding: 0 1.5rem;
 }
 
 /* InVEST Argument Forms */
@@ -542,14 +633,15 @@ exceed 100% of window.*/
 }
 
 .arg-group {
-  margin-top: 1.0rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 1rem 0;
   border-bottom: 1px dotted;
-}
-
-.arg-group:last-of-type {
-  border-bottom: none;
+  &:last-of-type {
+    border-bottom: none;
+  }
 }
 
 .arg-hide {
@@ -564,19 +656,17 @@ exceed 100% of window.*/
   color: #888888;
 }
 
-.args-form .form-group {
-  align-items: flex-start;
-}
-
 .argname {
   text-transform: capitalize;
   font-weight: 600;
 }
 
-.args-form .form-control,
-.custom-select {
-  font-family: monospace;
-  font-size: 1.3rem;
+.args-form {
+  .form-control,
+  .form-select {
+    font-family: monospace;
+    font-size: 1.25rem;
+  }
 }
 
 .args-form {
@@ -621,29 +711,31 @@ input[type=text]::placeholder {
   font-size: 1.5rem;
 }
 
-.custom-select,
-.custom-select.is-valid {
-  --caret-width: 1.875rem;
-  padding-right: var(--form-field-padding-right);
-  /* Custom dropdown icon is react-icons/md/MdKeyboardArrowDown, as a URL-encoded SVG */
-  background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" height="200px" width="200px"%3E%3Cpath fill="none" d="M0 0h24v24H0V0z"%3E%3C/path%3E%3Cpath d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"%3E%3C/path%3E%3C/svg%3E');
-  background-repeat: no-repeat;
-  background-position: center right calc((var(--form-field-padding-right) - var(--caret-width)) / 2);
-  background-size: var(--caret-width);
+.args-form .input-group {
+  .form-select,
+  .form-select.is-valid {
+    --caret-width: 1.875rem;
+    padding-right: var(--form-field-padding-right);
+    /* Custom dropdown icon is react-icons/md/MdKeyboardArrowDown, as a URL-encoded SVG */
+    background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" height="200px" width="200px"%3E%3Cpath fill="none" d="M0 0h24v24H0V0z"%3E%3C/path%3E%3Cpath d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"%3E%3C/path%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: center right calc((var(--form-field-padding-right) - var(--caret-width)) / 2);
+    background-size: var(--caret-width);
+  }
 }
 
 /* InVEST Log Tab */
 #log-display {
+  height: var(--content-height);
   overflow: auto;
   white-space: pre-wrap;
-  height: var(--content-height);
-}
-
-#log-display {
   font-family: monospace;
-  font-size:1rem;
+  font-size: 1rem;
   color: #000;
-  padding-right: 0;
+  padding: 0 1rem;
+  &:focus-visible {
+    outline-color: var(--invest-green);
+  }
 }
 
 #log-display .invest-log-primary {
@@ -670,55 +762,70 @@ input[type=text]::placeholder {
   overflow-y: auto;
 }
 
-/* Settings Modal */
-.settings-modal .modal-dialog {
-  /*Hardcoding prevents dynamic resizing, which is convenient.
-  And it is okay because we set the minimum electron window width
-  at 800px when we create it.*/
-  max-width: 600px;
-}
-
-.settings-modal .accordion:has(.show) button svg {
-  transform: rotate(180deg);
-}
-
-.settings-modal .accordion button {
-  display: flex;
-  align-items: center;
+/* Modals: common styles regardless of content */
+.modal-header {
   justify-content: space-between;
+  button:focus {
+    outline: revert;
+    outline-color: var(--invest-green);
+  }
 }
 
-#metadata-form {
-  /*This div toggles between a form and some help text.
-  position and static height ensure no resizing to content.*/
-  position: relative;
-  height: 460px;
-  background-color: ghostwhite;
-  border: dotted;
-  border-width: thin;
-  padding: 0.5rem;
+/* Settings Modal */
+.settings-modal-row-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-/* This button should also not move as content is toggled*/
-#metadata-form .info-toggle {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
+.form-field-details-list {
+  padding: 0.5rem 0 0.25rem 1.75rem;
+  margin: 0;
+  color: var(--bootstrap-secondary-gray);
 }
 
-#metadata-form legend {
-  font-size: 1.1rem;
-  text-decoration-line: underline;
-}
-
-#metadata-form .form-group {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+/* Metadata modal */
+.metadata-form {
+  .row, button {
+    margin-top: 1rem;
+  }
 }
 
 /* Save As modal */
-.save-as-modal svg {
-  margin-bottom: 0.2rem;
+.save-as-modal {
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .save-as-option {
+    background: var(--bootstrap-gray-100);
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    .form-check-input[type="radio"] {
+      margin-left: 0;
+    }
+    &:has(input:hover, input[type="radio"]:checked) {
+      background: var(--bootstrap-gray-300);
+    }
+    &:has(input:focus-visible) {
+      outline: 3px solid var(--invest-green);
+      outline-offset: 3px;
+    }
+  }
+  .form-text {
+    display: block;
+    color: var(--secondary-gray);
+  }
+  button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  svg {
+    font-size: 1.125rem;
+  }
 }
 
 .confirm-modal .modal-content {
@@ -756,6 +863,12 @@ input[type=text]::placeholder {
 /* Manage Plugins modal */
 .plugin-modal {
   width: 40rem;
+  form {
+    & > div,
+    & > button {
+      margin-top: 1rem;
+    }
+  }
 }
 
 .plugin-spinner {
@@ -798,7 +911,12 @@ input[type=text]::placeholder {
 }
 
 .plugin-form-text {
+  display: block;
   font-size: 0.875rem;
+}
+
+.browse-button svg {
+  font-size: 1.5rem;
 }
 
 code {

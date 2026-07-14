@@ -98,7 +98,7 @@ class SaveAsModal extends React.Component {
           variant="link"
           onClick={this.handleShow}
         >
-          <MdSave className="mr-1" />
+          <MdSave className="me-1 mb-1" />
           {t("Save as...")}
         </Button>
 
@@ -112,77 +112,88 @@ class SaveAsModal extends React.Component {
             <Button
               variant="secondary-outline"
               onClick={this.handleClose}
-              className="float-right"
               aria-label="close save-as dialog"
             >
               <MdClose />
             </Button>
           </Modal.Header>
           <Modal.Body>
-            <ButtonGroup vertical>
-              <ToggleButton
-                type="radio"
-                value="json"
-                checked={datastackType === "json"}
-                name="datastackType"
-                className="text-left"
-                variant="light"
-                onChange={this.handleChange}
-              >
-                <span className="ml-2">Parameters only</span>
-                <Form.Text muted>
-                  {t('Save your parameters in a JSON file. This includes the ' +
-                     'paths to your input data, but not the data itself. ' +
-                     'Open this file in InVEST to restore your parameters.')}
-                </Form.Text>
-                <Form.Check
-                  id="relativePaths"
-                  label="Use relative paths"
-                  name="relativePaths"
-                  disabled={datastackType !== "json"}
-                  onChange={this.handleRelativePathsCheckbox}
-                />
-              </ToggleButton>
-              <ToggleButton
-                type="radio"
-                value="tgz"
-                checked={datastackType === "tgz"}
-                name="datastackType"
-                className="text-left"
-                variant="light"
-                onChange={this.handleChange}
-              >
-                <span className="ml-2">Parameters and data</span>
-                <Form.Text muted>
-                  {t('Save your parameters and input data in a compressed archive. ' +
-                     'This archive contains the same JSON file produced by the ' +
-                     '"Parameters only" option, plus the data. You can open this ' +
-                     'file in InVEST to restore your parameters. This option is ' +
-                     'useful to copy all the necessary data to a different location.')}
-                </Form.Text>
-              </ToggleButton>
-              <ToggleButton
-                type="radio"
-                value="py"
-                checked={datastackType === "py"}
-                name="datastackType"
-                className="text-left"
-                variant="light"
-                onChange={this.handleChange}
-              >
-                <span className="ml-2">Python script</span>
-                <Form.Text muted>
-                  {t('Save your parameters in a python script. This includes the ' +
-                     'paths to your input data, but not the data itself. Running ' +
-                     'the python script will programmatically run the model with ' +
-                     'your parameters. Use this as a starting point for batch scripts.')}
-                </Form.Text>
-              </ToggleButton>
-            </ButtonGroup>
-            <Button onClick={this.browseSaveFile}>
-              <MdSave className="mr-1" />
-              {t('Save')}
-            </Button>
+            <Form>
+              <Form.Check className="save-as-option">
+                <Form.Check.Label>
+                  <Form.Check.Input
+                    type="radio"
+                    value="json"
+                    checked={datastackType === "json"}
+                    name="datastackType"
+                    id="datastackType-json"
+                    className="text-start"
+                    variant="light"
+                    onChange={this.handleChange}
+                  />
+                    <span className="ms-2">Parameters only</span>
+                    <Form.Text>
+                      {t('Save your parameters in a JSON file. This includes the ' +
+                        'paths to your input data, but not the data itself. ' +
+                        'Open this file in InVEST to restore your parameters.')}
+                    </Form.Text>
+                    <Form.Check
+                      id="relativePaths"
+                      label="Use relative paths"
+                      name="relativePaths"
+                      disabled={datastackType !== "json"}
+                      onChange={this.handleRelativePathsCheckbox}
+                    />
+                </Form.Check.Label>
+              </Form.Check>
+              <Form.Check className="save-as-option">
+                <Form.Check.Label>
+                  <Form.Check.Input
+                    type="radio"
+                    value="tgz"
+                    checked={datastackType === "tgz"}
+                    name="datastackType"
+                    id="datastackType-tgz"
+                    className="text-start"
+                    variant="light"
+                    onChange={this.handleChange}
+                  />
+                  <span className="ms-2">Parameters and data</span>
+                  <Form.Text>
+                    {t('Save your parameters and input data in a compressed archive. ' +
+                      'This archive contains the same JSON file produced by the ' +
+                      '"Parameters only" option, plus the data. You can open this ' +
+                      'file in InVEST to restore your parameters. This option is ' +
+                      'useful to copy all the necessary data to a different location.')}
+                  </Form.Text>
+                </Form.Check.Label>
+              </Form.Check>
+              <Form.Check className="save-as-option">
+                <Form.Check.Label>
+                  <Form.Check.Input
+                    type="radio"
+                    value="py"
+                    checked={datastackType === "py"}
+                    name="datastackType"
+                    id="datastackType-py"
+                    className="text-start"
+                    variant="light"
+                    onChange={this.handleChange}
+                  />
+                  <span className="ms-2">Python script</span>
+                  <Form.Text>
+                    {t('Save your parameters in a python script. This includes the ' +
+                      'paths to your input data, but not the data itself. Running ' +
+                      'the python script will programmatically run the model with ' +
+                      'your parameters. Use this as a starting point for batch scripts.')}
+                  </Form.Text>
+                </Form.Check.Label>
+              </Form.Check>
+              <Button onClick={this.browseSaveFile}>
+                <MdSave className="me-1" />
+                {t('Save')}
+              </Button>
+            </Form>
           </Modal.Body>
         </Modal>
       </React.Fragment>

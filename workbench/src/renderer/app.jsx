@@ -15,7 +15,6 @@ import Spinner from 'react-bootstrap/Spinner';
 import Tooltip from 'react-bootstrap/Tooltip';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import { MdClose, MdHome } from 'react-icons/md';
-import { AiOutlineTrademarkCircle } from 'react-icons/ai';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -217,7 +216,7 @@ export default function App(props) {
     if (investList) {
       const modelType = investList[job.modelID].type;
       if (modelType === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+        badge = <Badge bg="secondary">Plugin</Badge>;
       }
     }
 
@@ -233,7 +232,7 @@ export default function App(props) {
       >
         <Nav.Item
           key={id}
-          className={id === activeTab ? 'active' : ''}
+          className="model-run-tab"
         >
           <Nav.Link
             eventKey={id}
@@ -248,7 +247,7 @@ export default function App(props) {
           >
             {badge}
             {statusSymbol}
-            {` ${job.modelTitle}`}
+            <span className="model-name">{` ${job.modelTitle}`}</span>
           </Nav.Link>
           <Button
             aria-label={`close ${job.modelTitle} tab`}
@@ -269,7 +268,6 @@ export default function App(props) {
       <TabPane
         key={id}
         eventKey={id}
-        aria-label={`${job.modelTitle} tab`}
       >
         <InvestTab
           job={job}
@@ -318,68 +316,62 @@ export default function App(props) {
           nCPU={props.nCPU}
         />
       )}
-      <TabContainer activeKey={activeTab}>
-        <Navbar
-          onDragOver={dragOverHandlerNone}
-        >
-          <Row
-            className="w-100 flex-nowrap"
+      <TabContainer
+        activeKey={activeTab}
+        defaultActiveKey="home"
+      >
+        <div className="navbar">
+          <Nav
+            variant="tabs"
+            onDragOver={dragOverHandlerNone}
+            onSelect={setActiveTab}
           >
-            <Col sm={3}>
-              <Navbar.Brand>
+            <div className="navbar-left">
+              <Nav.Item>
                 <Nav.Link
-                  onSelect={setActiveTab}
                   eventKey="home"
+                  className="nav-link-home"
                 >
                   <MdHome />
-                  InVEST
+                  <span className="nav-link-text">InVEST</span>
+                  <sup className="rtm">®</sup>
                 </Nav.Link>
-              </Navbar.Brand>
-              <AiOutlineTrademarkCircle className="rtm" />
-            </Col>
-            <Col className="navbar-middle">
-              <Nav
-                justify
-                variant="tabs"
-                className="mr-auto"
-                activeKey={activeTab}
-                onSelect={setActiveTab}
-              >
-                {investNavItems}
-              </Nav>
-            </Col>
-            <Col className="text-right navbar-right">
-              {
-                (downloadedNofN)
-                  ? (
-                    <DownloadProgressBar
-                      downloadedNofN={downloadedNofN}
-                      expireAfter={5000} // milliseconds
-                    />
-                  )
-                  : <div />
-              }
-              <AppMenu
-                openDownloadModal={() => toggleDownloadModal(true)}
-                openPluginModal={() => setShowPluginModal(true)}
-                openChangelogModal={() => setShowChangelog(true)}
-                openSettingsModal={() => setShowSettingsModal(true)}
-                openMetadataModal={() => setShowMetadataModal(true)}
-              />
-            </Col>
-          </Row>
-        </Navbar>
-
+              </Nav.Item>
+            </div>
+            <div className="navbar-middle">
+              {investNavItems}
+            </div>
+          </Nav>
+          <div className="navbar-right">
+            {
+              downloadedNofN
+              && (
+                <DownloadProgressBar
+                downloadedNofN={downloadedNofN}
+                expireAfter={5000} // milliseconds
+                />
+              )
+            }
+            <AppMenu
+              openDownloadModal={() => toggleDownloadModal(true)}
+              openPluginModal={() => setShowPluginModal(true)}
+              openChangelogModal={() => setShowChangelog(true)}
+              openSettingsModal={() => setShowSettingsModal(true)}
+              openMetadataModal={() => setShowMetadataModal(true)}
+            />
+          </div>
+        </div>
         <TabContent
-          id="home-tab-content"
+          className="main-tab-content"
           onDragOver={dragOverHandlerNone}
         >
           <TabPane
             eventKey="home"
-            aria-label="home tab"
+            className="home-tabpanel container-fluid"
           >
-            {(investList)
-              ? (
+            {
+              investList
+              && (
                 <HomeTab
                   investList={investList}
                   openInvestModel={openInvestModel}
@@ -387,7 +379,8 @@ export default function App(props) {
                   deleteJob={deleteJob}
                   clearRecentJobs={clearRecentJobs}
                 />
-              ) : <div />}
+              )
+            }
           </TabPane>
           {investTabPanes}
         </TabContent>

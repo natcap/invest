@@ -237,7 +237,7 @@ export default function ArgInput(props) {
     fileSelector = (
       <Button
         aria-label={`browse for ${argSpec.name}`}
-        className="ml-2"
+        className="ms-2"
         id={inputId}
         variant="outline-dark"
         value={argSpec.type} // dialog will limit options accordingly
@@ -266,7 +266,6 @@ export default function ArgInput(props) {
         isValid={enabled && isValid}
         isInvalid={enabled && validationMessage}
         disabled={!enabled}
-        bsCustomPrefix="form-switch"
       />
     );
   } else if (argSpec.type === 'option_string') {
@@ -284,9 +283,8 @@ export default function ArgInput(props) {
       options.splice(0, 0, placeholderOpt);
     }
     form = (
-      <Form.Control
+      <Form.Select
         id={inputId}
-        as="select"
         name={argkey}
         value={value}
         onChange={handleChange}
@@ -294,10 +292,9 @@ export default function ArgInput(props) {
         disabled={!enabled}
         isValid={enabled && isValid}
         isInvalid={enabled && validationMessage}
-        custom
       >
         {options}
-      </Form.Control>
+      </Form.Select>
     );
   } else {
     form = (
@@ -426,7 +423,7 @@ function AboutModal(props) {
     <React.Fragment>
       <Button
         aria-label={`info about ${arg.name}`}
-        className="mr-2"
+        className="me-2"
         onClick={handleAboutOpen}
         variant="outline-info"
       >
@@ -449,7 +446,7 @@ function AboutModal(props) {
               onClick={handleClickUsersGuideLink}
             >
               {t("User's guide entry")}
-              <MdOpenInNew className="mr-1" />
+              <MdOpenInNew className="me-1" />
             </a>
           }
         </Modal.Body>
