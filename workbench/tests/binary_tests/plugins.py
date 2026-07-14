@@ -136,7 +136,7 @@ def test_install_and_run_plugin():
     send_keys_with_delay(number_input, '2', TYPE_DELAY)
 
     # 11. Run Model
-    run_button = driver.find_element(By.XPATH, "//button[text()='Run']")
+    run_button = driver.find_element(By.NAME, 'Run')
     run_button.click()
 
     # 12. Verify completion

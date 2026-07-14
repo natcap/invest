@@ -641,6 +641,7 @@ class SetupTab extends React.Component {
               size="lg"
               onClick={this.wrapInvestExecute}
               disabled={!argsValid || executeClicked}
+              name="Run"
             >
               {buttonText}
             </Button>
