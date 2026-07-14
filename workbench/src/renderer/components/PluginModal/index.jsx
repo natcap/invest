@@ -508,7 +508,7 @@ export default function PluginModal(props) {
             />
             <Button
               aria-label="browse for conda executable"
-              className="ms-1 me-1"
+              className="browse-button ms-1 me-1"
               id="browse-conda-button"
               variant="outline-dark"
               onClick={selectDirectory}
@@ -557,7 +557,7 @@ export default function PluginModal(props) {
               />
               <Button
                 aria-label="browse for env"
-                className="ms-1 me-2"
+                className="browse-button ms-1 me-2"
                 id="browse-env-button"
                 variant="outline-dark"
                 onClick={selectDirectory}
