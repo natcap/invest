@@ -474,7 +474,9 @@ jobs:
           curl -L ${{ matrix.chromediver-url }} -o chromedriver.zip
           unzip chromedriver.zip -d ./chromedriver
 
-          ./chromedriver/chromedriver --port=9515 &
+          ls ./chromedriver
+
+          ./chromedriver/chromedriver*/chromedriver --port=9515 &
 
           pip install selenium
 
