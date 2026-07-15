@@ -32,7 +32,7 @@ class PluginTests(unittest.TestCase):
             binary_glob = 'dist/mac*/*.app/Contents/MacOS/InVEST*'
         else:
             binary_glob = 'dist/win-unpacked/InVEST*.exe'
-        binaries = list(Path('.').glob(binary_glob))
+        binaries = list(Path(__file__).parent.parent.parent.glob(binary_glob))
         if len(binaries) > 1:
             raise ValueError('More than one binary found')
 
