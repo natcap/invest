@@ -167,7 +167,6 @@ export default function PluginModal(props) {
   };
 
   const resetCondaPath = () => {
-    console.log('reset conda path');
     ipcRenderer.invoke(
       ipcMainChannels.GET_SETTING, 'defaultMicromamba'
     ).then((data) => {
@@ -208,7 +207,6 @@ export default function PluginModal(props) {
   };
 
   useEffect(() => {
-
     ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
     if (show) {
       if (window.Workbench.OS === 'win32') {
