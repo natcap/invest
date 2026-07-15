@@ -474,6 +474,8 @@ jobs:
           yarn add --dev electron-to-chromium
           ELECTRON_VERSION=$(yarn info electron version --json | jq -r '.data')
           CHROMIUM_VERSION=$(yarn --json node -p "require('electron-to-chromium').electronToChromium('$ELECTRON_VERSION')")
+          echo "electron version: $ELECTRON_VERSION"
+          echo "corresponding chromium version: $CHROMIUM_VERSION"
           curl -L $CHROMEDRIVER_URL_PREFIX/$CHROMIUM_VERSION/${{ matrix.chromedriver-url-suffix }} \
             -o chromedriver.zip
           unzip chromedriver.zip -d ./chromedriver
@@ -481,7 +483,7 @@ jobs:
       - name: Test electron app with selenium
         working-directory: workbench
         run: |
-          ./chromedriver/chromedriver*/chromedriver --port=9515 &
+          ./chromedriver/chromedriver*/chromedriver* --port=9515 &
           pytest tests/binary_tests/plugins.py
 
       - name: Upload workbench logging from puppeteer
