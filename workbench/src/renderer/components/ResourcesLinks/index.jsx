@@ -48,8 +48,7 @@ const FORUM_TAGS = {
  * and a link to list of topics with the model's tag on the forum,
  * e.g. https://community.naturalcapitalalliance.org/tag/carbon/1
  */
-export default function ResourcesTab(props) {
-  const { docs, isCoreModel, modelID } = props;
+export default function ResourcesTab({isCoreModel, modelID = undefined, docs = ''}) {
 
   let forumURL = FORUM_ROOT;
   const tagPath = FORUM_TAGS[modelID];
@@ -116,8 +115,4 @@ ResourcesTab.propTypes = {
   modelID: PropTypes.string,
   isCoreModel: PropTypes.bool.isRequired,
   docs: PropTypes.string,
-};
-ResourcesTab.defaultProps = {
-  modelID: undefined,
-  docs: '',
 };
