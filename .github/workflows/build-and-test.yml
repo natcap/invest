@@ -307,12 +307,12 @@ jobs:
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
-            chromediver-url: http://storage.googleapis.com/chrome-for-testing-public/144.0.7559.236/mac-x64/chromedriver-mac-x64.zip
+            chromedriver-url-suffix: mac-x64/chromedriver-mac-x64.zip
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: InVEST-failed-windows-workspace.tar
             binary-extension: exe
-            chromediver-url: http://storage.googleapis.com/chrome-for-testing-public/149.0.7827.201/win64/chromedriver-win64.zip
+            chromedriver-url-suffix: win64/chromedriver-win64.zip
     steps:
       - uses: actions/checkout@v6
         with:
@@ -333,6 +333,7 @@ jobs:
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
             pandoc
+            selenium
 
       - name: Make install
         run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
@@ -466,22 +467,21 @@ jobs:
       #   working-directory: workbench
       #   run: npx cross-env CI=true yarn run test-electron-app
 
+      - name: Install chromedriver
+        env:
+          CHROMEDRIVER_URL_PREFIX: http://storage.googleapis.com/chrome-for-testing-public
+        run: |
+          ELECTRON_VERSION=$(yarn info electron version --json | jq -r '.data')
+          CHROMIUM_VERSION=$(node -p "require('electron-to-chromium').electronToChromium('$ELECTRON_VERSION')")
+          curl -L $CHROMEDRIVER_URL_PREFIX/$CHROMIUM_VERSION/${{ matrix.chromedriver-url-suffix }} \
+            -o chromedriver.zip
+          unzip chromedriver.zip -d ./chromedriver
+
       - name: Test electron app with selenium
         working-directory: workbench
         run: |
-          yarn add --dev electron-chromedriver
-          yarn add --dev selenium-webdriver
-          curl -L ${{ matrix.chromediver-url }} -o chromedriver.zip
-          unzip chromedriver.zip -d ./chromedriver
-
-          ls ./chromedriver
-
           ./chromedriver/chromedriver*/chromedriver --port=9515 &
-
-          pip install selenium
-
           pytest tests/binary_tests/plugins.py
-
 
       - name: Upload workbench logging from puppeteer
         uses: actions/upload-artifact@v4

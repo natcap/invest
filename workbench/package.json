@@ -87,6 +87,7 @@
     "electron": "^40.7.0",
     "electron-builder": "^26.8.1",
     "electron-chromedriver": "^43.1.1",
+    "electron-to-chromium": "^1.5.392",
     "eslint": "^8.57.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-plugin-import": "^2.29.1",
