@@ -471,8 +471,9 @@ jobs:
         env:
           CHROMEDRIVER_URL_PREFIX: http://storage.googleapis.com/chrome-for-testing-public
         run: |
+          yarn add --dev electron-to-chromium
           ELECTRON_VERSION=$(yarn info electron version --json | jq -r '.data')
-          CHROMIUM_VERSION=$(node -p "require('electron-to-chromium').electronToChromium('$ELECTRON_VERSION')")
+          CHROMIUM_VERSION=$(yarn --json node -p "require('electron-to-chromium').electronToChromium('$ELECTRON_VERSION')")
           curl -L $CHROMEDRIVER_URL_PREFIX/$CHROMIUM_VERSION/${{ matrix.chromedriver-url-suffix }} \
             -o chromedriver.zip
           unzip chromedriver.zip -d ./chromedriver
