@@ -637,6 +637,7 @@ class SetupTab extends React.Component {
           </Portal>
           <Portal elId={sidebarFooterElementId}>
             <Button
+              name="Run"
               variant="primary"
               size="lg"
               onClick={this.wrapInvestExecute}
