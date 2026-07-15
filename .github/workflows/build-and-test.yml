@@ -307,7 +307,7 @@ jobs:
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
-            chromediver-url: http://storage.googleapis.com/chrome-for-testing-public/149.0.7827.201/mac-x64/chromedriver-mac-x64.zip
+            chromediver-url: http://storage.googleapis.com/chrome-for-testing-public/144.0.7559.236/mac-x64/chromedriver-mac-x64.zip
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: InVEST-failed-windows-workspace.tar
