@@ -472,7 +472,7 @@ jobs:
           CHROMEDRIVER_URL_PREFIX: http://storage.googleapis.com/chrome-for-testing-public
         run: |
           yarn add --dev electron-to-chromium
-          ELECTRON_VERSION=$(jq -r '.devDependencies.electron' package.json)
+          ELECTRON_VERSION=$(jq -r '.devDependencies.electron' workbench/package.json)
           CHROMIUM_VERSION=$(yarn --json node -p "require('electron-to-chromium').electronToChromium('$ELECTRON_VERSION')")
           echo "electron version: $ELECTRON_VERSION"
           echo "corresponding chromium version: $CHROMIUM_VERSION"
