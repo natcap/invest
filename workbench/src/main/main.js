@@ -82,7 +82,6 @@ export const createWindow = async () => {
 
   settingsStore.set('investExe', findInvestBinaries(ELECTRON_DEV_MODE));
   settingsStore.set('micromamba', findMicromambaExecutable(ELECTRON_DEV_MODE));
-  settingsStore.set('defaultMicromamba', findMicromambaExecutable(ELECTRON_DEV_MODE));
   // No plugin server processes should persist between workbench sessions
   // In case any were left behind, remove them
   const plugins = settingsStore.get('plugins');

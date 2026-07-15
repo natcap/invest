@@ -31,8 +31,6 @@ export default function PluginModal(props) {
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
-  const [condaPath, setCondaPath] = useState('');
-  const [pluginEnvs, setPluginEnvs] = useState({});
   const [installErr, setInstallErr] = useState('');
   const [uninstallErr, setUninstallErr] = useState('');
   const [pluginToRemove, setPluginToRemove] = useState('');
@@ -63,21 +61,6 @@ export default function PluginModal(props) {
     setUserAcknowledgmentError(false);
     setPluginSourceMissingError(false);
   };
-
-  useEffect(() => {
-    ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'micromamba'
-    ).then((data) => setCondaPath(data));
-    ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'plugins'
-    ).then((data) => setPluginEnvs(
-      Object.fromEntries(
-        Object.keys(data).map(
-          (pluginID) => [pluginID, data[pluginID].env]
-        )
-      )
-    ))
-  }, []);
 
   useEffect(() => {
     clearFormErrors();
@@ -166,37 +149,6 @@ export default function PluginModal(props) {
     );
   };
 
-  const resetCondaPath = () => {
-    console.log('reset conda path');
-    ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'defaultMicromamba'
-    ).then((data) => {
-      setCondaPath(data);
-    });
-  };
-
-  const saveCondaPath = () => {
-    ipcRenderer.send(
-      ipcMainChannels.SET_SETTING, 'micromamba', condaPath
-    );
-  };
-
-  const resetPluginEnv = (pluginID) => {
-    ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, `plugins.${pluginID}.defaultEnv`
-    ).then((value) => {
-      setPluginEnvs({...pluginEnvs, [pluginID]: value});
-    });
-  };
-
-  const savePluginEnvs = () => {
-    Object.entries(pluginEnvs).forEach(([pluginID, envPath]) => {
-      ipcRenderer.send(
-        ipcMainChannels.SET_SETTING, `plugins.${pluginID}.env`, envPath
-      );
-    });
-  };
-
   const selectDirectory = async (event) => {
     const data = await ipcRenderer.invoke(
       ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openDirectory'] }
@@ -205,10 +157,9 @@ export default function PluginModal(props) {
       // dialog defaults allow only 1 selection
       setPath(data.filePaths[0]);
     }
-  };
+  }
 
   useEffect(() => {
-
     ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
     if (show) {
       if (window.Workbench.OS === 'win32') {
@@ -236,6 +187,7 @@ export default function PluginModal(props) {
   let pluginFields;
   if (installFrom === 'url') {
     pluginFields = (
+
       <Row>
         <Form.Group as={Col} xs={7}>
           <Form.Label htmlFor="url">{t('Git URL')}</Form.Label>
@@ -480,106 +432,6 @@ export default function PluginModal(props) {
             </Form.Text>
           }
         </div>
-      </Form>
-      <hr />
-      <Form aria-labelledby="configure-conda-form-title">
-        <Form.Group>
-          <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable (Advanced)')}</h5>
-          <Form.Text
-            as="span"
-            id="conda-executable-desciption"
-            className="plugin-form-text mb-3"
-          >
-            {t('InVEST is distributed with a copy of micromamba, a conda-like '
-              + 'package manager that is used to manage plugin environments. '
-              + 'If you have conda or mamba installed elsewhere on the system, '
-              + 'you can configure InVEST to use that executable instead. This '
-              + 'may be useful if you run into limitations of the included '
-              + 'micromamba distribution.')}
-          </Form.Text>
-          <Form.Label htmlFor="condaPath">{t('Conda or mamba executable')}</Form.Label>
-          <div className="d-flex flex-nowrap w-100">
-            <Form.Control
-              id="condaPath"
-              type="text"
-              value={condaPath}
-              onChange={(event) => setCondaPath(event.target.value)}
-              className="me-1"
-            />
-            <Button
-              aria-label="browse for conda executable"
-              className="ms-1 me-1"
-              id="browse-conda-button"
-              variant="outline-dark"
-              onClick={selectDirectory}
-            >
-              <MdFolderOpen />
-            </Button>
-            <Button onClick={resetCondaPath} className="text-nowrap ms-1">
-              {t('Reset')}
-            </Button>
-          </div>
-          <Button onClick={saveCondaPath} className="text-nowrap mt-3">
-            {t('Save')}
-          </Button>
-        </Form.Group>
-      </Form>
-      <hr />
-      <Form aria-labelledby="configure-plugin-envs-form-title">
-        <Form.Group>
-        <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments (Advanced)')}</h5>
-        <Form.Text
-            as="span"
-            id="plugin-env-desciption"
-            className="plugin-form-text mb-3"
-          >
-            {t('InVEST creates a separate conda environment for each installed '
-              + 'plugin. You may override this and provide a path to a different '
-              + 'conda environment, which may be useful for development and '
-              + 'debugging.')}
-          </Form.Text>
-        {Object.keys(plugins).map((pluginID) => (
-          <Form.Group key={`${pluginID}-env-group`}>
-            <Form.Label htmlFor={pluginID}>
-              {pluginID}
-            </Form.Label>
-            <div
-              className="d-flex flex-nowrap w-100 mb-1"
-            >
-              <Form.Control
-                id={pluginID}
-                type="text"
-                value={pluginEnvs[pluginID]}
-                onChange={(event) => setPluginEnvs(
-                  {...pluginEnvs, [pluginID]: event.target.value}
-                )}
-                className="me-1"
-              />
-              <Button
-                aria-label="browse for env"
-                className="ms-1 me-2"
-                id="browse-env-button"
-                variant="outline-dark"
-                onClick={selectDirectory}
-              >
-                <MdFolderOpen />
-              </Button>
-              <Button
-                onClick={() => resetPluginEnv(pluginID)}
-                className="text-nowrap"
-              >
-                {t('Reset')}
-              </Button>
-            </div>
-          </Form.Group>
-        ))}
-        <Button
-          onClick={savePluginEnvs}
-          className="text-nowrap mt-3"
-          disabled={!Object.keys(pluginEnvs).length}>
-            {t('Save')}
-        </Button>
-      </Form.Group>
       </Form>
     </Modal.Body>
   );

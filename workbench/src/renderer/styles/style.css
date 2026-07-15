@@ -862,7 +862,7 @@ input[type=text]::placeholder {
 
 /* Manage Plugins modal */
 .plugin-modal {
-  width: 40rem;
+  width: 34rem;
   form {
     & > div,
     & > button {
