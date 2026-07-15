@@ -82,7 +82,7 @@ const config = {
   },
   build: {
     electronVersion: '40.8.5'
-  }
+  },
   files: [
     'build/**/*',
     'node_modules/**/*',
