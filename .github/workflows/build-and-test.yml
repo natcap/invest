@@ -481,10 +481,9 @@ jobs:
           unzip chromedriver.zip -d ./chromedriver
 
       - name: Test electron app with selenium
-        working-directory: workbench
         run: |
           ./chromedriver/chromedriver*/chromedriver* --port=9515 &
-          pytest tests/binary_tests/plugins.py
+          pytest workbench/tests/binary_tests/plugins.py
 
       - name: Upload workbench logging from puppeteer
         uses: actions/upload-artifact@v4
