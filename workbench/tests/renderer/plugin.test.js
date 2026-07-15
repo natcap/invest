@@ -186,7 +186,7 @@ describe('Add plugin modal', () => {
 
   test('Add a plugin: failure with error displayed', async () => {
     const errorString = 'Failed to clone repository.';
-    const spy = ipcRenderer.invoke.mockImplementation((channel) => {
+    const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
       }
@@ -194,6 +194,16 @@ describe('Add plugin modal', () => {
         return Promise.reject(
           new Error(errorString)
         );
+      }
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve({
+            foo: {
+              modelTitle: 'Foo',
+              type: 'plugin',
+            },
+          });
+        }
       }
       return Promise.resolve();
     });
