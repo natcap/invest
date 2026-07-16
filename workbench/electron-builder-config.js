@@ -80,7 +80,6 @@ const config = {
     uninstallDisplayName: PRODUCT_NAME,
     license: 'build/license_en.txt',
   },
-  electronVersion: '40.8.5',
   files: [
     'build/**/*',
     'node_modules/**/*',
