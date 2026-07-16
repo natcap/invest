@@ -124,6 +124,7 @@ def _check_projection(srs, projected, projection_units):
         projected (bool): Whether the spatial reference must be projected in
             linear units.
         projection_units (pint.Unit): The projection's required linear units.
+            This should only be specified if projected is True.
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
@@ -134,11 +135,10 @@ def _check_projection(srs, projected, projection_units):
         if srs is None or srs.IsSame(empty_srs):
             return validation_messages.INVALID_PROJECTION
 
-        if projected:
-            if not srs.IsProjected():
-                return validation_messages.NOT_PROJECTED
+        if projected and not srs.IsProjected():
+            return validation_messages.NOT_PROJECTED
 
-        if projection_units:
+        if projected and projection_units:
             # pint uses underscores in multi-word units e.g. 'survey_foot'
             # it is case-sensitive
             layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
@@ -180,8 +180,18 @@ def validate_permissions_string(permissions):
     return permissions
 
 
-def _get_spatial_inputs(args, model_spec):
-    """Return spatial inputs and prj as dropdown Options, default first."""
+def _get_spatial_inputs(args, model_spec, projection_required=True):
+    """Return spatial inputs and prj as dropdown Options, default first.
+
+    Args:
+        args (dict): input arguments for InVEST model
+        model_spec (ModelSpec): model specification
+        projection_required (bool): Whether returned spatial inputs must
+            be projected
+
+    Returns:
+        list of spatial inputs to model
+    """
     valid_spatial_inputs = [
         inp for inp in model_spec.inputs
         if (isinstance(inp, SpatialFileInput) and args.get(inp.id))
@@ -229,7 +239,7 @@ def _get_spatial_inputs(args, model_spec):
                 raise TypeError("Input is not a raster or vector.")
 
         projection_warning = _check_projection(
-            srs, True, target_projection_units)
+            srs, projection_required, target_projection_units)
         if not projection_warning:
             # Get the top-level name (Projected or Geographic)
             prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
@@ -257,7 +267,8 @@ def _get_pixel_size(args, model_spec):
 
     Pixel size units match the units specified in the current target_projection
     input's projection"""
-    spatial_inputs = _get_spatial_inputs(args, model_spec)
+    spatial_inputs = _get_spatial_inputs(args, model_spec, False)
+    print(f"\n\nsaptial inputs: {spatial_inputs}")
     projection_input_id = args.get('target_projection')
     if not projection_input_id or not args.get(projection_input_id):
         default_projection_inputs = [

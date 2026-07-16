@@ -33,7 +33,8 @@ def _get_pixelsize_umh(args, model_spec):
     else:
         default_for_model_option = 'ndvi_base'
 
-    spatial_inputs = spec._get_spatial_inputs(args, model_spec)
+    spatial_inputs = spec._get_spatial_inputs(args, model_spec,
+                                              projection_required=False)
     projection_input_id = args.get('target_projection')
     if not projection_input_id or not args.get(projection_input_id):
         default_projection_inputs = [
