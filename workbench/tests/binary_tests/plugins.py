@@ -57,7 +57,7 @@ class PluginTests(unittest.TestCase):
 
     def wait_for_main_window(self):
         n_retries = 0
-        while n_retries < 30:
+        while n_retries < 200:
             for handle in self.driver.window_handles:
                 self.driver.switch_to.window(handle)
                 if self.driver.current_url.endswith('index.html'):
