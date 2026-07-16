@@ -13,10 +13,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 CHROMEDRIVER_PORT = 9515
-SCREENSHOT_PREFIX = "screenshot_"
 TEST_PLUGIN_GIT_URL = "https://github.com/natcap/invest-demo-plugin.git"
 
-# Helper function to replicate Puppeteer's character typing delay
 def send_keys_with_delay(element, text, delay):
     for char in text:
         element.send_keys(char)
@@ -71,7 +69,7 @@ class PluginTests(unittest.TestCase):
     def test_install_and_run_plugin(self):
         """Install and run the demo plugin."""
 
-        self.driver.save_screenshot(f"{SCREENSHOT_PREFIX}1-page-load.png")
+        self.driver.save_screenshot('screenshot1-page-load.png')
         self.wait_for_main_window()
 
         # close the "recent updates" and "download sample data" modals
@@ -107,14 +105,11 @@ class PluginTests(unittest.TestCase):
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((
                 By.XPATH,
-                "//div[contains(text(), 'Starting up model...')]"
-            ))
-        )
+                "//div[contains(text(), 'Starting up model...')]")))
 
         # enter input data into the form
         WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "args-form"))
-        )
+            EC.presence_of_element_located((By.CLASS_NAME, "args-form")))
         self.type(By.NAME, 'workspace_dir', self.workspace_dir)
         raster_path = str(Path(__file__).resolve().parent / 'dem.tif')
         self.type(By.NAME, 'raster_path', raster_path)
@@ -124,11 +119,9 @@ class PluginTests(unittest.TestCase):
         self.click(By.NAME, 'Run')
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "#invest-tab-tab-log.active"))
-        )
+                (By.CSS_SELECTOR, "#invest-tab-tab-log.active")))
         WebDriverWait(self.driver, 120).until(
             EC.presence_of_element_located(
-                (By.XPATH, "//div[contains(., 'Model Complete')]"))
-        )
+                (By.XPATH, "//div[contains(., 'Model Complete')]")))
 
         self.driver.quit()
