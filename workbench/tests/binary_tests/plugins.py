@@ -15,10 +15,6 @@ from selenium.webdriver.support import expected_conditions as EC
 CHROMEDRIVER_PORT = 9515
 TEST_PLUGIN_GIT_URL = "https://github.com/natcap/invest-demo-plugin.git"
 
-def send_keys_with_delay(element, text, delay):
-    for char in text:
-        element.send_keys(char)
-        time.sleep(delay)
 
 class PluginTests(unittest.TestCase):
     """Tests for the workbench plugin interface"""
@@ -43,20 +39,25 @@ class PluginTests(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
+        self.driver.quit()
 
     def click(self, strategy, locator, timeout=5):
+        """Click on an element once it is clickable"""
         element = WebDriverWait(self.driver, timeout).until(
             EC.element_to_be_clickable((strategy, locator)))
         element.click()
 
-    def type(self, strategy, locator, text, typing_delay=0.05):
+    def type(self, strategy, locator, text, typing_delay=0.01):
+        """Enter text into an input field, with delay to simulate typing."""
         element = self.driver.find_element(strategy, locator)
-        send_keys_with_delay(element, text, typing_delay)
+        for char in text:
+            element.send_keys(char)
+            time.sleep(typing_delay)
 
-    def wait_for_main_window(self):
+    def wait_for_main_window(self, max_retries=200):
         """Cycle through open windows until the main window is found."""
         n_retries = 0
-        while n_retries < 200:
+        while n_retries < max_retries:
             for handle in self.driver.window_handles:
                 self.driver.switch_to.window(handle)
                 if self.driver.current_url.endswith('index.html'):
@@ -123,5 +124,3 @@ class PluginTests(unittest.TestCase):
         WebDriverWait(self.driver, 120).until(
             EC.presence_of_element_located(
                 (By.XPATH, "//div[contains(., 'Model Complete')]")))
-
-        self.driver.quit()
