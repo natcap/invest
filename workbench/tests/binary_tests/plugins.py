@@ -56,6 +56,7 @@ class PluginTests(unittest.TestCase):
         send_keys_with_delay(element, text, typing_delay)
 
     def wait_for_main_window(self):
+        """Cycle through open windows until the main window is found."""
         n_retries = 0
         while n_retries < 200:
             for handle in self.driver.window_handles:
@@ -68,12 +69,13 @@ class PluginTests(unittest.TestCase):
             'Timed out waiting for index.html window target')
 
     def test_install_and_run_plugin(self):
+        """Install and run the demo plugin."""
 
-        self.wait_for_main_window()
         self.driver.save_screenshot(f"{SCREENSHOT_PREFIX}1-page-load.png")
+        self.wait_for_main_window()
 
         # close the "recent updates" and "download sample data" modals
-        self.click(By.XPATH, "//button[@aria-label='Close modal']", timeout=30)
+        self.click(By.XPATH, "//button[@aria-label='Close modal']")
         self.click(By.XPATH, "//button[@aria-label='Close modal']")
 
         # click on the hamburger menu, then "Manage Plugins"
