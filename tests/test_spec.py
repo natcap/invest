@@ -510,6 +510,17 @@ class InputTests(unittest.TestCase):
         self.assertCountEqual(
             csv_input.get_keywords(include_children=False), [keywords.LULC.value])
 
+    def test_get_keywords_irregular_csv_input(self):
+        """Test that CSVInput.get_keywords works when columns None."""
+        csv_input = spec.CSVInput(
+            id="foo",
+            about="Description.",
+            name="foo",
+            columns=None
+        )
+        expected_keywords = []
+        self.assertEqual(csv_input.get_keywords(), expected_keywords)
+
     def test_get_keywords_vector_input(self):
         """Test that VectorInput.get_keywords returns correct keywords."""
         vector_input = spec.VectorInput(

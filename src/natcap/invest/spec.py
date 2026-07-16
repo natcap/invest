@@ -305,7 +305,9 @@ class Input(BaseModel):
         if hasattr(self, 'fields'):
             return self.fields
         if hasattr(self, 'columns'):
-            return self.columns
+            # columns can be None for irregular CSV like in HRA
+            if self.columns:
+                return self.columns
         if hasattr(self, 'contents'):
             return self.contents
         return []
