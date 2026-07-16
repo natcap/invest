@@ -305,7 +305,9 @@ class Input(BaseModel):
         if hasattr(self, 'fields'):
             return self.fields
         if hasattr(self, 'columns'):
-            return self.columns
+            # columns can be None for irregular CSV like in HRA
+            if self.columns:
+                return self.columns
         if hasattr(self, 'contents'):
             return self.contents
         return []
@@ -2419,6 +2421,19 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
         Option(key="MFD", description="Multiple flow direction")
     ]
 )
+WATERSHED_VECTOR = VectorInput(
+    id="watersheds_path",
+    name=gettext("Watersheds"),
+    about=gettext(
+        "Map of the boundaries of the watershed(s) over which to aggregate"
+        " results."
+    ),
+    keywords=[keywords.WATERSHED_BOUNDARIES],
+    geometry_types={"POLYGON", "MULTIPOLYGON"},
+    fields=[]
+)
+PROJECTED_WATERSHED_VECTOR = WATERSHED_VECTOR.model_copy(
+    update=dict(projected=True))
 
 # Specs for common outputs ####################################################
 TASKGRAPH_CACHE = FileOutput(

@@ -20,6 +20,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -83,6 +84,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "A table mapping each LULC code from the LULC map to biophysical data for"
                 " that LULC class."
             ),
+            keywords=[keywords.CARBON],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.BooleanInput(
@@ -130,19 +132,11 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="lucode",
             na_allowed=["c_above"]
         ),
-        spec.SingleBandRasterInput(
+        spec.LULC.model_copy(update=dict(
             id="lulc_raster_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of land use/land cover codes. Each land use/land cover type must be"
-                " assigned a unique integer code. All values in this raster must have"
-                " corresponding entries in the Biophysical Table."
-            ),
-            data_type=int,
-            units=None,
             projected=True,
             projection_units=u.meter
-        ),
+        )),
         spec.OptionStringInput(
             id="pools_to_calculate",
             name=gettext("carbon pools to calculate"),
@@ -176,6 +170,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " Default data is provided. Required if Compute Forest Edge Effects is"
                 " selected."
             ),
+            keywords=[keywords.CARBON_REGRESSION_PARAMETERS],
             required="compute_forest_edge_effects",
             allowed="compute_forest_edge_effects",
             geometry_types={"POLYGON", "MULTIPOLYGON"},

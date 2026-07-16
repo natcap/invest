@@ -1,4 +1,5 @@
 """Pollinator service model for InVEST."""
+from ast import keyword
 import collections
 import itertools
 import logging
@@ -12,6 +13,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -36,17 +38,10 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.SingleBandRasterInput(
+        spec.LULC.model_copy(update=dict(
             id="landcover_raster_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of LULC codes. All values in this raster must have corresponding"
-                " entries in the Biophysical Table."
-            ),
-            data_type=int,
-            units=None,
             projected=True
-        ),
+        )),
         spec.CSVInput(
             id="guild_table_path",
             name=gettext("Guild Table"),
@@ -54,6 +49,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "A table mapping each pollinator species or guild of interest to its"
                 " pollination-related parameters."
             ),
+            keywords=[keywords.POLLINATOR_SPECIES, keywords.POLLINATOR_NESTING_SUITABILITY,
+                      keywords.POLLINATOR_FORAGE_ACTIVITY, keywords.POLLINATOR_ABUNDANCE],
             columns=[
                 spec.StringInput(
                     id="species",
@@ -113,6 +110,8 @@ MODEL_SPEC = spec.ModelSpec(
                 " values in the LULC raster must have corresponding entries in this"
                 " table."
             ),
+            keywords=[keywords.POLLINATOR_NESTING_SUITABILITY,
+                      keywords.POLLINATOR_FLORAL_RESOURCES],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.RatioInput(
@@ -146,6 +145,15 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of farm sites to be analyzed, with pollination data specific to each"
                 " farm."
             ),
+            keywords=[
+                keywords.AGRICULTURE_PRODUCTION,
+                keywords.PLANT_COMMODITIES,
+                keywords.POLLINATION_SEASON,
+                keywords.POLLINATOR_ABUNDANCE,
+                keywords.POLLINATOR_FLORAL_RESOURCES,
+                keywords.POLLINATOR_NESTING_SUITABILITY,
+                keywords.POLLINATOR_DEPENDENCE,
+            ],
             required=False,
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
