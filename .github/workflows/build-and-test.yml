@@ -464,10 +464,11 @@ jobs:
           gcloud storage rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
 
       - name: Install chromedriver
+        working-directory: workbench
         env:
           CHROMEDRIVER_URL_PREFIX: http://storage.googleapis.com/chrome-for-testing-public
         run: |
-          ELECTRON_VERSION=$(jq -r '.build.electronVersion' workbench/package.json)
+          ELECTRON_VERSION=$(jq -r '.build.electronVersion' package.json)
           CHROMIUM_VERSION=$(yarn --json node -p "require('electron-to-chromium').electronToChromium('$ELECTRON_VERSION')")
           echo "electron version: $ELECTRON_VERSION"
           echo "corresponding chromium version: $CHROMIUM_VERSION"
@@ -476,9 +477,10 @@ jobs:
           unzip chromedriver.zip -d ./chromedriver
 
       - name: Test electron app with selenium
+        working-directory: workbench
         run: |
           ./chromedriver/chromedriver*/chromedriver* --port=9515 &
-          pytest workbench/tests/binary_tests/plugins.py
+          pytest tests/binary_tests/plugins.py
 
       - name: Test electron app with puppeteer
         working-directory: workbench
