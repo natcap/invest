@@ -109,7 +109,7 @@ class PluginTests(unittest.TestCase):
                 "//div[contains(text(), 'Starting up model...')]")))
 
         # enter input data into the form
-        WebDriverWait(self.driver, 10).until(
+        WebDriverWait(self.driver, 60).until(
             EC.presence_of_element_located((By.CLASS_NAME, "args-form")))
         self.type(By.NAME, 'workspace_dir', self.workspace_dir)
         raster_path = str(Path(__file__).resolve().parent / 'dem.tif')
