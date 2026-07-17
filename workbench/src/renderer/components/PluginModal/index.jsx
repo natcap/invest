@@ -528,7 +528,7 @@ export default function PluginModal(props) {
         <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments (Advanced)')}</h5>
         <Form.Text
             as="span"
-            id="plugin-env-desciption"
+            id="plugin-env-description"
             className="plugin-form-text mb-3"
           >
             {t('InVEST creates a separate conda environment for each installed '
