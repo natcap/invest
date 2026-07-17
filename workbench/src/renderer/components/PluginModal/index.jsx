@@ -480,7 +480,7 @@ export default function PluginModal(props) {
         </div>
       </Form>
       <hr />
-      <Form aria-labelledby="configure-conda-form-title">
+      <Form aria-labelledby="configure-conda-form-title" aria-describedby="conda-executable-description">
         <Form.Group>
           <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable (Advanced)')}</h5>
           <Form.Text
