@@ -485,7 +485,7 @@ export default function PluginModal(props) {
           <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable (Advanced)')}</h5>
           <Form.Text
             as="span"
-            id="conda-executable-desciption"
+            id="conda-executable-description"
             className="plugin-form-text mb-3"
           >
             {t('InVEST is distributed with a copy of micromamba, a conda-like '
