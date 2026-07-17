@@ -523,7 +523,7 @@ export default function PluginModal(props) {
         </Form.Group>
       </Form>
       <hr />
-      <Form aria-labelledby="configure-plugin-envs-form-title">
+      <Form aria-labelledby="configure-plugin-envs-form-title" aria-describedby="plugin-env-description">
         <Form.Group>
         <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments (Advanced)')}</h5>
         <Form.Text
