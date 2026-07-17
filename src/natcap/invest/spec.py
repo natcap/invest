@@ -323,6 +323,16 @@ class Input(BaseModel):
                     keywords += child.get_keywords()
         return list(set(keywords))
 
+    def get_keywords_objects(self, include_children=True):
+        """Get a list of unique keyword strings for this input and children."""
+        keywords = []
+        if self.keywords:
+            keywords += [keyword.model_dump() for keyword in self.keywords]
+        if include_children:
+            for child in self.get_child_inputs():
+                keywords += child.get_keywords_objects()
+        return keywords
+
 
 class Output(BaseModel):
     """A data output, or result, of an invest model.
