@@ -268,8 +268,10 @@ describe('Arguments form interactions', () => {
 
     // A required input with no value is invalid (red X), but
     // feedback does not display until the input has been touched.
-    expect(input).toHaveClass('is-invalid');
-    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+      expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
+    });
 
     await userEvent.type(input, 'foo');
     await waitFor(() => {
@@ -328,7 +330,9 @@ describe('Arguments form interactions', () => {
     } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
-    expect(input).toHaveClass('is-invalid');
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+    });
     expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
     await userEvent.click(input);
@@ -349,7 +353,9 @@ describe('Arguments form interactions', () => {
 
     // An optional input with no value is valid, but green check
     // does not display until the input has been touched.
-    expect(input).not.toHaveClass('is-valid', 'is-invalid');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('is-valid', 'is-invalid');
+    });
 
     await userEvent.click(input);
     await waitFor(() => {
@@ -873,26 +879,30 @@ describe('Form drag-and-drop', () => {
       findByLabelText, findByTestId,
     } = renderSetupFromSpec(spec, inputFieldOrder);
     const setupForm = await findByTestId('setup-form');
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
     const file = new File([], 'test.csv');
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).toHaveClass('input-dragging');
-    expect(setupForm).not.toHaveClass('dragging');
+    await waitFor(() => {
+      expect(input).toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.drop(setupInput, {
+    await waitFor(() => fireEvent.drop(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
-    expect(setupInput).not.toHaveClass('dragging');
-    expect(setupInput).toHaveValue('test.csv');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).not.toHaveClass('dragging');
+      expect(input).toHaveValue('test.csv');
+    });
   });
 
   test('DragEnter on an input adds "input-dragging" class; DragLeave removes "input-dragging" class', async () => {
@@ -915,24 +925,32 @@ describe('Form drag-and-drop', () => {
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
-    const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const {
+      findByLabelText, findByTestId,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
     const file = new File([], 'test.csv')
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.dragLeave(setupInput, {
+    await waitFor(() => fireEvent.dragLeave(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+    });
   });
 
   test('DragEnter on a disabled input does not add "input-dragging" class; Drop neither adds "input-dragging" class nor populates input', async () => {
@@ -957,25 +975,33 @@ describe('Form drag-and-drop', () => {
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: false });
 
-    const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
+    const {
+      findByLabelText, findByTestId,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
 
     const file = new File([], 'test.gpkg');
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.drop(setupInput, {
+    await waitFor(() => fireEvent.drop(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
-    expect(setupInput).toHaveValue('');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).toHaveValue('');
+    });
   });
 });
 

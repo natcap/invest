@@ -2,20 +2,20 @@ import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 
 /** A wrapper component that hides it's children after delay. */
-export default function Expire(props) {
+export default function Expire({delay, children, className = ''}) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const timerId = setTimeout(() => {
       setVisible(false);
-    }, props.delay);
+    }, delay);
 
     return () => clearTimeout(timerId);
   });
 
   return (
     visible
-      ? <div className={props.className}>{props.children}</div>
+      ? <div className={className}>{children}</div>
       : <div />
   );
 }
@@ -27,7 +27,4 @@ Expire.propTypes = {
     PropTypes.arrayOf(PropTypes.node),
     PropTypes.node,
   ]).isRequired,
-};
-Expire.defaultProps = {
-  className: ''
 };
