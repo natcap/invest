@@ -85,6 +85,8 @@ class SetupTab extends React.Component {
   constructor(props) {
     super(props);
     this.dropdownRequestId = 0;
+    this.enabledRequestId = 0;
+    this.validationRequestId = 0;
     this._isMounted = false;
     this.validationTimer = null;
     this.enabledTimer = null;
@@ -159,7 +161,7 @@ class SetupTab extends React.Component {
     }, () => {
       this.investValidate();
       this.investArgsEnabled();
-      this.callDropdownFunctions();
+      // this.callDropdownFunctions();
     });
   }
 
@@ -367,25 +369,6 @@ class SetupTab extends React.Component {
       (argkey) => argsSpec[argkey]?.responsive_to === key
     );
 
-    const refreshDropdown = Object.keys(argsSpec).some((argkey) => {
-      const spec = argsSpec[argkey];
-    
-      const isTargetSpatialDropdown = [
-        'target_pixelsize',
-        'target_projection',
-      ].includes(spec?.id);
-
-      const respondsToTargetProjection = (
-        key === 'target_projection' &&
-        spec?.id === 'target_pixelsize'
-      );
-    
-      return (
-        (isTargetSpatialDropdown && changedArgIsSpatial) || // responds to change in spatial input
-        spec?.responsive_to === key || // responds to named input
-        respondsToTargetProjection
-      );
-    });
     this.setState((prevState) => {
       const newArgsValues = {
         ...prevState.argsValues,
@@ -429,10 +412,7 @@ class SetupTab extends React.Component {
 
       this.debouncedValidate();
       this.debouncedArgsEnabled();
-
-      if (refreshDropdown) {
-        this.debouncedDropdownFunctions();
-      }
+      this.debouncedDropdownFunctions();
     });
   }
 
@@ -486,17 +466,25 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investArgsEnabled() {
+    const requestId = ++this.enabledRequestId;
     const { modelID } = this.props;
     const { argsValues } = this.state;
-
-    if (this._isMounted) {
-      this.setState({
-        argsEnabled: await fetchArgsEnabled({
-          model_id: modelID,
-          args: JSON.stringify(argsDictFromObject(argsValues)),
-        }),
-      });
+  
+    const argsEnabled = await fetchArgsEnabled({
+      model_id: modelID,
+      args: JSON.stringify(argsDictFromObject(argsValues)),
+    });
+  
+    if (
+      requestId !== this.enabledRequestId ||
+      !this._isMounted
+    ) {
+      return;
     }
+  
+    this.setState({
+      argsEnabled,
+    });
   }
 
   debouncedDropdownFunctions() {
@@ -560,6 +548,7 @@ class SetupTab extends React.Component {
       };
     }, () => {
       this.debouncedValidate();
+      this.debouncedArgsEnabled();
     });
   }
 
@@ -584,6 +573,7 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investValidate() {
+    const requestId = ++this.validationRequestId;
     const { argsSpec, modelID } = this.props;
     const { argsValues, argsValidation, argsValid } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
@@ -592,6 +582,14 @@ class SetupTab extends React.Component {
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await fetchValidation(payload);
+
+    // Ignore an outdated response or a response received after unmounting.
+    if (
+      requestId !== this.validationRequestId ||
+      !this._isMounted
+    ) {
+      return;
+    }
 
     // A) At least one arg was invalid:
     if (results.length) {
