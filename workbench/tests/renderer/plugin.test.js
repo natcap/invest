@@ -316,6 +316,8 @@ describe('Add plugin modal', () => {
         }
       } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
         return Promise.resolve({ filePaths: ['foo'] })
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
       }
       return Promise.resolve();
     });
@@ -366,6 +368,8 @@ describe('Add plugin modal', () => {
         }
       } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
         return Promise.resolve({ filePaths: ['/path/to/my_env'] })
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
       }
       return Promise.resolve();
     });
