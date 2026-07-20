@@ -166,7 +166,7 @@ afterEach(async () => {
   }
 });
 
-test.skip('Run a real invest model', async () => {
+test('Run a real invest model', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -246,7 +246,7 @@ test.skip('Run a real invest model', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 360000); // >2x the sum of all the max timeouts within this test
 
-test.skip('Open each model and each local userguide', async () => {
+test('Open each model and each local userguide', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -374,7 +374,7 @@ test('Install and run a plugin', async () => {
   const argsForm = await page.waitForSelector('.args-form');
   console.log('found args form');
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace Directory"][role="textbox"]', { timeout: 300000 }
+    'aria/[name="Workspace Directory"][role="textbox"]'
   );
   console.log('found workspace');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
@@ -391,6 +391,11 @@ test('Install and run a plugin', async () => {
   const runButton = await sidebar.waitForSelector('.btn-primary:not([disabled])');
   await runButton.click();
   await page.waitForSelector('#invest-tab-tab-log.active');
+
+  // Cancel button does not appear until after invest has confirmed
+  // it is running. So extra timeout on the query:
+  const cancelButton = await sidebar.waitForSelector(
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 30000 });
   await page.waitForSelector('div ::-p-text(Model Complete)');
 }, 500000);
 

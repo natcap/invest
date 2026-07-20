@@ -73,9 +73,12 @@ class PluginTests(unittest.TestCase):
         self.driver.save_screenshot('screenshot1-page-load.png')
         self.wait_for_main_window()
 
-        # close the "recent updates" and "download sample data" modals
-        self.click(By.XPATH, "//button[@aria-label='Close modal']")
-        self.click(By.XPATH, "//button[@aria-label='Close modal']")
+        try:
+            # close the "recent updates" and "download sample data" modals
+            self.click(By.XPATH, "//button[@aria-label='Close modal']")
+            self.click(By.XPATH, "//button[@aria-label='Close modal']")
+        except Exception:
+            pass
 
         # click on the hamburger menu, then "Manage Plugins"
         self.click(By.XPATH, "//button[@aria-label='menu']")
@@ -121,6 +124,9 @@ class PluginTests(unittest.TestCase):
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "#invest-tab-tab-log.active")))
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(
+                (By.XPATH, "//button[text()='Cancel Run']")))
         WebDriverWait(self.driver, 120).until(
             EC.presence_of_element_located(
                 (By.XPATH, "//div[contains(., 'Model Complete')]")))
