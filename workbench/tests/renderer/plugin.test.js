@@ -197,12 +197,7 @@ describe('Add plugin modal', () => {
       }
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
-          return Promise.resolve({
-            foo: {
-              modelTitle: 'Foo',
-              type: 'plugin',
-            },
-          });
+          return Promise.resolve({});
         }
       }
       return Promise.resolve();
