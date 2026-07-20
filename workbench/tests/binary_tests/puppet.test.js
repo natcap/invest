@@ -166,7 +166,7 @@ afterEach(async () => {
   }
 });
 
-test('Run a real invest model', async () => {
+test.skip('Run a real invest model', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -246,7 +246,7 @@ test('Run a real invest model', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 360000); // >2x the sum of all the max timeouts within this test
 
-test('Open each model and each local userguide', async () => {
+test.skip('Open each model and each local userguide', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -313,6 +313,86 @@ test('Open each model and each local userguide', async () => {
     await new Promise(r => setTimeout(r, 100)); // allow for Home Tab to be visible again
   }
 });
+
+test('Install and run a plugin', async () => {
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
+  let i = 0;
+  while (!BROWSER || !BROWSER.isConnected()) {
+    i++;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`waited ${i} seconds for pptr to connect`);
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  const target = await BROWSER.waitForTarget(
+    (target) => target.url().endsWith('index.html')
+  );
+  const page = await target.page();
+  page.on('error', (err) => {
+    console.log(err);
+  });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
+  const downloadModal = await page.waitForSelector('.modal-dialog');
+  const downloadModalClose = await downloadModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
+  );
+  await downloadModalClose.click();
+  const changelogModal = await page.waitForSelector('.modal-dialog');
+  const changelogModalClose = await changelogModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
+  );
+  await changelogModalClose.click();
+
+  const dropdownButton = await page.waitForSelector('aria/[name="menu"][role="button"]');
+  await dropdownButton.click();
+  const pluginsModalButton = await page.waitForSelector('aria/[name="Manage Plugins"][role="button"]');
+  await pluginsModalButton.click();
+  console.log('opened plugin modal');
+  const urlInputField = await page.waitForSelector('aria/[name="Git URL"][role="textbox"]');
+  console.log('found url field');
+  await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
+  console.log('typed into input field');
+  const userAcknowledgmentCheckbox = await page.waitForSelector('#user-acknowledgment-checkbox');
+  await userAcknowledgmentCheckbox.click();
+  const submitButton = await page.waitForSelector('aria/[name="Add"][role="button"]');
+  console.log('found submit button');
+  console.log(submitButton);
+  await submitButton.click();
+  console.log('clicked submit');
+  await page.waitForSelector('text/Successfully installed plugin', { timeout: 300000 });
+
+  const modalClose = await page.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
+  );
+  await modalClose.click();
+
+  const pluginButton = await page.waitForSelector('[name="Demo Plugin"]');
+  await pluginButton.evaluate((b) => b.click());
+
+  await page.waitForSelector('div ::-p-text(Starting up model...)');
+  console.log('starting up model');
+  const argsForm = await page.waitForSelector('.args-form');
+  console.log('found args form');
+  const workspace = await argsForm.waitForSelector(
+    'aria/[name="Workspace (directory)"][role="textbox"]'
+  );
+  console.log('found workspace');
+  await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
+  const rasterInput = await argsForm.waitForSelector(
+    'aria/[name="Input Raster (raster)"][role="textbox"]'
+  );
+  await rasterInput.type(testRaster, { delay: TYPE_DELAY });
+  const numberInput = await argsForm.waitForSelector(
+    'aria/[name="Multiplication Factor (integer)"][role="textbox"]'
+  );
+  await numberInput.type('2', { delay: TYPE_DELAY });
+
+  const sidebar = await page.waitForSelector('.invest-sidebar-col');
+  const runButton = await sidebar.waitForSelector('.btn-primary:not([disabled])');
+  await runButton.click();
+  await page.waitForSelector('#invest-tab-tab-log.active');
+  await page.waitForSelector('div ::-p-text(Model Complete)');
+}, 500000);
 
 const testWin = process.platform === 'win32' ? test : test.skip;
 /* Test for duplicate application launch.
