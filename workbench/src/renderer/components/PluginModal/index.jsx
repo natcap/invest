@@ -488,12 +488,12 @@ export default function PluginModal(props) {
         </div>
       </Form>
       <hr />
-      <Form aria-labelledby="configure-conda-form-title">
+      <Form aria-labelledby="configure-conda-form-title" aria-describedby="conda-executable-description">
         <Form.Group>
           <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable (Advanced)')}</h5>
           <Form.Text
             as="span"
-            id="conda-executable-desciption"
+            id="conda-executable-description"
             className="plugin-form-text mb-3"
           >
             {t('InVEST is distributed with a copy of micromamba, a conda-like '
@@ -530,12 +530,12 @@ export default function PluginModal(props) {
         </Form.Group>
       </Form>
       <hr />
-      <Form aria-labelledby="configure-plugin-envs-form-title">
+      <Form aria-labelledby="configure-plugin-envs-form-title" aria-describedby="plugin-env-description">
         <Form.Group>
         <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments (Advanced)')}</h5>
         <Form.Text
             as="span"
-            id="plugin-env-desciption"
+            id="plugin-env-description"
             className="plugin-form-text mb-3"
           >
             {t('InVEST creates a separate conda environment for each installed '
