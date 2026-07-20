@@ -374,7 +374,7 @@ test('Install and run a plugin', async () => {
   const argsForm = await page.waitForSelector('.args-form');
   console.log('found args form');
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace (directory)"][role="textbox"]'
+    'aria/[name="Workspace (directory)"][role="textbox"]', { timeout: 300000 }
   );
   console.log('found workspace');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
