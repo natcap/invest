@@ -501,7 +501,8 @@ export default function PluginModal(props) {
               + 'If you have conda or mamba installed elsewhere on the system, '
               + 'you can configure InVEST to use that executable instead. This '
               + 'may be useful if you run into limitations of the included '
-              + 'micromamba distribution.')}
+              + 'micromamba distribution. You can enter an absolute path, or '
+              + 'the name of an executable that is on the system PATH.')}
           </Form.Text>
           <Form.Label htmlFor="condaPath">{t('Conda or mamba executable')}</Form.Label>
           <div className="d-flex flex-nowrap w-100">
