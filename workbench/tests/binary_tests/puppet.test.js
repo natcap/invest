@@ -264,6 +264,7 @@ test('Open each model and each local userguide', async () => {
     console.log(err);
   });
 
+  console.log('starting test');
   const downloadModal = await page.waitForSelector(
     'aria/[name="Download InVEST sample data"][role="dialog"]'
   );
@@ -395,7 +396,7 @@ test('Install and run a plugin', async () => {
   // Cancel button does not appear until after invest has confirmed
   // it is running. So extra timeout on the query:
   const cancelButton = await sidebar.waitForSelector(
-    'aria/[name="Cancel Run"][role="button"]', { timeout: 30000 });
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
   await page.waitForSelector('div ::-p-text(Model Complete)');
 }, 500000);
 

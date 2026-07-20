@@ -73,6 +73,7 @@ class PluginTests(unittest.TestCase):
         self.driver.save_screenshot('screenshot1-page-load.png')
         self.wait_for_main_window()
 
+        print('starting test')
         try:
             # close the "recent updates" and "download sample data" modals
             self.click(By.XPATH, "//button[@aria-label='Close modal']")
