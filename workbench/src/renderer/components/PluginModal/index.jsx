@@ -201,8 +201,16 @@ export default function PluginModal(props) {
       ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
-      // dialog defaults allow only 1 selection
-      setPath(data.filePaths[0]);
+      return data.filePaths[0];
+    }
+  };
+
+  const selectFile = async (event) => {
+    const data = await ipcRenderer.invoke(
+      ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openFile'] }
+    );
+    if (data.filePaths.length) {
+      return data.filePaths[0];
     }
   };
 
@@ -304,7 +312,7 @@ export default function PluginModal(props) {
             aria-label="browse for plugin directory"
             className="browse-button ms-2"
             variant="outline-dark"
-            onClick={selectDirectory}
+            onClick={async (event) => setPath(await selectDirectory(event) || path)}
           >
             <MdFolderOpen />
           </Button>
@@ -507,9 +515,8 @@ export default function PluginModal(props) {
             <Button
               aria-label="browse for conda executable"
               className="browse-button ms-1 me-1"
-              id="browse-conda-button"
               variant="outline-dark"
-              onClick={selectDirectory}
+              onClick={async (event) => setCondaPath(await selectFile(event) || condaPath)}
             >
               <MdFolderOpen />
             </Button>
@@ -556,9 +563,11 @@ export default function PluginModal(props) {
               <Button
                 aria-label="browse for env"
                 className="browse-button ms-1 me-2"
-                id="browse-env-button"
                 variant="outline-dark"
-                onClick={selectDirectory}
+                onClick={async (event) => setPluginEnvs({
+                  ...pluginEnvs,
+                  [pluginID]: await selectDirectory(event) || pluginEnvs[pluginID]
+                })}
               >
                 <MdFolderOpen />
               </Button>
