@@ -191,16 +191,6 @@ export default function ArgInput(props) {
       inputRef.current.scrollLeft = inputRef.current.scrollWidth;
     }
   }, [scrollEventCount, value]);
-  useEffect(() => {
-  if (
-    argSpec.type === 'option_string' &&
-    dropdownOptions &&
-    dropdownOptions.length > 0 &&
-    (value === undefined || value === '' || value === null)
-  ) {
-    updateArgValues(argkey, dropdownOptions[0].key);
-  }
-}, [dropdownOptions]);
 
   function handleChange(event) {
     /** Pass input value up to SetupTab for storage & validation. */
