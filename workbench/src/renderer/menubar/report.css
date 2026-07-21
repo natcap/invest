@@ -1,18 +1,18 @@
-#header {
+.header {
   font-size: 1.5rem;
+  font-weight: normal;
 }
 
-#footer {
+.footer {
   margin-top: 2rem;
   text-align: center;
-}
-
-#footer img {
-  padding: 1rem;
+  img {
+    padding: 1rem;
+  }
 }
 
 button {
-  display:  block;
+  display: block;
   margin-top: 1rem;
 }
 
