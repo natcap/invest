@@ -307,7 +307,7 @@ test('Open each model and each local userguide', async () => {
     }
 
     await ugPage.close();
-    const tab = await page.waitForSelector('.nav-item');
+    const tab = await page.waitForSelector('.model-run-tab');
     const closeTabBtn = await tab.waitForSelector('aria/[role="button"]');
     await closeTabBtn.click();
     await new Promise(r => setTimeout(r, 100)); // allow for Home Tab to be visible again
