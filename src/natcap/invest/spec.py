@@ -153,7 +153,6 @@ def _check_projection(srs, projected, projection_units):
                     unit_a=projection_units, unit_b=layer_units_name)
 
 
-
 def validate_permissions_string(permissions):
     """
     Validate an rwx-style permissions string.
@@ -178,6 +177,13 @@ def validate_permissions_string(permissions):
             raise ValueError('permissions contains a duplicate letter')
         used_letters.add(letter)
     return permissions
+
+
+def smart_title(text):
+    words = text.split()
+    new_words = [
+        word if word.isupper() else word.capitalize() for word in words]
+    return " ".join(new_words)
 
 
 def _get_spatial_reference(filepath):
@@ -229,7 +235,7 @@ def _get_spatial_inputs(args, model_spec, projection_required=True):
         ordered_inputs = valid_spatial_inputs
 
     target_projection_units = [
-        inp for inp in model_spec.inputs if inp.id=='target_projection'
+        inp for inp in model_spec.inputs if inp.id == 'target_projection'
     ][0].projection_units
 
     def get_display_name_and_check_prj(input_spec, target_projection_units):
@@ -242,7 +248,7 @@ def _get_spatial_inputs(args, model_spec, projection_required=True):
         # the only "empty" input that would be passed to this function is the
         # default target projection input
         if not args.get(input_spec.id):
-            return "(Default) " + input_spec.name.title()
+            return "(Default) " + smart_title(input_spec.name)
         srs = _get_spatial_reference(args[input_spec.id])
 
         projection_warning = _check_projection(
@@ -251,13 +257,13 @@ def _get_spatial_inputs(args, model_spec, projection_required=True):
             # Get the top-level name (Projected or Geographic)
             prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
             if input_spec.is_default_projection:
-                return "(Default) " + input_spec.name.title() + f" ({prj_name})"
-            return input_spec.name.title() + f" ({prj_name})"
+                return "(Default) " + smart_title(input_spec.name) + f" ({prj_name})"
+            return smart_title(input_spec.name) + f" ({prj_name})"
         else:
             # return display name for default target proj input even if
             # unprojected as inputs own validation will fail first.
             if input_spec.is_default_projection:
-                return "(Default) " + input_spec.name.title()
+                return "(Default) " + smart_title(input_spec.name)
         return None
 
     options = []
@@ -299,7 +305,7 @@ def _get_pixel_size(args, model_spec):
     def get_display_name_and_pixel_size(option_key, selected_projection_wkt):
         # the only "empty" input that would be passed to this function is the
         # default target projection input
-        inp_name = model_spec.get_input(option_key).name.title()
+        inp_name = smart_title(model_spec.get_input(option_key).name)
         if not args.get(option_key):
             return "(Default) " + inp_name
         # if default projection input hasn't been entered and target

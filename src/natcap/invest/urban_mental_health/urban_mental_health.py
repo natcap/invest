@@ -33,61 +33,13 @@ def _get_pixelsize_umh(args, model_spec):
     else:
         default_for_model_option = 'ndvi_base'
 
-    spatial_inputs = spec._get_spatial_inputs(args, model_spec,
-                                              projection_required=False)
-    projection_input_id = args.get('target_projection')
-    if not projection_input_id or not args.get(projection_input_id):
-        default_projection_inputs = [
-            inp for inp in model_spec.inputs
-            if isinstance(inp, spec.SpatialFileInput) and inp.is_default_projection
-        ]
-        if default_projection_inputs:
-            projection_input_id = default_projection_inputs[0].id
+    options = spec._get_pixel_size(args, model_spec)
 
-    if projection_input_id and args.get(projection_input_id):
-        current_projection = utils.get_raster_or_vector_projection(
-            args[projection_input_id])
-    else:
-        current_projection = None
-
-    raster_inputs = [opt for opt in spatial_inputs if args.get(opt.key) and (
-        pygeoprocessing.get_gis_type(
-            args[opt.key]) == pygeoprocessing.RASTER_TYPE)]
-    if not raster_inputs:
-        return []
-
-    def get_display_name_and_pixel_size(option_key, selected_projection_wkt):
-        # the only "empty" input that would be passed to this function is the
-        # default target projection input
-        inp_name = model_spec.get_input(option_key).name.title()
-        if not args.get(option_key):
-            return "(Default) " + inp_name
-        # if default projection input hasn't been entered and target
-        # projection hasn't been selected, i.e., changed from the default text,
-        # selected_projection_wkt will be None
-        if selected_projection_wkt:
-            # convert pixel size to be in same units as selected target projection
-            trans_pixelsize = utils.get_raster_pixel_size_in_tgt_projection_units(
-                args[option_key], selected_projection_wkt)
-            formatted_pixelsize = [float(round(pix, 3)) for pix in trans_pixelsize]
-            if model_spec.get_input(option_key).id == default_for_model_option:
-                return "(Default) " + inp_name + f" {formatted_pixelsize}"
-            return inp_name + f" {formatted_pixelsize}"
-        else:
-            return ''
-
-    options = []
-    for opt in raster_inputs:
-        display_name = get_display_name_and_pixel_size(opt.key,
-                                                       current_projection)
-        if display_name:
-            options.append(spec.Option(key=opt.key, display_name=display_name))
     default_pixelsize_input = [
         opt for opt in options if opt.key == default_for_model_option]
     ordered_options = default_pixelsize_input + [
         opt for opt in options if opt.key != default_for_model_option]
     return ordered_options
-# TODO - NDVI in title case is incorrect when it populates in dropdown menu
 
 
 _model_description = gettext(
