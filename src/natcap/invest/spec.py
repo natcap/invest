@@ -124,7 +124,6 @@ def _check_projection(srs, projected, projection_units):
         projected (bool): Whether the spatial reference must be projected in
             linear units.
         projection_units (pint.Unit): The projection's required linear units.
-            This should only be specified if projected is True.
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
@@ -138,7 +137,7 @@ def _check_projection(srs, projected, projection_units):
         if projected and not srs.IsProjected():
             return validation_messages.NOT_PROJECTED
 
-        if projected and projection_units:
+        if projection_units:
             # pint uses underscores in multi-word units e.g. 'survey_foot'
             # it is case-sensitive
             layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
@@ -152,6 +151,7 @@ def _check_projection(srs, projected, projection_units):
             except pint.errors.UndefinedUnitError:
                 return validation_messages.WRONG_PROJECTION_UNIT.format(
                     unit_a=projection_units, unit_b=layer_units_name)
+
 
 
 def validate_permissions_string(permissions):
@@ -178,6 +178,26 @@ def validate_permissions_string(permissions):
             raise ValueError('permissions contains a duplicate letter')
         used_letters.add(letter)
     return permissions
+
+
+def _get_spatial_reference(filepath):
+    with GDALUseExceptions():
+        gdal_path = utils._GDALPath.from_uri(filepath)
+        gis_type = pygeoprocessing.get_gis_type(filepath)
+
+        if gis_type == pygeoprocessing.RASTER_TYPE:
+            dataset = gdal.OpenEx(
+                gdal_path.to_normalized_path(),
+                gdal.OF_RASTER)
+            return dataset.GetSpatialRef()
+
+        if gis_type == pygeoprocessing.VECTOR_TYPE:
+            dataset = gdal.OpenEx(
+                gdal_path.to_normalized_path(),
+                gdal.OF_VECTOR)
+            return dataset.GetLayer().GetSpatialRef()
+
+        raise TypeError("Input is not a raster or vector.")
 
 
 def _get_spatial_inputs(args, model_spec, projection_required=True):
@@ -223,20 +243,7 @@ def _get_spatial_inputs(args, model_spec, projection_required=True):
         # default target projection input
         if not args.get(input_spec.id):
             return "(Default) " + input_spec.name.title()
-        with GDALUseExceptions():
-            gdal_path = utils._GDALPath.from_uri(args[input_spec.id])
-            gis_type = pygeoprocessing.get_gis_type(args[input_spec.id])
-            if gis_type == pygeoprocessing.VECTOR_TYPE:
-                gdal_dataset = gdal.OpenEx(
-                    gdal_path.to_normalized_path(), gdal.OF_VECTOR)
-                layer = gdal_dataset.GetLayer()
-                srs = layer.GetSpatialRef()
-            elif gis_type == pygeoprocessing.RASTER_TYPE:
-                gdal_dataset = gdal.OpenEx(
-                    gdal_path.to_normalized_path(), gdal.OF_RASTER)
-                srs = gdal_dataset.GetSpatialRef()
-            else:
-                raise TypeError("Input is not a raster or vector.")
+        srs = _get_spatial_reference(args[input_spec.id])
 
         projection_warning = _check_projection(
             srs, projection_required, target_projection_units)
@@ -268,7 +275,6 @@ def _get_pixel_size(args, model_spec):
     Pixel size units match the units specified in the current target_projection
     input's projection"""
     spatial_inputs = _get_spatial_inputs(args, model_spec, False)
-    print(f"\n\nsaptial inputs: {spatial_inputs}")
     projection_input_id = args.get('target_projection')
     if not projection_input_id or not args.get(projection_input_id):
         default_projection_inputs = [
@@ -283,8 +289,7 @@ def _get_pixel_size(args, model_spec):
             args[projection_input_id])
     else:
         current_projection = None
-# todo should we allow any raster input, not just the validated (projected)
-# raster? i,e., is it possible to get pixel size in m for a raster w a GCS and not a projection?
+
     raster_inputs = [opt for opt in spatial_inputs if args.get(opt.key) and (
         pygeoprocessing.get_gis_type(
             args[opt.key]) == pygeoprocessing.RASTER_TYPE)]
@@ -443,6 +448,13 @@ class Input(IOModel):
 
         return [rst_line]
 
+    def validate(self, value):
+        """Validate this input's value in isolation."""
+        return None
+
+    def validate_with_context(self, value, args, model_spec):
+        """Validate this value using other model arguments."""
+        return None
 
 class Output(IOModel):
     """A data output, or result, of an invest model.
@@ -1847,7 +1859,10 @@ class OptionSpatialInput(OptionStringInput):
     """
     projection_units: typing.Union[pint.Unit, None] = None
     """The units in which a selected spatial file input must be projected.
-    Defaults to None. """ #TODO - is new class needed?
+    Defaults to None. """
+
+    projected: typing.Union[bool, None] = None
+    """Whether the selected input must be projected. Defaults to None."""
 
     responsive_to: typing.Union[str, None] = None
     """A different model input which, when changed in the workbench,
@@ -1857,6 +1872,25 @@ class OptionSpatialInput(OptionStringInput):
         message = super().validate(value)
         if message:
             return message
+
+    def validate_with_context(self, value, args, model_spec):
+        if not value:
+            return None
+
+        try:
+            selected_spec = model_spec.get_input(value)
+        except KeyError:
+            return validation_messages.MISSING_KEY
+         # otherwise leaving validation to the actual files
+
+        filepath = args.get(value)
+        projection_spec = selected_spec.model_copy(update={
+            # 'is_default_projection': True,
+            'projected': self.projected,
+            'projection_units': self.projection_units,
+        })
+
+        return projection_spec.validate(filepath)
 
 
 class FileOutput(Output):
@@ -2272,8 +2306,6 @@ class ModelSpec(ImmutableBaseModel):
                     "Target pixel size not able to be specified as no valid "
                     "spatial input options.")
 
-        # TODO need to make sure that this works for UMH i.e. pixel size
-        # doesnt fall back to same arg as target projection bc this is a vector in UMh
         return args
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):
