@@ -170,7 +170,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["target_projection", "target_pixelsize"]
     ],
     validate_spatial_overlap=True,
-    different_projections_ok=False,
+    different_projections_ok=True,
     aliases=("hwy", "awy"),
     module_name=__name__,
     inputs=[

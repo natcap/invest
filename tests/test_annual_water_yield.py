@@ -562,7 +562,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         self.assertEqual(resolved_args['target_pixelsize'], 'lulc_path')
 
     def test_correct_output_projection_if_target_not_default(self):
-        """Test output projection correct if precip raster is target proj"""
+        """Test output projection if watersheds vector is target projection"""
         from natcap.invest.annual_water_yield import annual_water_yield
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
@@ -578,18 +578,18 @@ class AnnualWaterYieldTests(unittest.TestCase):
         args['target_projection'] = 'watersheds_path'
         file_reg = annual_water_yield.execute(args)
 
-        # assert that output in the same projection as precip
+        # assert that output is in the same projection as watersheds
         actual_projection = pygeoprocessing.get_raster_info(
             file_reg['aet'])['projection_wkt']
 
         self.assertEqual(actual_projection, target_projection_wkt)
 
-    def test_pixelsize_dropdown_default_to_pop_if_invalid_default(self):
-        """Test that if default (lulc) raster is not linearly projected, i.e. in epsg4326
-        then it won't show up in the list of options and instead the dropdown 
-        menu will default to population
+    def test_error_if_default_projection_is_unprojected(self):
+        """Test error if projection target unset and default is unprojected
 
-        test that an output gets reprojected to match fallback target projection"""
+        Test that if default LULC raster is not projected, i.e. in EPSG 4326,
+        then error will be raised.
+        """
         from natcap.invest.annual_water_yield import annual_water_yield
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
@@ -599,7 +599,8 @@ class AnnualWaterYieldTests(unittest.TestCase):
         target_projection_wkt = srs.ExportToWkt()
         target_path = os.path.join(self.workspace_dir, "lulc_reprj.tif")
         pygeoprocessing.warp_raster(
-            args['lulc_path'], (.1, -.1), target_path,
+            args['lulc_path'],
+            (0.0001347942195727987018, -0.0001347942195727987018), target_path,
             resample_method='near',
             target_projection_wkt=target_projection_wkt)
         args['lulc_path'] = target_path
