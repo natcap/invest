@@ -27,7 +27,6 @@ import {
 } from '../../src/main/setupCheckFirstRun';
 import {
   createCoreServerProcess,
-  getFlaskIsReady
 } from '../../src/main/createPythonFlaskProcess';
 import { findInvestBinaries } from '../../src/main/findBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
@@ -47,7 +46,6 @@ beforeEach(() => {
     error: null
   });
   createCoreServerProcess.mockImplementation(() => {});
-  getFlaskIsReady.mockResolvedValue(true);
   // These vars are only defined in an electron environment and our
   // app expects them to be defined.
   process.defaultApp = 'test'; // imitates dev mode
