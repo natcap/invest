@@ -10,6 +10,8 @@ import pygeoprocessing
 from shapely import Polygon
 from osgeo import gdal, ogr, osr
 
+from natcap.invest import utils
+
 from .utils import assert_complete_execute
 
 gdal.UseExceptions()
@@ -960,7 +962,7 @@ class UMHTests(unittest.TestCase):
              [7, 8, 9]])
 
         # Create raster in a projected CRS with US survey feet so that
-        # _raster_projected_in_m returns False and the helper uses
+        # _spatial_file_projected_in_m returns False and the helper uses
         # gdal.SuggestedWarpOutput in the vector CRS.
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
@@ -1145,19 +1147,17 @@ class UMHTests(unittest.TestCase):
 
         self.assertEqual(actual_projection, expected_projection_wkt)
 
-    def test_projection_if_population_raster_is_target(self):
-        """Test model if population raster is target projection"""
+    def test_projection_and_pixelsize_if_target_pixelsize_in_ft(self):
+        """Test model if target pixelsize input projected in feet"""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
-        # make population raster in differnt projection
+        # Create ndvi raster in a different projected CRS than other raster.
         raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
-        args['population_raster'] = raster_path
+        args['ndvi_base'] = raster_path
         args['target_projection'] = 'population_raster'
-        args['target_pixelsize'] = 'population_raster'
+        args['target_pixelsize'] = 'ndvi_base'
 
-        # Create pop raster in a different projected CRS than other raster
-        # inputs to check which ends up as target projection
         raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
@@ -1171,11 +1171,45 @@ class UMHTests(unittest.TestCase):
             projection_wkt,
             raster_path)
 
-        # assert that outputs are in that ^ projection
         file_reg = urban_mental_health.execute(args)
-        actual_projection = pygeoprocessing.get_raster_info(
-            file_reg['preventable_cases'])['projection_wkt']
-        self.assertEqual(actual_projection, projection_wkt)
+
+        # Output raster pixel size should be same as ndvi_base input but in m
+        expected_pixelsize = utils.get_raster_pixel_size_in_tgt_projection_units(
+            args[args['target_pixelsize']],
+            target_file_or_projection_wkt=args[args['target_projection']])
+        actual_pixelsize = pygeoprocessing.get_raster_info(
+            file_reg['baseline_cases'])['pixel_size']  # in meters
+        numpy.testing.assert_allclose(actual_pixelsize, expected_pixelsize)
+
+    def test_error_if_population_raster_is_target_prj_in_ft(self):
+        """Test model if target projection projected in feet"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        # make population raster in different projection the target projection
+        raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
+        args['population_raster'] = raster_path
+        args['target_projection'] = 'population_raster'
+        args['target_pixelsize'] = 'ndvi_base'
+
+        raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
+        projection_wkt = srs.ExportToWkt()
+
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array.astype(numpy.float32),
+            FLOAT32_NODATA,
+            (10, -10),
+            (6019339.53, 2499628.03),
+            projection_wkt,
+            raster_path)
+
+        with self.assertRaises(ValueError) as context:
+            urban_mental_health.execute(args)
+        self.assertTrue(
+            "must be projected in m" in
+            str(context.exception))
 
     def test_error_if_target_projection_set_to_input_w_invalid_prj(self):
         """Error raised if target_projection input not projected in m"""
