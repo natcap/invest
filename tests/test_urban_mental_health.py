@@ -1176,3 +1176,26 @@ class UMHTests(unittest.TestCase):
         actual_projection = pygeoprocessing.get_raster_info(
             file_reg['preventable_cases'])['projection_wkt']
         self.assertEqual(actual_projection, projection_wkt)
+
+    def test_error_if_target_projection_set_to_input_w_invalid_prj(self):
+        """Error raised if target_projection input not projected in m"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+
+        lulc_path = os.path.join(self.workspace_dir, "lulc_base.tif")
+        origin = (-123.4871091946283173, 44.4632819141416675)
+        pixelsize = (0.001009081362474094357, -0.001009081362474094357)
+        lulc_array = numpy.ones((4, 4))
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        projectionwkt = srs.ExportToWkt()
+        pygeoprocessing.numpy_array_to_raster(lulc_array, -9999, pixelsize,
+                                              origin, projectionwkt, lulc_path)
+        args['target_projection'] = 'lulc_base'
+
+        with self.assertRaises(ValueError) as context:
+            urban_mental_health.execute(args)
+        self.assertTrue(
+            "Target projection must be projected" in
+            str(context.exception))
