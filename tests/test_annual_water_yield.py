@@ -544,3 +544,70 @@ class AnnualWaterYieldTests(unittest.TestCase):
         _validate_fields(watershed_results_vector_path, "hp_val",
                          [501.9029748723, 4587.91946857059],
                          "Error calculating net present value.")
+
+    def test_target_pixelsize_projection_correct_default(self):
+        """Test correct default pixelsize and projection"""
+        from natcap.invest.annual_water_yield import annual_water_yield
+
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
+        # not necessary but want to be explicit and guard against changing function
+        args['target_projection'] = ''
+        args['target_pixelsize'] = ''
+
+        resolved_args, _, task_graph = annual_water_yield.MODEL_SPEC.setup(args)
+        task_graph.close()
+        task_graph.join()
+
+        self.assertEqual(resolved_args['target_projection'], 'lulc_path')
+        self.assertEqual(resolved_args['target_pixelsize'], 'lulc_path')
+
+    def test_correct_output_projection_if_target_not_default(self):
+        """Test output projection correct if precip raster is target proj"""
+        from natcap.invest.annual_water_yield import annual_water_yield
+
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
+        # reproject watersheds to be different than rest of sample data
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
+        target_projection_wkt = srs.ExportToWkt()
+        target_path = os.path.join(self.workspace_dir, "watersheds_reprj.shp")
+        pygeoprocessing.reproject_vector(
+            args['watersheds_path'], target_projection_wkt, target_path)
+        args['watersheds_path'] = target_path
+        args['target_projection'] = 'watersheds_path'
+        file_reg = annual_water_yield.execute(args)
+
+        # assert that output in the same projection as precip
+        actual_projection = pygeoprocessing.get_raster_info(
+            file_reg['aet'])['projection_wkt']
+
+        self.assertEqual(actual_projection, target_projection_wkt)
+
+    def test_pixelsize_dropdown_default_to_pop_if_invalid_default(self):
+        """Test that if default (lulc) raster is not linearly projected, i.e. in epsg4326
+        then it won't show up in the list of options and instead the dropdown 
+        menu will default to population
+
+        test that an output gets reprojected to match fallback target projection"""
+        from natcap.invest.annual_water_yield import annual_water_yield
+
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
+        # reproject lulc to epsg 4326
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        target_projection_wkt = srs.ExportToWkt()
+        target_path = os.path.join(self.workspace_dir, "lulc_reprj.tif")
+        pygeoprocessing.warp_raster(
+            args['lulc_path'], (.1, -.1), target_path,
+            resample_method='near',
+            target_projection_wkt=target_projection_wkt)
+        args['lulc_path'] = target_path
+        args['target_projection'] = ''
+        args['target_pixelsize'] = ''
+
+        with self.assertRaises(ValueError) as context:
+            annual_water_yield.execute(args)
+        self.assertTrue(
+            "Target projection must be projected" in
+            str(context.exception))
