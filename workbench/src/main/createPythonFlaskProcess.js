@@ -35,6 +35,8 @@ export async function handleServerStartup(pythonServerProcess, url, maxRetries=5
   pythonServerProcess.stderr.on('data', (data) => {
     logger.debug(`${data}`);
   });
+  // The 'error' event happens when the child process fails to spawn.
+  // This should be rare.
   pythonServerProcess.on('error', (err) => {
     logger.error(pythonServerProcess.spawnargs);
     logger.error(err.stack);
@@ -44,14 +46,16 @@ export async function handleServerStartup(pythonServerProcess, url, maxRetries=5
     );
     throw err;
   });
-  pythonServerProcess.on('close', (code, signal) => {
-    logger.debug(`Flask process closed with code ${code} and signal ${signal}`);
-  });
+  // The 'exit' event is what happens on routine errors like a
+  // typo in the micromamba command or a plugin failing to import
   pythonServerProcess.on('exit', (code) => {
     logger.debug(`Flask process exited with code ${code}`);
     if (code != 0) {
       processErrored = true;
     }
+  });
+  pythonServerProcess.on('close', (code, signal) => {
+    logger.debug(`Flask process closed with code ${code} and signal ${signal}`);
   });
   pythonServerProcess.on('disconnect', () => {
     logger.debug('Flask process disconnected');
@@ -118,12 +122,10 @@ export async function createCoreServerProcess(_port = undefined) {
  * @returns { integer } - PID of the process that was launched
  */
 export async function createPluginServerProcess(modelID, _port = undefined) {
-
   let port = _port;
   if (port === undefined) {
     port = await getFreePort();
   }
-
   logger.debug('creating invest plugin server process');
   const micromamba = settingsStore.get('micromamba');
   const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
