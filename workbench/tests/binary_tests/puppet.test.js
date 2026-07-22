@@ -239,7 +239,7 @@ test('Run a real invest model', async () => {
   // Cancel button does not appear until after invest has confirmed
   // it is running. So extra timeout on the query:
   const cancelButton = await sidebar.waitForSelector(
-    'aria/[name="Cancel Run"][role="button"]', { timeout: 30000 });
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
   await cancelButton.click();
   await sidebar.waitForSelector('text/Run Canceled');
   await page.waitForSelector('aria/[name="Open Workspace"][role="button"]');
@@ -264,6 +264,7 @@ test('Open each model and each local userguide', async () => {
     console.log(err);
   });
 
+  console.log('starting test');
   const downloadModal = await page.waitForSelector(
     'aria/[name="Download InVEST sample data"][role="dialog"]'
   );
@@ -314,7 +315,7 @@ test('Open each model and each local userguide', async () => {
   }
 });
 
-test.skip('Install and run a plugin', async () => {
+test('Install and run a plugin', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -359,8 +360,14 @@ test.skip('Install and run a plugin', async () => {
   console.log(submitButton);
   await submitButton.click();
   console.log('clicked submit');
-  const pluginButton = await page.waitForSelector(
-    'aria/[name="Foo Model"][role="button"]', { timeout: 300000 });
+  await page.waitForSelector('text/Successfully installed plugin', { timeout: 300000 });
+
+  const modalClose = await page.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
+  );
+  await modalClose.click();
+
+  const pluginButton = await page.waitForSelector('[name="Demo Plugin"]');
   await pluginButton.evaluate((b) => b.click());
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
@@ -368,16 +375,16 @@ test.skip('Install and run a plugin', async () => {
   const argsForm = await page.waitForSelector('.args-form');
   console.log('found args form');
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace"][role="textbox"]'
+    'aria/[name="Workspace Directory"][role="textbox"]'
   );
   console.log('found workspace');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const rasterInput = await argsForm.waitForSelector(
-    'aria/[name="Input Raster"][role="textbox"]'
+    'aria/[name="Input Raster (raster)"][role="textbox"]'
   );
   await rasterInput.type(testRaster, { delay: TYPE_DELAY });
   const numberInput = await argsForm.waitForSelector(
-    'aria/[name="Multiplication Factor"][role="textbox"]'
+    'aria/[name="Multiplication Factor (integer)"][role="textbox"]'
   );
   await numberInput.type('2', { delay: TYPE_DELAY });
 
@@ -385,6 +392,11 @@ test.skip('Install and run a plugin', async () => {
   const runButton = await sidebar.waitForSelector('.btn-primary:not([disabled])');
   await runButton.click();
   await page.waitForSelector('#invest-tab-tab-log.active');
+
+  // Cancel button does not appear until after invest has confirmed
+  // it is running. So extra timeout on the query:
+  const cancelButton = await sidebar.waitForSelector(
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
   await page.waitForSelector('div ::-p-text(Model Complete)');
 }, 500000);
 

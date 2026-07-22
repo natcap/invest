@@ -307,10 +307,12 @@ jobs:
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
+            chromedriver-url-suffix: mac-x64/chromedriver-mac-x64.zip
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: InVEST-failed-windows-workspace.tar
             binary-extension: exe
+            chromedriver-url-suffix: win64/chromedriver-win64.zip
     steps:
       - uses: actions/checkout@v6
         with:
@@ -331,6 +333,7 @@ jobs:
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
             pandoc
+            selenium
 
       - name: Make install
         run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
@@ -370,7 +373,7 @@ jobs:
         working-directory: workbench
         run: |
           yarn config set network-timeout 600000 -g
-          yarn install
+          yarn install --verbose
 
       - name: Download micromamba for distribution (MacOS)
         if: matrix.os == 'macos-15-intel'
@@ -459,6 +462,25 @@ jobs:
         run: |
           DEST=gs://releases.naturalcapitalproject.org/invest-reports/latest
           gcloud storage rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
+
+      - name: Install chromedriver
+        working-directory: workbench
+        env:
+          CHROMEDRIVER_URL_PREFIX: http://storage.googleapis.com/chrome-for-testing-public
+        run: |
+          ELECTRON_VERSION=$(jq -r '.build.electronVersion' package.json)
+          CHROMIUM_VERSION=$(yarn --json node -p "require('electron-to-chromium').electronToChromium('$ELECTRON_VERSION')")
+          echo "electron version: $ELECTRON_VERSION"
+          echo "corresponding chromium version: $CHROMIUM_VERSION"
+          curl -L $CHROMEDRIVER_URL_PREFIX/$CHROMIUM_VERSION/${{ matrix.chromedriver-url-suffix }} \
+            -o chromedriver.zip
+          unzip chromedriver.zip -d ./chromedriver
+
+      - name: Test electron app with selenium
+        working-directory: workbench
+        run: |
+          ./chromedriver/chromedriver*/chromedriver* --port=9515 &
+          pytest tests/binary_tests/plugins.py
 
       - name: Test electron app with puppeteer
         working-directory: workbench
