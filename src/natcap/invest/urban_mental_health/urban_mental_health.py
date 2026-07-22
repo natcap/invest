@@ -332,9 +332,6 @@ MODEL_SPEC = spec.ModelSpec(
                 "pixel size."),
             dropdown_function=_get_pixelsize_umh,
             responsive_to='model_option'
-            # TODO if a raster input is invalid when the default is set,
-            # but then filepath is changed, should dropdown reset to default?
-
         )),
         ],
     outputs=[
@@ -730,7 +727,7 @@ def execute(args):
 
     # get target pixel size for outputs
     pixel_size = _get_raster_pixel_size_in_meters(
-        args[args['target_pixelsize']], args['aoi_path'])
+        args[args['target_pixelsize']], args[args['target_projection']])
 
     pixel_radius = int(round(args['search_radius']/pixel_size[0]))
     LOGGER.info(f"Search radius {args['search_radius']} results in "
@@ -1061,8 +1058,8 @@ def execute(args):
     return file_registry.registry
 
 
-def _get_raster_pixel_size_in_meters(raster_path, vector_path):
-    """Get square pixel size in meters; if not projected in m, use vector CRS.
+def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
+    """Get square pixel size of raster in meters.
 
     This is necessary because we do not want to force users to initially
     project their input rasters in meters, however align_and_resize requires
@@ -1072,7 +1069,7 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
     Args:
         raster_path (str): Path to baseline LULC or baseline NDVI raster,
             which may or may not be projected in meters.
-        vector_path (str): Path to AOI vector in a projected CRS with
+        spatial_path (str): Path to a spatial file in a projected CRS with
             units in meters.
 
     Returns:
@@ -1080,7 +1077,7 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
             used as the target pixel size in meters when aligning and resizing
             raster stack.
     """
-    def _raster_projected_in_m(projection_wkt):
+    def _spatial_file_projected_in_m(projection_wkt):
         if projection_wkt:
             srs = osr.SpatialReference()
             srs.ImportFromWkt(projection_wkt)
@@ -1092,17 +1089,24 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
         return False
 
     raster_info = pygeoprocessing.get_raster_info(raster_path)
-    if _raster_projected_in_m(raster_info['projection_wkt']):
+    spatial_wkt = utils.get_raster_or_vector_projection(spatial_path)
+    if not _spatial_file_projected_in_m(spatial_wkt):
+        raise ValueError(
+            f"target_projection ({spatial_path}) must be projected in m."
+            f"Current projection: {spatial_wkt}")
+
+    if _spatial_file_projected_in_m(raster_info['projection_wkt']):
         tgt_pixel_size = numpy.mean([abs(raster_info["pixel_size"][0]),
                                      abs(raster_info["pixel_size"][1])])
-        LOGGER.info("Baseline raster is projected in meters; will use pixel "
-                    f"size {tgt_pixel_size} as target in align_and_resize, "
-                    "which is the native resolution of the raster (transformed"
-                    "to have square pixels if it doesn't already).")
+        LOGGER.info(
+            "target_pixelsize raster is projected in meters; will use pixel "
+            f"size {tgt_pixel_size} as target in align_and_resize, which is "
+            "the native resolution of the raster (transformed to have square "
+            "pixels if it doesn't already).")
         return (tgt_pixel_size, -tgt_pixel_size)
     pixel_width, pixel_height = utils.get_raster_pixel_size_in_tgt_projection_units(
-        raster_path, vector_path)
-    LOGGER.info("Baseline raster is not projected in meters; will use "
+        raster_path, spatial_path)
+    LOGGER.info("target_pixelsize raster is not projected in meters; will use "
                 f"transformed pixel size {pixel_width, pixel_height} as "
                 "target in align_and_resize")
     return (pixel_width, pixel_height)
