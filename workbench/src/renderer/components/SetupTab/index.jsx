@@ -161,7 +161,6 @@ class SetupTab extends React.Component {
     }, () => {
       this.investValidate();
       this.investArgsEnabled();
-      // this.callDropdownFunctions();
     });
   }
 
@@ -360,10 +359,6 @@ class SetupTab extends React.Component {
    */
   updateArgValues(key, value) {
     const { argsSpec } = this.props;
-    
-    const changedArgIsSpatial = ['raster', 'vector'].includes(
-      argsSpec[key]?.type
-    );
 
     const dependentArgkeys = Object.keys(argsSpec).filter(
       (argkey) => argsSpec[argkey]?.responsive_to === key
@@ -528,13 +523,20 @@ class SetupTab extends React.Component {
       Object.keys(results ?? {}).forEach((argkey) => {
         const options = results[argkey];
         argsDropdownOptions[argkey] = options;
-  
+        
+        if (!argsValues[argkey]){
+          return;
+        }
         const currentValue = prevState.argsValues[argkey].value;
         const currentValueIsValid = options.some(
           (option) => option.key === currentValue
         );
+        const isTargetSpatialDropdown = [
+          'target_pixelsize',
+          'target_projection',
+        ].includes(this.props.argsSpec[argkey]?.id);
   
-        if (!currentValueIsValid) {
+        if (!currentValueIsValid && isTargetSpatialDropdown) {
           argsValues[argkey] = {
             ...prevState.argsValues[argkey],
             value: options[0]?.key || '',
