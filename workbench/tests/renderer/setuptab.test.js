@@ -515,6 +515,194 @@ describe('UI spec functionality', () => {
     const arg6 = await queryByText('F');
     expect(arg6).toBeNull();
   });
+
+  test('target_pixelsize dropdown options update when a spatial input changes', async () => {
+    fetchValidation.mockResolvedValue([]);
+    fetchArgsEnabled.mockResolvedValue({
+      spatial_input: true,
+      target_pixelsize: true,
+    });
+
+    getDynamicDropdowns.mockImplementation(async ({ args }) => {
+      const argsValues = JSON.parse(args);
+
+      if (argsValues.spatial_input) {
+        return {
+          target_pixelsize: [
+            {
+              key: '30',
+              display_name: '30',
+            },
+          ],
+        };
+      }
+
+      return {
+        target_pixelsize: [],
+      };
+    });
+
+    const spec = {
+      model_spec: 'eco_model',
+      args: {
+        spatial_input: {
+          name: 'afoo',
+          type: 'raster',
+        },
+        target_pixelsize: {
+          id: 'target_pixelsize',
+          name: 'Target Pixel Size',
+          type: 'option_string',
+          options: [],
+          dropdown_function: 'retrieve pixel sizes from spatial inputs',
+        },
+      },
+    };
+
+    const inputFieldOrder = [Object.keys(spec.args)];
+
+    const {
+      findByLabelText,
+      queryByText,
+      findByText,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+
+    const spatialInput = await findByLabelText(
+      (content) => content.startsWith(spec.args.spatial_input.name)
+    );
+
+    expect(queryByText('30')).toBeNull();
+
+    await userEvent.type(spatialInput, '/path/to/raster.tif');
+
+    expect(await findByText('30')).toBeInTheDocument();
+
+    expect(getDynamicDropdowns).toHaveBeenCalledWith({
+      model_id: spec.model_id ?? 'eco_model',
+      args: expect.stringContaining('/path/to/raster.tif'),
+    });
+  });
+
+  test('changing an arg refreshes only dropdowns responsive_to it', async () => {
+    fetchValidation.mockResolvedValue([]);
+    fetchArgsEnabled.mockResolvedValue({
+      source_option: true,
+      responsive_option: true,
+      unrelated_option: true,
+    });
+
+    getDynamicDropdowns.mockResolvedValue({
+      responsive_option: [
+        { key: 'new_field', display_name: 'new_field' },
+      ],
+    });
+
+    const spec = {
+      args: {
+        source_option: {
+          name: 'foo',
+          type: 'option_string',
+          options: [
+            { key: 'a', display_name: 'a' },
+            { key: 'b', display_name: 'b' },
+            { key: 'c', display_name: 'c' },
+          ],
+        },
+        responsive_option: {
+          name: 'bar',
+          type: 'option_string',
+          options: [
+            { key: 'old_field', display_name: 'old_field' },
+          ],
+          dropdown_function: 'xyz',
+          responsive_to: 'source_option',
+        },
+        unrelated_option: {
+          name: 'baz',
+          type: 'option_string',
+          options: [
+            { key: 'x', display_name: 'x' },
+            { key: 'y', display_name: 'y' },
+          ],
+        },
+      },
+    };
+
+    const initValues = {
+      source_option: 'a',
+      responsive_option: 'old_field',
+      unrelated_option: 'x',
+    };
+
+    const {
+      findByLabelText,
+      findByRole,
+      queryByRole,
+    } = renderSetupFromSpec(
+      spec,
+      [Object.keys(spec.args)],
+      initValues
+    );
+
+    const sourceSelect = await findByLabelText(
+      spec.args.source_option.name
+    );
+
+    const responsiveSelect = await findByLabelText(
+      spec.args.responsive_option.name
+    );
+
+    const unrelatedSelect = await findByLabelText(
+      spec.args.unrelated_option.name
+    );
+
+    await waitFor(() => {
+      expect(responsiveSelect).toHaveValue('old_field');
+    });
+
+     // Ignore any dropdown request made during initial rendering
+    getDynamicDropdowns.mockClear();
+
+    // Changing an unrelated argument should not clear or replace the value
+    // of responsive_option
+    await userEvent.selectOptions(unrelatedSelect, 'y');
+
+    await waitFor(() => {
+      expect(unrelatedSelect).toHaveValue('y');
+    });
+
+    expect(responsiveSelect).toHaveValue('old_field');
+    expect(getDynamicDropdowns).not.toHaveBeenCalled();
+
+ 
+    // Changing the argument named by responsive_to should refresh the
+    // dropdown and select the newly returned option.
+    await userEvent.selectOptions(sourceSelect, 'b');
+    await waitFor(() => {
+      expect(getDynamicDropdowns).toHaveBeenCalledTimes(1);
+    });
+  
+
+    expect(
+      await findByRole('option', { name: 'new_field' })
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(responsiveSelect).toHaveValue('new_field');
+    });
+
+    expect(
+      queryByRole('option', { name: 'old_field' })
+    ).not.toBeInTheDocument();
+
+    const payload = getDynamicDropdowns.mock.calls[0][0];
+
+    expect(JSON.parse(payload.args)).toMatchObject({
+      source_option: 'b',
+      responsive_option: '',
+      unrelated_option: 'y',
+    });
+  });
 });
 
 describe('Misc form validation stuff', () => {
