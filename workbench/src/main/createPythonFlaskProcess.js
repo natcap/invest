@@ -20,39 +20,15 @@ async function getFreePort() {
   });
 }
 
-/** Find out if the Flask server is online, waiting until it is.
- *
- * @param {number} i - the number or previous tries
- * @param {number} retries - number of recursive calls this function is allowed.
- * @returns { Promise } resolves text indicating success.
- */
-export async function getFlaskIsReady(port, i = 0, retries = 41) {
-  try {
-    await fetch(`${HOSTNAME}:${port}/api/ready`, {
-      method: 'get',
-    });
-  } catch (error) {
-    if (error.code === 'ECONNREFUSED') {
-      while (i < retries) {
-        i++;
-        // Try every X ms, usually takes a couple seconds to startup.
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        logger.debug(`retry # ${i}`);
-        return getFlaskIsReady(port, i, retries);
-      }
-      logger.error(`Not able to connect to server after ${retries} tries.`);
-    }
-    logger.error(error);
-    throw error;
-  }
-}
-
 /**
- * Set up handlers for server process events.
+ * Wait for a invest server process to start up, handling any errors.
  * @param  {ChildProcess} pythonServerProcess - server process instance.
- * @returns {undefined}
+ * @param {string} url - server status url to retry
+ * @param {number} maxRetries - number of retries allowed
+ * @returns {number} PID of the started process, or undefined if it fails to launch
  */
-export function setupServerProcessHandlers(pythonServerProcess) {
+export async function handleServerStartup(pythonServerProcess, url, maxRetries=500) {
+  let processErrored = false;
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
   });
@@ -73,11 +49,38 @@ export function setupServerProcessHandlers(pythonServerProcess) {
   });
   pythonServerProcess.on('exit', (code) => {
     logger.debug(`Flask process exited with code ${code}`);
+    if (code != 0) {
+      processErrored = true;
+    }
   });
   pythonServerProcess.on('disconnect', () => {
     logger.debug('Flask process disconnected');
   });
   pidToSubprocess[pythonServerProcess.pid] = pythonServerProcess;
+
+  // Wait for the server to start up
+  let retries = 0;
+  while (retries < 500) {
+    if (processErrored) {
+      return undefined;
+    }
+    logger.debug(`retry # ${retries}`);
+    try {
+      await fetch(url, { method: 'get' });
+      logger.info('flask is ready');
+      return pythonServerProcess.pid;
+    } catch (error) {
+      if (error.code === 'ECONNREFUSED') {
+        // wait 300ms before retrying
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        retries++;
+      } else {
+        logger.error(error);
+        throw error;
+      }
+    }
+  }
+  logger.error(`Not able to connect to server after ${retries} tries.`);
 }
 
 /**
@@ -102,10 +105,9 @@ export async function createCoreServerProcess(_port = undefined) {
   settingsStore.set('core.pid', pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-
-  setupServerProcessHandlers(pythonServerProcess);
-  await getFlaskIsReady(port, 0, 500);
-  logger.info('flask is ready');
+  const pid = await handleServerStartup(
+    pythonServerProcess, `${HOSTNAME}:${port}/api/ready`);
+  return pid;
 }
 
 /**
@@ -116,6 +118,7 @@ export async function createCoreServerProcess(_port = undefined) {
  * @returns { integer } - PID of the process that was launched
  */
 export async function createPluginServerProcess(modelID, _port = undefined) {
+
   let port = _port;
   if (port === undefined) {
     port = await getFreePort();
@@ -136,12 +139,9 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   settingsStore.set(`plugins.${modelID}.pid`, pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-
-  setupServerProcessHandlers(pythonServerProcess);
-
-  await getFlaskIsReady(port, 0, 500);
-  logger.info('flask is ready');
-  return pythonServerProcess.pid;
+  const pid = await handleServerStartup(
+    pythonServerProcess, `${HOSTNAME}:${port}/api/ready`);
+  return pid;
 }
 
 /**
