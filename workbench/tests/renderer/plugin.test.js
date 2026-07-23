@@ -186,7 +186,7 @@ describe('Add plugin modal', () => {
 
   test('Add a plugin: failure with error displayed', async () => {
     const errorString = 'Failed to clone repository.';
-    const spy = ipcRenderer.invoke.mockImplementation((channel) => {
+    const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
       }
@@ -194,6 +194,11 @@ describe('Add plugin modal', () => {
         return Promise.reject(
           new Error(errorString)
         );
+      }
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve({});
+        }
       }
       return Promise.resolve();
     });
@@ -299,5 +304,105 @@ describe('Add plugin modal', () => {
     // expect the plugin to have disappeared from the model list and the dropdown
     await waitFor(() => expect(queryByRole('button', { name: /Foo/ })).toBeNull());
     await waitFor(() => expect(queryByRole('option', { name: /Foo/ })).toBeNull());
+  });
+
+  test('Change the conda executable', async () => {
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve({});
+        } else if (setting === 'defaultMicromamba') {
+          return Promise.resolve('micromamba')
+        }
+      } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve({ filePaths: ['foo'] })
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+      return Promise.resolve();
+    });
+    const {
+      findByText, findByRole, getByRole, findByLabelText, queryByRole,
+    } = render(<App />);
+
+    const spy = jest.spyOn(ipcRenderer, 'send');
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
+    const managePluginsButton = await findByText(/Manage plugins/i);
+    await userEvent.click(managePluginsButton);
+
+    const input = await findByLabelText('Conda or mamba executable');
+    await userEvent.type(input, 'conda')
+    await waitFor(() => expect(input).toHaveValue('conda'));
+
+    await userEvent.click(await findByRole(
+      'button', { name: /browse for conda executable/ }));
+    await waitFor(() => { expect(input).toHaveValue('foo'); });
+
+    const div = await findByLabelText('Configure conda executable (Advanced)')
+    const saveButton = await within(div).findByRole('button', { name: /Save/ });
+    await userEvent.click(saveButton);
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        ipcMainChannels.SET_SETTING,
+        'micromamba',
+        'foo'
+      );
+    });
+
+    const resetButton = await within(div).findByRole('button', { name: /Reset/ });
+    await userEvent.click(resetButton);
+    await waitFor(() => { expect(input).toHaveValue('micromamba'); });
+  });
+  test('Change a plugin env', async () => {
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve({
+            foo: {
+              modelTitle: 'Foo',
+              type: 'plugin',
+            },
+          });
+        } else if (setting === 'plugins.foo.defaultEnv') {
+          return Promise.resolve('default_env');
+        }
+      } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve({ filePaths: ['/path/to/my_env'] })
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+      return Promise.resolve();
+    });
+    const {
+      findByText, findByRole, findByLabelText
+    } = render(<App />);
+
+    const spy = jest.spyOn(ipcRenderer, 'send');
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
+    const managePluginsButton = await findByText(/Manage plugins/i);
+    await userEvent.click(managePluginsButton);
+
+    const div = await findByLabelText('Configure plugin environments (Advanced)')
+    const input = await within(div).findByLabelText('foo');
+    await userEvent.type(input, 'my_env')
+    await waitFor(() => expect(input).toHaveValue('my_env'));
+
+    await userEvent.click(await findByRole(
+      'button', { name: /browse for env/ }));
+    await waitFor(() => { expect(input).toHaveValue('/path/to/my_env'); });
+
+    const saveButton = await within(div).findByRole('button', { name: /Save/ });
+    await userEvent.click(saveButton);
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        ipcMainChannels.SET_SETTING,
+        'plugins.foo.env',
+        '/path/to/my_env'
+      );
+    });
+
+    const resetButton = await within(div).findByRole('button', { name: /Reset/ });
+    await userEvent.click(resetButton);
+    await waitFor(() => { expect(input).toHaveValue('default_env'); });
   });
 });

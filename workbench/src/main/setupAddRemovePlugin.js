@@ -76,7 +76,7 @@ async function createBaseEnv(baseEnvPrefix, micromamba) {
   logger.info(`creating base environment from file:\n${baseEnvYMLContents}`);
   fs.writeFileSync(baseEnvYMLPath, baseEnvYMLContents);
   await spawnWithLogging(micromamba, [
-    'create', '--yes', '--prefix', `"${baseEnvPrefix}"`,
+    'env', 'create', '--yes', '--prefix', `"${baseEnvPrefix}"`,
     '--file', `"${baseEnvYMLPath}"`]);
 }
 
@@ -158,7 +158,7 @@ async function installPlugin(
   // conda-forge build, setup.py requires this env variable.
   process.env['NATCAP_INVEST_GDAL_LIB_PATH'] = `${pluginEnvPrefix}/Library`;
   await spawnWithLogging(micromamba, [
-    'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
+    'env', 'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
     '--file', `"${pluginEnvYMLPath}"`]);
   logger.info('created micromamba env for plugin');
   event.sender.send('plugin-install-status', i18n.t('Installing plugin into environment...'));
@@ -210,6 +210,7 @@ function storePluginMetadataSync(
       modelTitle: modelTitle,
       type: 'plugin',
       source: installString,
+      defaultEnv: pluginEnvPrefix,
       env: pluginEnvPrefix,
       version: version,
     }

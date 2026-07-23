@@ -572,9 +572,15 @@ describe('Main menu interactions', () => {
   });
 
   test('Open Plugins Modal from menu', async () => {
-    ipcRenderer.invoke.mockImplementation((channel) => {
+    ipcRenderer.invoke.mockImplementation((channel, arg) => {
       if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
+      } else if (channel === ipcMainChannels.GET_SETTING) {
+        if (arg === 'micromamba') {
+          return Promise.resolve('micromamba');
+        } else if (arg === 'plugins') {
+          return Promise.resolve({});
+        }
       }
       return Promise.resolve();
     });
