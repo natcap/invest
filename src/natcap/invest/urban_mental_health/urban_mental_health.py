@@ -33,13 +33,8 @@ def _get_pixelsize_umh(args, model_spec):
     else:
         default_for_model_option = 'ndvi_base'
 
-    options = spec._get_pixel_size(args, model_spec)
-
-    default_pixelsize_input = [
-        opt for opt in options if opt.key == default_for_model_option]
-    ordered_options = default_pixelsize_input + [
-        opt for opt in options if opt.key != default_for_model_option]
-    return ordered_options
+    return spec._get_pixel_size(
+        args, model_spec, default_input_id=default_for_model_option)
 
 
 _model_description = gettext(

@@ -127,7 +127,6 @@ def _check_projection(srs, projected, projection_units):
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
-
     """
     with GDALUseExceptions():
         empty_srs = osr.SpatialReference()
@@ -275,11 +274,22 @@ def _get_spatial_inputs(args, model_spec, projection_required=True):
     return options
 
 
-def _get_pixel_size(args, model_spec):
+def _get_pixel_size(args, model_spec, default_input_id=None):
     """Return spatial inputs and pixel size as dropdown Options, default first
 
-    Pixel size units match the units specified in the current target_projection
-    input's projection"""
+    Pixel size units match the units specified in the current
+    ``target_projection`` input's projection
+
+    Args:
+        args (dict): model arguments
+        model_spec (ModelSpec): model specification
+        default_input_id (str): Optional input ID to label and order as the
+             default. When ``None``, the input arg marked
+             ``is_default_projection`` is used.
+
+    Returns:
+        list of options for pixel size
+    """
     spatial_inputs = _get_spatial_inputs(args, model_spec, False)
     projection_input_id = args.get('target_projection')
     if not projection_input_id or not args.get(projection_input_id):
@@ -302,6 +312,13 @@ def _get_pixel_size(args, model_spec):
     if not raster_inputs:
         return []
 
+    if default_input_id is None:
+        default_inputs = [input_spec for input_spec in model_spec.inputs if (
+            isinstance(input_spec, SpatialFileInput) and
+            input_spec.is_default_projection)]
+        if default_inputs:
+            default_input_id = default_inputs[0].id
+
     def get_display_name_and_pixel_size(option_key, selected_projection_wkt):
         # the only "empty" input that would be passed to this function is the
         # default target projection input
@@ -316,7 +333,12 @@ def _get_pixel_size(args, model_spec):
             trans_pixelsize = utils.get_raster_pixel_size_in_tgt_projection_units(
                 args[option_key], selected_projection_wkt)
             formatted_pixelsize = [float(round(pix, 3)) for pix in trans_pixelsize]
-            if model_spec.get_input(option_key).is_default_projection:
+            is_default = (
+                option_key == default_input_id
+                if default_input_id is not None
+                else model_spec.get_input(option_key).is_default_projection
+            )
+            if is_default:
                 return "(Default) " + inp_name + f" {formatted_pixelsize}"
             return inp_name + f" {formatted_pixelsize}"
         else:
@@ -328,6 +350,13 @@ def _get_pixel_size(args, model_spec):
                                                        current_projection)
         if display_name:
             options.append(Option(key=opt.key, display_name=display_name))
+
+    if default_input_id is not None:
+        default_options = [
+            opt for opt in options if opt.key == default_input_id]
+        options = default_options + [
+            opt for opt in options if opt.key != default_input_id]
+
     return options
 
 
