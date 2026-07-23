@@ -161,6 +161,7 @@ class SetupTab extends React.Component {
     }, () => {
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
