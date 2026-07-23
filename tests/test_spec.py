@@ -535,6 +535,49 @@ class InputTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             spec.LULC.about = 'new description'
 
+    @patch.object(
+        spec.SingleBandRasterInput,
+        'validate',
+        autospec=True,
+        return_value='projection error')
+    def test_option_spatial_input_validate_with_context(
+            self, mock_validate):
+        """Validate the selected spatial input's filepath."""
+        spatial_input = spec.SingleBandRasterInput(
+            id='source_raster',
+            data_type=int,
+            units=None)
+
+        model_spec = Mock()
+        model_spec.get_input.return_value = spatial_input
+
+        option_input = spec.OptionSpatialInput(
+            id='target_projection',
+            options=[],
+            projected=True,
+            projection_units=u.meter)
+
+        args = {
+            'source_raster': 'source.tif',
+            'target_projection': 'source_raster',
+        }
+
+        message = option_input.validate_with_context(
+            args['target_projection'],
+            args,
+            model_spec,
+        )
+
+        self.assertEqual(message, 'projection error')
+        model_spec.get_input.assert_called_once_with('source_raster')
+        mock_validate.assert_called_once()
+
+        validated_spec, validated_filepath = mock_validate.call_args.args
+
+        self.assertEqual(validated_filepath, 'source.tif')
+        self.assertTrue(validated_spec.projected)
+        self.assertEqual(validated_spec.projection_units, u.meter)
+
 
 class ModelSpecTests(unittest.TestCase):
     """Tests for natcap.invest.spec.ModelSpec."""
