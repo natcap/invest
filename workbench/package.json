@@ -95,6 +95,7 @@
     "eslint-plugin-react": "^7.34.0",
     "eslint-plugin-react-hooks": "^4.2.0",
     "fs-extra": "^9.1.0",
+    "glob": "^13.0.6",
     "i18next-conv": "^15.1.1",
     "i18next-parser": "^9.4.0",
     "jest": "^30.4.2",
