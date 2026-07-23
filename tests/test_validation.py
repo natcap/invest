@@ -14,6 +14,7 @@ from unittest.mock import Mock
 
 import numpy
 import pandas
+import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -305,6 +306,60 @@ class ValidatorTest(unittest.TestCase):
             func('arg')
             self.assertTrue(len(ws) == 1)
             self.assertTrue('timed out' in str(ws[0].message))
+
+    def test_option_spatial_input_validate_with_context(self):
+        """Test OptionSpatialInput validates the selected projection units."""
+        with tempfile.TemporaryDirectory() as workspace_dir:
+            projected_path = os.path.join(
+                workspace_dir, 'projected_raster.tif')
+            geographic_path = os.path.join(
+                workspace_dir, 'geographic_raster.tif')
+
+            raster_array = numpy.ones((2, 2), dtype=numpy.int32)
+
+            projected_srs = osr.SpatialReference()
+            projected_srs.ImportFromEPSG(26910)
+            pygeoprocessing.numpy_array_to_raster(
+                raster_array,
+                -1,
+                (30, -30),
+                (461261, 4923265),
+                projected_srs.ExportToWkt(),
+                projected_path)
+
+            geographic_srs = osr.SpatialReference()
+            geographic_srs.ImportFromEPSG(4326)
+            pygeoprocessing.numpy_array_to_raster(
+                raster_array,
+                -1,
+                (0.01, -0.01),
+                (-123, 49),
+                geographic_srs.ExportToWkt(),
+                geographic_path)
+
+            selected_input = spec.SingleBandRasterInput(
+                id='source_raster',
+                data_type=int,
+                units=None)
+
+            model_spec = Mock()
+            model_spec.get_input.return_value = selected_input
+
+            option_input = spec.TARGET_PROJECTION.model_copy(update=dict(
+                projection_units=u.meter
+            ))
+
+            args = {'source_raster': projected_path}
+            message = option_input.validate_with_context(
+                'source_raster', args, model_spec)
+
+            self.assertIsNone(message)
+
+            args['source_raster'] = geographic_path
+            message = option_input.validate_with_context(
+                'source_raster', args, model_spec)
+            expected_message = 'Layer must be projected in this unit: "meter" but found this unit: "unknown"'
+            self.assertEqual(message, expected_message)
 
 
 class WorkspaceValidation(unittest.TestCase):

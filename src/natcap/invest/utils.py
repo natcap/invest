@@ -1018,3 +1018,92 @@ def base_model_id(model_id: str) -> str:
     returned unchanged.
     """
     return model_id.split('@')[0]
+
+
+def get_raster_pixel_size_in_tgt_projection_units(
+        raster_path, target_file_or_projection_wkt):
+    """Get square pixel size of a raster in units of `target_projection_wkt`.
+
+    Use gdal to auto calculate the target pixel size if transforming
+    the raster to a target projection. This is useful for getting the
+    `target_pixel_size` for `pygeoprocessing.align_and_resize_raster_stack` in
+    the same units as a target projection or spatial file with that projection.
+
+    Args:
+        raster_path (str): Path to projected raster
+        target_file_or_projection_wkt (str): Either a Well-Known Text
+            projection with the units into which to translate the original
+            pixel size of ``raster_path``, or a path to raster or vector
+            containing the target projection.
+
+    Raises:
+        ValueError if target projection is not projected.
+
+    Returns:
+        tuple[float, float]: (pixel_width, pixel_height)
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    raster_wkt = raster_info["projection_wkt"]
+
+    raster_srs = osr.SpatialReference()
+    raster_srs.ImportFromWkt(raster_wkt)
+
+    if os.path.isfile(target_file_or_projection_wkt):
+        target_projection_wkt = get_raster_or_vector_projection(
+            target_file_or_projection_wkt)
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromWkt(target_projection_wkt)
+    else:
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromWkt(target_file_or_projection_wkt)
+
+    target_projected = target_srs.IsProjected()
+
+    if not target_projected:
+        raise ValueError('Target projection must be projected.')
+
+    # Same projected CRS units: preserve native pixel size.
+    if raster_srs.IsSame(target_srs):
+        native_pixel_size = numpy.mean([
+            abs(raster_info['pixel_size'][0]),
+            abs(raster_info['pixel_size'][1]),
+        ])
+        return (native_pixel_size, -native_pixel_size)
+    # Otherwise ask GDAL what the raster would look like warped to target CRS.
+    src_ds = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+    transformer = gdal.Transformer(
+        src_ds, None, [f'DST_SRS={target_srs}'])
+    target_warp = gdal.SuggestedWarpOutput(src_ds, transformer)
+    pixel_width = target_warp.geotransform[1]
+    pixel_height = target_warp.geotransform[5]
+    src_ds = None
+
+    tgt_pixel_size = float(numpy.mean([abs(pixel_width), abs(pixel_height)]))
+    return (tgt_pixel_size, -tgt_pixel_size)
+
+
+def get_raster_or_vector_projection(filepath):
+    """Get projection of a GDAL vector or GDAL raster (dataset).
+
+    Args:
+        filepath (String): a path to a GDAL vector or raster. Paths may use any
+            GDAL-supported scheme, including virtual file system /vsi schemes.
+
+    Raises:
+        ValueError
+            if ``filepath`` is not a file or cannot be opened as a
+            ``gdal.OF_RASTER`` or `gdal.OF_VECTOR``.
+    Returns:
+        projection_wkt (string): projection of the vector or raster in Well
+          Known Text.
+    """
+    if pygeoprocessing.get_gis_type(filepath) == pygeoprocessing.RASTER_TYPE:
+        target_spatial_prj = pygeoprocessing.get_raster_info(
+            filepath)['projection_wkt']
+    elif pygeoprocessing.get_gis_type(filepath) == pygeoprocessing.VECTOR_TYPE:
+        target_spatial_prj = pygeoprocessing.get_vector_info(
+            filepath)['projection_wkt']
+    else:
+        raise ValueError(f"{filepath} must be a GDAL vector or raster.")
+
+    return target_spatial_prj

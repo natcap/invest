@@ -84,6 +84,9 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
 class SetupTab extends React.Component {
   constructor(props) {
     super(props);
+    this.dropdownRequestId = 0;
+    this.enabledRequestId = 0;
+    this.validationRequestId = 0;
     this._isMounted = false;
     this.validationTimer = null;
     this.enabledTimer = null;
@@ -158,6 +161,7 @@ class SetupTab extends React.Component {
     }, () => {
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
@@ -326,13 +330,21 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgTouched(key) {
-    const { argsValues } = this.state;
-    if (!argsValues[key].touched) {
-      argsValues[key].touched = true;
-      this.setState({
-        argsValues: argsValues,
-      });
-    }
+    this.setState((prevState) => {
+      if (prevState.argsValues[key].touched) {
+        return null;
+      }
+  
+      return {
+        argsValues: {
+          ...prevState.argsValues,
+          [key]: {
+            ...prevState.argsValues[key],
+            touched: true,
+          },
+        },
+      };
+    });
   }
 
   /** Update state with arg values as they change. And validate the args.
@@ -347,14 +359,53 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    const { argsValues } = this.state;
-    argsValues[key].value = value;
-    this.setState({
-      argsValues: argsValues,
-    }, () => {
-      this.props.updateJobProperties(this.props.tabID, {
-        status: undefined, // Clear job status to hide model status indicator.
+    const { argsSpec } = this.props;
+
+    const dependentArgkeys = Object.keys(argsSpec).filter(
+      (argkey) => argsSpec[argkey]?.responsive_to === key
+    );
+
+    this.setState((prevState) => {
+      const newArgsValues = {
+        ...prevState.argsValues,
+        [key]: {
+          ...prevState.argsValues[key],
+          value,
+        },
+      };
+  
+      const newArgsValidation = {
+        ...prevState.argsValidation,
+        [key]: {
+          ...prevState.argsValidation[key],
+          valid: undefined,
+          validationMessage: '',
+        },
+      };
+  
+      dependentArgkeys.forEach((argkey) => {
+        newArgsValues[argkey] = {
+          ...newArgsValues[argkey],
+          value: '',
+        };
+  
+        newArgsValidation[argkey] = {
+          ...prevState.argsValidation[argkey],
+          valid: undefined,
+          validationMessage: '',
+        };
       });
+
+      return {
+        argsValues: newArgsValues,
+        argsValidation: newArgsValidation,
+      };
+      }, () => {
+      this.props.updateJobProperties(this.props.tabID, {
+        // Clear job status to hide the model status indicator.
+        status: undefined,
+      });
+
       this.debouncedValidate();
       this.debouncedArgsEnabled();
       this.debouncedDropdownFunctions();
@@ -386,6 +437,7 @@ class SetupTab extends React.Component {
       });
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
@@ -410,17 +462,25 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investArgsEnabled() {
+    const requestId = ++this.enabledRequestId;
     const { modelID } = this.props;
     const { argsValues } = this.state;
-
-    if (this._isMounted) {
-      this.setState({
-        argsEnabled: await fetchArgsEnabled({
-          model_id: modelID,
-          args: JSON.stringify(argsDictFromObject(argsValues)),
-        }),
-      });
+  
+    const argsEnabled = await fetchArgsEnabled({
+      model_id: modelID,
+      args: JSON.stringify(argsDictFromObject(argsValues)),
+    });
+  
+    if (
+      requestId !== this.enabledRequestId ||
+      !this._isMounted
+    ) {
+      return;
     }
+  
+    this.setState({
+      argsEnabled,
+    });
   }
 
   debouncedDropdownFunctions() {
@@ -437,17 +497,62 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async callDropdownFunctions() {
+    const requestId = ++this.dropdownRequestId;
     const { modelID } = this.props;
-    const { argsValues, argsDropdownOptions } = this.state;
     const payload = {
       model_id: modelID,
-      args: JSON.stringify(argsDictFromObject(argsValues)),
+      args: JSON.stringify(argsDictFromObject(this.state.argsValues)),
     };
+  
     const results = await getDynamicDropdowns(payload);
-    Object.keys(results).forEach((argkey) => {
-      argsDropdownOptions[argkey] = results[argkey];
+  
+    if (
+      requestId !== this.dropdownRequestId ||
+      !this._isMounted
+    ) {
+      return;
+    }
+  
+    this.setState((prevState) => {
+      const argsDropdownOptions = {
+        ...prevState.argsDropdownOptions,
+      };
+      const argsValues = {
+        ...prevState.argsValues,
+      };
+  
+      Object.keys(results ?? {}).forEach((argkey) => {
+        const options = results[argkey];
+        argsDropdownOptions[argkey] = options;
+        
+        if (!argsValues[argkey]){
+          return;
+        }
+        const currentValue = prevState.argsValues[argkey].value;
+        const currentValueIsValid = options.some(
+          (option) => option.key === currentValue
+        );
+        const isTargetSpatialDropdown = [
+          'target_pixelsize',
+          'target_projection',
+        ].includes(this.props.argsSpec[argkey]?.id);
+  
+        if (!currentValueIsValid && isTargetSpatialDropdown) {
+          argsValues[argkey] = {
+            ...prevState.argsValues[argkey],
+            value: options[0]?.key || '',
+          };
+        }
+      });
+
+      return {
+        argsDropdownOptions,
+        argsValues,
+      };
+    }, () => {
+      this.debouncedValidate();
+      this.debouncedArgsEnabled();
     });
-    this.setState({ argsDropdownOptions: argsDropdownOptions });
   }
 
   /** Get a debounced version of investValidate.
@@ -471,6 +576,7 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investValidate() {
+    const requestId = ++this.validationRequestId;
     const { argsSpec, modelID } = this.props;
     const { argsValues, argsValidation, argsValid } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
@@ -479,6 +585,14 @@ class SetupTab extends React.Component {
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await fetchValidation(payload);
+
+    // Ignore an outdated response or a response received after unmounting.
+    if (
+      requestId !== this.validationRequestId ||
+      !this._isMounted
+    ) {
+      return;
+    }
 
     // A) At least one arg was invalid:
     if (results.length) {

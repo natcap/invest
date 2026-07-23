@@ -20,6 +20,28 @@ from natcap.invest.unit_registry import u
 LOGGER = logging.getLogger(__name__)
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
 
+
+def _get_pixelsize_umh(args, model_spec):
+    """Return spatial inputs and pixel size as dropdown Options, default first
+
+    Pixel size units match the units specified in the current target_projection
+    input's projection. Note that if an input is not projected, it will not
+    appear in the dropdown list so if the default input is not projected, the
+    default behavior will be different from what is expected."""
+    if args['model_option'] == 'lulc':
+        default_for_model_option = 'lulc_base'
+    else:
+        default_for_model_option = 'ndvi_base'
+
+    options = spec._get_pixel_size(args, model_spec)
+
+    default_pixelsize_input = [
+        opt for opt in options if opt.key == default_for_model_option]
+    ordered_options = default_pixelsize_input + [
+        opt for opt in options if opt.key != default_for_model_option]
+    return ordered_options
+
+
 _model_description = gettext(
     """
     The InVEST Urban Mental Health model estimates the impacts of nature
@@ -47,7 +69,8 @@ MODEL_SPEC = spec.ModelSpec(
          "health_cost_rate"],
         ["model_option"],
         ["ndvi_base", "ndvi_alt"],
-        ["lulc_base", "lulc_alt", "lulc_attr_csv"]
+        ["lulc_base", "lulc_alt", "lulc_attr_csv"],
+        ["target_projection", "target_pixelsize"]
     ],
     inputs=[
         spec.WORKSPACE,
@@ -63,7 +86,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "determine the processing area. Final outputs will be clipped "
                 "to this AOI."),
             projected=True,
-            projection_units=u.meter
+            is_default_projection=True
         )),
         spec.SingleBandRasterInput(
             id="population_raster",
@@ -247,7 +270,21 @@ MODEL_SPEC = spec.ModelSpec(
             # raster is provided so attribute table is needed for water masking
             required="model_option=='lulc' or (model_option!='lulc' and lulc_base)",
             allowed="model_option=='lulc' or lulc_base"
-        )
+        ),
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            projection_units=u.meter
+        )),
+        spec.TARGET_PIXELSIZE.model_copy(update=dict(
+            about=gettext(
+                "Input with target pixel size to which all other spatial "
+                "inputs will be resampled. Units match those of the selected "
+                "Target Projection. If the selected model option is 'LULC', "
+                "then will default to the baseline LULC raster pixel size. "
+                "Otherwise, will default to the baseline NDVI raster "
+                "pixel size."),
+            dropdown_function=_get_pixelsize_umh,
+            responsive_to='model_option'
+        )),
         ],
     outputs=[
             spec.SingleBandRasterOutput(
@@ -538,6 +575,14 @@ MODEL_SPEC = spec.ModelSpec(
                 data_type=float,
                 units=u.people
             ),
+            spec.VectorOutput(
+                id="aoi_reprojected",
+                path="intermediate/aoi_reprojected.shp",
+                about=gettext(
+                    "AOI vector reprojected to match the selected target "
+                    "projection."),
+                fields=[]
+            ),
             spec.TASKGRAPH_CACHE
         ]
 )
@@ -613,6 +658,15 @@ def execute(args):
                 and not ``args['ndvi_base']``. NDVI value of the LULC class.
             - ``exclude`` (bool): (required) Specifies whether to keep (0)
                 or mask out (1) the LULC class.
+        args['target_projection'] (string): (optional) if a non-empty string,
+            path to input that defines the target projection and alignment
+            for other spatial inputs.
+        args['target_pixelsize'] (string): (optional) if a non-empty string,
+            path to input that defines the target pixel size for other
+            spatial inputs.
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
 
     Returns:
         dict: File registry dictionary mapping ``MODEL_SPEC`` output ids to
@@ -624,12 +678,8 @@ def execute(args):
     LOGGER.info("Start preprocessing")
 
     # get target pixel size for outputs
-    if args['model_option'] == 'ndvi':
-        pixel_size = _get_raster_pixel_size_in_meters(args['ndvi_base'],
-                                                      args['aoi_path'])
-    else:
-        pixel_size = _get_raster_pixel_size_in_meters(args['lulc_base'],
-                                                      args['aoi_path'])
+    pixel_size = _get_raster_pixel_size_in_meters(
+        args[args['target_pixelsize']], args[args['target_projection']])
 
     pixel_radius = int(round(args['search_radius']/pixel_size[0]))
     LOGGER.info(f"Search radius {args['search_radius']} results in "
@@ -649,7 +699,23 @@ def execute(args):
     # Users should input the AOI to which they want outputs clipped
     # InVEST will take care of buffering the processing AOI to ensure
     # correct edge pixel calculation
-    aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
+    target_spatial_prj = utils.get_raster_or_vector_projection(
+        args[args['target_projection']])
+    if args['target_projection'] != 'aoi_path':
+        LOGGER.info("Reprojecting AOI to target projection defined in "
+                    f"{args['target_projection']}")
+        reproject_aoi_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(args['aoi_path'], target_spatial_prj,
+                  file_registry['aoi_reprojected']),
+            target_path_list=[file_registry['aoi_reprojected']],
+            task_name='reproject aoi vector')
+        aoi = file_registry['aoi_reprojected']
+        align_dependent_tasks = [reproject_aoi_task]
+    else:
+        aoi = args['aoi_path']
+        align_dependent_tasks = []
+    aoi_info = pygeoprocessing.get_vector_info(aoi)
     aoi_projection = aoi_info["projection_wkt"]
     aoi_sr = osr.SpatialReference()
     aoi_sr.ImportFromWkt(aoi_projection)
@@ -678,18 +744,20 @@ def execute(args):
         # Note: population raster is not checked; it just needs to cover AOI
         # which seems straighforward enough to not require checking bounds
 
-    align_index = input_align_list.index(
-        args['lulc_base'] if args['model_option'] == 'lulc' else args['ndvi_base'])
-    LOGGER.info(f"Aligning input rasters to {input_align_list[align_index]}")
-
+    if args[args['target_pixelsize']] in input_align_list:
+        align_index = input_align_list.index(args[args['target_pixelsize']])
+    else:
+        align_index = 0
+    LOGGER.info(f"Aligning raster stack to {input_align_list[align_index]}")
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(input_align_list, output_align_list, resample_method_list,
               pixel_size, aoi_buffered_bbox),
         kwargs={
             'raster_align_index': align_index,
-            'target_projection_wkt': aoi_projection},
+            'target_projection_wkt': target_spatial_prj},
         target_path_list=output_align_list,
+        dependent_task_list=align_dependent_tasks,
         task_name='align input rasters')
 
     # Resample population raster to match aligned inputs; this is used for
@@ -708,7 +776,7 @@ def execute(args):
                 'population_aligned'],
             'target_pixel_size': pixel_size,
             'target_bb': target_snapped_bbox,
-            'target_projection_wkt': aoi_projection,
+            'target_projection_wkt': target_spatial_prj,
             'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['population_aligned']],
@@ -942,19 +1010,18 @@ def execute(args):
     return file_registry.registry
 
 
-def _get_raster_pixel_size_in_meters(raster_path, vector_path):
-    """Get square pixel size in meters; if not projected in m, use vector CRS.
+def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
+    """Get square pixel size of raster in meters.
 
-    Use gdal to auto calculate the target pixel size in meters if transforming
-    the raster to the CRS of the input vector AOI. This is necessary because
-    we do not want to force users to initially project their input rasters
-    in meters, however align_and_resize requires a target pixel size.
-    The pixels will be square with the same value for width and height.
+    This is necessary because we do not want to force users to initially
+    project their input rasters in meters, however align_and_resize requires
+    a target pixel size. The pixels will be square with the same value for
+    width and height.
 
     Args:
         raster_path (str): Path to baseline LULC or baseline NDVI raster,
             which may or may not be projected in meters.
-        vector_path (str): Path to AOI vector in a projected CRS with
+        spatial_path (str): Path to a spatial file in a projected CRS with
             units in meters.
 
     Returns:
@@ -962,7 +1029,7 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
             used as the target pixel size in meters when aligning and resizing
             raster stack.
     """
-    def _raster_projected_in_m(projection_wkt):
+    def _spatial_file_projected_in_m(projection_wkt):
         if projection_wkt:
             srs = osr.SpatialReference()
             srs.ImportFromWkt(projection_wkt)
@@ -974,30 +1041,27 @@ def _get_raster_pixel_size_in_meters(raster_path, vector_path):
         return False
 
     raster_info = pygeoprocessing.get_raster_info(raster_path)
-    if _raster_projected_in_m(raster_info['projection_wkt']):
+    spatial_wkt = utils.get_raster_or_vector_projection(spatial_path)
+    if not _spatial_file_projected_in_m(spatial_wkt):
+        raise ValueError(
+            f"target_projection ({spatial_path}) must be projected in m."
+            f"Current projection: {spatial_wkt}")
+
+    if _spatial_file_projected_in_m(raster_info['projection_wkt']):
         tgt_pixel_size = numpy.mean([abs(raster_info["pixel_size"][0]),
                                      abs(raster_info["pixel_size"][1])])
-        LOGGER.info("Baseline raster is projected in meters; will use pixel "
-                    f"size {tgt_pixel_size} as target in align_and_resize, "
-                    "which is the native resolution of the raster (transformed"
-                    "to have square pixels if it doesn't already).")
+        LOGGER.info(
+            "target_pixelsize raster is projected in meters; will use pixel "
+            f"size {tgt_pixel_size} as target in align_and_resize, which is "
+            "the native resolution of the raster (transformed to have square "
+            "pixels if it doesn't already).")
         return (tgt_pixel_size, -tgt_pixel_size)
-    else:
-        vector_info = pygeoprocessing.get_vector_info(vector_path)
-        vector_wkt = vector_info["projection_wkt"]
-
-        src_ds = gdal.Open(raster_path)
-        transformer = gdal.Transformer(src_ds, None, [f'DST_SRS={vector_wkt}'])
-        target_warp = gdal.SuggestedWarpOutput(src_ds, transformer)
-        pixel_width = target_warp.geotransform[1]
-        pixel_height = target_warp.geotransform[5]
-        LOGGER.info("Baseline raster is not projected in meters; will use "
-                    f"transformed pixel size {pixel_width, pixel_height} as "
-                    "target in align_and_resize")
-        src_ds = None
-
-        tgt_pixel_size = numpy.mean([abs(pixel_width), abs(pixel_height)])
-        return (tgt_pixel_size, -tgt_pixel_size)
+    pixel_width, pixel_height = utils.get_raster_pixel_size_in_tgt_projection_units(
+        raster_path, spatial_path)
+    LOGGER.info("target_pixelsize raster is not projected in meters; will use "
+                f"transformed pixel size {pixel_width, pixel_height} as "
+                "target in align_and_resize")
+    return (pixel_width, pixel_height)
 
 
 def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
