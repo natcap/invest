@@ -21,14 +21,43 @@ async function getFreePort() {
 }
 
 /**
- * Wait for a invest server process to start up, handling any errors.
- * @param  {ChildProcess} pythonServerProcess - server process instance.
- * @param {string} url - server status url to retry
+ * Wait for the server to become responsive.
+ * @param {signal} signal - AbortController signal to abort trying to connect
  * @param {number} maxRetries - number of retries allowed
  * @returns {number} PID of the started process, or undefined if it fails to launch
  */
-export async function handleServerStartup(pythonServerProcess, url, maxRetries=500) {
-  let processErrored = false;
+async function getServerReady(signal, maxRetries = 500) {
+  let retries = 0;
+  while (!signal.aborted && retries < maxRetries) {
+    logger.debug(`retry # ${retries}`);
+    try {
+      await fetch(`${HOSTNAME}:${port}/api/ready`, { method: 'get' });
+      logger.info('flask is ready');
+      return;
+    } catch (error) {
+      if (error.code === 'ECONNREFUSED') {
+        // wait 300ms before retrying
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        retries++;
+      } else {
+        logger.error(error);
+        throw error;
+      }
+    }
+  }
+  logger.error(`Not able to connect to server after ${retries} tries.`);
+  throw new Error('Could not connect');
+}
+
+/**
+ * Wait for a invest server process to start up, handling any errors.
+ * @param  {ChildProcess} pythonServerProcess - server process instance.
+ * @returns {number} PID of the started process, or undefined if it fails to launch
+ */
+export async function handleServerStartup(pythonServerProcess) {
+  const controller = new AbortController();
+  const signal = controller.signal;
+
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
   });
@@ -51,7 +80,7 @@ export async function handleServerStartup(pythonServerProcess, url, maxRetries=5
   pythonServerProcess.on('exit', (code) => {
     logger.debug(`Flask process exited with code ${code}`);
     if (code != 0) {
-      processErrored = true;
+      controller.abort();
     }
   });
   pythonServerProcess.on('close', (code, signal) => {
@@ -60,31 +89,14 @@ export async function handleServerStartup(pythonServerProcess, url, maxRetries=5
   pythonServerProcess.on('disconnect', () => {
     logger.debug('Flask process disconnected');
   });
-  pidToSubprocess[pythonServerProcess.pid] = pythonServerProcess;
 
-  // Wait for the server to start up
-  let retries = 0;
-  while (retries < 500) {
-    if (processErrored) {
-      return undefined;
-    }
-    logger.debug(`retry # ${retries}`);
-    try {
-      await fetch(url, { method: 'get' });
-      logger.info('flask is ready');
-      return pythonServerProcess.pid;
-    } catch (error) {
-      if (error.code === 'ECONNREFUSED') {
-        // wait 300ms before retrying
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        retries++;
-      } else {
-        logger.error(error);
-        throw error;
-      }
-    }
+  try {
+    await getServerReady(signal);
+  } catch (error) {
+    return undefined;
   }
-  logger.error(`Not able to connect to server after ${retries} tries.`);
+  pidToSubprocess[pythonServerProcess.pid] = pythonServerProcess;
+  return pythonServerProcess.pid;
 }
 
 /**
@@ -109,8 +121,7 @@ export async function createCoreServerProcess(_port = undefined) {
   settingsStore.set('core.pid', pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-  const pid = await handleServerStartup(
-    pythonServerProcess, `${HOSTNAME}:${port}/api/ready`);
+  const pid = await handleServerStartup(pythonServerProcess);
   return pid;
 }
 
@@ -141,8 +152,7 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   settingsStore.set(`plugins.${modelID}.pid`, pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-  const pid = await handleServerStartup(
-    pythonServerProcess, `${HOSTNAME}:${port}/api/ready`);
+  const pid = await handleServerStartup(pythonServerProcess);
   return pid;
 }
 
