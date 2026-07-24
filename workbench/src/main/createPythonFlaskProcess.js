@@ -25,9 +25,10 @@ async function getFreePort() {
  * @param {string} url - URL to poll for server status
  * @param {signal} signal - AbortController signal to abort trying to connect
  * @param {number} maxRetries - number of retries allowed
- * @returns {number} PID of the started process, or undefined if it fails to launch
+ * @returns undefined when the server is ready, or throws an error
+ *          if it fails to launch
  */
-async function getServerReady(url, signal, maxRetries = 500) {
+async function getFlaskIsReady(url, signal, maxRetries = 500) {
   let retries = 0;
   while (!signal.aborted && retries < maxRetries) {
     logger.debug(`retry # ${retries}`);
