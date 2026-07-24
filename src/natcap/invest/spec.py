@@ -180,8 +180,17 @@ def validate_permissions_string(permissions):
 
 def smart_title(text):
     words = text.split()
-    new_words = [
-        word if word.isupper() else word.capitalize() for word in words]
+    new_words = []
+
+    for word in words:
+        if word.isupper():
+            new_words.append(word)
+        else:
+            # Split by slash, capitalize each part, and rejoin with a slash
+            # e.g., to ensure Land Use/Land Cover gets correctly formatted
+            parts = [p.capitalize() for p in word.split('/')]
+            new_words.append('/'.join(parts))
+
     return " ".join(new_words)
 
 
@@ -291,6 +300,14 @@ def _get_pixel_size(args, model_spec, default_input_id=None):
         list of options for pixel size
     """
     spatial_inputs = _get_spatial_inputs(args, model_spec, False)
+
+    # add default pixel size input to spatial inputs if not already in there
+    if default_input_id and (
+            default_input_id not in [inp.key for inp in spatial_inputs]):
+        spatial_inputs.append(Option(key=default_input_id, display_name=''))
+
+    # if there is not a target_projection selected or user has not entered
+    # a value associated with that id, default back to default projection
     projection_input_id = args.get('target_projection')
     if not projection_input_id or not args.get(projection_input_id):
         default_projection_inputs = [
@@ -306,50 +323,45 @@ def _get_pixel_size(args, model_spec, default_input_id=None):
     else:
         current_projection = None
 
-    raster_inputs = [opt for opt in spatial_inputs if args.get(opt.key) and (
-        pygeoprocessing.get_gis_type(
-            args[opt.key]) == pygeoprocessing.RASTER_TYPE)]
-    if not raster_inputs:
-        return []
-
     if default_input_id is None:
         default_inputs = [input_spec for input_spec in model_spec.inputs if (
-            isinstance(input_spec, SpatialFileInput) and
             input_spec.is_default_projection)]
         if default_inputs:
             default_input_id = default_inputs[0].id
 
-    def get_display_name_and_pixel_size(option_key, selected_projection_wkt):
-        # the only "empty" input that would be passed to this function is the
-        # default target projection input
-        inp_name = smart_title(model_spec.get_input(option_key).name)
-        if not args.get(option_key):
-            return "(Default) " + inp_name
-        # if default projection input hasn't been entered and target
-        # projection hasn't been selected, i.e., changed from the default text,
-        # selected_projection_wkt will be None
-        if selected_projection_wkt:
-            # convert pixel size to be in same units as selected target projection
-            trans_pixelsize = utils.get_raster_pixel_size_in_tgt_projection_units(
-                args[option_key], selected_projection_wkt)
-            formatted_pixelsize = [float(round(pix, 3)) for pix in trans_pixelsize]
-            is_default = (
-                option_key == default_input_id
-                if default_input_id is not None
-                else model_spec.get_input(option_key).is_default_projection
-            )
-            if is_default:
-                return "(Default) " + inp_name + f" {formatted_pixelsize}"
-            return inp_name + f" {formatted_pixelsize}"
-        else:
-            return ''
+    raster_inputs = [
+        opt for opt in spatial_inputs if (
+            args.get(opt.key) and (
+                pygeoprocessing.get_gis_type(args[opt.key]) == pygeoprocessing.RASTER_TYPE))
+        or opt.key == default_input_id]
+
+    if not raster_inputs:
+        return []
 
     options = []
     for opt in raster_inputs:
-        display_name = get_display_name_and_pixel_size(opt.key,
-                                                       current_projection)
-        if display_name:
-            options.append(Option(key=opt.key, display_name=display_name))
+        inp_name = smart_title(model_spec.get_input(opt.key).name)
+        # if default projection input hasn't been entered and target
+        # projection hasn't been selected, i.e., changed from the default text,
+        # selected_projection_wkt will be None
+        if current_projection and args.get(opt.key):
+            # convert pixel size to be in same units as selected target projection
+            try:
+                trans_pixelsize = utils.get_raster_pixel_size_in_tgt_projection_units(
+                    args[opt.key], current_projection)
+                formatted_pixelsize = [float(round(pix, 3)) for pix in trans_pixelsize]
+            except ValueError:
+                # raised if current_projection is unprojected
+                formatted_pixelsize = ''
+
+        else:
+            formatted_pixelsize = ''
+
+        if opt.key == default_input_id:
+            display_name = "(Default) " + inp_name + f" {formatted_pixelsize}"
+        else:
+            display_name = inp_name + f" {formatted_pixelsize}"
+        options.append(Option(key=opt.key, display_name=display_name))
 
     if default_input_id is not None:
         default_options = [
@@ -490,6 +502,7 @@ class Input(IOModel):
     def validate_with_context(self, value, args, model_spec):
         """Validate this value using other model arguments."""
         return None
+
 
 class Output(IOModel):
     """A data output, or result, of an invest model.
@@ -1916,7 +1929,11 @@ class OptionSpatialInput(OptionStringInput):
             selected_spec = model_spec.get_input(value)
         except KeyError:
             return validation_messages.MISSING_KEY
-         # otherwise leaving validation to the actual files
+        # otherwise leaving validation to the actual files
+
+        filepath = args.get(value)
+        if not filepath:
+            return validation_messages.FILE_NOT_FOUND
 
         filepath = args.get(value)
         projection_spec = selected_spec.model_copy(update={
@@ -2663,7 +2680,7 @@ TARGET_PROJECTION = OptionSpatialInput( #TODO - add 'Custom' option to all lists
     about=gettext(
         "Input with target projection to which all other spatial "
         "inputs will be reprojected."),
-    required=False,  # models will fallback to using default target projections
+    required=True,  # models will fallback to using default target projections
     options=[],
     dropdown_function=_get_spatial_inputs
 )
@@ -2674,7 +2691,7 @@ TARGET_PIXELSIZE = OptionSpatialInput(
         "Input with target pixel size to which all other spatial "
         "inputs will be resampled. Units match those of the selected "
         "Target Projection."),
-    required=False,  # models will fallback to using default target pixel size
+    required=True,  # models will fallback to using default target pixel size
     options=[],
     dropdown_function=_get_pixel_size
 )
