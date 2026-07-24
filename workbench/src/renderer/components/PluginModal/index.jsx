@@ -166,14 +166,6 @@ export default function PluginModal(props) {
     );
   };
 
-  const resetCondaPath = () => {
-    ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'defaultMicromamba'
-    ).then((data) => {
-      setCondaPath(data);
-    });
-  };
-
   const saveCondaPath = () => {
     ipcRenderer.send(
       ipcMainChannels.SET_SETTING, 'micromamba', condaPath
@@ -521,7 +513,10 @@ export default function PluginModal(props) {
             >
               <MdFolderOpen />
             </Button>
-            <Button onClick={resetCondaPath} className="text-nowrap ms-1">
+            <Button
+              className="text-nowrap ms-1"
+              onClick={() => setCondaPath(window.Workbench.DEFAULT_MICROMAMBA)}
+            >
               {t('Reset')}
             </Button>
           </div>
