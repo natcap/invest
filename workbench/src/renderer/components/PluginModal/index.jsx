@@ -581,12 +581,14 @@ export default function PluginModal(props) {
             </div>
           </Form.Group>
         ))}
-        <Button
-          onClick={savePluginEnvs}
-          className="text-nowrap mt-3"
-          disabled={!Object.keys(pluginEnvs).length}>
-            {t('Save')}
-        </Button>
+        {Object.keys(pluginEnvs).length
+          ? <Button
+              onClick={savePluginEnvs}
+              className="text-nowrap mt-3">
+                {t('Save')}
+            </Button>
+          : <p>{t('No plugins to configure.')}</p>
+        }
       </Form.Group>
       </Form>
     </Modal.Body>
