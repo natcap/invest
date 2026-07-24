@@ -22,16 +22,17 @@ async function getFreePort() {
 
 /**
  * Wait for the server to become responsive.
+ * @param {string} url - URL to poll for server status
  * @param {signal} signal - AbortController signal to abort trying to connect
  * @param {number} maxRetries - number of retries allowed
  * @returns {number} PID of the started process, or undefined if it fails to launch
  */
-async function getServerReady(signal, maxRetries = 500) {
+async function getServerReady(url, signal, maxRetries = 500) {
   let retries = 0;
   while (!signal.aborted && retries < maxRetries) {
     logger.debug(`retry # ${retries}`);
     try {
-      await fetch(`${HOSTNAME}:${port}/api/ready`, { method: 'get' });
+      await fetch(url, { method: 'get' });
       logger.info('flask is ready');
       return;
     } catch (error) {
@@ -51,10 +52,11 @@ async function getServerReady(signal, maxRetries = 500) {
 
 /**
  * Wait for a invest server process to start up, handling any errors.
- * @param  {ChildProcess} pythonServerProcess - server process instance.
+ * @param {ChildProcess} pythonServerProcess - server process instance.
+ * @param {string} url - URL to poll for server status
  * @returns {number} PID of the started process, or undefined if it fails to launch
  */
-export async function handleServerStartup(pythonServerProcess) {
+export async function handleServerStartup(pythonServerProcess, url) {
   const controller = new AbortController();
   const signal = controller.signal;
 
@@ -91,7 +93,7 @@ export async function handleServerStartup(pythonServerProcess) {
   });
 
   try {
-    await getServerReady(signal);
+    await getServerReady(url, signal);
   } catch (error) {
     return undefined;
   }
@@ -121,7 +123,8 @@ export async function createCoreServerProcess(_port = undefined) {
   settingsStore.set('core.pid', pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-  const pid = await handleServerStartup(pythonServerProcess);
+  const pid = await handleServerStartup(
+    pythonServerProcess, `${HOSTNAME}:${port}/api/ready`);
   return pid;
 }
 
@@ -152,7 +155,8 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   settingsStore.set(`plugins.${modelID}.pid`, pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-  const pid = await handleServerStartup(pythonServerProcess);
+  const pid = await handleServerStartup(
+    pythonServerProcess, `${HOSTNAME}:${port}/api/ready`);
   return pid;
 }
 
