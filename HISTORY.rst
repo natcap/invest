@@ -66,6 +66,13 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* Fixed an issue with cross-compiling ``natcap.invest`` for non-native
+  architectures, particularly on conda-forge.  This should also speed up
+  the operation of ``setup.py``.
+  (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
+
 Workbench
 =========
 * Added a file browse button to the input field for selecting a
