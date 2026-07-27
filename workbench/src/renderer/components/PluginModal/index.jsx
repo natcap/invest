@@ -73,7 +73,7 @@ export default function PluginModal(props) {
     ).then((data) => setPluginEnvs(
       Object.fromEntries(
         Object.keys(data).map(
-          (pluginID) => [pluginID, data[pluginID].env]
+          (pluginID) => [pluginID, data[pluginID].userDefinedEnv]
         )
       )
     ))
@@ -174,7 +174,7 @@ export default function PluginModal(props) {
 
   const resetPluginEnv = (pluginID) => {
     ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, `plugins.${pluginID}.defaultEnv`
+      ipcMainChannels.GET_SETTING, `plugins.${pluginID}.env`
     ).then((value) => {
       setPluginEnvs({...pluginEnvs, [pluginID]: value});
     });
@@ -183,7 +183,7 @@ export default function PluginModal(props) {
   const savePluginEnvs = () => {
     Object.entries(pluginEnvs).forEach(([pluginID, envPath]) => {
       ipcRenderer.send(
-        ipcMainChannels.SET_SETTING, `plugins.${pluginID}.env`, envPath
+        ipcMainChannels.SET_SETTING, `plugins.${pluginID}.userDefinedEnv`, envPath
       );
     });
   };
