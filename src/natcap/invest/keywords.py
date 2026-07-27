@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class Keyword(BaseModel):
     value: str
     vocabulary: str
+    aliases: list[str] = []
 
 
 class GCMDKeyword(Keyword):
@@ -92,7 +93,8 @@ CROP_TYPE = GCMDKeyword(
 DEM = GCMDKeyword(
     value='DIGITAL ELEVATION/TERRAIN MODEL (DEM)',
     uuid='395372ad-2883-4b6a-a481-6383a310ca47',
-    full_path='EARTH SCIENCE > LAND SURFACE > TOPOGRAPHY > TERRAIN ELEVATION > DIGITAL ELEVATION/TERRAIN MODEL (DEM)')
+    full_path='EARTH SCIENCE > LAND SURFACE > TOPOGRAPHY > TERRAIN ELEVATION > DIGITAL ELEVATION/TERRAIN MODEL (DEM)',
+    aliases=['DEM', 'DIGITAL ELEVATION MODEL'])
 
 DRAINAGE = GCMDKeyword(
     value='DRAINAGE',
@@ -137,12 +139,16 @@ LANDMASS = InvestKeyword(
 LULC = GCMDKeyword(
     value='LAND USE/LAND COVER',
     uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
-    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER')
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER',
+    alias=['LAND USE LAND COVER'])
 
+# TODO: this is not currently in use. Instead biophysical tables are
+# tagged with LULC. Should we use this tag instead?
 LULC_CLASSES = GCMDKeyword(
     value='LAND USE/LAND COVER CLASSES',
     uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
-    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES')   
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES',
+    aliases=['LAND USE LAND COVER CLASSES'])
 
 NITROGEN = GCMDKeyword(
     value='NITROGEN',
@@ -256,11 +262,12 @@ SEA_LEVEL_RISE = GCMDKeyword(
 SHORELINES = GCMDKeyword(
     value='SHORELINES',
     uuid='1d3b4eb7-9931-44bf-8457-26847051b7a8',
-    full_path='EARTH SCIENCE > OCEANS > COASTAL PROCESSES > SHORELINES')
+    full_path='EARTH SCIENCE > OCEANS > COASTAL PROCESSES > SHORELINES',
+    aliases=['COASTLINE'])
 
 SOIL_ERODIBILITY = InvestKeyword(
     value='SOIL ERODIBILITY',
-    definition='The susceptibility of soil to erosion as a function of soil properties.')
+    definition='The susceptibility of soil to erosion as a function of soil properties.',)
 
 SOIL_EROSION = GCMDKeyword(
     value='SOIL EROSION',
@@ -270,7 +277,8 @@ SOIL_EROSION = GCMDKeyword(
 SOIL_ROOTING_DEPTH = GCMDKeyword(
     value='SOIL ROOTING DEPTH',
     uuid='1b475201-a032-4a66-a3aa-a35605affaee',
-    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL ROOTING DEPTH')
+    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL ROOTING DEPTH',
+    aliases=['DEPTH TO BEDROCK', 'ROOT RESTRICTING LAYER DEPTH'])
 
 USLE_C_FACTOR = InvestKeyword(
     value='USLE C FACTOR',

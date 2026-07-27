@@ -547,10 +547,10 @@ class InputTests(unittest.TestCase):
             about="Description.",
             keywords=[keywords.LULC],
             name="foo",
-            contents=[spec.DEM, spec.SOIL_GROUP]
+            contents=[spec.SOIL_GROUP]
         )
         expected_keywords = [
-            keywords.LULC.value, keywords.DEM.value,
+            keywords.LULC.value,
             keywords.HYDROLOGIC_SOIL_GROUPS.value]
         self.assertCountEqual(directory_input.get_keywords(), expected_keywords)
         self.assertCountEqual(

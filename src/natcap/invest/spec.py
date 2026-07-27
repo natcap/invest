@@ -312,11 +312,15 @@ class Input(BaseModel):
             return self.contents
         return []
 
-    def get_keywords(self, include_children=True):
+    def get_keywords(self, include_children=True, include_aliases=True):
         """Get a list of unique keyword strings for this input and children."""
         keywords = []
         if self.keywords:
-            keywords += [keyword.value for keyword in self.keywords]
+            for keyword in self.keywords:
+                keywords.append(keyword.value)
+                if include_aliases:
+                    keywords.extend(keyword.aliases)
+                # keywords += [keyword.value for keyword in self.keywords]
         if include_children:
             for child in self.get_child_inputs():
                 if child.keywords:
@@ -2641,6 +2645,7 @@ def write_metadata_file(datasource_path, spec, keywords_list,
     resource.set_lineage(lineage_statement)
     # a pre-existing metadata doc could have keywords
     words = resource.get_keywords()
+    # TODO: there could also be keywords attached to the `spec`.
     resource.set_keywords(set(words + keywords_list))
 
     if spec.about:
