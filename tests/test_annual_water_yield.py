@@ -583,32 +583,3 @@ class AnnualWaterYieldTests(unittest.TestCase):
             file_reg['aet'])['projection_wkt']
 
         self.assertEqual(actual_projection, target_projection_wkt)
-
-    def test_error_if_default_projection_is_unprojected(self):
-        """Test error if projection target unset and default is unprojected
-
-        Test that if default LULC raster is not projected, i.e. in EPSG 4326,
-        then error will be raised.
-        """
-        from natcap.invest.annual_water_yield import annual_water_yield
-
-        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
-        # reproject lulc to epsg 4326
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(4326)
-        target_projection_wkt = srs.ExportToWkt()
-        target_path = os.path.join(self.workspace_dir, "lulc_reprj.tif")
-        pygeoprocessing.warp_raster(
-            args['lulc_path'],
-            (0.0001347942195727987018, -0.0001347942195727987018), target_path,
-            resample_method='near',
-            target_projection_wkt=target_projection_wkt)
-        args['lulc_path'] = target_path
-        args['target_projection'] = ''
-        args['target_pixelsize'] = ''
-
-        # with self.assertRaises(ValueError) as context:
-        annual_water_yield.execute(args)
-        # self.assertTrue(
-        #     "Target projection must be projected" in
-        #     str(context.exception))

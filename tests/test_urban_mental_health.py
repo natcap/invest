@@ -1231,5 +1231,5 @@ class UMHTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             urban_mental_health.execute(args)
         self.assertTrue(
-            "Target projection must be projected" in
+            "must be projected in m." in
             str(context.exception))
