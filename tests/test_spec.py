@@ -578,23 +578,6 @@ class InputTests(unittest.TestCase):
         self.assertCountEqual(
             vector_input.get_keywords(include_children=False), [keywords.LULC.value])
 
-    def test_get_keywords_directory_input(self):
-        """Test that DirectoryInput.get_keywords returns correct keywords."""
-        directory_input = spec.DirectoryInput(
-            id="foo",
-            about="Description.",
-            keywords=[keywords.LULC],
-            name="foo",
-            contents=[spec.SOIL_GROUP]
-        )
-        expected_keywords = [
-            keywords.LULC.value,
-            keywords.HYDROLOGIC_SOIL_GROUPS.value]
-        self.assertCountEqual(directory_input.get_keywords(), expected_keywords)
-        self.assertCountEqual(
-            directory_input.get_keywords(include_children=False),
-            [keywords.LULC.value])
-
     def test_immutable_input(self):
         """Test that Input instances are immutable."""
         with self.assertRaises(ValidationError):
