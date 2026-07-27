@@ -74,8 +74,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Table mapping month indexes (1-12) to reference evapotranspiration"
                 " raster paths. The paths may be either absolute or relative to the"
                 " location of the ET0 table itself. There must be one reference"
-                " evapotranspiration raster provided for each of the 12 months. Each"
-                " ET0 raster represents monthly average values in millimeters."
+                " evapotranspiration raster provided for each of the 12 months."
                 " Required if User-Defined Local Recharge is not selected."
             ),
             required="not user_defined_local_recharge",
@@ -104,8 +103,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Table mapping month indexes (1-12) to monthly precipitation raster"
                 " paths. The paths may be either absolute or relative to the location"
                 " of the precipitation table itself. There must be one precipitation"
-                " raster provided for each of the 12 months. Each precipitation raster"
-                " represents monthly average values in millimeters."
+                " raster provided for each of the 12 months."
                 " Required if User-Defined Local Recharge is not selected."
             ),
             required="not user_defined_local_recharge",
