@@ -4,9 +4,7 @@ import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-
 import contextMenu from 'electron-context-menu';
 
 import BASE_URL from './baseUrl';
-import { getLogger } from './logger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+import { logger } from './logger';
 
 const isMac = process.platform === 'darwin';
 
@@ -117,7 +115,7 @@ function createWindow(parentWindow, isDevMode) {
   const win = new BrowserWindow({
     parent: parentWindow,
     width: 700,
-    height: 800,
+    height: 900,
     frame: true,
     webPreferences: {
       minimumFontSize: 12,

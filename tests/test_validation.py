@@ -23,7 +23,7 @@ from natcap.invest.spec import (
     u,
     BooleanInput,
     CSVInput,
-    DirectoryInput,
+    WorkspaceInput,
     FileInput,
     Input,
     IntegerInput,
@@ -307,8 +307,8 @@ class ValidatorTest(unittest.TestCase):
             self.assertTrue('timed out' in str(ws[0].message))
 
 
-class DirectoryValidation(unittest.TestCase):
-    """Test Directory Validation."""
+class WorkspaceValidation(unittest.TestCase):
+    """Test Workspace Validation."""
 
     def setUp(self):
         """Create a new workspace to use for each test."""
@@ -320,15 +320,7 @@ class DirectoryValidation(unittest.TestCase):
 
     def test_exists(self):
         """Validation: when a folder must exist and does."""
-        self.assertIsNone(DirectoryInput(
-            id='foo', contents=[]).validate(self.workspace_dir))
-
-    def test_not_exists(self):
-        """Validation: when a folder must exist but does not."""
-        dirpath = os.path.join(self.workspace_dir, 'nonexistent_dir')
-        validation_warning = DirectoryInput(
-            id='foo', contents=[]).validate(dirpath)
-        self.assertEqual(validation_warning, validation_messages.DIR_NOT_FOUND)
+        self.assertIsNone(WorkspaceInput().validate(self.workspace_dir))
 
     def test_file(self):
         """Validation: when a file is given to folder validation."""
@@ -336,22 +328,14 @@ class DirectoryValidation(unittest.TestCase):
         with open(filepath, 'w') as opened_file:
             opened_file.write('the text itself does not matter.')
 
-        validation_warning = DirectoryInput(
-            id='foo', contents=[]).validate(filepath)
+        validation_warning = WorkspaceInput().validate(filepath)
         self.assertEqual(validation_warning, validation_messages.NOT_A_DIR)
-
-    def test_valid_permissions(self):
-        """Validation: folder permissions."""
-        self.assertIsNone(DirectoryInput(
-            id='foo', contents=[], permissions='rwx').validate(self.workspace_dir))
 
     def test_workspace_not_exists(self):
         """Validation: when a folder's parent must exist with permissions."""
         dirpath = 'foo'
         new_dir = os.path.join(self.workspace_dir, dirpath)
-        self.assertIsNone(DirectoryInput(
-            id='foo', contents=[], must_exist=False, permissions='rwx'
-        ).validate(new_dir))
+        self.assertIsNone(WorkspaceInput().validate(new_dir))
 
 
 @unittest.skipIf(
@@ -365,8 +349,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
         permissions but is missing write and execute permissions."""
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD)
-            validation_warning = DirectoryInput(
-                id='foo', contents=[], permissions='rwx').validate(tempdir)
+            validation_warning = WorkspaceInput().validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='execute'))
@@ -376,8 +359,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
         permissions but is missing read and execute permissions."""
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IWRITE)
-            validation_warning = DirectoryInput(
-                id='foo', contents=[], permissions='rwx').validate(tempdir)
+            validation_warning = WorkspaceInput().validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read'))
@@ -387,8 +369,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
         permissions but is missing read and write permissions."""
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IEXEC)
-            validation_warning = DirectoryInput(
-                id='foo', contents=[], permissions='rwx').validate(tempdir)
+            validation_warning = WorkspaceInput().validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read'))
@@ -398,8 +379,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
         permissions but is missing execute permission."""
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD | stat.S_IWRITE)
-            validation_warning = DirectoryInput(
-                id='foo', contents=[], permissions='rwx').validate(tempdir)
+            validation_warning = WorkspaceInput().validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='execute'))
@@ -409,8 +389,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
         permissions but is missing write permission."""
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD | stat.S_IEXEC)
-            validation_warning = DirectoryInput(
-                id='foo', contents=[], permissions='rwx').validate(tempdir)
+            validation_warning = WorkspaceInput().validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='write'))
@@ -420,8 +399,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
         permissions but is missing read permission."""
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IWRITE | stat.S_IEXEC)
-            validation_warning = DirectoryInput(
-                id='foo', contents=[], permissions='rwx').validate(tempdir)
+            validation_warning = WorkspaceInput().validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read'))
@@ -1859,55 +1837,6 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEqual(
             validation_warnings,
             [(['number_a'], validation_messages.UNEXPECTED_ERROR)])
-
-    def test_conditionally_required_directory_contents(self):
-        """Validation: conditionally required directory contents."""
-        model_spec = model_spec_with_defaults(inputs=[
-            NumberInput(
-                id="some_number",
-                expression="value > 0.5",
-                units=u.none
-            ),
-            DirectoryInput(
-                id="directory",
-                contents=[
-                    CSVInput(
-                        id="file.1",
-                        required=True,
-                    ),
-                    CSVInput(
-                        id="file.2",
-                        required="some_number == 2"
-                    )
-                ]
-            )
-        ])
-        path_1 = os.path.join(self.workspace_dir, 'file.1')
-        with open(path_1, 'w') as my_file:
-            my_file.write('col1,col2')
-        args = {
-            'some_number': 1,
-            'directory': self.workspace_dir,
-        }
-        self.assertEqual([], validation.validate(args, model_spec))
-
-        path_2 = os.path.join(self.workspace_dir, 'file.2')
-        with open(path_2, 'w') as my_file:
-            my_file.write('col1,col2')
-        args = {
-            'some_number': 2,
-            'directory': self.workspace_dir,
-        }
-        self.assertEqual([], validation.validate(args, model_spec))
-
-        os.remove(path_2)
-        self.assertFalse(os.path.exists(path_2))
-        args = {
-            'some_number': 2,
-            'directory': self.workspace_dir,
-        }
-        # TODO: directory contents are not actually validated right now
-        self.assertEqual([], validation.validate(args, model_spec))
 
     def test_conditional_validity_recursive(self):
         """Validation: check that we can require from nested conditions."""

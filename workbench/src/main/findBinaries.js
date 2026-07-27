@@ -4,9 +4,7 @@ import { spawnSync } from 'child_process';
 import { ipcMain } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from './logger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+import { logger } from './logger';
 
 /**
  * Find paths to local invest executeable under dev or production environments.

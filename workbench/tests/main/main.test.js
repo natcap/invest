@@ -255,16 +255,10 @@ describe('investUsageLogger', () => {
     expect(fetch.mock.calls[0][0]).toBe(expectedURL);
     const startPayload = JSON.parse(fetch.mock.calls[0][1].body);
 
-    usageLogger.exit(investStdErr, PORT);
-    expect(fetch.mock.calls).toHaveLength(2);
-    const exitPayload = JSON.parse(fetch.mock.calls[1][1].body);
-
-    expect(startPayload.type).toBe('core');
-    expect(startPayload.session_id).toBe(exitPayload.session_id);
+    expect(startPayload.model_type).toBe('core');
     expect(startPayload.model_id).toBe(modelID);
     expect(JSON.parse(startPayload.model_args)).toMatchObject(args);
     expect(startPayload.invest_interface).toContain('Workbench');
-    expect(exitPayload.status).toBe(investStdErr);
   });
 
   test('logs plugin usage correctly', () => {
@@ -287,14 +281,14 @@ describe('investUsageLogger', () => {
 
     usageLogger.start('pluginA', args, PORT);
     let startPayload = JSON.parse(fetch.mock.calls[0][1].body);
-    expect(startPayload.type).toBe('plugin');
+    expect(startPayload.model_type).toBe('plugin');
     expect(startPayload.model_id).toBe('pluginA');
-    expect(startPayload.source).toBe('git+https://plugin');
+    expect(startPayload.plugin_source).toBe('git+https://plugin');
 
     usageLogger.start('pluginB', args, PORT);
     startPayload = JSON.parse(fetch.mock.calls[1][1].body);
-    expect(startPayload.type).toBe('plugin');
+    expect(startPayload.model_type).toBe('plugin');
     expect(startPayload.model_id).toBe('pluginB');
-    expect(startPayload.source).toBe('local');
+    expect(startPayload.plugin_source).toBe('local');
   });
 });

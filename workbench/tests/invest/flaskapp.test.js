@@ -224,6 +224,7 @@ describe('Test building model UIs and forum links', () => {
     'stormwater',
     'urban_cooling_model',
     'urban_flood_risk_mitigation',
+    'urban_mental_health',
     'urban_nature_access',
     'wave_energy',
     'wind_energy',

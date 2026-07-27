@@ -7,10 +7,8 @@ import {
 } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from './logger';
+import { logger } from './logger';
 import pkg from '../../package.json';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 export const APP_VERSION_TOKEN = 'app-version-token.txt';
 

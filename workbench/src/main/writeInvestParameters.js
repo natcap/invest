@@ -1,9 +1,7 @@
 import fetch from 'node-fetch';
 
-import { getLogger } from './logger';
-import { settingsStore } from './settingsStore';
+import { logger } from './logger';
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://127.0.0.1';
 
 export default function writeParametersToFile(payload, port) {

@@ -18,7 +18,6 @@ run.
 """
 
 import ast
-import codecs
 import collections
 import importlib
 import json
@@ -30,14 +29,11 @@ import re
 import shutil
 import tarfile
 import tempfile
-import warnings
 
-from osgeo import gdal
-
-from . import spec
-from . import utils
-from . import models
-
+from natcap.invest import models
+from natcap.invest import spec
+from natcap.invest import utils
+from natcap.invest.utils import base_model_id
 
 LOGGER = logging.getLogger(__name__)
 DATASTACK_EXTENSION = '.invest.tar.gz'
@@ -142,7 +138,7 @@ def build_datastack_archive(args, model_id, datastack_path):
     """
     module = importlib.import_module(
         # For plugins, use the model id before the '@'
-        name=models.model_id_to_pyname[model_id.split('@')[0]])
+        name=models.model_id_to_pyname[base_model_id(model_id)])
 
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')
@@ -163,9 +159,9 @@ def build_datastack_archive(args, model_id, datastack_path):
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
 
     spatial_types = {spec.SingleBandRasterInput, spec.VectorInput,
-        spec.RasterOrVectorInput}
+                     spec.RasterOrVectorInput}
     file_based_types = spatial_types.union({
-        spec.CSVInput, spec.FileInput, spec.DirectoryInput})
+        spec.CSVInput, spec.FileInput, spec.WorkspaceInput})
     rewritten_args = {}
     for key in args:
         # Allow the model to override specific arguments in datastack archive
@@ -188,13 +184,6 @@ def build_datastack_archive(args, model_id, datastack_path):
                 args[key], data_dir, files_found)
             continue
 
-        # We don't want to accidentally archive a user's complete workspace
-        # directory, complete with prior runs there.
-        if key == 'workspace_dir':
-            LOGGER.debug(
-                f"Skipping workspace directory: {args['workspace_dir']}")
-            continue
-
         LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
@@ -202,6 +191,13 @@ def build_datastack_archive(args, model_id, datastack_path):
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
         input_spec = module.MODEL_SPEC.get_input(key)
+        # We don't want to accidentally archive a user's complete workspace
+        # directory, complete with prior runs there.
+        if isinstance(input_spec, spec.WorkspaceInput):
+            LOGGER.debug(
+                f"Skipping workspace directory: {args['workspace_dir']}")
+            continue
+
         if type(input_spec) in file_based_types:
             if args[key] in {None, ''}:
                 LOGGER.info(
@@ -234,15 +230,18 @@ def build_datastack_archive(args, model_id, datastack_path):
 
             LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
 
+            csv_dir = os.path.join(data_dir, f'{key}_csv')
+            os.makedirs(csv_dir)
+
             target_csv_path = os.path.join(
-                data_dir, f'{key}_csv.csv')
+                csv_dir, os.path.basename(source_path))
             if not spatial_columns:
                 LOGGER.debug(
                     f'No spatial columns, copying to {target_csv_path}')
                 shutil.copyfile(source_path, target_csv_path)
             else:
                 contained_files_dir = os.path.join(
-                    data_dir, f'{key}_csv_data')
+                    csv_dir, f'{key}_csv_data')
 
                 dataframe = input_spec.get_validated_dataframe(source_path)
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
@@ -288,7 +287,7 @@ def build_datastack_archive(args, model_id, datastack_path):
                             target_filepath = utils.copy_spatial_files(
                                 source_filepath, target_dir)
                             target_filepath = os.path.relpath(
-                                target_filepath, data_dir)
+                                target_filepath, csv_dir)
 
                         LOGGER.debug(
                             'Spatial file in CSV copied from '
@@ -309,26 +308,6 @@ def build_datastack_archive(args, model_id, datastack_path):
                 data_dir, f'{key}_file')
             shutil.copyfile(source_path, target_filepath)
             target_arg_value = target_filepath
-            files_found[source_path] = target_arg_value
-
-        elif type(input_spec)is spec.DirectoryInput:
-            # copy the whole folder
-            target_directory = os.path.join(data_dir, f'{key}_directory')
-            os.makedirs(target_directory)
-
-            # We want to copy the directory contents into the directory
-            # directly, not copy the parent folder into the directory.
-            for filename in os.listdir(source_path):
-                src_path = os.path.join(source_path, filename)
-                dest_path = os.path.join(target_directory, filename)
-                if os.path.isdir(src_path):
-                    shutil.copytree(src_path, dest_path)
-                else:
-                    shutil.copyfile(src_path, dest_path)
-
-            LOGGER.debug(
-                f'Directory copied from {source_path} --> {target_directory}')
-            target_arg_value = target_directory
             files_found[source_path] = target_arg_value
 
         elif type(input_spec) in spatial_types:
@@ -367,7 +346,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             subdir = os.path.dirname(parameter_set['args'][k])
             target_location = os.path.join(temp_workspace, subdir)
             spec.write_metadata_file(v, this_arg_spec, keywords,
-                                           out_workspace=target_location)
+                                     out_workspace=target_location)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
@@ -490,7 +469,7 @@ def build_parameter_set(args, model_id, paramset_path, relative=False):
         'model_id': model_id,
         'args': _recurse(args)
     }
-    with codecs.open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
+    with open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
         paramset_file.write(
             json.dumps(parameter_data,
                        indent=4,
@@ -515,7 +494,7 @@ def extract_parameter_set(paramset_path):
             model_id (string): the ID of the model that these parameters are for
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
-    with codecs.open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
+    with open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
         params_raw = paramset_file.read()
 
     read_params = json.loads(params_raw)
@@ -587,7 +566,7 @@ def extract_parameters_from_logfile(logfile_path):
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
     """
-    with codecs.open(logfile_path, 'r', encoding='utf-8') as logfile:
+    with open(logfile_path, 'r', encoding='utf-8') as logfile:
         detected_args = []
         args_started = False
         for line in logfile:

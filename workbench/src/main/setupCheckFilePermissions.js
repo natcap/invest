@@ -6,9 +6,7 @@ import {
 } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from './logger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+import { logger } from './logger';
 
 export default function setupCheckFilePermissions() {
   ipcMain.handle(

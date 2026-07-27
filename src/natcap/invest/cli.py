@@ -1,7 +1,6 @@
 # coding=UTF-8
 """Single entry point for all InVEST applications."""
 import argparse
-import codecs
 import datetime
 import gettext
 import importlib
@@ -148,7 +147,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
         cast_args = dict((str(key), value) for (key, value)
                          in args_dict.items())
 
-    with codecs.open(target_filepath, 'w', encoding='utf-8') as py_file:
+    with open(target_filepath, 'w', encoding='utf-8') as py_file:
         args = pprint.pformat(cast_args, indent=4)  # 4 spaces
         # Tweak formatting from pprint:
         # * Bump parameter inline with starting { to next line
@@ -307,6 +306,10 @@ def main(user_args=None):
             '-w', '--workspace', default=None, nargs='?',
             help=('The workspace in which outputs will be saved. '
                   'Required if using --headless'))
+        run_subparser.add_argument(
+            '--no-report', action='store_false', dest='generate_report',
+            help=('Skip generating the report at the end of the model run. Only '
+                  'affects models for which a reporter is defined.'))
         run_subparser.add_argument(
             'model', action=SelectModelAction,  # Assert valid model name
             help=('The model to run.  Use "invest list" to list the available '
@@ -479,7 +482,7 @@ def main(user_args=None):
                 generate_metadata=True,
                 save_file_registry=True,
                 check_outputs=False,
-                generate_report=bool(model_module.MODEL_SPEC.reporter))
+                generate_report=model_module.MODEL_SPEC.reporter and args.generate_report)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)

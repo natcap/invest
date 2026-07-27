@@ -25,13 +25,25 @@ LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
+model_description = gettext(
+    """
+    The InVEST Urban Cooling model calculates an index of heat mitigation based
+    on shade, evapotranspiration, and albedo, as well as distance from cooling
+    islands (e.g., parks). The index is used to estimate temperature reduction
+    by vegetation. Optionally, the model estimates the value of the heat
+    mitigation service using two valuation methods: energy consumption and/or
+    work productivity.
+    """)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="urban_cooling_model",
     model_title=gettext("Urban Cooling"),
     userguide="urban_cooling_model.html",
+    reporter="natcap.invest.urban_cooling_model.reporter",
+    about=model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
-    aliases=("ucm",),
+    aliases=set("ucm",),
     module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
@@ -55,7 +67,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " have corresponding entries in the Biophysical Table."
             ),
             data_type=int,
-            units=None,
+            units=u.none,
             projected=True,
             projection_units=u.meter
         ),
@@ -98,7 +110,6 @@ MODEL_SPEC = spec.ModelSpec(
                         " option is selected for the Cooling Capacity Calculation Method."
                     ),
                     required="cc_method == 'factors'",
-                    units=None
                 ),
                 spec.RatioInput(
                     id="albedo",
@@ -108,7 +119,6 @@ MODEL_SPEC = spec.ModelSpec(
                         " for the Cooling Capacity Calculation Method."
                     ),
                     required="cc_method == 'factors'",
-                    units=None
                 ),
                 spec.RatioInput(
                     id="building_intensity",
@@ -119,7 +129,6 @@ MODEL_SPEC = spec.ModelSpec(
                         " Calculation Method."
                     ),
                     required="cc_method == 'intensity'",
-                    units=None
                 )
             ],
             index_col="lucode"
@@ -184,7 +193,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="do_productivity_valuation",
             allowed="do_productivity_valuation",
-            units=None,
             expression="0 <= value <= 100"
         ),
         spec.VectorInput(
@@ -269,7 +277,6 @@ MODEL_SPEC = spec.ModelSpec(
                 " capacity index. If not provided, defaults to 0.6."
             ),
             required=False,
-            units=None
         ),
         spec.RatioInput(
             id="cc_weight_albedo",
@@ -279,7 +286,6 @@ MODEL_SPEC = spec.ModelSpec(
                 " capacity index. If not provided, defaults to 0.2."
             ),
             required=False,
-            units=None
         ),
         spec.RatioInput(
             id="cc_weight_eti",
@@ -289,16 +295,29 @@ MODEL_SPEC = spec.ModelSpec(
                 " capacity index. If not provided, defaults to 0.2."
             ),
             required=False,
-            units=None
         )
     ],
     outputs=[
+        spec.SingleBandRasterOutput(
+            id="t_air",
+            path="T_air.tif",
+            about=gettext("Map of air temperature with air mixing."),
+            data_type=float,
+            units=u.degree_Celsius
+        ),
         spec.SingleBandRasterOutput(
             id="hm",
             path="hm.tif",
             about=gettext("Map of heat mitigation index."),
             data_type=float,
-            units=None
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="cc",
+            path="cc.tif",
+            about=gettext("Map of cooling capacity"),
+            data_type=float,
+            units=u.none
         ),
         spec.VectorOutput(
             id="uhi_results",
@@ -309,7 +328,9 @@ MODEL_SPEC = spec.ModelSpec(
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
                 spec.NumberOutput(
-                    id="avg_cc", about=gettext("Average CC value"), units=u.none
+                    id="avg_cc",
+                    about=gettext("Average CC value"),
+                    units=u.none
                 ),
                 spec.NumberOutput(
                     id="avg_tmp_v",
@@ -324,10 +345,10 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberOutput(
                     id="avd_eng_cn",
                     about=gettext(
-                        "Avoided energy consumption (kWh or $ if optional energy cost"
+                        "Avoided energy consumption (kWh or currency units if optional energy cost"
                         " input column was provided in the Energy Consumption Table)."
                     ),
-                    units=u.none
+                    units=u.other
                 ),
                 spec.NumberOutput(
                     id="avg_wbgt_v",
@@ -359,7 +380,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " contains NO natural areas nor green spaces; where CC = 0 for"
                         " all LULC classes."
                     ),
-                    units=u.none
+                    units=u.other
                 ),
                 spec.NumberOutput(
                     id="mean_t_air",
@@ -372,32 +393,18 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.SingleBandRasterOutput(
-            id="cc",
-            path="intermediate/cc.tif",
-            about=gettext("Map of cooling capacity"),
-            data_type=float,
-            units=None
-        ),
-        spec.SingleBandRasterOutput(
             id="cc_park",
             path="intermediate/cc_park.tif",
             about=gettext("Map of cooling capacity decayed by proximity to greenspace"),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="cc_masked_green_areas",
             path="intermediate/cc_masked_green_areas.tif",
             about=gettext("Cooling capacity map masked by non-green areas"),
             data_type=float,
-            units=None
-        ),
-        spec.SingleBandRasterOutput(
-            id="t_air",
-            path="intermediate/T_air.tif",
-            about=gettext("Map of air temperature with air mixing."),
-            data_type=float,
-            units=u.degree_Celsius
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="t_air_nomix",
@@ -411,7 +418,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/eti.tif",
             about=gettext("Map of the evapotranspiration index."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="wbgt",
@@ -445,14 +452,14 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/albedo.tif",
             about=gettext("Map of albedo."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="area_kernel",
             path="intermediate/area_kernel.tif",
             about=gettext("Area kernel for green area convolution."),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="green_area_sum",
@@ -491,7 +498,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/lulc.tif",
             about=gettext("Map of land use/land cover."),
             data_type=int,
-            units=None
+            units=u.none
         ),
         spec.SingleBandRasterOutput(
             id="ref_eto",
@@ -508,7 +515,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/shade.tif",
             about=gettext("Map of shade."),
             data_type=float,
-            units=None
+            units=u.none
         ),
         spec.FileOutput(
             id="cc_ref_aoi_stats",
@@ -1476,7 +1483,7 @@ def mask_cc_green_areas_op(green_area_array, cc_array):
             and 0 represent areas that are not green.
 
     Returns:
-        A modified `cc_array` where only green areas retain their original values, 
+        A modified `cc_array` where only green areas retain their original values,
         non-green areas are set to 0, and nodata values are preserved.
 
     """

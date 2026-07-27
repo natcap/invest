@@ -1,14 +1,12 @@
 from natcap.invest import spec
 
-MODEL_SPEC = spec.ModelSpec(inputs=[
-    spec.IntegerInput(id='a'),
-    spec.StringInput(id='b'),
-    spec.StringInput(id='c'),
-    spec.StringInput(id='d'),
-    spec.DirectoryInput(
-        id='workspace_dir',
-        contents=[]
-    )],
+MODEL_SPEC = spec.ModelSpec(
+    inputs=[
+        spec.IntegerInput(id='a'),
+        spec.StringInput(id='b'),
+        spec.StringInput(id='c'),
+        spec.StringInput(id='d'),
+        spec.WorkspaceInput()],
     outputs=[],
     model_id='simple_model',
     model_title='',
