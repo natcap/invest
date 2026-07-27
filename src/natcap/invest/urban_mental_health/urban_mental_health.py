@@ -1039,7 +1039,7 @@ def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
     spatial_wkt = utils.get_raster_or_vector_projection(spatial_path)
     if not _spatial_file_projected_in_m(spatial_wkt):
         raise ValueError(
-            f"target_projection ({spatial_path}) must be projected in m."
+            f"target_projection (from {spatial_path}) must be projected in m. "
             f"Current projection: {spatial_wkt}")
 
     if _spatial_file_projected_in_m(raster_info['projection_wkt']):

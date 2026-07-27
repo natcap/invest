@@ -324,8 +324,8 @@ def _get_pixel_size(args, model_spec, default_input_id=None):
         current_projection = None
 
     if default_input_id is None:
-        default_inputs = [input_spec for input_spec in model_spec.inputs if (
-            input_spec.is_default_projection)]
+        default_inputs = [inp for inp in model_spec.inputs if (
+            isinstance(inp, SpatialFileInput) and inp.is_default_projection)]
         if default_inputs:
             default_input_id = default_inputs[0].id
 
