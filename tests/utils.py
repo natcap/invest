@@ -107,12 +107,7 @@ def fake_execute(output_spec, workspace):
         dict (FileRegistry.registry)
 
     """
-    file_registry = FileRegistry(output_spec, workspace)
-    for spec_data in output_spec:
-        reg_key = spec_data.id
-        if '[' in spec_data.id:
-            reg_key = (spec_data.id, 'A')
-        filepath = file_registry[reg_key]
+    def _create_file(spec_data, filepath):
         if isinstance(spec_data, spec.SingleBandRasterOutput):
             driver = gdal.GetDriverByName('GTIFF')
             raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
@@ -134,4 +129,17 @@ def fake_execute(output_spec, workspace):
             # Such as taskgraph.db, just create the file.
             with open(filepath, 'w') as file:
                 pass
+
+    file_registry = FileRegistry(output_spec, workspace)
+    for spec_data in output_spec:
+        reg_key = spec_data.id
+        if '[' in spec_data.id:
+            reg_keys = [(spec_data.id, 'A'), (spec_data.id, 'B')]
+            for reg_key in reg_keys:
+                filepath = file_registry[reg_key]
+                _create_file(spec_data, filepath)
+        else:
+            filepath = file_registry[reg_key]
+            _create_file(spec_data, filepath)
+
     return file_registry.registry

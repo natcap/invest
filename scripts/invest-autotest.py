@@ -40,6 +40,7 @@ DATASTACKS = {
     'stormwater': ['UrbanStormwater/stormwater_datastack.invest.json'],
     'urban_cooling_model': ['UrbanCoolingModel/urban_cooling_model_datastack.invest.json'],
     'urban_flood_risk_mitigation': ['UrbanFloodMitigation/urban_flood_risk_mitigation.invs.json'],
+    'urban_mental_health': ['UrbanMentalHealth/invest_urban_mental_health_args.json'],
     'urban_nature_access': ['UrbanNatureAccess/invest_urban_nature_access_datastack.invest.json'],
     'wave_energy': [
         'WaveEnergy/wave_energy_aquabuoy_wcvi.invs.json',

@@ -6,9 +6,7 @@ import {
 } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from './logger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+import { logger } from './logger';
 
 export const STORAGE_TOKEN = 'storage_token.txt';
 

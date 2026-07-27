@@ -4,8 +4,8 @@ import pygeoprocessing
 cimport cython
 from osgeo import gdal
 
-from ..managed_raster.managed_raster cimport D8
-from ..managed_raster.managed_raster cimport MFD
+from pygeoprocessing.extensions cimport D8
+from pygeoprocessing.extensions cimport MFD
 from .sediment_deposition cimport run_sediment_deposition
 
 

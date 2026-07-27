@@ -99,7 +99,7 @@ describe('Arguments form input types', () => {
   });
 
   test.each([
-    ['directory'],
+    ['workspace'],
     ['csv'],
     ['vector'],
     ['raster'],
@@ -258,7 +258,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Change value & get feedback on a required input', async () => {
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText,
@@ -268,8 +268,10 @@ describe('Arguments form interactions', () => {
 
     // A required input with no value is invalid (red X), but
     // feedback does not display until the input has been touched.
-    expect(input).toHaveClass('is-invalid');
-    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+      expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
+    });
 
     await userEvent.type(input, 'foo');
     await waitFor(() => {
@@ -289,7 +291,7 @@ describe('Arguments form interactions', () => {
 
   test('Type fast & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
@@ -305,7 +307,7 @@ describe('Arguments form interactions', () => {
 
   test('Type slow & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
@@ -328,7 +330,9 @@ describe('Arguments form interactions', () => {
     } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
-    expect(input).toHaveClass('is-invalid');
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+    });
     expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
     await userEvent.click(input);
@@ -349,7 +353,9 @@ describe('Arguments form interactions', () => {
 
     // An optional input with no value is valid, but green check
     // does not display until the input has been touched.
-    expect(input).not.toHaveClass('is-valid', 'is-invalid');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('is-valid', 'is-invalid');
+    });
 
     await userEvent.click(input);
     await waitFor(() => {
@@ -360,7 +366,7 @@ describe('Arguments form interactions', () => {
   test('Open info dialog, expect text & link', async () => {
     const spy = jest.spyOn(ipcRenderer, 'send')
       .mockImplementation(() => Promise.resolve());
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     const { findByText, findByRole } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
@@ -374,7 +380,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Open info dialog, expect text but no link if model is a plugin', async () => {
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     const { findByText, findByRole, queryByRole } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER, undefined, false);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
@@ -666,7 +672,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -764,7 +770,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -815,7 +821,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -873,26 +879,30 @@ describe('Form drag-and-drop', () => {
       findByLabelText, findByTestId,
     } = renderSetupFromSpec(spec, inputFieldOrder);
     const setupForm = await findByTestId('setup-form');
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
     const file = new File([], 'test.csv');
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).toHaveClass('input-dragging');
-    expect(setupForm).not.toHaveClass('dragging');
+    await waitFor(() => {
+      expect(input).toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.drop(setupInput, {
+    await waitFor(() => fireEvent.drop(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
-    expect(setupInput).not.toHaveClass('dragging');
-    expect(setupInput).toHaveValue('test.csv');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).not.toHaveClass('dragging');
+      expect(input).toHaveValue('test.csv');
+    });
   });
 
   test('DragEnter on an input adds "input-dragging" class; DragLeave removes "input-dragging" class', async () => {
@@ -915,24 +925,32 @@ describe('Form drag-and-drop', () => {
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
-    const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const {
+      findByLabelText, findByTestId,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
     const file = new File([], 'test.csv')
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.dragLeave(setupInput, {
+    await waitFor(() => fireEvent.dragLeave(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+    });
   });
 
   test('DragEnter on a disabled input does not add "input-dragging" class; Drop neither adds "input-dragging" class nor populates input', async () => {
@@ -941,7 +959,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -957,24 +975,72 @@ describe('Form drag-and-drop', () => {
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: false });
 
-    const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
+    const {
+      findByLabelText, findByTestId,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
 
     const file = new File([], 'test.gpkg');
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.drop(setupInput, {
+    await waitFor(() => fireEvent.drop(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
-    expect(setupInput).toHaveValue('');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).toHaveValue('');
+    });
+  });
+});
+
+describe('loadParametersFromFile', () => {
+  test('Loading a datastack with an unrecognized model ID should present an error message', async () => {
+    const spec = {
+      model_id: 'coastal_blue_carbon',
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'workspace',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    const inputFieldOrder = [Object.keys(spec.args)];
+    const mockDatastack = {
+      model_id: 'coastal_purple_carbon',
+      model_title: 'Coastal Purple Carbon',
+      args: {},
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    jest.spyOn(window, 'alert').mockImplementation();
+
+    const { findByTestId } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+
+    await waitFor(() => fireEvent.drop(setupForm, {
+      dataTransfer: {
+        files: [new File([], 'test.json')],
+      }
+    }));
+
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith(
+        'Model ID in datastack/logfile (coastal_purple_carbon) does not match this model (coastal_blue_carbon).');
+    });
   });
 });

@@ -4,25 +4,31 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from bs4 import BeautifulSoup
+import geometamaker
 import matplotlib
 import matplotlib.testing.compare
 from matplotlib.testing import set_font_settings_for_testing
 from matplotlib.testing.exceptions import ImageComparisonFailure
 import numpy
-from osgeo import osr
+from osgeo import gdal, osr
+import pandas
 import pygeoprocessing
+from pydantic import ValidationError
 
 from natcap.invest import spec
 from natcap.invest.reports import MATPLOTLIB_PARAMS, raster_utils
 from natcap.invest.reports.raster_utils import RasterDatatype
 from natcap.invest.reports.raster_utils import RasterTransform
 from natcap.invest.reports.raster_utils import RasterPlotConfig
+from natcap.invest.reports.raster_utils import SpecialValueConfig
 
 projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
 REFS_DIR = os.path.join('data', 'invest-test-data', 'reports', 'snapshots')
+MPL_VERSION = tuple(int(_) for _ in matplotlib.__version__.split('.'))
 
 
 def setUpModule():
@@ -44,7 +50,7 @@ def save_figure(fig, filepath):
 def make_simple_raster(target_filepath, shape):
     array = numpy.linspace(0, 1, num=numpy.multiply(*shape)).reshape(*shape)
     pygeoprocessing.numpy_array_to_raster(
-        array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+        array, target_nodata=None, pixel_size=(1, -1), origin=(0, 0),
         projection_wkt=PROJ_WKT, target_path=target_filepath)
 
 
@@ -64,6 +70,27 @@ def make_nominal_raster_with_distinct_counts(target_filepath, num_vals):
     pygeoprocessing.numpy_array_to_raster(
         array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
         projection_wkt=PROJ_WKT, target_path=target_filepath)
+
+
+def add_raster_attribute_table(target_filepath, value_name='value',
+                               count_name='count', extra_cols=[]):
+    raster = gdal.OpenEx(target_filepath, gdal.OF_UPDATE)
+    band = raster.GetRasterBand(1)
+    rat = gdal.RasterAttributeTable()
+    rat.CreateColumn(value_name, gdal.GFT_Integer, gdal.GFU_MinMax)
+    rat.CreateColumn(count_name, gdal.GFT_Integer, gdal.GFU_PixelCount)
+    for name in extra_cols:
+        rat.CreateColumn(name, gdal.GFT_String, gdal.GFU_Generic)
+
+    array = band.ReadAsArray()
+    values, counts = numpy.unique(array, return_counts=True)
+    for i in range(len(values)):
+        rat.SetValueAsInt(i, 0, int(values[i]))
+        rat.SetValueAsInt(i, 1, int(counts[i]))
+        for idx, name in enumerate(extra_cols):
+            rat.SetValueAsString(i, 2 + idx, 'foo')
+    band.SetDefaultRAT(rat)
+    band = raster = None
 
 
 def compare_snapshots(reference, actual):
@@ -91,6 +118,8 @@ def compare_snapshots(reference, actual):
     raise AssertionError(comparison, f'actual image saved to {new_reference}')
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotLayoutTests(unittest.TestCase):
     """Snapshot tests for matplotlib figure layouts."""
 
@@ -171,7 +200,42 @@ class RasterPlotLayoutTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
+    def test_plot_raster_list_units_subtitle_padding(self):
+        """Test subtitle offset for plots of rasters with and without units"""
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
 
+        # check that no subtitle offset because no units
+        fig = raster_utils.plot_raster_list([self.raster_config])
+        raster_axes = [ax for ax in fig.axes if ax.get_label() != '<colorbar>']
+        for ax in raster_axes:
+            ylim = ax.get_ylim()
+            expected_ylim = (3.5, -0.5)
+            self.assertEqual(ylim, expected_ylim)
+
+        # Test plot ylims if one raster has units and other does not
+        raster_path_with_units = os.path.join(self.workspace_dir, 'foo.tif')
+        make_simple_raster(raster_path_with_units, shape)
+        # units determined by checking metadata
+        metadata = geometamaker.describe(raster_path_with_units)
+        metadata.set_band_description(1, units="meters")
+        metadata.write()
+        raster_config_with_units = RasterPlotConfig(
+            raster_path_with_units,
+            RasterDatatype.continuous,
+            spec.Output(id='foo', units="meter"))
+
+        config_list = [self.raster_config, raster_config_with_units]
+        fig = raster_utils.plot_raster_list(config_list)
+        raster_axes = [ax for ax in fig.axes if ax.get_label() != '<colorbar>']
+        for ax in raster_axes:
+            bottom, top = ax.get_ylim()
+            expected_ylim = (shape[0], -0.1 * shape[0])
+            self.assertEqual((bottom, top), expected_ylim)
+
+
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
     """Snapshot tests for datatype and transform options."""
 
@@ -267,6 +331,8 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 1), 'Snapshots were created with matplotlib 3.11.1')
 class RasterPlotLegendTests(unittest.TestCase):
     """Snapshot tests for legend placement on nominal rasters."""
 
@@ -328,6 +394,8 @@ class RasterPlotLegendTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotFacetsTests(unittest.TestCase):
     """Snapshot tests for plotting multiple rasters on the same colorscale."""
 
@@ -338,6 +406,24 @@ class RasterPlotFacetsTests(unittest.TestCase):
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    @patch('natcap.invest.reports.raster_utils._get_raster_units')
+    def create_small_plots_grid(workspace_dir, shape, mock_get_raster_units,
+                                supertitle=None):
+        raster_paths = [os.path.join(workspace_dir, f'{s}.tif')
+                        for s in ['a', 'b', 'c', 'd']]
+        arrays = [numpy.linspace(
+            i, i+1, num=numpy.multiply(*shape)).reshape(*shape) for i in range(4)]
+        for raster_path, array in zip(raster_paths, arrays):
+            pygeoprocessing.numpy_array_to_raster(
+                array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+                projection_wkt=PROJ_WKT, target_path=raster_path)
+
+        mock_get_raster_units.return_value = 'flux capacitrons'
+        return raster_utils.plot_raster_facets(
+            raster_paths, RasterDatatype.continuous, small_plots=True,
+            supertitle=supertitle)
 
     def test_plot_raster_facets(self):
         """Test rasters share a common colorscale."""
@@ -363,7 +449,43 @@ class RasterPlotFacetsTests(unittest.TestCase):
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
 
+    def test_plot_raster_facets_small_plots(self):
+        """Test small plots: standard AOI width should have 4 columns."""
+        figname = 'plot_raster_facets_small_plots.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape)
 
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_facets_small_plots_wide_aoi(self):
+        """Test small plots: wide AOI width should have 3 columns."""
+        figname = 'plot_raster_facets_small_plots_wide_aoi.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (6, 12)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape)
+
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_facets_small_plots_supertitle(self):
+        """Test small plots with optional supertitle."""
+        figname = 'plot_raster_facets_small_plots_supertitle.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (2, 10)
+        fig = self.create_small_plots_grid(self.workspace_dir, shape,
+                                           supertitle="Custom Title")
+
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotTitleTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with various titles."""
 
@@ -435,6 +557,8 @@ class RasterPlotTitleTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+@unittest.skipIf(
+    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
 class RasterPlotUnitTextTests(unittest.TestCase):
     """Snapshot tests for plotting rasters with unit text."""
 
@@ -481,6 +605,184 @@ class RasterPlotUnitTextTests(unittest.TestCase):
         compare_snapshots(reference, actual_png)
 
 
+class SpecialConfigValueUnitTests(unittest.TestCase):
+    """Unit tests for SpecialConfigValue constructions."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_special_value_config(self):
+        """Should pass when only index 0 (lower bound) is fully populated."""
+        config = SpecialValueConfig(
+            thresholds=(0.0, 100.0),
+            labels=("Low", "High"),
+            colors=("blue", "red")
+        )
+        self.assertEqual(config.thresholds, (0.0, 100.0))
+
+        config = SpecialValueConfig(
+            thresholds=(0.0, None),
+            labels=("Low", None),
+            colors=("blue", None)
+        )
+        self.assertEqual(config.colors, ("blue", None))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),
+                labels=(None, None),  # missing lower label
+                colors=("blue", None)
+            )
+        self.assertTrue(
+            "If index 0 is `None` in any of the special config tuples" in
+            str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            SpecialValueConfig(
+                thresholds=(0.0, None),  # missing upper threshold
+                labels=("Low", "High"),
+                colors=("blue", None)  # missing upper color
+            )
+        self.assertTrue(
+            "If index 1 is `None` in any of the special config tuples" in
+            str(context.exception))
+
+    def test_special_values_rejected_for_nominal(self):
+        """RasterPlotConfig does not allow special values for nominal raster"""
+        with self.assertRaisesRegex(
+                ValueError, '`special_values` may only be defined'):
+            raster_utils.RasterPlotConfig(
+                raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+                datatype=raster_utils.RasterDatatype.nominal,
+                spec=spec.Output(id='foo', about='foo output'),
+                special_values=raster_utils.SpecialValueConfig(
+                    thresholds=(-1, 1),
+                    labels=('low', 'high'),
+                    colors=('red', 'blue')))
+
+    def test_special_values_rejected_for_binary(self):
+        """RasterPlotConfig does not allow special values for binary raster"""
+        with self.assertRaisesRegex(
+                ValueError, '`special_values` may only be defined'):
+            raster_utils.RasterPlotConfig(
+                raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+                datatype=raster_utils.RasterDatatype.binary,
+                spec=spec.Output(id='foo', about='foo output'),
+                special_values=raster_utils.SpecialValueConfig(
+                    thresholds=(-1, 1),
+                    labels=('low', 'high'),
+                    colors=('red', 'blue')))
+
+    def test_configure_special_values_both_bounds(self):
+        """_configure_special_values configures both colorbar extensions."""
+        cmap = matplotlib.colormaps['viridis'].copy()
+        special_values = raster_utils.SpecialValueConfig(
+            thresholds=(-1, 1),
+            labels=('low', 'high'),
+            colors=('red', 'blue'))
+
+        cmap, extend, thresholds, labels, text_specs = (
+            raster_utils._configure_special_values(cmap, special_values))
+
+        self.assertEqual(extend, 'both')
+        self.assertEqual(thresholds, [-1, 1])
+        self.assertEqual(labels, ['low', 'high'])
+        self.assertEqual(
+            text_specs, [(0, -0.05, 'top'), (0, 1.05, 'bottom')])
+
+    def test_plot_divergent_log_raster_requires_symmetric_thresholds(
+            self):
+        """Divergent log special values must be symmetric around 0."""
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.divergent,
+            transform="log",
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=(0.4, 1),
+                labels=('low', 'high'),
+                colors=('black', 'orange')))
+        make_simple_raster(raster_config.raster_path, shape)
+
+        with self.assertRaisesRegex(
+                UserWarning, 'To ensure that 0 falls at the logical break'):
+            raster_utils.plot_raster_list([raster_config])
+
+    @unittest.skipIf(
+        MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+    def test_plot_continuous_raster_special_values(self):
+        """Test correct plot for continuous raster with special values"""
+        figname = 'plot_raster_list_special_values.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.continuous,
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=(0.4, 1),
+                labels=('low', 'high'),
+                colors=('black', 'orange')))
+        make_simple_raster(raster_config.raster_path, shape)
+
+        config_list = [raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    @unittest.skipIf(
+        MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+    def test_plot_divergent_raster_max_special_value(self):
+        """Test divergent raster plot w special value has a correct colorbar"""
+        figname = 'plot_raster_list_special_max_value.png'
+        reference = os.path.join(REFS_DIR, figname)
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.divergent,
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=(None, 0.8),
+                labels=(None, 'high'),
+                colors=(None, 'darkblue')))
+        # Note this raster doesn't actually have negative values
+        make_simple_raster(raster_config.raster_path, shape)
+
+        config_list = [raster_config]
+        fig = raster_utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_special_values_adds_threshold_ticks(self):
+        """Test plot_raster_list adds special values as colorbar ticks."""
+        thresholds = (-.8, .9)
+        shape = (4, 4)
+        raster_config = raster_utils.RasterPlotConfig(
+            raster_path=os.path.join(self.workspace_dir, 'foo.tif'),
+            datatype=raster_utils.RasterDatatype.continuous,
+            spec=spec.Output(id='foo', about='foo output'),
+            special_values=raster_utils.SpecialValueConfig(
+                thresholds=thresholds,
+                labels=('low', 'high'),
+                colors=('red', 'blue')))
+        make_simple_raster(raster_config.raster_path, shape)
+
+        fig = raster_utils.plot_raster_list([raster_config])
+        colorbar_ax = fig.axes[1]
+        ticks = list(colorbar_ax.get_yticks())
+
+        self.assertIn(thresholds[0], ticks)
+        self.assertIn(thresholds[1], ticks)
+
+
 class RasterCaptionTests(unittest.TestCase):
     """Unit tests for caption-generating utility."""
 
@@ -518,6 +820,165 @@ class RasterCaptionTests(unittest.TestCase):
         self.assertEqual(generated_caption, expected_caption)
 
 
+class PlotCategoricalRastersTest(unittest.TestCase):
+    """Unit tests for plotting categorical rasters with attribute table."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def html_string_to_dataframe(html_string):
+        """Helper to convert an HTML table string to a pandas dataframe."""
+        soup = BeautifulSoup(html_string, 'html.parser')
+        rows = soup.find_all('tr')
+        header = rows[0]
+        cells = header.find_all(['th', 'td'])
+        col_names = [cell.get_text() for cell in cells]
+        df = pandas.DataFrame(columns=col_names)
+
+        for idx, row in enumerate(rows[1:]):
+            cells = row.find_all(['td'])
+            cell_values = [cell.get_text() for cell in cells]
+            df.loc[idx + 1] = cell_values
+        return df
+
+    def test_plot_single_raster_with_rat(self):
+        """Test single raster with RAT."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        add_raster_attribute_table(target_filepath, extra_cols=['foo'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        df = self.html_string_to_dataframe(table)
+        # Our RAT has 3 columns, a 4th was added for the color swatch
+        self.assertEqual(df.shape, (num_vals, 4))
+
+    def test_plot_single_raster_with_rat_color_table(self):
+        """Test that the RAT color table will be filtered out."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        add_raster_attribute_table(
+            target_filepath,
+            extra_cols=['RED', 'green', 'Blue', 'ALPHA', 'opacity'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        df = self.html_string_to_dataframe(table)
+        # All the RGBA (and opacity) columns should be filtered out
+        self.assertEqual(df.shape, (num_vals, 3))
+
+    def test_plot_single_raster_without_rat(self):
+        """Test single raster without RAT."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [target_filepath])
+        # In the absence of a RAT, a frequency table was constructed
+        df = self.html_string_to_dataframe(table)
+        self.assertEqual(df.shape, (num_vals, 3))
+        self.assertCountEqual(
+            df.columns,
+            ['color', 'value', 'count'])
+
+    def test_plot_two_rasters_with_rat(self):
+        """Test two rasters with RATS and expect RATS are joined."""
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        add_raster_attribute_table(filepath_a)
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        add_raster_attribute_table(filepath_b, extra_cols=['foo'])
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = self.html_string_to_dataframe(table)
+        # In this example, the union of unique values in 'a' and 'b' happens to
+        # equal the unique values in 'b'
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        # and b has 1 extra column.
+        n_cols = 5
+        self.assertEqual(df.shape, (unique_values, n_cols))
+
+    def test_plot_two_rasters_one_missing_rat(self):
+        """Test two rasters with one missing a RAT."""
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        # This RAT will be ignored because the 2nd raster does not also
+        # have a RAT.
+        add_raster_attribute_table(
+            filepath_a, extra_cols=['foo', 'bar', 'baz'])
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = self.html_string_to_dataframe(table)
+        # Since one was missing a rat, we expect the plot function to ignore
+        # the existing RAT and build its own frequency table for both.
+        # In this example, the union of unique values in 'a' and 'b' happens to
+        # equal the unique values in 'b'
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        n_cols = 4
+        self.assertEqual(df.shape, (unique_values, n_cols))
+
+    def test_plot_two_rasters_with_incompatible_rat(self):
+        """Test two rasters with non-matching RATS."""
+        filepath_a = os.path.join(self.workspace_dir, 'lulc_a.tif')
+        num_vals_a = 6
+        make_nominal_raster_with_distinct_counts(
+            filepath_a, num_vals_a)
+        add_raster_attribute_table(filepath_a, value_name='VALUE')
+
+        filepath_b = os.path.join(self.workspace_dir, 'lulc_b.tif')
+        num_vals_b = 8
+        make_nominal_raster_with_distinct_counts(
+            filepath_b, num_vals_b)
+        add_raster_attribute_table(filepath_b, value_name='VAL')
+        img_src, table = raster_utils.plot_categorical_raster_with_table(
+            [filepath_a, filepath_b])
+        df = self.html_string_to_dataframe(table)
+
+        # Since the two RAT do not have a common value column, they could
+        # not be joined. Expect the default frequency table instead.
+        unique_values = num_vals_b
+        # The value and color columns are shared; each has a count col;
+        n_cols = 4
+        self.assertEqual(df.shape, (unique_values, n_cols))
+        self.assertCountEqual(
+            df.columns,
+            ['color', 'value', 'count_left', 'count_right'])
+
+    def test_plot_three_rasters_without_rat(self):
+        """Test three rasters raises ValueError."""
+        target_filepath = os.path.join(self.workspace_dir, 'lulc.tif')
+        num_vals = 12
+        make_nominal_raster_with_distinct_counts(
+            target_filepath, num_vals)
+        with self.assertRaises(ValueError):
+            img_src, table = raster_utils.plot_categorical_raster_with_table(
+                [target_filepath] * 3)
+
+
 class RasterWorkspaceSummaryTests(unittest.TestCase):
     """Unit tests for output raster stats table-generating utility."""
 
@@ -542,5 +1003,5 @@ class RasterWorkspaceSummaryTests(unittest.TestCase):
             file_registry, args_dict)
         dataframe = raster_utils.raster_workspace_summary(file_registry)
 
-        # There are 2 rasters in the sample output spec
-        self.assertEqual(dataframe.shape, (2, 7))
+        # There are 3 rasters in the sample output spec
+        self.assertEqual(dataframe.shape, (3, 7))

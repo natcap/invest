@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+  {{ super() }}
+  {% include 'datatable-styles.html' %}
+{% endblock styles %}
+
+{% block content %}
+
+  {{ super() }}
+
+  {% from 'args-table.html' import args_table %}
+  {% from 'caption.html' import caption %}
+  {% from 'content-grid.html' import content_grid %}
+  {% from 'metadata.html' import list_metadata %}
+  {% from 'raster-plot-img.html' import raster_plot_img %}
+  {% from 'wide-table.html' import wide_table %}
+
+  <h2 class="section-header">Results</h2>
+
+  {{ accordion_section(
+    output_raster_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(outputs_img_src, output_raster_heading), 100),
+      (caption(outputs_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Aggregate Results',
+    content_grid([
+      (wide_table(
+        uhi_table | safe,
+        font_size_px=15
+      ), 100),
+      (caption(uhi_table_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {% if aoi_map_json != None %}
+    {{ accordion_section(
+      'Results Aggregated by AOI Feature',
+      content_grid([
+          ('<div id="aoi_map"></div>', 100),
+          (caption(aoi_map_caption, aoi_map_source_list, definition_list=True), 100)
+      ])
+    ) }}
+  {% endif %}
+
+  {% if bldg_table != None %}
+    {% if bldg_totals_table != None %}
+      {% set bldg_agg_results = content_grid([
+        (wide_table(
+          bldg_table | safe,
+          font_size_px=15
+        ), 100),
+        (wide_table(
+          bldg_totals_table | safe,
+          font_size_px=15
+        ), 100),
+        (caption(bldg_table_caption, definition_list=True), 100)
+      ]) %}
+    {% else %}
+      {% set bldg_agg_results = content_grid([
+        (wide_table(
+          bldg_table | safe,
+          font_size_px=15
+        ), 100),
+        (caption(bldg_table_caption, definition_list=True), 100)
+      ])%}
+    {% endif %}
+
+    {{ accordion_section(
+      'Building Stats',
+      bldg_agg_results,
+    )}}
+
+    {{ accordion_section(
+      'Energy Savings and Air Temperature by Building',
+      content_grid([
+          ('<div id="bldg_map"></div>', 100),
+          (caption(bldg_map_caption, bldg_map_source_list, definition_list=True), 100)
+      ])
+    ) }}
+  {% endif %}
+
+  {{ accordion_section(
+    biophysical_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(biophysical_img_src, biophysical_heading), 100),
+      (caption(biophysical_raster_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Output Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Inputs</h2>
+
+  {% if args_dict != None %}
+    {{ accordion_section(
+      'Arguments',
+      args_table(args_dict)
+    )}}
+  {% endif %}
+
+  {{ accordion_section(
+    lulc_raster_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(lulc_img_src, lulc_raster_heading), 60),
+      (wide_table(lulc_legend_html | safe), 40),
+      (caption(lulc_caption, definition_list=True), 100),
+    ])
+  )}}
+
+  {{ accordion_section(
+    et0_raster_heading,
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(et0_img_src, et0_raster_heading), 100),
+      (caption(et0_caption, definition_list=True), 100)
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Input Raster Stats',
+    content_grid([
+      (stats_table_note, 100),
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
+  )}}
+
+  <h2 class="section-header">Metadata</h2>
+
+  {{
+    accordion_section(
+      'Output Filenames and Descriptions',
+      list_metadata(model_spec_outputs),
+      expanded=False
+    )
+  }}
+
+{% endblock content %}
+
+{% from 'vegalite-plot.html' import embed_vega %}
+{% block scripts %}
+  {{ super() }}
+  {% include 'datatable-js.html' %}
+  {% include 'vega-dependencies.html' %}
+  {% include 'vega-embed-js.html' %}
+  {% set chart_spec_id_list = [] %}
+  {% if aoi_map_json != None %}
+    {% set chart_spec_id_list = chart_spec_id_list + [
+      (aoi_map_json, 'aoi_map')] %}
+  {% endif %}
+  {% if bldg_map_json != None %}
+    {% set chart_spec_id_list = chart_spec_id_list + [
+      (bldg_map_json, 'bldg_map')] %}
+  {% endif %}
+  {{ embed_vega(chart_spec_id_list) }}
+{% endblock scripts %}

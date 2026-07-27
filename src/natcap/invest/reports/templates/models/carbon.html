@@ -63,13 +63,19 @@
     )}}
   {% endif %}
 
+  {% set img_width = 100 %}
+  {% set table_width = 100 %}
+  {% if not args_dict['calc_sequestration'] %}
+    {% set img_width = 60 %}
+    {% set table_width = 40 %}
+  {% endif %}
   {{ accordion_section(
-    'LULC Maps',
+    'Land Use/Land Cover Inputs',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
-      (caption(lulc_pre_caption, pre_caption=True), 100),
-      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
-      (caption(inputs_caption, definition_list=True), 100)
+      (raster_plot_img(lulc_img_src, 'LULC Inputs'), img_width),
+      (wide_table(lulc_legend_html | safe), table_width),
+      (caption(lulc_caption, definition_list=True), 100)
     ])
   )}}
 

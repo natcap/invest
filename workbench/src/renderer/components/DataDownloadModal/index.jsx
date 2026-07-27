@@ -201,6 +201,7 @@ class DataDownloadModal extends React.Component {
       'Urban Stormwater Retention': t('Urban Stormwater Retention'),
       'Urban Cooling': t('Urban Cooling'),
       'Urban Flood Risk Mitigation': t('Urban Flood Risk Mitigation'),
+      'Urban Mental Health': t('Urban Mental Health'),
       'Urban Nature Access': t('Urban Nature Access'),
       'Visitation: Recreation and Tourism': t('Visitation: Recreation and Tourism'),
       'Wave Energy Production': t('Wave Energy Production'),
@@ -263,7 +264,7 @@ class DataDownloadModal extends React.Component {
                   >
                     <MdErrorOutline
                       size="2em"
-                      className="pr-1"
+                      className="pe-1"
                     />
                     {t('Please choose a different folder. '
                       + 'This application does not have permission to write to folder:')}
@@ -279,7 +280,6 @@ class DataDownloadModal extends React.Component {
             <Button
               variant="secondary-outline"
               onClick={this.closeDialog}
-              className="float-right"
               aria-label="Close modal"
             >
               <MdClose />

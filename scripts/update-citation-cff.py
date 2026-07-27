@@ -1,5 +1,4 @@
 import argparse
-import codecs
 import os
 
 RELEASES_BUCKET = 'http://releases.naturalcapitalproject.org'
@@ -20,7 +19,7 @@ def update_citation_file(citation_filepath, version, date):
     Returns:
         ``None``.
     """
-    with codecs.open(citation_filepath, encoding='utf-8') as citation_file:
+    with open(citation_filepath, encoding='utf-8') as citation_file:
         citation_data = citation_file.readlines()
 
     # This approach allows us to only change the lines we need to change and
@@ -40,7 +39,7 @@ def update_citation_file(citation_filepath, version, date):
 
         lines.append(line)
 
-    with codecs.open(citation_filepath, 'w', encoding='utf-8') as citation_file:
+    with open(citation_filepath, 'w', encoding='utf-8') as citation_file:
         citation_file.writelines(lines)
 
 

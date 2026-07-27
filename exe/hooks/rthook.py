@@ -20,3 +20,9 @@ if platform.system() == 'Windows':
     # as an anaconda gdal installation.
     if 'PATH' in os.environ:
         os.environ['PATH'] = f"{sys._MEIPASS};{os.environ['PATH']}"
+
+    # There is currently a bug in the osgeo runtime hook that is supposed
+    # to set this variable, so we can set it here.
+    # https://github.com/pyinstaller/pyinstaller-hooks-contrib/issues/1020
+    os.environ['GDAL_DATA'] = os.path.join(
+        sys._MEIPASS, 'Library', 'share', 'gdal')

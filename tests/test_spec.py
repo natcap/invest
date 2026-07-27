@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 import geometamaker
 import numpy
@@ -236,15 +237,10 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_directory_spec(self):
         self.maxDiff = None
-        dir_spec = spec.DirectoryInput(
-            id="bar",
-            about="Description",
-            name="Bar",
-            contents=[]
-        )
+        dir_spec = spec.WorkspaceInput()
         out = dir_spec.describe_rst()
         expected_rst = ([
-            '**Bar** (`directory <input_types.html#directory>`__, *required*): Description'
+            f'**workspace directory** (`workspace directory <input_types.html#workspace>`__, *required*): {dir_spec.about}'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
@@ -288,7 +284,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         SAMPLE_MODEL_SPEC.generate_metadata_for_outputs(file_registry, args_dict)
 
         files, messages = geometamaker.validate_dir(self.workspace_dir)
-        self.assertEqual(len(files), 4)
+        self.assertEqual(len(files), 5)
         self.assertFalse(any(messages))
 
         # Test some specific content of the metadata
@@ -335,8 +331,8 @@ class ResultsSuffixTests(unittest.TestCase):
         self.assertEqual(missing_suffix, [])
 
 
-class MissingResultsSuffixTests(unittest.TestCase):
-    """Test ModelSpec.execute for model without ResultsSuffixInput."""
+class ModelSpecExecuteTests(unittest.TestCase):
+    """Test ModelSpec.execute."""
 
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
@@ -395,6 +391,48 @@ class MissingResultsSuffixTests(unittest.TestCase):
         carbon.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
             args, carbon.MODEL_SPEC, **execute_kwargs)
+
+    @patch('natcap.invest.carbon.carbon.execute')
+    def test_execute_function_returns_none(self, mock_execute):
+        """ModelSpec.execute tolerates missing file_registry dict."""
+        from natcap.invest import carbon
+        mock_execute = Mock()
+        mock_execute.return_value = None
+
+        execute_kwargs = {
+            'check_outputs': True,
+            'generate_metadata': True,
+            'save_file_registry': True,
+            'generate_report': True
+        }
+        kwargs_used = [f'{k}={v}' for k, v in execute_kwargs.items()]
+        message = "`execute` was called with {kwargs}, but no" \
+                  " file registry dictionary was returned from `execute`."
+
+        with self.assertLogs('natcap.invest.spec', level='WARNING') as cm:
+            carbon.MODEL_SPEC.execute({}, **execute_kwargs)
+        self.assertIn(
+            message.format(kwargs=', '.join(kwargs_used)),
+            ' '.join(cm.output))
+
+    @patch('natcap.invest.carbon.carbon.execute')
+    def test_execute_function_returns_empty_dict(self, mock_execute):
+        """ModelSpec.execute tolerates an empty file_registry dict."""
+        from natcap.invest import carbon
+        mock_execute = Mock()
+        mock_execute.return_value = {}
+
+        execute_kwargs = {
+            'check_outputs': True,
+            'generate_metadata': True,
+            'save_file_registry': True,
+            'generate_report': True
+        }
+
+        try:
+            carbon.MODEL_SPEC.execute({}, **execute_kwargs)
+        except Exception as error:
+            self.fail(error)
 
 
 class InputTests(unittest.TestCase):
@@ -546,6 +584,11 @@ class InputTests(unittest.TestCase):
             directory_input.get_keywords(include_children=False),
             [keywords.LULC.value])
 
+    def test_immutable_input(self):
+        """Test that Input instances are immutable."""
+        with self.assertRaises(ValidationError):
+            spec.LULC.about = 'new description'
+
 
 class ModelSpecTests(unittest.TestCase):
     """Tests for natcap.invest.spec.ModelSpec."""
@@ -569,3 +612,9 @@ class ModelSpecTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             # This module is importable, but has no 'report' attribute
             spec.ModelSpec(**data, reporter='natcap.invest')
+
+    def test_immutable_model_spec(self):
+        """Test that ModelSpec instance is immutable."""
+        from natcap.invest.carbon import MODEL_SPEC
+        with self.assertRaises(ValidationError):
+            MODEL_SPEC.model_id = 'foo'

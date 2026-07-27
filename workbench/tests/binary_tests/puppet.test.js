@@ -213,7 +213,7 @@ test('Run a real invest model', async () => {
   const argsForm = await page.waitForSelector('.args-form');
 
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace (directory)"][role="textbox"]');
+    'aria/[name="Workspace Directory"][role="textbox"]');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const aoi = await argsForm.waitForSelector(
     'aria/[name="Area Of Interest (vector)"][role="textbox"]');
@@ -307,7 +307,7 @@ test('Open each model and each local userguide', async () => {
     }
 
     await ugPage.close();
-    const tab = await page.waitForSelector('.nav-item');
+    const tab = await page.waitForSelector('.model-run-tab');
     const closeTabBtn = await tab.waitForSelector('aria/[role="button"]');
     await closeTabBtn.click();
     await new Promise(r => setTimeout(r, 100)); // allow for Home Tab to be visible again

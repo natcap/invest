@@ -1,7 +1,7 @@
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
-  render, waitFor, within
+  render, waitFor, waitForElementToBeRemoved, within
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -13,7 +13,7 @@ import {
   fetchValidation,
   fetchDatastackFromFile,
   fetchArgsEnabled,
-  getGeoMetaMakerProfile,
+  getDynamicDropdowns,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
@@ -38,7 +38,7 @@ const SAMPLE_SPEC = {
     workspace_dir: {
       name: 'Workspace',
       about: 'help text',
-      type: 'directory',
+      type: 'workspace',
     },
     carbon_pools_path: {
       name: 'Carbon Pools',
@@ -174,7 +174,7 @@ describe('Various ways to open and close InVEST models', () => {
     const openButton = await findByRole(
       'button', { name: /browse to a datastack or invest logfile/i });
     await userEvent.click(openButton);
-    const homeTab = await findByRole('tabpanel', { name: 'home tab' });
+    const homeTab = await findByRole('tabpanel', { name: /^InVEST/ });
     // expect we're on the same tab we started on instead of switching to Setup
     expect(homeTab.classList.contains('active')).toBeTruthy();
     // These are the calls that would have triggered if a file was selected
@@ -192,14 +192,14 @@ describe('Various ways to open and close InVEST models', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    const homeTab = await findByRole('tabpanel', { name: 'home tab' });
+    const homeTab = await findByRole('tabpanel', { name: /^InVEST/ });
 
     // Open a model tab and expect that it's active
     await userEvent.click(carbon);
     let modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(1); // one carbon tab open
     const tab1 = modelTabs[0];
-    const tab1EventKey = tab1.getAttribute('data-rb-event-key');
+    const tab1EventKey = tab1.getAttribute('data-rr-ui-event-key');
     expect(tab1.classList.contains('active')).toBeTruthy();
     expect(homeTab.classList.contains('active')).toBeFalsy();
 
@@ -209,7 +209,7 @@ describe('Various ways to open and close InVEST models', () => {
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(2); // 2 carbon tabs open
     const tab2 = modelTabs[1];
-    const tab2EventKey = tab2.getAttribute('data-rb-event-key');
+    const tab2EventKey = tab2.getAttribute('data-rr-ui-event-key');
     expect(tab2.classList.contains('active')).toBeTruthy();
     expect(tab1.classList.contains('active')).toBeFalsy();
     expect(homeTab.classList.contains('active')).toBeFalsy();
@@ -222,7 +222,7 @@ describe('Various ways to open and close InVEST models', () => {
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(3); // 3 carbon tabs open
     const tab3 = modelTabs[2];
-    const tab3EventKey = tab3.getAttribute('data-rb-event-key');
+    const tab3EventKey = tab3.getAttribute('data-rr-ui-event-key');
     expect(tab3.classList.contains('active')).toBeTruthy();
     expect(tab2.classList.contains('active')).toBeFalsy();
     expect(tab1.classList.contains('active')).toBeFalsy();
@@ -262,6 +262,100 @@ describe('Various ways to open and close InVEST models', () => {
     expect(modelTabs).toHaveLength(0);
     // No more model tabs, so it should switch back to the home tab.
     expect(homeTab.classList.contains('active')).toBeTruthy();
+  });
+});
+
+describe('Completed Run status responds to interactions', () => {
+  const workspacePath = 'my_workspace';
+
+  beforeEach(async () => {
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
+    getSpec.mockResolvedValue(SAMPLE_SPEC);
+    fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+    fetchArgsEnabled.mockResolvedValue({
+      workspace_dir: true, carbon_pools_path: true
+    });
+    getDynamicDropdowns.mockResolvedValue({});
+
+    // Setup a successful recent run
+    const argsValues = {
+      workspace_dir: workspacePath,
+    };
+    const mockJob = new InvestJob({
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'Carbon Sequestration',
+      argsValues: argsValues,
+      status: 'success',
+      type: 'core',
+    });
+    await InvestJob.saveJob(mockJob);
+  });
+
+  afterEach(async () => {
+    await InvestJob.clearStore();
+  });
+
+  test('Modifying an arg clears a completed run status', async () => {
+    const {
+      findByText,
+      findByLabelText,
+      findByRole,
+    } = render(
+      <App />
+    );
+
+    const recentJobCard = await findByText(
+      workspacePath
+    );
+    await userEvent.click(recentJobCard);
+    const alert = await findByRole('alert');
+    expect(alert).toHaveTextContent('Model Complete');
+
+    // Modify an arg
+    const input = await findByLabelText(
+      (content) => content.startsWith(SAMPLE_SPEC.args.workspace_dir.name)
+    );
+    await userEvent.type(input, 'foo');
+    await expect(alert).not.toBeInTheDocument();
+  });
+
+  test('Loading parameters from file clears a completed run status', async () => {
+    const mockDatastack = {
+      model_id: MOCK_MODEL_ID,
+      args: {
+        workspace: 'my_different_workspace',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    const mockDialogData = {
+      canceled: false,
+      filePaths: ['foo.json'],
+    };
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve(mockDialogData);
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const {
+      findByText,
+      findByRole,
+    } = render(
+      <App />
+    );
+
+    const recentJobCard = await findByText(
+      workspacePath
+    );
+    await userEvent.click(recentJobCard);
+    const alert = await findByRole('alert');
+    expect(alert).toHaveTextContent('Model Complete');
+
+    // Load new parameters
+    const loadButton = await findByText('Load parameters from file');
+    await userEvent.click(loadButton);
+    expect(alert).not.toBeInTheDocument();
   });
 });
 

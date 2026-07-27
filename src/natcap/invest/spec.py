@@ -23,7 +23,7 @@ import pint
 import pygeoprocessing
 from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_validator, model_validator
+    field_validator, model_serializer, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
@@ -181,17 +181,28 @@ def validate_permissions_string(permissions):
     return permissions
 
 
-class Input(BaseModel):
+class ImmutableBaseModel(BaseModel):
+    """BaseModel with frozen attributes."""
+
+    model_config = ConfigDict(frozen=True)
+    """Make models immutable so that they must be copied before modifying."""
+
+
+class IOModel(ImmutableBaseModel):
+    """Base class for both `Input` and `Output`."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types that don't inherit from BaseModel
+    (needed for pint.Unit)."""
+
+
+class Input(IOModel):
     """A data input, or parameter, of an invest model.
 
     This represents an abstract input or parameter, which is rendered as an
     input field in the InVEST workbench. This does not store the value of the
     parameter for a specific run of the model.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
     id: str
     """Input identifier that should be unique within a model"""
 
@@ -322,17 +333,13 @@ class Input(BaseModel):
         return list(set(keywords))
 
 
-class Output(BaseModel):
+class Output(IOModel):
     """A data output, or result, of an invest model.
 
     This represents an abstract output which is produced as a result of running
     an invest model. This does not store the value of the output for a specific
     run of the model.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
     id: str
     """Output identifier that should be unique within a model"""
 
@@ -477,16 +484,8 @@ class SpatialFileInput(FileInput):
         return col.apply(format_path).astype(pandas.StringDtype())
 
 
-class RasterBand(BaseModel):
-    """A single-band raster input, or parameter, of an invest model.
-
-    This represents a raster file input (all GDAL-supported raster file types
-    are allowed), where only the first band is needed.
-    """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
-    Needed for pint.Unit."""
-
+class RasterBand(IOModel):
+    """A representation of a single raster band."""
     band_id: typing.Union[int, str] = 1
     """band index used to access the raster band"""
 
@@ -998,11 +997,16 @@ class CSVInput(FileInput):
 
         # Evaluate any conditional requirement strings to booleans
         # This will raise an error if any can't be evaluated
-        columns = copy.deepcopy(self.columns)
-        for col_spec in columns:
+        # Specs cannot be modified in place, so we copy with update
+        # to update the required attribute, and assemble a new list.
+        columns = []
+        for col_spec in self.columns:
             if isinstance(col_spec.required, str):
-                col_spec.required = bool(utils.evaluate_expression(
+                is_required = bool(utils.evaluate_expression(
                     col_spec.required, args or {}))
+                col_spec = col_spec.model_copy(update=dict(
+                    required=is_required))
+            columns.append(col_spec)
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
@@ -1036,11 +1040,11 @@ class CSVInput(FileInput):
                 df[col][df[col].notna()].apply(check_value)
 
         if any(df.columns.duplicated()):
-            duplicated_columns = df.columns[df.columns.duplicated]
+            duplicated_columns = df.columns[df.columns.duplicated()]
             raise ValueError(validation_messages.DUPLICATE_HEADER.format(
-                header=header_type,
-                header_name=expected,
-                number=count))
+                header=f'{self.orientation}(s)',
+                header_name=', '.join(duplicated_columns),
+                number='multiple'))
 
         # set the index column, if specified
         if self.index_col is not None:
@@ -1091,57 +1095,23 @@ class CSVInput(FileInput):
         return [rst_line]
 
 
-class DirectoryInput(Input):
-    """A directory input, or parameter, of an invest model.
+class WorkspaceInput(Input):
+    """A workspace directory path input to an invest model.
 
-    Use this type when you need to specify a group of many file-based inputs,
-    or an unknown number of file-based inputs, by grouping them together in a
-    directory. This may also be used to describe an empty directory where model
-    outputs will be written to.
+    This is used to describe a directory where model outputs will be written.
     """
-    contents: list[Input]
-    """An iterable of `Input`s representing the contents of this directory. The
-    `key` of each input must be the file name or pattern."""
-
-    permissions: typing.Annotated[str, AfterValidator(
-        validate_permissions_string)] = ''
-    """A string that includes the lowercase characters ``r``, ``w`` and/or ``x``,
-    indicating read, write, and execute permissions (respectively) required for
-    this directory."""
-
-    must_exist: bool = True
-    """Defaults to True, indicating the directory must already exist before
-    running the model. Set to False if the directory will be created."""
-
-    type: typing.ClassVar[str] = 'directory'
-
-    rst_section: typing.ClassVar[str] = 'directory'
-
-    _contents_dict: dict[str, Input] = {}
-
-    @model_validator(mode='after')
-    def check_contents_types(self):
-        allowed_types = {
-            CSVInput, DirectoryInput, FileInput, RasterOrVectorInput,
-            SingleBandRasterInput, VectorInput}
-        for content in (self.contents or []):
-            for input_type in allowed_types:
-                if isinstance(content, input_type):
-                    break
-            else:
-                raise ValueError(
-                    f'Directory contents {content} is not an allowed type')
-        return self
-
-    def model_post_init(self, context):
-        self._contents_dict = {x.id: x for x in self.contents}
+    id: typing.ClassVar[str] = 'workspace_dir'
+    name: typing.ClassVar[str] = 'workspace directory'
+    about: str = gettext(
+        "The folder where all the model's output files will be written."
+        " If this folder does not exist, it will be created. If data"
+        " already exists in the folder, it will be overwritten.")
+    type: typing.ClassVar[str] = 'workspace'
+    rst_section: typing.ClassVar[str] = 'workspace'
 
     @property
     def display_name(self):
-        return gettext('directory')
-
-    def get_contents(self, key: str) -> Input:
-        return self._contents_dict[key]
+        return gettext('workspace directory')
 
     @timeout
     def validate(self, dirpath: str):
@@ -1153,13 +1123,6 @@ class DirectoryInput(Input):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        if not utils._GDALPath.from_uri(dirpath).is_local:
-            return  # Don't check paths and permissions for remote paths
-
-        if self.must_exist:
-            if not os.path.exists(dirpath):
-                return validation_messages.DIR_NOT_FOUND
-
         if os.path.exists(dirpath):
             if not os.path.isdir(dirpath):
                 return validation_messages.NOT_A_DIR
@@ -1175,31 +1138,38 @@ class DirectoryInput(Input):
                     dirpath = parent
                     break
 
-        if 'r' in self.permissions:
-            try:
-                os.scandir(dirpath).close()
-            except OSError:
-                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read')
+        try:  # check for read permissions
+            os.scandir(dirpath).close()
+        except OSError:
+            return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read')
 
-        # Check for x access before checking for w,
+        # Check for execute permissions before checking for write,
         # since w operations to a dir are dependent on x access
-        if 'x' in self.permissions:
-            try:
-                cwd = os.getcwd()
-                os.chdir(dirpath)
-            except OSError:
-                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='execute')
-            finally:
-                os.chdir(cwd)
+        try:
+            cwd = os.getcwd()
+            os.chdir(dirpath)
+        except OSError:
+            return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='execute')
+        finally:
+            os.chdir(cwd)
 
-        if 'w' in self.permissions:
-            try:
-                temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
-                with open(temp_path, 'w') as temp:
-                    temp.close()
-                    os.remove(temp_path)
-            except OSError:
-                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='write')
+        try:  # check for write permissions
+            temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
+            with open(temp_path, 'w') as temp:
+                temp.close()
+                os.remove(temp_path)
+        except OSError:
+            return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='write')
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler):
+        """Custom serializer to include static class attributes in the dict representation"""
+        return {
+            **handler(self),
+            'id': self.id,
+            'name': self.name,
+            'about': self.about
+        }
 
 
 class NumberInput(Input):
@@ -1599,7 +1569,7 @@ class ResultsSuffixInput(StringInput):
         return value
 
 
-class Option(BaseModel):
+class Option(ImmutableBaseModel):
     """An option in an OptionStringInput or OptionStringOutput."""
 
     key: str
@@ -1879,27 +1849,26 @@ class NumberOutput(Output):
     """The units of measurement for this numeric value"""
 
 
-class IntegerOutput(Output):
+class IntegerOutput(NumberOutput):
     """An integer output, or result, of an invest model."""
-    pass
 
 
-class RatioOutput(Output):
+class RatioOutput(NumberOutput):
     """A ratio output, or result, of an invest model.
 
     A ratio is a proportion expressed as a value from 0 to 1 (in contrast to a
     percent, which ranges from 0 to 100).
     """
-    pass
 
 
-class PercentOutput(Output):
+class PercentOutput(NumberOutput):
     """A percent output, or result, of an invest model.
 
     A percent is a proportion expressed as a value from 0 to 100 (in contrast to
     a ratio, which ranges from 0 to 1).
     """
-    pass
+    units: typing.Union[pint.Unit, None] = u.percent
+    """The units of measurement for this numeric value"""
 
 
 class StringOutput(Output):
@@ -1918,7 +1887,7 @@ class OptionStringOutput(Output):
     """A list of the values that this input may take"""
 
 
-class ModelSpec(BaseModel):
+class ModelSpec(ImmutableBaseModel):
     """Specification of an invest model describing metadata, inputs, and outputs."""
 
     model_id: str
@@ -2260,6 +2229,19 @@ class ModelSpec(BaseModel):
             model_module = importlib.import_module(self.module_name)
             registry = model_module.execute(args)
 
+            if not isinstance(registry, dict):
+                msg = "`execute` was called with {kwargs}, but no" \
+                      " file registry dictionary was returned from `execute`."
+                kwargs_used = []
+                for kwarg in [
+                        'check_outputs', 'generate_metadata',
+                        'save_file_registry', 'generate_report']:
+                    if locals()[kwarg]:
+                        kwargs_used.append(f'{kwarg}=True')
+                if kwargs_used:
+                    LOGGER.warning(msg.format(kwargs=', '.join(kwargs_used)))
+                return
+
             preprocessed_args = self.preprocess_inputs(args)
 
             if check_outputs:
@@ -2314,18 +2296,7 @@ class ModelSpec(BaseModel):
 
 
 # Specs for common arg types ##################################################
-WORKSPACE = DirectoryInput(
-    id="workspace_dir",
-    name="workspace",
-    about=(
-        "The folder where all the model's output files will be written."
-        " If this folder does not exist, it will be created. If data"
-        " already exists in the folder, it will be overwritten."
-    ),
-    contents=[],
-    permissions="rwx",
-    must_exist=False,
-)
+WORKSPACE = WorkspaceInput()
 SUFFIX = ResultsSuffixInput(
     id="results_suffix",
     name=gettext("file suffix"),

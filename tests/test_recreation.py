@@ -269,23 +269,23 @@ class UnitTestRecServer(unittest.TestCase):
         # transfer zipped file to server
         start_year = '2005'
         end_year = '2014'
-        out_vector_filename = 'results_pud.gpkg'
+        out_csv_filename = 'results_pud.csv'
 
         zip_result, workspace_id, version_str = (
             recreation_server.calc_user_days_in_aoi(
                 zip_file_binary, aoi_filename, start_year, end_year,
-                out_vector_filename))
+                out_csv_filename))
 
         # unpack result
         result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
         with open(result_zip_path, 'wb') as file:
             file.write(zip_result)
         zipfile.ZipFile(result_zip_path, 'r').extractall(self.workspace_dir)
-        result_vector_path = os.path.join(
-            self.workspace_dir, out_vector_filename)
+        result_csv_path = os.path.join(
+            self.workspace_dir, out_csv_filename)
 
         expected_attributes = [
-           {'poly_id': 0,
+           {'id': 0,
             'PUD_YR_AVG': 83.2,
             'PUD_JAN': 2.5,
             'PUD_FEB': 2.4,
@@ -300,13 +300,9 @@ class UnitTestRecServer(unittest.TestCase):
             'PUD_NOV': 1.0,
             'PUD_DEC': 1.2}
         ]
-        fields = {field: ogr.OFTReal for field in expected_attributes[0]}
-
-        expected_vector_path = os.path.join(
-            self.workspace_dir, 'regression_pud.geojson')
-        _make_simple_lat_lon_aoi(
-            [polygon], expected_vector_path, fields, expected_attributes)
-        utils._assert_vectors_equal(expected_vector_path, result_vector_path)
+        actual_data = pandas.read_csv(result_csv_path)
+        expected_data = pandas.DataFrame(expected_attributes)
+        pandas.testing.assert_frame_equal(actual_data, expected_data)
 
     def test_local_calc_poly_ud(self):
         """Recreation test single threaded local PUD calculation."""
@@ -1500,10 +1496,27 @@ class RecreationProductionServerHealth(unittest.TestCase):
     """Health check for the production server."""
 
     def test_production_server(self):
+        """Ping the server that is compatible with latest client."""
         from natcap.invest.recreation import recmodel_client
         import requests
 
         server_url = requests.get(recmodel_client.SERVER_URL).text.rstrip()
+        try:
+            proxy = Pyro5.api.Proxy(server_url)
+            # _pyroBind() forces the client-server handshake and
+            # seems like a good way to check if the remote object is ready
+            proxy._pyroBind()
+        except Exception as exc:
+            self.fail(exc)
+        finally:
+            proxy._pyroRelease()
+
+    def test_production_server_3_15_0(self):
+        """Ping server supporting invest clients prior to 3.19.0."""
+        import requests
+
+        registry = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_3_15_0/index.html'
+        server_url = requests.get(registry).text.rstrip()
         try:
             proxy = Pyro5.api.Proxy(server_url)
             # _pyroBind() forces the client-server handshake and

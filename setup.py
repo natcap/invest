@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import platform
 import subprocess
@@ -8,14 +9,20 @@ from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
 
-# Read in requirements.txt and populate the python readme with the
-# non-comment, non-environment-specifier contents.
-_REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
-                 open('requirements.txt').readlines()
-                 if (not req.startswith(('#', 'hg+', 'git+'))
-                     and len(req.strip()) > 0)]
+include_dirs = [numpy.get_include()]
 
-include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
+pygeoprocessing_spec = importlib.util.find_spec("pygeoprocessing")
+if pygeoprocessing_spec is not None and pygeoprocessing_spec.submodule_search_locations:
+    # Don't import all of pygeoprocessing, just get the include dir from
+    # package metadata.
+    # This should avoid issues with conda-forge when cross-compiling to
+    # non-native architectures like linux-ppcle64.
+    include_dirs.append(os.path.join(
+        pygeoprocessing_spec.submodule_search_locations[0], 'extensions'))
+else:
+    raise ModuleNotFoundError(
+        "Pygeoprocessing is required to compile natcap.invest")
+
 if platform.system() == 'Windows':
     compiler_args = ['/std:c++20']
     compiler_and_linker_args = []
@@ -60,7 +67,6 @@ class build_py(_build_py):
 
 
 setup(
-    install_requires=_REQUIREMENTS,
     ext_modules=cythonize([
         Extension(
             name=f'natcap.invest.{package}.{module}',

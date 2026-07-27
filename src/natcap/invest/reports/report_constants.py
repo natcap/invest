@@ -18,4 +18,9 @@ STREAM_CAPTION_APPENDIX = gettext(
     'in GIS to assess its accuracy.'
 )
 
+LULC_PRE_CAPTION = gettext(
+    'LULC values in the legend are listed in order of frequency (most common '
+    'first).'
+)
+
 TABLE_PAGINATION_THRESHOLD = 10
