@@ -66,6 +66,13 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* Fixed an issue with cross-compiling ``natcap.invest`` for non-native
+  architectures, particularly on conda-forge.  This should also speed up
+  the operation of ``setup.py``.
+  (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
+
 Workbench
 =========
 * Added a file browse button to the input field for selecting a
@@ -74,8 +81,16 @@ Workbench
 * Bootstrap and React Bootstrap dependencies have been updated to their latest
   stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
   (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda executable is used to run plugins.
+  (`#2645 <https://github.com/natcap/invest/issues/2645>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda environment is used to run each plugin.
+  (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
 * React dependency has been updated to its latest stable version (19.2.7).
   (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
+* Improved handling of errors on plugin server startup
+  (`#2637 https://github.com/natcap/invest/issues/2637`)
 
 3.20.0 (2026-06-11)
 -------------------

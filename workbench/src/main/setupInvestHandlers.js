@@ -94,10 +94,10 @@ export function setupInvestRunHandlers() {
     let port;
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelID)) {
-      cmd = settingsStore.get('micromamba');
+      cmd = settingsStore.get('userDefinedMicromamba') || settingsStore.get('micromamba');
       cmdArgs = [
         'run',
-        `--prefix "${settingsStore.get(`plugins.${modelID}.env`)}"`,
+        '--prefix', `"${plugins[modelID].userDefinedEnv || plugins[modelID].env}"`,
         // calling invest with python avoids issues with unescaped
         // spaces in the python path in the conda bin/invest script
         'python -m natcap.invest',
