@@ -91,6 +91,8 @@ Workbench
   (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
 * Improved handling of errors on plugin server startup
   (`#2637 https://github.com/natcap/invest/issues/2637`)
+* The "View Results" button now supports plugins.
+  (`#2638 <https://github.com/natcap/invest/issues/2638>`_)
 
 3.20.0 (2026-06-11)
 -------------------
