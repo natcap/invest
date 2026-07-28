@@ -2680,7 +2680,7 @@ TARGET_PROJECTION = OptionSpatialInput( #TODO - add 'Custom' option to all lists
     about=gettext(
         "Input with target projection to which all other spatial "
         "inputs will be reprojected."),
-    required=True,  # models will fallback to using default target projections
+    required=False,  # models will fallback to using default target projections
     options=[],
     dropdown_function=_get_spatial_inputs
 )
@@ -2691,7 +2691,7 @@ TARGET_PIXELSIZE = OptionSpatialInput(
         "Input with target pixel size to which all other spatial "
         "inputs will be resampled. Units match those of the selected "
         "Target Projection."),
-    required=True,  # models will fallback to using default target pixel size
+    required=False,  # models will fallback to using default target pixel size
     options=[],
     dropdown_function=_get_pixel_size
 )
