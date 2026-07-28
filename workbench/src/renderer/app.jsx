@@ -35,7 +35,7 @@ const { ipcRenderer } = window.Workbench.electron;
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
  */
-export default function App(props) {
+export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}) {
 
   const [activeTab, setActiveTab] = useState('home');
   const [openJobs, setOpenJobs] = useState(new Map());
@@ -53,10 +53,10 @@ export default function App(props) {
   useEffect(() => {
     async function setup() {
       await updateInvestList();
-      setShowDownloadModal(props.isFirstRun);
+      setShowDownloadModal(isFirstRun);
       // Show changelog if this is a new version,
       // but if it's the first run ever, wait until after download modal closes.
-      setShowChangelog(props.isNewVersion && !props.isFirstRun);
+      setShowChangelog(isNewVersion && !isFirstRun);
       await i18n.changeLanguage(window.Workbench.LANGUAGE);
       ipcRenderer.on('download-status', (downloadedNofN) => {
         setDownloadedNofN(downloadedNofN)
@@ -77,7 +77,7 @@ export default function App(props) {
     setShowDownloadModal(shouldShow);
     // After close, show changelog if new version and app has just launched
     // (i.e., show changelog only once, after the first time the download modal closes).
-    if (!shouldShow && props.isNewVersion && !changelogDismissed) {
+    if (!shouldShow && isNewVersion && !changelogDismissed) {
       setShowChangelog(true);
     }
   }
@@ -313,7 +313,7 @@ export default function App(props) {
         <SettingsModal
           show={showSettingsModal}
           close={() => setShowSettingsModal(false)}
-          nCPU={props.nCPU}
+          nCPU={nCPU}
         />
       )}
       <TabContainer
@@ -393,12 +393,4 @@ App.propTypes = {
   isFirstRun: PropTypes.bool,
   isNewVersion: PropTypes.bool,
   nCPU: PropTypes.number,
-};
-
-// Setting a default here mainly to make testing easy, so these props
-// can be undefined for unrelated tests.
-App.defaultProps = {
-  isFirstRun: false,
-  isNewVersion: false,
-  nCPU: 1,
 };
