@@ -66,7 +66,7 @@ export function destroyWindow() {
 
 /** Create an Electron browser window and start the flask application. */
 export const createWindow = async () => {
-  logger.info(`Running invest-workbench version ${pkg.version}`);
+  logger.info(`Running!!!! invest-workbench version ${pkg.version}`);
   nativeTheme.themeSource = 'light'; // override OS/browser setting
 
   i18n.changeLanguage(settingsStore.get('language'));
@@ -92,7 +92,9 @@ export const createWindow = async () => {
     });
   }
 
+  logger.info('creating core server process');
   await createCoreServerProcess();
+  logger.info('created core server process');
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();
