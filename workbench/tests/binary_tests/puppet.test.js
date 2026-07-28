@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import glob from 'glob';
+import { glob } from 'glob';
 import { spawn, spawnSync } from 'child_process';
 
 import { rimraf } from 'rimraf';
