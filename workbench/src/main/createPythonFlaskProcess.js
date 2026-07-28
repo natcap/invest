@@ -114,6 +114,7 @@ export async function createCoreServerProcess(_port = undefined) {
   if (port === undefined) {
     port = await getFreePort();
   }
+  logger.debug('creating invest core server process');
   const pythonServerProcess = spawn(
     settingsStore.get('investExe'),
     ['--debug', 'serve', '--port', port],
@@ -140,6 +141,7 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   if (port === undefined) {
     port = await getFreePort();
   }
+  logger.debug('creating invest plugin server process');
   const micromamba = settingsStore.get('micromamba');
   const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
   const args = [
