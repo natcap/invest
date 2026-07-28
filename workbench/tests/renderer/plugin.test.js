@@ -311,7 +311,7 @@ describe('Add plugin modal', () => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
           return Promise.resolve({});
-        } else if (setting === 'defaultMicromamba') {
+        } else if (setting === 'micromamba') {
           return Promise.resolve('micromamba')
         }
       } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
@@ -331,7 +331,8 @@ describe('Add plugin modal', () => {
     await userEvent.click(managePluginsButton);
 
     const input = await findByLabelText('Conda or mamba executable');
-    await userEvent.type(input, 'conda')
+    await userEvent.clear(input);
+    await userEvent.type(input, 'conda');
     await waitFor(() => expect(input).toHaveValue('conda'));
 
     await userEvent.click(await findByRole(
@@ -344,7 +345,7 @@ describe('Add plugin modal', () => {
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
         ipcMainChannels.SET_SETTING,
-        'micromamba',
+        'userDefinedMicromamba',
         'foo'
       );
     });
@@ -363,7 +364,7 @@ describe('Add plugin modal', () => {
               type: 'plugin',
             },
           });
-        } else if (setting === 'plugins.foo.defaultEnv') {
+        } else if (setting === 'plugins.foo.env') {
           return Promise.resolve('default_env');
         }
       } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
@@ -396,7 +397,7 @@ describe('Add plugin modal', () => {
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
         ipcMainChannels.SET_SETTING,
-        'plugins.foo.env',
+        'plugins.foo.userDefinedEnv',
         '/path/to/my_env'
       );
     });

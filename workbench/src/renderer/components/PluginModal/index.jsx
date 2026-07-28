@@ -65,15 +65,18 @@ export default function PluginModal(props) {
   };
 
   useEffect(() => {
-    ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'micromamba'
-    ).then((data) => setCondaPath(data));
+    Promise.all([
+      ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'micromamba'),
+      ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'userDefinedMicromamba')
+    ]).then(([micromamba, userDefinedMicromamba]) => {
+      setCondaPath(userDefinedMicromamba || micromamba);
+    });
     ipcRenderer.invoke(
       ipcMainChannels.GET_SETTING, 'plugins'
     ).then((data) => setPluginEnvs(
       Object.fromEntries(
         Object.keys(data).map(
-          (pluginID) => [pluginID, data[pluginID].userDefinedEnv]
+          (pluginID) => [pluginID, data[pluginID].userDefinedEnv || data[pluginID].env]
         )
       )
     ))
@@ -166,9 +169,17 @@ export default function PluginModal(props) {
     );
   };
 
+  const resetCondaPath = () => {
+    ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'micromamba'
+    ).then((data) => {
+      setCondaPath(data);
+    });
+  };
+
   const saveCondaPath = () => {
     ipcRenderer.send(
-      ipcMainChannels.SET_SETTING, 'micromamba', condaPath
+      ipcMainChannels.SET_SETTING, 'userDefinedMicromamba', condaPath
     );
   };
 
@@ -515,7 +526,7 @@ export default function PluginModal(props) {
             </Button>
             <Button
               className="text-nowrap ms-1"
-              onClick={() => setCondaPath(window.Workbench.DEFAULT_MICROMAMBA)}
+              onClick={resetCondaPath}
             >
               {t('Reset')}
             </Button>

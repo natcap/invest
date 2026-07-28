@@ -3,7 +3,6 @@ const { ipcRenderer, webUtils } = require('electron');
 // using `import` for electron messes with vite and yields a bad bundle.
 // `import`` is okay for local modules though
 import { ipcMainChannels } from '../main/ipcMainChannels';
-import { findMicromambaExecutable } from '../main/findBinaries';
 
 // Most IPC initiates in renderer and main does the listening,
 // but these channels are exceptions: renderer listens for them
@@ -35,7 +34,6 @@ export default {
   USERGUIDE_PATH: userguidePath,
   LANGUAGE: ipcRenderer.sendSync(ipcMainChannels.GET_LANGUAGE),
   OS: process.platform,
-  DEFAULT_MICROMAMBA: findMicromambaExecutable(),
   logger: {
     debug: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'debug', message),
     info: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'info', message),
