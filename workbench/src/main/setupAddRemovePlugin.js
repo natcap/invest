@@ -211,7 +211,6 @@ function storePluginMetadataSync(
       type: 'plugin',
       source: installString,
       env: pluginEnvPrefix,
-      userDefinedEnv: pluginEnvPrefix,
       version: version,
     }
   );
