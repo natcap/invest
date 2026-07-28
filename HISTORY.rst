@@ -83,6 +83,8 @@ Workbench
   (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
 * React dependency has been updated to its latest stable version (19.2.7).
   (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
+* The "View Results" button now supports plugins.
+  (`#2638 <https://github.com/natcap/invest/issues/2638>`_)
 
 3.20.0 (2026-06-11)
 -------------------
