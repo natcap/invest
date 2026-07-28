@@ -68,8 +68,10 @@ export function setupInvestRunHandlers() {
     if (resultsSuffix && !resultsSuffix.startsWith('_')) {
       resultsSuffix = `_${resultsSuffix}`;
     }
+    // Strip version info from plugin ID before forming report filepath.
+    const baseModelId = modelID.includes('@') ? modelID.split('@')[0] : modelID;
     const reportFilepath = path.join(
-      args.workspace_dir, `${modelID}_report${resultsSuffix}.html`
+      args.workspace_dir, `${baseModelId}_report${resultsSuffix}.html`
     );
 
     // Write a temporary datastack json for passing to invest CLI
