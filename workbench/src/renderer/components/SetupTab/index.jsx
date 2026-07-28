@@ -509,23 +509,25 @@ class SetupTab extends React.Component {
           (option) => option.key === currentValue
         );
 
-        const isTargetSpatialDropdown = [
-          'target_pixelsize',
-          'target_projection',
-        ].includes(this.props.argsSpec[argkey]?.id);
-
         const hasCurrentValue = (
           currentValue !== undefined &&
           currentValue !== null &&
           currentValue !== ''
         );
-        
+
+        const selectedInputIsDisabled = prevState.argsEnabled?.[currentValue] === false;
+
+        const isTargetSpatialDropdown = [
+          'target_pixelsize',
+          'target_projection',
+        ].includes(this.props.argsSpec[argkey]?.id);
+
         // Handle user manually selecting a non-default input option
         // and then deleting that filepath
         if (
           hasCurrentValue &&
-          !currentValueExists &&
-          isTargetSpatialDropdown
+          isTargetSpatialDropdown &&
+          (!currentValueExists || selectedInputIsDisabled)
         ) {
           newArgsDropdownOptions[argkey] = [
             {
@@ -533,7 +535,7 @@ class SetupTab extends React.Component {
               display_name: `Select a new input`,
               disabled: true,
             },
-            ...options,
+            ...options.filter((option) => option.key !== currentValue),
           ];
         } else {
           newArgsDropdownOptions[argkey] = options;
