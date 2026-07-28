@@ -307,11 +307,21 @@ describe('Arguments form interactions', () => {
 
   test('Type slow & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
+
+    jest.spyOn(
+      SetupTab.WrappedComponent.prototype,
+      'callDropdownFunctions'
+    ).mockImplementation(() => {});
+
     const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
+    // Wait for componentDidMount's direct validation
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
     spy.mockClear(); // it was already called once on render
 
     // Slow typing, expect validation call after each character
@@ -591,10 +601,18 @@ describe('UI spec functionality', () => {
       unrelated_option: true,
     });
 
-    getDynamicDropdowns.mockResolvedValue({
-      responsive_option: [
-        { key: 'new_field', display_name: 'new_field' },
-      ],
+    getDynamicDropdowns.mockImplementation(async ({ args }) => {
+      const argsValues = JSON.parse(args);
+    
+      return {
+        responsive_option: argsValues.source_option === 'b'
+          ? [
+            { key: 'new_field', display_name: 'new_field' },
+          ]
+          : [
+            { key: 'old_field', display_name: 'old_field' },
+          ],
+      };
     });
 
     const spec = {
@@ -657,6 +675,7 @@ describe('UI spec functionality', () => {
     );
 
     await waitFor(() => {
+      expect(getDynamicDropdowns).toHaveBeenCalledTimes(1);
       expect(responsiveSelect).toHaveValue('old_field');
     });
 
