@@ -89,6 +89,8 @@ Workbench
   (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
 * React dependency has been updated to its latest stable version (19.2.7).
   (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
+* Improved handling of errors on plugin server startup
+  (`#2637 https://github.com/natcap/invest/issues/2637`)
 
 3.20.0 (2026-06-11)
 -------------------
