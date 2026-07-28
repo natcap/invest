@@ -122,10 +122,10 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   }
 
   logger.debug('creating invest plugin server process');
-  const micromamba = settingsStore.get('micromamba');
-  const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
+  const micromamba = settingsStore.get('userDefinedMicromamba') || settingsStore.get('micromamba');
+  const pluginSettings = settingsStore.get(`plugins.${modelID}`);
   const args = [
-    'run', '--prefix', `"${modelEnvPath}"`,
+    'run', '--prefix', `"${pluginSettings.userDefinedEnv || pluginSettings.env}"`,
     // calling invest with python avoids issues with unescaped
     // spaces in the python path in the conda bin/invest script
     'python -m natcap.invest', '--debug', 'serve', '--port', port];

@@ -81,6 +81,12 @@ Workbench
 * Bootstrap and React Bootstrap dependencies have been updated to their latest
   stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
   (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda executable is used to run plugins.
+  (`#2645 <https://github.com/natcap/invest/issues/2645>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda environment is used to run each plugin.
+  (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
 * React dependency has been updated to its latest stable version (19.2.7).
   (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
 
