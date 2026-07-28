@@ -324,28 +324,49 @@ class Input(IOModel):
         return []
 
     def get_keywords(self, include_children=True, include_aliases=True):
-        """Get a list of unique keyword strings for this input and children."""
+        """Get a list of unique keyword strings for this input and children.
+
+        Args:
+            include_children (bool): include the keywords of nested Input or
+                Output specs.
+            include_aliases (bool): extend the list of keyword strings with the
+                list of the keyword's aliases
+
+        Returns:
+            list of strings
+
+        """
         keywords = []
         if self.keywords:
             for keyword in self.keywords:
                 keywords.append(keyword.value)
                 if include_aliases:
                     keywords.extend(keyword.aliases)
-                # keywords += [keyword.value for keyword in self.keywords]
         if include_children:
             for child in self.get_child_inputs():
                 if child.keywords:
-                    keywords += child.get_keywords()
+                    keywords += child.get_keywords(
+                        include_children=include_children)
         return list(set(keywords))
 
-    def get_keywords_objects(self, include_children=True):
-        """Get a list of unique keyword strings for this input and children."""
+    def get_keyword_objects(self, include_children=True):
+        """Get a list of keyword objects for this input and children.
+
+        Args:
+            include_children (bool): include the keywords of nested Input or
+                Output specs.
+
+        Returns:
+            list of dicts
+
+        """
         keywords = []
         if self.keywords:
             keywords += [keyword.model_dump() for keyword in self.keywords]
         if include_children:
             for child in self.get_child_inputs():
-                keywords += child.get_keywords_objects()
+                keywords += child.get_keyword_objects(
+                    include_children=include_children)
         return keywords
 
 

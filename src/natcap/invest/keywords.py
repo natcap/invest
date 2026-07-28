@@ -2,21 +2,31 @@ from pydantic import BaseModel
 
 
 class Keyword(BaseModel):
+    """Base model for all keywords."""
     value: str
+    """The keyword string."""
     vocabulary: str
+    """The name of a controlled vocabulary where this keyword is defined."""
     aliases: list[str] = []
+    """A list of alternatives to the ``value`` string that carry the same meaning.
+
+    It is useful to alias some GCMD keywords when they include special characters
+    that are not usable in some contexts (e.g. as CKAN tags).
+    """
 
 
 class GCMDKeyword(Keyword):
-    value: str
+    """A Keyword from the NASA Global Change Master Directory (GCMD)"""
     uuid: str
+    """The unique id from the GCMD."""
     full_path: str
+    """The full hierarchy of they keyword within the GCMD."""
     vocabulary: str = 'Global Change Master Directory (GCMD) Keywords'
 
 
 class InvestKeyword(Keyword):
-    value: str
     definition: str = ''
+    """The meaning of the keyword."""
     vocabulary: str = 'InVEST Keywords'
 
 
