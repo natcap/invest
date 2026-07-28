@@ -77,8 +77,7 @@ FormLabel.propTypes = {
   units: PropTypes.string,
 };
 
-function Feedback(props) {
-  const { argkey, message } = props;
+function Feedback({argkey, message = ''}) {
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
@@ -94,9 +93,6 @@ function Feedback(props) {
 Feedback.propTypes = {
   argkey: PropTypes.string.isRequired,
   message: PropTypes.string,
-};
-Feedback.defaultProps = {
-  message: '',
 };
 
 /**
@@ -157,28 +153,15 @@ function parseArgType(argtype) {
   return userFriendlyArgType;
 }
 
-export default function ArgInput(props) {
+export default function ArgInput({
+  argkey, argSpec, userguide, isCoreModel, value = undefined,
+  touched = false, isValid = undefined, validationMessage = '',
+  updateArgValues, handleFocus, selectFile, enabled,
+  dropdownOptions = undefined, inputDropHandler, scrollEventCount = 0
+}) {
   const uniqueId = useId();
   const inputRef = useRef();
   const { t } = useTranslation();
-
-  const {
-    argkey,
-    argSpec,
-    userguide,
-    isCoreModel,
-    enabled,
-    updateArgValues,
-    handleFocus,
-    inputDropHandler,
-    isValid,
-    selectFile,
-    touched,
-    dropdownOptions,
-    value,
-    scrollEventCount,
-  } = props;
-  let { validationMessage } = props;
 
   const inputId = `${argkey}-${uniqueId}`;
 
@@ -382,14 +365,6 @@ ArgInput.propTypes = {
   })),
   inputDropHandler: PropTypes.func.isRequired,
   scrollEventCount: PropTypes.number,
-};
-ArgInput.defaultProps = {
-  value: undefined,
-  touched: false,
-  isValid: undefined,
-  validationMessage: '',
-  dropdownOptions: undefined,
-  scrollEventCount: 0,
 };
 
 /**
