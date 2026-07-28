@@ -58,7 +58,6 @@ async function getFlaskIsReady(url, signal, maxRetries = 500) {
  * @returns {number} PID of the started process, or undefined if it fails to launch
  */
 export async function handleServerStartup(pythonServerProcess, url) {
-  logger.debug('handle server startup');
   const controller = new AbortController();
   const signal = controller.signal;
 
@@ -95,8 +94,7 @@ export async function handleServerStartup(pythonServerProcess, url) {
   });
 
   try {
-    logger.debug('wait for server to be ready');
-    await getServerReady(url, signal);
+    await getFlaskIsReady(url, signal);
   } catch (error) {
     return undefined;
   }
@@ -116,7 +114,6 @@ export async function createCoreServerProcess(_port = undefined) {
   if (port === undefined) {
     port = await getFreePort();
   }
-  logger.debug('creating invest core server process');
   const pythonServerProcess = spawn(
     settingsStore.get('investExe'),
     ['--debug', 'serve', '--port', port],
@@ -128,7 +125,6 @@ export async function createCoreServerProcess(_port = undefined) {
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   const pid = await handleServerStartup(
     pythonServerProcess, `${HOSTNAME}:${port}/api/ready`);
-  logger.debug('returning', pid);
   return pid;
 }
 
@@ -144,7 +140,6 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   if (port === undefined) {
     port = await getFreePort();
   }
-  logger.debug('creating invest plugin server process');
   const micromamba = settingsStore.get('micromamba');
   const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
   const args = [
