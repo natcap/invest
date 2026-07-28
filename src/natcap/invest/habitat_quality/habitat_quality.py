@@ -18,7 +18,7 @@ from natcap.invest.unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 MISSING_SENSITIVITY_TABLE_THREATS_MSG = gettext(
-    'Threats {threats} does not match any column in the sensitivity table. '
+    'Threats {threats} do not match any column in the sensitivity table. '
     'Sensitivity columns: {column_names}')  # (set of missing threats, set of found columns)
 MISSING_THREAT_RASTER_MSG = gettext(
     "A threat raster for threats: {threat_list} was not found or it "
@@ -221,7 +221,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "The relative sensitivity of each LULC class to each type of"
                         " threat, where 1 represents high sensitivity and 0 represents"
                         " that it is unaffected. There must be one threat column for each"
-                        " threat name in the 'threats' column of the Threats Table."
+                        " threat name in the 'threat' column of the Threats Table."
                     ),
                     units=None
                 )

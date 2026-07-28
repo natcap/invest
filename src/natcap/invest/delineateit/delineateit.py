@@ -72,7 +72,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="snap_points",
             name=gettext("snap points to the nearest stream"),
             about=(
-                "Whether to snap point geometries to the nearest stream pixel.  If"
+                "Whether to snap point geometries to the nearest stream pixel. If"
                 " ``True``, ``args['flow_threshold']`` and ``args['snap_distance']`` must"
                 " also be defined. If a point is equally near to more than one stream"
                 " pixel, it will be snapped to the stream pixel with the highest flow"
