@@ -17,7 +17,7 @@ import App from '../../src/renderer/app';
 
 jest.mock('../../src/renderer/server_requests');
 
-describe('Add plugin modal', () => {
+describe('Manage Plugins modal', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue({
       model_id: 'foo',
@@ -237,7 +237,7 @@ describe('Add plugin modal', () => {
           });
         }
       } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
-        return 1;
+        return 1111; // a fake PID
       }
       return Promise.resolve();
     });
@@ -278,6 +278,8 @@ describe('Add plugin modal', () => {
         plugins = {};
       } else if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
+      } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
+        return 1111; // a fake PID
       }
       return Promise.resolve();
     });
