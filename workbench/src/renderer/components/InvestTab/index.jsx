@@ -228,16 +228,21 @@ class InvestTab extends React.Component {
     const { tabID, investList, t } = this.props;
 
     if (tabStatus === 'failed') {
-      return (<>
+      return (
         <div className="invest-tab-loading">
-          {t('Failed to launch plugin. Check the workbench logs.')}
+          <p>{t('Failed to launch plugin. Check the workbench logs.')}</p>
+          <div className="text-center mt-3">
+            <Button onClick={handleClickFindLogfiles}>
+              {t('Find My Logs')}
+            </Button>
+          </div>
+          <p>
+            {t(`You may wish to manually configure the conda executeable
+              or the plugin environment.`)}
+          </p>
+          <p>{t('See the "Advanced" options in the Manage Plugins menu.')}</p>
         </div>
-        <div className="text-center mt-3">
-          <Button onClick={handleClickFindLogfiles}>
-            {t('Find My Logs')}
-          </Button>
-        </div>
-      </>);
+      );
     }
 
     // Don't render the model setup & log until data has been fetched.
