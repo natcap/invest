@@ -153,10 +153,11 @@ LULC = GCMDKeyword(
     alias=['LAND USE LAND COVER'])
 
 # TODO: this is not currently in use. Instead biophysical tables are
-# tagged with LULC. Should we use this tag instead?
+# tagged with LULC. Should we use this tag instead? It would not currently
+# match any tags in use on the DH.
 LULC_CLASSES = GCMDKeyword(
     value='LAND USE/LAND COVER CLASSES',
-    uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
+    uuid='fe2f8240-4d8e-4b1f-b869-29fee59692f7',
     full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES',
     aliases=['LAND USE LAND COVER CLASSES'])
 
