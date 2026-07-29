@@ -278,7 +278,7 @@ SHORELINES = GCMDKeyword(
 
 SOIL_ERODIBILITY = InvestKeyword(
     value='SOIL ERODIBILITY',
-    definition='The susceptibility of soil to erosion as a function of soil properties.',)
+    definition='The susceptibility of soil to erosion as a function of soil properties.')
 
 SOIL_EROSION = GCMDKeyword(
     value='SOIL EROSION',
