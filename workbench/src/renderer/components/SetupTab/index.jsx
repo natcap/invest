@@ -515,8 +515,6 @@ class SetupTab extends React.Component {
           currentValue !== ''
         );
 
-        const selectedInputIsDisabled = prevState.argsEnabled?.[currentValue] === false;
-
         const isTargetSpatialDropdown = [
           'target_pixelsize',
           'target_projection',
@@ -527,7 +525,7 @@ class SetupTab extends React.Component {
         if (
           hasCurrentValue &&
           isTargetSpatialDropdown &&
-          (!currentValueExists || selectedInputIsDisabled)
+          !currentValueExists
         ) {
           newArgsDropdownOptions[argkey] = [
             {
@@ -581,13 +579,44 @@ class SetupTab extends React.Component {
   async investValidate() {
     
     const { argsSpec, modelID } = this.props;
-    const { argsValues, argsValidation, argsValid } = this.state;
+    const { argsValues, argsValidation, argsValid, argsEnabled } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_id: modelID,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await fetchValidation(payload);
+
+    // Invalidate a target spatial dropdown when its selected input is disabled
+    const validateSpatialDropdownSelections = () => {
+      let invalidSelection = false;
+
+      Object.keys(argsSpec).forEach((argkey) => {
+        const isTargetSpatialDropdown = [
+          'target_pixelsize',
+          'target_projection',
+        ].includes(argsSpec[argkey]?.id);
+
+        if (!isTargetSpatialDropdown) {
+          return;
+        }
+
+        const selectedInputKey = argsValues[argkey]?.value;
+        const selectedInputIsDisabled = (
+          selectedInputKey &&
+          argsEnabled[selectedInputKey] === false
+        );
+
+        if (selectedInputIsDisabled) {
+          argsValidation[argkey].valid = false;
+          argsValidation[argkey].validationMessage =
+            'The selected input is disabled. Select a new input.';
+          invalidSelection = true;
+        }
+      });
+
+      return invalidSelection;
+    };
 
     // A) At least one arg was invalid:
     if (results.length) {
@@ -610,6 +639,7 @@ class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
+      validateSpatialDropdownSelections();
       if (this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
@@ -623,13 +653,24 @@ class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
+      const invalidSpatialDropdown = validateSpatialDropdownSelections();
+      // The model is valid only if no target dropdown points to
+      // an input that is currently disabled
+      const newArgsValid = !invalidSpatialDropdown;
+
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can
       // be avoided entirely.
-      if (!argsValid && this._isMounted) {
+      if (argsValid !== newArgsValid && this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
-          argsValid: true,
+          argsValid: newArgsValid,
+        });
+      } else if (invalidSpatialDropdown && this._isMounted) {
+        // The overall validity may already be false, but the dropdown's
+        // validation message still needs to be committed
+        this.setState({
+          argsValidation,
         });
       }
     }
