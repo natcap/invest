@@ -60,7 +60,7 @@ CARBON_REGRESSION_PARAMETERS = InvestKeyword(
     value='CARBON REGRESSION PARAMETERS',
     definition=(
         'Parameters used by the regression model in the InVEST Forest Carbon'
-        ' Edge Effects model.'))
+        ' Edge Effect model.'))
 
 CARBON_SEQUESTRATION = GCMDKeyword(
     value='CARBON SEQUESTRATION',
