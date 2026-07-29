@@ -793,8 +793,8 @@ def execute(args):
         # fallback to aligning everything to the arg with default pixel size
         raster_align_index = base_raster_path_list.index(
             args[args['target_pixelsize']])
-    target_pixel_size = pygeoprocessing.get_raster_info(
-        args[args['target_pixelsize']])['pixel_size']
+    target_pixel_size = utils.get_raster_pixel_size_in_tgt_projection_units(
+        args[args['target_pixelsize']], target_spatial_prj)
     base_vector_path_list = [file_registry['watershed_results_wyield']]
     if args['aoi_vector_path']:
         base_vector_path_list.append(args['aoi_vector_path'])
