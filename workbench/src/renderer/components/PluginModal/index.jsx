@@ -17,7 +17,7 @@ import {
 import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench.electron;
+const { getFilePath, ipcRenderer } = window.Workbench.electron;
 
 export default function PluginModal(props) {
   const {
@@ -208,6 +208,22 @@ export default function PluginModal(props) {
     }
   };
 
+  const handlePluginPathDragOver = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+  
+  const handlePluginPathDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  
+    const droppedFile = event.dataTransfer.files[0];
+    if (droppedFile) {
+      setPath(getFilePath(droppedFile));
+    }
+  };
+
   const selectFile = async (event) => {
     const data = await ipcRenderer.invoke(
       ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openFile'] }
@@ -309,6 +325,8 @@ export default function PluginModal(props) {
               : 'C:\\Documents\\path\\to\\plugin\\'}
             value={path}
             onChange={(event) => setPath(event.currentTarget.value)}
+            onDragOver={handlePluginPathDragOver}
+            onDrop={handlePluginPathDrop}
             aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
           />
           <Button
