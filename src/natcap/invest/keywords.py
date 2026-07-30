@@ -337,3 +337,11 @@ WIND_SPEED = GCMDKeyword(
     value='WIND SPEED',
     uuid='a7ce84a3-8329-4eb7-b5de-72d2dea8c6bf',
     full_path='EARTH SCIENCE > OCEANS > OCEAN WINDS > SURFACE WINDS > WIND SPEED')
+
+
+def to_list():
+    keywords = []
+    for attr in globals().values():
+        if isinstance(attr, Keyword):
+            keywords.append(attr)
+    return keywords
