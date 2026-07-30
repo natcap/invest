@@ -56,19 +56,12 @@ export function findInvestBinaries(isDevMode) {
  * @param {boolean} isDevMode - a boolean designating dev mode or not.
  * @returns {string} micromamba executable.
  */
-export function findMicromambaExecutable(isDevMode) {
+export function setDefaultMicromambaExecutable(isDevMode) {
   let micromambaExe;
-  if (isDevMode) {
-    micromambaExe = 'micromamba'; // assume that micromamba is available
-  } else {
+  if (!isDevMode) {
     micromambaExe = `"${upath.join(process.resourcesPath, 'micromamba')}"`;
-  }
-  // Check that the executable is working
-  const { stderr, error } = spawnSync(micromambaExe, ['--help'], { shell: true });
-  if (error) {
-    logger.error(stderr.toString());
-    logger.error('micromamba executable is not where we expected it.');
-    throw error;
+  } else {
+    micromambaExe = 'micromamba'; // assume that micromamba is available
   }
   logger.info(`using micromamba executable '${micromambaExe}'`);
   return micromambaExe;
