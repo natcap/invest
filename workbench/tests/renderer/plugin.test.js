@@ -17,7 +17,16 @@ import App from '../../src/renderer/app';
 
 jest.mock('../../src/renderer/server_requests');
 
-describe('Add plugin modal', () => {
+const PLUGIN_SETTING_ITEM = {
+  foo: {
+    modelTitle: 'Foo',
+    type: 'plugin',
+    version: '1.0',
+    env: 'foo/bar/baz/',
+  },
+};
+
+describe('Manage Plugins modal', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue({
       model_id: 'foo',
@@ -53,12 +62,7 @@ describe('Add plugin modal', () => {
       spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
         if (channel === ipcMainChannels.GET_SETTING) {
           if (setting === 'plugins') {
-            return Promise.resolve({
-              foo: {
-                modelTitle: 'Foo',
-                type: 'plugin',
-              },
-            });
+            return Promise.resolve(PLUGIN_SETTING_ITEM);
           }
         } else if (channel === ipcMainChannels.HAS_MSVC) {
           return Promise.resolve(true);
@@ -140,12 +144,7 @@ describe('Add plugin modal', () => {
     const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
-          return Promise.resolve({
-            foo: {
-              modelTitle: 'Foo',
-              type: 'plugin',
-            },
-          });
+          return Promise.resolve(PLUGIN_SETTING_ITEM);
         }
       } else if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
@@ -229,15 +228,10 @@ describe('Add plugin modal', () => {
     ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
-          return Promise.resolve({
-            foo: {
-              modelTitle: 'Foo',
-              type: 'plugin',
-            },
-          });
+          return Promise.resolve(PLUGIN_SETTING_ITEM);
         }
       } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
-        return 1;
+        return 1111; // a fake PID
       }
       return Promise.resolve();
     });
@@ -262,22 +256,20 @@ describe('Add plugin modal', () => {
   });
 
   test('Remove a plugin', async () => {
-    let plugins = {
-      foo: {
-        modelTitle: 'Foo',
-        type: 'plugin',
-        version: '1.0',
-      },
-    };
+    let plugins = PLUGIN_SETTING_ITEM;
     const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
           return Promise.resolve(plugins);
         }
       } else if (channel === ipcMainChannels.REMOVE_PLUGIN) {
+        // after REMOVE_PLUGIN there will be a subsequent call to GET_SETTING,
+        // so this effectively replaces the mocked settings data
         plugins = {};
       } else if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
+      } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
+        return 1111; // a fake PID
       }
       return Promise.resolve();
     });
@@ -322,7 +314,7 @@ describe('Add plugin modal', () => {
       return Promise.resolve();
     });
     const {
-      findByText, findByRole, getByRole, findByLabelText, queryByRole,
+      findByText, findByRole, findByLabelText,
     } = render(<App />);
 
     const spy = jest.spyOn(ipcRenderer, 'send');
@@ -358,17 +350,12 @@ describe('Add plugin modal', () => {
     ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
-          return Promise.resolve({
-            foo: {
-              modelTitle: 'Foo',
-              type: 'plugin',
-            },
-          });
+          return Promise.resolve(PLUGIN_SETTING_ITEM);
         } else if (setting === 'plugins.foo.env') {
-          return Promise.resolve('default_env');
+          return Promise.resolve(PLUGIN_SETTING_ITEM.foo.env);
         }
       } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
-        return Promise.resolve({ filePaths: ['/path/to/my_env'] })
+        return Promise.resolve({ filePaths: ['/path/to/my_env'] });
       } else if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
       }
@@ -385,7 +372,9 @@ describe('Add plugin modal', () => {
 
     const div = await findByLabelText('Configure plugin environments (Advanced)')
     const input = await within(div).findByLabelText('foo');
-    await userEvent.type(input, 'my_env')
+    expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env);
+    await userEvent.clear(input);
+    await userEvent.type(input, 'my_env');
     await waitFor(() => expect(input).toHaveValue('my_env'));
 
     await userEvent.click(await findByRole(
@@ -404,6 +393,6 @@ describe('Add plugin modal', () => {
 
     const resetButton = await within(div).findByRole('button', { name: /Reset/ });
     await userEvent.click(resetButton);
-    await waitFor(() => { expect(input).toHaveValue('default_env'); });
+    await waitFor(() => { expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env); });
   });
 });

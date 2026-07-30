@@ -540,7 +540,7 @@ export default function PluginModal(props) {
             <Form.Control
               id="condaPath"
               type="text"
-              value={condaPath}
+              value={condaPath || ''}
               onChange={(event) => setCondaPath(event.target.value)}
               onDragOver={dragOverHandler}
               onDrop={(event) => {
