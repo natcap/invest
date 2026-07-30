@@ -208,20 +208,23 @@ export default function PluginModal(props) {
     }
   };
 
-  const handlePluginPathDragOver = (event) => {
+  const dragOverHandler = (event) => {
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = 'copy';
   };
   
-  const handlePluginPathDrop = (event) => {
+  const getDroppedFilePath = (event) => {
     event.preventDefault();
     event.stopPropagation();
   
     const droppedFile = event.dataTransfer.files[0];
-    if (droppedFile) {
-      setPath(getFilePath(droppedFile));
-    }
+    return droppedFile ? getFilePath(droppedFile) : undefined;
+  };
+
+  const ignoreDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
   };
 
   const selectFile = async (event) => {
@@ -270,6 +273,8 @@ export default function PluginModal(props) {
             placeholder="https://github.com/owner/repo.git"
             value={url}
             onChange={(event) => setURL(event.currentTarget.value)}
+            onDragOver={ignoreDrop}
+            onDrop={ignoreDrop}
             aria-describedby={`about-git-url${pluginSourceMissingError ? ' url-error' : ''}`}
           />
           <Form.Text
@@ -325,8 +330,13 @@ export default function PluginModal(props) {
               : 'C:\\Documents\\path\\to\\plugin\\'}
             value={path}
             onChange={(event) => setPath(event.currentTarget.value)}
-            onDragOver={handlePluginPathDragOver}
-            onDrop={handlePluginPathDrop}
+            onDragOver={dragOverHandler}
+            onDrop={(event) => {
+              const droppedPath = getDroppedFilePath(event);
+              if (droppedPath) {
+                setPath(droppedPath);
+              }
+            }}
             aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
           />
           <Button
@@ -532,6 +542,13 @@ export default function PluginModal(props) {
               type="text"
               value={condaPath}
               onChange={(event) => setCondaPath(event.target.value)}
+              onDragOver={dragOverHandler}
+              onDrop={(event) => {
+                const droppedPath = getDroppedFilePath(event);
+                if (droppedPath) {
+                  setCondaPath(droppedPath);
+                }
+              }}
               className="me-1"
             />
             <Button
@@ -583,6 +600,16 @@ export default function PluginModal(props) {
                 onChange={(event) => setPluginEnvs(
                   {...pluginEnvs, [pluginID]: event.target.value}
                 )}
+                onDragOver={dragOverHandler}
+                onDrop={(event) => {
+                  const droppedPath = getDroppedFilePath(event);
+                  if (droppedPath) {
+                    setPluginEnvs({
+                      ...pluginEnvs,
+                      [pluginID]: droppedPath,
+                    });
+                  }
+                }}
                 className="me-1"
               />
               <Button
