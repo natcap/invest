@@ -62,8 +62,53 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
+
 Unreleased Changes
 ------------------
+
+General
+=======
+* Fixed an issue with cross-compiling ``natcap.invest`` for non-native
+  architectures, particularly on conda-forge.  This should also speed up
+  the operation of ``setup.py``.
+  (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
+
+Workbench
+=========
+* Added a file browse button to the input field for selecting a
+  local plugin directory to install.
+  (`#2641 <https://github.com/natcap/invest/issues/2641>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda executable is used to run plugins.
+  (`#2645 <https://github.com/natcap/invest/issues/2645>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda environment is used to run each plugin.
+  (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
+* Improved handling of errors on plugin server startup.
+  (`#2637 https://github.com/natcap/invest/issues/2637`)
+* The "View Results" button now supports plugins.
+  (`#2638 <https://github.com/natcap/invest/issues/2638>`_)
+* The base report template now better supports plugins by including a link to
+  plugin-specific documentation instead of a link to the InVEST User Guide.
+  (`#2640 <https://github.com/natcap/invest/issues/2640>`_)
+* Bootstrap and React Bootstrap dependencies have been updated to their latest
+  stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
+  (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
+* React dependency has been updated to its latest stable version (19.2.7).
+  (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
+
+3.20.0 (2026-06-11)
+-------------------
+
+Highlights
+==========
+* InVEST Reports are now available for these additional models:
+    * Annual Water Yield
+    * Urban Cooling
+    * Urban Nature Access
+
+  Reports are visual summaries of model results. `View sample reports.
+  <http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/>`_
 
 General
 =======
@@ -113,10 +158,10 @@ Workbench
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
-* Added a disclosure about InVEST data collection to the Workbench installer
+* Added a disclosure about InVEST usage data to the Workbench installer
   and to the in-Workbench "About InVEST" page. For more details, refer to the
-  `InVEST Data Collection Notice <https://naturalcapitalalliance.stanford.edu/
-  software/invest/invest-downloads-data#invest-data-collection-notice>`_.
+  `InVEST Usage Data Notice <https://naturalcapitalalliance.stanford.edu/
+  software/invest/invest-downloads-data#usage-data>`_.
   (`#2553 <https://github.com/natcap/invest/issues/2553>`_)
 * Removed outdated usage-logging code to reflect current data collection
   practices. (`#2600 <https://github.com/natcap/invest/issues/2600>`_)

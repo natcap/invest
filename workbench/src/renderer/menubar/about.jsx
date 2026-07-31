@@ -26,12 +26,12 @@ const linkDefs = [
     href: 'http://releases.naturalcapitalproject.org/invest-userguide/latest/en/index.html',
   },
   {
-    name: 'InVEST Data Collection Notice',
-    href: 'https://naturalcapitalalliance.stanford.edu/software/invest/invest-downloads-data#invest-data-collection-notice',
+    name: 'InVEST Usage Data Notice',
+    href: 'https://naturalcapitalalliance.stanford.edu/software/invest/invest-downloads-data#usage-data',
   },
   {
     name: 'InVEST Attribution Guidelines',
-    href: 'https://naturalcapitalalliance.stanford.edu/software/invest/invest-downloads-data#invest-attribution-guidelines',
+    href: 'https://naturalcapitalalliance.stanford.edu/software/invest/invest-downloads-data#attribution',
   },
   {
     name: 'InVEST Trademark and Logo Use Policy',
@@ -101,7 +101,7 @@ root.render(
           </ul>
         </section>
         <section>
-          <h2 className="section-heading">{t('Data Collection')}</h2>
+          <h2 className="section-heading">{t('Usage Data')}</h2>
           <p>{t('The Natural Capital Alliance software team collects certain non-personal data each time an InVEST model or InVEST plugin is run via the InVEST Workbench. These data help inform future work on InVEST and support our mission to maintain InVEST as free and open-source software.')}</p>
         </section>
       </React.Fragment>

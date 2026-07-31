@@ -2,8 +2,9 @@ import base64
 import collections
 import logging
 import math
-import textwrap
 import os
+import re
+import textwrap
 from io import BytesIO
 from enum import Enum
 
@@ -24,8 +25,7 @@ from pydantic.dataclasses import dataclass
 from typing import Literal
 
 from natcap.invest import gettext
-from natcap.invest.spec import ModelSpec, Input, Output, \
-    CSVInput, SingleBandRasterInput
+from natcap.invest.spec import Input, Output, CSVInput, SingleBandRasterInput
 
 LOGGER = logging.getLogger(__name__)
 
@@ -112,6 +112,10 @@ NODATA_COL_NAME = gettext('Nodata value')
 UNITS_COL_NAME = gettext('Units')
 UNKNOWN_VAL_TEXT = gettext('unknown')
 UNITS_TEXT = gettext('Units')
+
+# Raster Attribute Tables sometimes contain these columns
+# Right now we filter them out and create our own color palette.
+RAT_COLOR_COLS = ['red', 'green', 'blue', 'alpha', 'opacity']
 
 
 class RasterDatatype(str, Enum):
@@ -415,20 +419,20 @@ def _configure_special_values(
     text_specs = []
 
     if lower_threshold is not None:
-        cmap.set_under(lower_color)
+        cmap = cmap.with_extremes(under=lower_color)
         extend = 'min'
         thresholds.append(lower_threshold)
         labels.append(lower_label)
         text_specs.append((0, -0.05, 'top'))
 
     if upper_threshold is not None:
-        cmap.set_over(upper_color)
+        cmap = cmap.with_extremes(over=upper_color)
         extend = 'max' if extend == 'neither' else 'both'
         thresholds.append(upper_threshold)
         labels.append(upper_label)
         text_specs.append((0, 1.05, 'bottom'))
 
-    return extend, thresholds, labels, text_specs
+    return cmap, extend, thresholds, labels, text_specs
 
 
 def plot_raster_list(raster_list: list[RasterPlotConfig]):
@@ -531,7 +535,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                 mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
                 fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
             else:
-                extend, thresholds, labels, text_specs = \
+                cmap, extend, thresholds, labels, text_specs = \
                     _configure_special_values(cmap, config.special_values)
                 mappable = ax.imshow(
                         arr, cmap=cmap,
@@ -747,7 +751,8 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
             # Some RATs include color tables. This is not useful to display in
             # this context because it will be confusing.
             # Best we can do is guess what the column names could be.
-            col_filter = df.filter(['Red', 'Green', 'Blue', 'Alpha', 'Opacity'])
+            col_filter = df.filter(
+                regex=re.compile('|'.join(RAT_COLOR_COLS), flags=re.I))
             df = df.drop(col_filter, axis=1)
             rat_df_list.append(df)
         if len(rat_value_names) == 1:

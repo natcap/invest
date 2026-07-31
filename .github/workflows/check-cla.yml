@@ -19,7 +19,7 @@ jobs:
                   python-version: "3.13"
                   cache: "pip"
 
-            - run: pip install requests
+            - run: pip install requests retrying
 
             - name: Check that the CLA has been signed
               shell: bash

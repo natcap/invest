@@ -77,8 +77,7 @@ FormLabel.propTypes = {
   units: PropTypes.string,
 };
 
-function Feedback(props) {
-  const { argkey, message } = props;
+function Feedback({argkey, message = ''}) {
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
@@ -94,9 +93,6 @@ function Feedback(props) {
 Feedback.propTypes = {
   argkey: PropTypes.string.isRequired,
   message: PropTypes.string,
-};
-Feedback.defaultProps = {
-  message: '',
 };
 
 /**
@@ -157,28 +153,15 @@ function parseArgType(argtype) {
   return userFriendlyArgType;
 }
 
-export default function ArgInput(props) {
+export default function ArgInput({
+  argkey, argSpec, userguide, isCoreModel, value = undefined,
+  touched = false, isValid = undefined, validationMessage = '',
+  updateArgValues, handleFocus, selectFile, enabled,
+  dropdownOptions = undefined, inputDropHandler, scrollEventCount = 0
+}) {
   const uniqueId = useId();
   const inputRef = useRef();
   const { t } = useTranslation();
-
-  const {
-    argkey,
-    argSpec,
-    userguide,
-    isCoreModel,
-    enabled,
-    updateArgValues,
-    handleFocus,
-    inputDropHandler,
-    isValid,
-    selectFile,
-    touched,
-    dropdownOptions,
-    value,
-    scrollEventCount,
-  } = props;
-  let { validationMessage } = props;
 
   const inputId = `${argkey}-${uniqueId}`;
 
@@ -237,7 +220,7 @@ export default function ArgInput(props) {
     fileSelector = (
       <Button
         aria-label={`browse for ${argSpec.name}`}
-        className="ml-2"
+        className="ms-2"
         id={inputId}
         variant="outline-dark"
         value={argSpec.type} // dialog will limit options accordingly
@@ -266,7 +249,6 @@ export default function ArgInput(props) {
         isValid={enabled && isValid}
         isInvalid={enabled && validationMessage}
         disabled={!enabled}
-        bsCustomPrefix="form-switch"
       />
     );
   } else if (argSpec.type === 'option_string') {
@@ -284,9 +266,8 @@ export default function ArgInput(props) {
       options.splice(0, 0, placeholderOpt);
     }
     form = (
-      <Form.Control
+      <Form.Select
         id={inputId}
-        as="select"
         name={argkey}
         value={value}
         onChange={handleChange}
@@ -294,10 +275,9 @@ export default function ArgInput(props) {
         disabled={!enabled}
         isValid={enabled && isValid}
         isInvalid={enabled && validationMessage}
-        custom
       >
         {options}
-      </Form.Control>
+      </Form.Select>
     );
   } else {
     form = (
@@ -386,14 +366,6 @@ ArgInput.propTypes = {
   inputDropHandler: PropTypes.func.isRequired,
   scrollEventCount: PropTypes.number,
 };
-ArgInput.defaultProps = {
-  value: undefined,
-  touched: false,
-  isValid: undefined,
-  validationMessage: '',
-  dropdownOptions: undefined,
-  scrollEventCount: 0,
-};
 
 /**
  * Open the target href in the default web browser.
@@ -426,7 +398,7 @@ function AboutModal(props) {
     <React.Fragment>
       <Button
         aria-label={`info about ${arg.name}`}
-        className="mr-2"
+        className="me-2"
         onClick={handleAboutOpen}
         variant="outline-info"
       >
@@ -449,7 +421,7 @@ function AboutModal(props) {
               onClick={handleClickUsersGuideLink}
             >
               {t("User's guide entry")}
-              <MdOpenInNew className="mr-1" />
+              <MdOpenInNew className="me-1" />
             </a>
           }
         </Modal.Body>

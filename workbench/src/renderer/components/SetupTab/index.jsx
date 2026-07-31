@@ -622,7 +622,7 @@ class SetupTab extends React.Component {
                 onClick={this.browseForDatastack}
                 variant="link"
               >
-                <MdFolderOpen className="mr-1" />
+                <MdFolderOpen className="me-1 mb-1" />
                 {t('Load parameters from file')}
               </Button>
             </OverlayTrigger>
@@ -637,7 +637,6 @@ class SetupTab extends React.Component {
           </Portal>
           <Portal elId={sidebarFooterElementId}>
             <Button
-              block
               variant="primary"
               size="lg"
               onClick={this.wrapInvestExecute}

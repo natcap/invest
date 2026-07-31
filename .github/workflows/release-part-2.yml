@@ -76,16 +76,16 @@ jobs:
           rm -rf artifacts/Wheel*
 
           # download each artifact separately so that the command will fail if any is missing
-          for artifact in Workbench-macOS-binary \
-                          InVEST-sample-data \
+          for artifact in InVEST-sample-data \
                           InVEST-user-guide \
                           "Source distribution"
           do
             gh run download $RUN_ID --dir artifacts --name "$artifact"
           done
 
-          # download the signed windows workbench file from GCS
+          # download the signed workbench files from GCS
           wget --directory-prefix=artifacts https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/${{ env.VERSION }}/workbench/invest_${{ env.VERSION }}_workbench_win32_x64.exe
+          wget --directory-prefix=artifacts https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/${{ env.VERSION }}/workbench/invest_${{ env.VERSION }}_workbench_darwin_x64.dmg
 
       - name: Create release notes
         shell: python
