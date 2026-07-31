@@ -184,8 +184,10 @@ def validate_permissions_string(permissions):
 class ImmutableBaseModel(BaseModel):
     """BaseModel with frozen attributes."""
 
-    model_config = ConfigDict(frozen=True)
-    """Make models immutable so that they must be copied before modifying."""
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+    """Make models immutable so that they must be copied before modifying, and
+       allow fields to have arbitrary types that don't inherit from BaseModel
+       (needed for pint.Unit)."""
 
 
 class IOModel(ImmutableBaseModel):
@@ -196,10 +198,6 @@ class IOModel(ImmutableBaseModel):
 
     about: typing.Union[str, None] = None
     """User-facing description of the input/output"""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    """Allow fields to have arbitrary types that don't inherit from BaseModel
-    (needed for pint.Unit)."""
 
     def write_metadata_file(self, datasource_path, keywords_list,
                             lineage_statement='', out_workspace=None):
@@ -603,7 +601,7 @@ class SpatialFileInput(FileInput):
         datastack.files_found[source_path] = target_arg_value
 
 
-class RasterBand(IOModel):
+class RasterBand(ImmutableBaseModel):
     """A representation of a single raster band."""
     band_id: typing.Union[int, str] = 1
     """band index used to access the raster band"""
