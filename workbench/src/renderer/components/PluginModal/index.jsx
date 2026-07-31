@@ -208,24 +208,68 @@ export default function PluginModal(props) {
     }
   };
 
-  const dragOverHandler = (event) => {
+  /**
+   * Prevent the default case for onDragOver so onDrop event will be fired.
+   *
+   * @param {Event} event - dragover event
+   */
+  function dragOverHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.disabled) {
+      event.dataTransfer.dropEffect = 'none';
+    } else {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  function getDroppedFilePath(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.classList.remove('input-dragging');
+  
+    if (event.currentTarget.disabled) {
+      return undefined;
+    }
+  
+    const fileList = event.dataTransfer.files;
+    if (fileList.length !== 1) {
+      //return undefined;
+      alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
+    } else if (fileList.length === 1) {
+      return getFilePath(fileList[0]);
+    } else {
+      throw new Error('Error handling input file drop');
+    }
+    event.currentTarget.focus();
+    triggerScrollEvent();
+  }
+
+  const rejectDropHandler = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'none';
+    event.currentTarget.classList.remove('input-dragging');
+  };
+
+  function dragEnterHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.disabled) {
+      event.dataTransfer.dropEffect = 'none';
+    } else {
+      event.dataTransfer.dropEffect = 'copy';
+      event.currentTarget.classList.add('input-dragging');
+    }
+  }
+
+  function dragLeavingHandler(event) {
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = 'copy';
-  };
-  
-  const getDroppedFilePath = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  
-    const droppedFile = event.dataTransfer.files[0];
-    return droppedFile ? getFilePath(droppedFile) : undefined;
-  };
+    event.currentTarget.classList.remove('input-dragging');
+  }
 
-  const ignoreDrop = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
 
   const selectFile = async (event) => {
     const data = await ipcRenderer.invoke(
@@ -273,8 +317,8 @@ export default function PluginModal(props) {
             placeholder="https://github.com/owner/repo.git"
             value={url}
             onChange={(event) => setURL(event.currentTarget.value)}
-            onDragOver={ignoreDrop}
-            onDrop={ignoreDrop}
+            onDragOver={rejectDropHandler}
+            onDrop={rejectDropHandler}
             aria-describedby={`about-git-url${pluginSourceMissingError ? ' url-error' : ''}`}
           />
           <Form.Text
@@ -331,6 +375,8 @@ export default function PluginModal(props) {
             value={path}
             onChange={(event) => setPath(event.currentTarget.value)}
             onDragOver={dragOverHandler}
+            onDragEnter={dragEnterHandler}
+            onDragLeave={dragLeavingHandler}
             onDrop={(event) => {
               const droppedPath = getDroppedFilePath(event);
               if (droppedPath) {
@@ -543,6 +589,8 @@ export default function PluginModal(props) {
               value={condaPath || ''}
               onChange={(event) => setCondaPath(event.target.value)}
               onDragOver={dragOverHandler}
+              onDragEnter={dragEnterHandler}
+              onDragLeave={dragLeavingHandler}
               onDrop={(event) => {
                 const droppedPath = getDroppedFilePath(event);
                 if (droppedPath) {
@@ -601,6 +649,8 @@ export default function PluginModal(props) {
                   {...pluginEnvs, [pluginID]: event.target.value}
                 )}
                 onDragOver={dragOverHandler}
+                onDragEnter={dragEnterHandler}
+                onDragLeave={dragLeavingHandler}
                 onDrop={(event) => {
                   const droppedPath = getDroppedFilePath(event);
                   if (droppedPath) {
