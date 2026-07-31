@@ -635,6 +635,10 @@ def execute(args):
         args['workspace_dir'] (string): a path to the directory that will write
             output and other temporary files during calculation. (required)
 
+        args['aoi_path'] (str): (optional) Path to a polygon vector of the area
+            over which the model should be run. Must be projected in a
+            coordinate system.
+
         args['lulc_path'] (string): a path to a land use/land cover raster
             whose LULC indexes correspond to indexes in the biophysical table
             input. Used for determining soil retention and other biophysical
@@ -697,12 +701,14 @@ def execute(args):
             'fraction', 'cost', 'height', 'kw_price'
 
         args['target_projection'] (string): (optional) if a non-empty string,
-            path to input that defines the target projection and alignment
-            for other spatial inputs.
+            id of spatial input that defines the target projection. If that
+            spatial input is a raster, rather than a vector, it will also
+            represent the target alignment for other spatial inputs.
 
         args['target_pixelsize'] (string): (optional) if a non-empty string,
-            path to input that defines the target pixel size for other
-            spatial inputs.
+            id of spatial input that defines the target pixel size for other
+            spatial inputs. If ``target_projection`` is a vector, this spatial
+            input will also represent the target alignment.
 
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
@@ -743,13 +749,13 @@ def execute(args):
                 f'"{", ".join(str(x) for x in sorted(missing_ws_ids))}"')
 
     # reproject watersheds_path to target_projection
-    target_spatial_prj = utils.get_raster_or_vector_projection(
+    target_projection_wkt = utils.get_raster_or_vector_projection(
         args[args['target_projection']])
     # Reproject watersheds_path even if it has the `target_projection` to
     # create a copy so we don't modify the original when doing zonal stats 
     reproject_watersheds_task = graph.add_task(
         pygeoprocessing.reproject_vector,
-        args=(args['watersheds_path'], target_spatial_prj,
+        args=(args['watersheds_path'], target_projection_wkt,
               file_registry['watershed_results_wyield']),
         target_path_list=[file_registry['watershed_results_wyield']],
         task_name='reproject_watersheds')
@@ -761,7 +767,7 @@ def execute(args):
     if args['sub_watersheds_path']:
         reproject_sub_watersheds_task = graph.add_task(
             pygeoprocessing.reproject_vector,
-            args=(args['sub_watersheds_path'], target_spatial_prj,
+            args=(args['sub_watersheds_path'], target_projection_wkt,
                   file_registry['subwatershed_results_wyield']),
             target_path_list=[file_registry['subwatershed_results_wyield']],
             task_name='reproject_sub_watersheds')
@@ -793,8 +799,8 @@ def execute(args):
         # fallback to aligning everything to the arg with default pixel size
         raster_align_index = base_raster_path_list.index(
             args[args['target_pixelsize']])
-    target_pixel_size = utils.get_raster_pixel_size_in_tgt_projection_units(
-        args[args['target_pixelsize']], target_spatial_prj)
+    target_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+        args[args['target_pixelsize']], target_projection_wkt)
     base_vector_path_list = [file_registry['watershed_results_wyield']]
     if args['aoi_vector_path']:
         base_vector_path_list.append(args['aoi_vector_path'])
@@ -806,7 +812,7 @@ def execute(args):
               target_pixel_size, 'intersection'),
         kwargs={'raster_align_index': raster_align_index,
                 'base_vector_path_list': base_vector_path_list,
-                'target_projection_wkt': target_spatial_prj},
+                'target_projection_wkt': target_projection_wkt},
         target_path_list=aligned_raster_path_list,
         task_name='align_raster_stack',
         dependent_task_list=[reproject_watersheds_task])

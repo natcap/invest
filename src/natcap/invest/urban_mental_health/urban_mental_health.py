@@ -572,7 +572,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             spec.VectorOutput(
                 id="aoi_reprojected",
-                path="intermediate/aoi_reprojected.shp",
+                path="intermediate/aoi_reprojected.gpkg",
                 about=gettext(
                     "AOI vector reprojected to match the selected target "
                     "projection."),
@@ -703,6 +703,7 @@ def execute(args):
             func=pygeoprocessing.reproject_vector,
             args=(args['aoi_path'], target_spatial_prj,
                   file_registry['aoi_reprojected']),
+            kwargs={'driver_name': 'GPKG'},
             target_path_list=[file_registry['aoi_reprojected']],
             task_name='reproject aoi vector')
         aoi = file_registry['aoi_reprojected']
@@ -1051,7 +1052,7 @@ def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
             "the native resolution of the raster (transformed to have square "
             "pixels if it doesn't already).")
         return (tgt_pixel_size, -tgt_pixel_size)
-    pixel_width, pixel_height = utils.get_raster_pixel_size_in_tgt_projection_units(
+    pixel_width, pixel_height = utils.get_raster_pixel_size_in_target_proj_units(
         raster_path, spatial_path)
     LOGGER.info("target_pixelsize raster is not projected in meters; will use "
                 f"transformed pixel size {pixel_width, pixel_height} as "

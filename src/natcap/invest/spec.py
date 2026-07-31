@@ -242,9 +242,8 @@ def _get_spatial_inputs(args, model_spec, projection_required=True):
     else:
         ordered_inputs = valid_spatial_inputs
 
-    target_projection_units = [
-        inp for inp in model_spec.inputs if inp.id == 'target_projection'
-    ][0].projection_units
+    target_projection_units = model_spec.get_input(
+        'target_projection').projection_units
 
     def get_display_name_and_check_prj(input_spec, target_projection_units):
         """Get display name, which is composed of the name and projection
@@ -283,7 +282,7 @@ def _get_spatial_inputs(args, model_spec, projection_required=True):
     return options
 
 
-def _get_pixel_size(args, model_spec, default_input_id=None):
+def _get_pixel_size_options(args, model_spec, default_input_id=None):
     """Return spatial inputs and pixel size as dropdown Options, default first
 
     Pixel size units match the units specified in the current
@@ -347,7 +346,7 @@ def _get_pixel_size(args, model_spec, default_input_id=None):
         if current_projection and args.get(opt.key):
             # convert pixel size to be in same units as selected target projection
             try:
-                trans_pixelsize = utils.get_raster_pixel_size_in_tgt_projection_units(
+                trans_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
                     args[opt.key], current_projection)
                 formatted_pixelsize = [float(round(pix, 3)) for pix in trans_pixelsize]
             except ValueError:
@@ -2693,7 +2692,7 @@ TARGET_PIXELSIZE = OptionSpatialInput(
         "Target Projection."),
     required=False,  # models will fallback to using default target pixel size
     options=[],
-    dropdown_function=_get_pixel_size
+    dropdown_function=_get_pixel_size_options
 )
 
 # Specs for common outputs ####################################################
