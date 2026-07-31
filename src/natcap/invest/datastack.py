@@ -34,7 +34,6 @@ from natcap.invest import models
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest.utils import base_model_id
-import pandas
 
 LOGGER = logging.getLogger(__name__)
 DATASTACK_EXTENSION = '.invest.tar.gz'
