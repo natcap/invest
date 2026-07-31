@@ -242,7 +242,6 @@ export default function PluginModal(props) {
       throw new Error('Error handling input file drop');
     }
     event.currentTarget.focus();
-    triggerScrollEvent();
   }
 
   const rejectDropHandler = (event) => {
