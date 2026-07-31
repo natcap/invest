@@ -236,12 +236,11 @@ export default function PluginModal(props) {
     if (fileList.length !== 1) {
       //return undefined;
       alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
-    } else if (fileList.length === 1) {
-      return getFilePath(fileList[0]);
-    } else {
-      throw new Error('Error handling input file drop');
-    }
+      return undefined;
+    } 
+    
     event.currentTarget.focus();
+    return getFilePath(fileList[0]);
   }
 
   const rejectDropHandler = (event) => {

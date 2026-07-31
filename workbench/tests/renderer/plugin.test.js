@@ -2,7 +2,7 @@ import React from 'react';
 import { ipcRenderer } from 'electron';
 import '@testing-library/jest-dom';
 import {
-  within, render, waitFor,
+  within, render, waitFor, fireEvent, createEvent,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -346,6 +346,59 @@ describe('Manage Plugins modal', () => {
     await userEvent.click(resetButton);
     await waitFor(() => { expect(input).toHaveValue('micromamba'); });
   });
+
+  test('Replace the conda executable via drag-and-drop', async () => {
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve({});
+        } else if (setting === 'micromamba') {
+          return Promise.resolve('micromamba')
+        }
+      } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve({ filePaths: ['foo'] })
+      }
+      return Promise.resolve();
+    });
+    const {
+      findByText, findByRole, findByLabelText,
+    } = render(<App />);
+
+    const spy = jest.spyOn(ipcRenderer, 'send');
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
+    const managePluginsButton = await findByText(/Manage plugins/i);
+    await userEvent.click(managePluginsButton);
+
+    const input = await findByLabelText('Conda or mamba executable');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'conda');
+    await waitFor(() => expect(input).toHaveValue('conda'));
+
+    const file = new File([], 'my-conda');
+    fireEvent.drop(input, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+
+    await waitFor(() => { expect(input).toHaveValue('my-conda'); });
+
+    const div = await findByLabelText('Configure conda executable (Advanced)')
+    const saveButton = await within(div).findByRole('button', { name: /Save/ });
+    await userEvent.click(saveButton);
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        ipcMainChannels.SET_SETTING,
+        'userDefinedMicromamba',
+        'my-conda'
+      );
+    });
+
+    const resetButton = await within(div).findByRole('button', { name: /Reset/ });
+    await userEvent.click(resetButton);
+    await waitFor(() => { expect(input).toHaveValue('micromamba'); });
+  });
+
   test('Change a plugin env', async () => {
     ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
@@ -394,5 +447,183 @@ describe('Manage Plugins modal', () => {
     const resetButton = await within(div).findByRole('button', { name: /Reset/ });
     await userEvent.click(resetButton);
     await waitFor(() => { expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env); });
+  });
+
+  test('Drag-and-drop populates the local plugin path', async () => {
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve({});
+        }
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+  
+      return Promise.resolve();
+    });
+  
+    const {
+      findByText, findByRole, findByLabelText,
+    } = render(<App />);
+  
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
+    await userEvent.click(await findByText(/Manage plugins/i));
+  
+    await userEvent.selectOptions(
+      await findByLabelText('Install from'),
+      'local path'
+    );
+  
+    const input = await findByLabelText('Local absolute path');
+    const file = new File([], 'plugin-dir');
+  
+    fireEvent.dragEnter(input, {
+      dataTransfer: { files: [file] },
+    });
+  
+    expect(input).toHaveClass('input-dragging');
+  
+    fireEvent.drop(input, {
+      dataTransfer: { files: [file] },
+    });
+  
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).toHaveValue('plugin-dir');
+      expect(input).toHaveFocus();
+    });
+  });
+
+  test('Drag-and-drop populates a plugin environment input', async () => {
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve(PLUGIN_SETTING_ITEM);
+        }
+        if (setting === 'micromamba') {
+          return Promise.resolve('micromamba');
+        }
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+  
+      return Promise.resolve();
+    });
+  
+    const {
+      findByText, findByRole, findByLabelText,
+    } = render(<App />);
+  
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
+    await userEvent.click(await findByText(/Manage plugins/i));
+  
+    const div = await findByLabelText(
+      'Configure plugin environments (Advanced)'
+    );
+    const input = await within(div).findByLabelText('foo');
+  
+    const file = new File([], 'plugin-environment');
+  
+    fireEvent.dragEnter(input, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+  
+    expect(input).toHaveClass('input-dragging');
+  
+    fireEvent.drop(input, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+  
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).toHaveValue('plugin-environment');
+      expect(input).toHaveFocus();
+    });
+  });
+
+  test('Drag-leave removes input-dragging from a filepath input', async () => {
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve(PLUGIN_SETTING_ITEM);
+        }
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+  
+      return Promise.resolve();
+    });
+  
+    const {
+      findByText, findByRole, findByLabelText,
+    } = render(<App />);
+  
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
+    await userEvent.click(await findByText(/Manage plugins/i));
+  
+    await userEvent.selectOptions(
+      await findByLabelText('Install from'),
+      'path'
+    );
+  
+    const input = await findByLabelText('Local absolute path');
+    const file = new File([], 'plugin-directory');
+  
+    fireEvent.dragEnter(input, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+  
+    expect(input).toHaveClass('input-dragging');
+  
+    fireEvent.dragLeave(input, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+  
+    expect(input).not.toHaveClass('input-dragging');
+  });
+
+  test('Drag-and-drop on the git URL input does nothing', async () => {
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve({});
+        }
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+  
+      return Promise.resolve();
+    });
+  
+    const {
+      findByText, findByRole, findByLabelText,
+    } = render(<App />);
+  
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
+    await userEvent.click(await findByText(/Manage plugins/i));
+  
+    const input = await findByLabelText('Git URL');
+  
+    const file = new File([], 'plugin-directory');
+    const dropEvent = createEvent.drop(input, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+    
+    const preventDefaultSpy = jest.spyOn(dropEvent, 'preventDefault');
+    
+    fireEvent(input, dropEvent);
+    
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(input).toHaveValue('');
   });
 });
