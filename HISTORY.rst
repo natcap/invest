@@ -72,6 +72,9 @@ General
   architectures, particularly on conda-forge.  This should also speed up
   the operation of ``setup.py``.
   (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
+* Fixed a bug in datastack archiving that affected HRA. Refactored some
+  datastack creation logic into class methods on ``Input``s and ``Output``s.
+  (`#2589 <https://github.com/natcap/invest/issues/2589>`_)
 
 Workbench
 =========
