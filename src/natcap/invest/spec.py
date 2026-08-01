@@ -181,16 +181,19 @@ def validate_permissions_string(permissions):
     return permissions
 
 
-class ImmutableBaseModel(BaseModel):
-    """BaseModel with frozen attributes."""
-
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
-    """Make models immutable so that they must be copied before modifying, and
-       allow fields to have arbitrary types that don't inherit from BaseModel
-       (needed for pint.Unit)."""
-
-
 def set_metadata_field_descriptions(field_specs, resource):
+    """Set field descriptions on a geometamaker resource.
+
+    Uses column or field specs from a CSV or vector input or output.
+    Does not override existing metadata values.
+
+    Args:
+        field_specs (list[Input or Output]): list of column or field specs
+        resource (geometamaker.Resource): metadata resource to update
+
+    Returns:
+        None
+    """
     # field names in attr_spec might not match the case of the
     # actual fieldname in the data because
     # invest does not require case-sensitive fieldnames
@@ -213,6 +216,16 @@ def set_metadata_field_descriptions(field_specs, resource):
             # fields that are in the spec but missing
             # from model results because they are conditional.
             LOGGER.debug(error)
+
+
+class ImmutableBaseModel(BaseModel):
+    """BaseModel with frozen attributes."""
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+    """Make models immutable so that they must be copied before modifying, and
+       allow fields to have arbitrary types that don't inherit from BaseModel
+       (needed for pint.Unit)."""
+
 
 class IOModel(ImmutableBaseModel):
     """Base class for both `Input` and `Output`."""
