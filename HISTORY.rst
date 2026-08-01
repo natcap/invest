@@ -73,7 +73,7 @@ General
   the operation of ``setup.py``.
   (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
 * Fixed a bug in datastack archiving that affected HRA. Refactored some
-  datastack creation logic into class methods on ``Input``s and ``Output``s.
+  datastack creation logic into class methods on input and output specs.
   (`#2589 <https://github.com/natcap/invest/issues/2589>`_)
 
 Workbench
