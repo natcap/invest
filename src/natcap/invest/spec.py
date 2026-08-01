@@ -190,6 +190,30 @@ class ImmutableBaseModel(BaseModel):
        (needed for pint.Unit)."""
 
 
+def set_metadata_field_descriptions(field_specs, resource):
+    # field names in attr_spec might not match the case of the
+    # actual fieldname in the data because
+    # invest does not require case-sensitive fieldnames
+    field_lookup = {
+        field.name.lower(): field for field in resource._get_fields()}
+    for nested_spec in field_specs:
+        try:
+            field_metadata = field_lookup[nested_spec.id.lower()]
+            # Field description only gets set if its empty, i.e. ''
+            if len(field_metadata.description.strip()) < 1:
+                resource.set_field_description(
+                    field_metadata.name, description=nested_spec.about)
+            # units only get set if empty
+            if len(field_metadata.units.strip()) < 1:
+                units = format_unit(nested_spec.units) if hasattr(
+                    nested_spec, 'units') else ''
+                resource.set_field_description(
+                    field_metadata.name, units=units)
+        except KeyError as error:
+            # fields that are in the spec but missing
+            # from model results because they are conditional.
+            LOGGER.debug(error)
+
 class IOModel(ImmutableBaseModel):
     """Base class for both `Input` and `Output`."""
 
@@ -198,6 +222,18 @@ class IOModel(ImmutableBaseModel):
 
     about: typing.Union[str, None] = None
     """User-facing description of the input/output"""
+
+    def configure_metadata(self, resource):
+        """Add metadata from this input/output to a geometamaker resource.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        if self.about:
+            resource.set_description(self.about)
 
     def write_metadata_file(self, datasource_path, keywords_list,
                             lineage_statement='', out_workspace=None):
@@ -231,43 +267,7 @@ class IOModel(ImmutableBaseModel):
         # a pre-existing metadata doc could have keywords
         words = resource.get_keywords()
         resource.set_keywords(set(words + keywords_list))
-
-        if self.about:
-            resource.set_description(self.about)
-        attr_specs = None
-        if hasattr(self, 'columns') and self.columns:
-            attr_specs = self.columns
-        if hasattr(self, 'fields') and self.fields:
-            attr_specs = self.fields
-        if attr_specs:
-            # field names in attr_spec might not match the case of the
-            # actual fieldname in the data because
-            # invest does not require case-sensitive fieldnames
-            field_lookup = {
-                field.name.lower(): field for field in resource._get_fields()}
-            for nested_spec in attr_specs:
-                try:
-                    field_metadata = field_lookup[nested_spec.id.lower()]
-                    # Field description only gets set if its empty, i.e. ''
-                    if len(field_metadata.description.strip()) < 1:
-                        resource.set_field_description(
-                            field_metadata.name, description=nested_spec.about)
-                    # units only get set if empty
-                    if len(field_metadata.units.strip()) < 1:
-                        units = format_unit(nested_spec.units) if hasattr(
-                            nested_spec, 'units') else ''
-                        resource.set_field_description(
-                            field_metadata.name, units=units)
-                except KeyError as error:
-                    # fields that are in the spec but missing
-                    # from model results because they are conditional.
-                    LOGGER.debug(error)
-        if isinstance(self, SingleBandRasterInput) or isinstance(
-                self, SingleBandRasterOutput):
-            if len(resource.get_band_description(1).units) < 1:
-                units = format_unit(self.units)
-                resource.set_band_description(1, units=units)
-
+        self.configure_metadata(resource)
         resource.write(workspace=out_workspace)
 
 
@@ -750,6 +750,22 @@ class SingleBandRasterInput(SpatialFileInput):
 
         return [rst_line]
 
+    def configure_metadata(self, resource):
+        """Update a geometamaker resource with metadata for this output.
+
+        Will not overwrite existing values.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        super().configure_metadata(resource)
+        if len(resource.get_band_description(1).units) < 1:
+            units = format_unit(self.units)
+            resource.set_band_description(1, units=units)
+
 
 class VectorInput(SpatialFileInput):
     """A vector input, or parameter, of an invest model.
@@ -896,6 +912,21 @@ class VectorInput(SpatialFileInput):
             rst_line += f': {sanitized_about_string}'
 
         return [rst_line]
+
+    def configure_metadata(self, resource):
+        """Update a geometamaker resource with metadata for this output.
+
+        Will not overwrite existing values.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        super().configure_metadata(resource)
+        if self.fields:
+            set_metadata_field_descriptions(self.fields, resource)
 
 
 class RasterOrVectorInput(SpatialFileInput):
@@ -1302,6 +1333,21 @@ class CSVInput(FileInput):
             shutil.copyfile(source_path, target_csv_path)
         datastack.args[self.id] = target_csv_path
         datastack.files_found[source_path] = target_csv_path
+
+    def configure_metadata(self, resource):
+        """Update a geometamaker resource with metadata for this output.
+
+        Will not overwrite existing values.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        super().configure_metadata(resource)
+        if self.columns:
+            set_metadata_field_descriptions(self.columns, resource)
 
 
 class WorkspaceInput(Input):
@@ -1955,6 +2001,22 @@ class SingleBandRasterOutput(FileOutput):
     units: typing.Union[pint.Unit, None] = None
     """units of measurement of the raster values"""
 
+    def configure_metadata(self, resource):
+        """Update a geometamaker resource with metadata for this output.
+
+        Will not overwrite existing values.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        super().configure_metadata(resource)
+        if len(resource.get_band_description(1).units) < 1:
+            units = format_unit(self.units)
+            resource.set_band_description(1, units=units)
+
 
 class RasterOutput(FileOutput):
     """A raster output, or result, of an invest model.
@@ -1998,6 +2060,21 @@ class VectorOutput(FileOutput):
 
     def get_field(self, key: str) -> Output:
         return self._fields_dict[key]
+
+    def configure_metadata(self, resource):
+        """Update a geometamaker resource with metadata for this output.
+
+        Will not overwrite existing values.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        super().configure_metadata(resource)
+        if self.fields:
+            set_metadata_field_descriptions(self.fields, resource)
 
 
 class CSVOutput(FileOutput):
@@ -2050,6 +2127,21 @@ class CSVOutput(FileOutput):
 
     def get_column(self, key: str) -> Output:
         return self._columns_dict[key]
+
+    def configure_metadata(self, resource):
+        """Update a geometamaker resource with metadata for this output.
+
+        Will not overwrite existing values.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        super().configure_metadata(resource)
+        if self.columns:
+            set_metadata_field_descriptions(self.columns, resource)
 
 
 class NumberOutput(Output):
