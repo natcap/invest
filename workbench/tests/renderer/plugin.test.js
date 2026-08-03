@@ -331,57 +331,16 @@ describe('Manage Plugins modal', () => {
       'button', { name: /browse for conda executable/ }));
     await waitFor(() => { expect(input).toHaveValue('foo'); });
 
-    const div = await findByLabelText('Configure conda executable (Advanced)')
-    const saveButton = await within(div).findByRole('button', { name: /Save/ });
-    await userEvent.click(saveButton);
-    await waitFor(() => {
-      expect(spy).toHaveBeenCalledWith(
-        ipcMainChannels.SET_SETTING,
-        'userDefinedMicromamba',
-        'foo'
-      );
-    });
-
-    const resetButton = await within(div).findByRole('button', { name: /Reset/ });
-    await userEvent.click(resetButton);
-    await waitFor(() => { expect(input).toHaveValue('micromamba'); });
-  });
-
-  test('Replace the conda executable via drag-and-drop', async () => {
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve({});
-        } else if (setting === 'micromamba') {
-          return Promise.resolve('micromamba')
-        }
-      } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
-        return Promise.resolve({ filePaths: ['foo'] })
-      }
-      return Promise.resolve();
-    });
-    const {
-      findByText, findByRole, findByLabelText,
-    } = render(<App />);
-
-    const spy = jest.spyOn(ipcRenderer, 'send');
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    const managePluginsButton = await findByText(/Manage plugins/i);
-    await userEvent.click(managePluginsButton);
-
-    const input = await findByLabelText('Conda or mamba executable');
-    await userEvent.clear(input);
-    await userEvent.type(input, 'conda');
-    await waitFor(() => expect(input).toHaveValue('conda'));
-
     const file = new File([], 'my-conda');
-    fireEvent.drop(input, {
-      dataTransfer: {
-        files: [file],
-      },
+    fireEvent.dragEnter(input, {dataTransfer: {files: [file]}});
+    expect(input).toHaveClass('input-dragging');
+    fireEvent.drop(input, {dataTransfer: {files: [file]}});
+  
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).toHaveValue('my-conda');
+      expect(input).toHaveFocus();
     });
-
-    await waitFor(() => { expect(input).toHaveValue('my-conda'); });
 
     const div = await findByLabelText('Configure conda executable (Advanced)')
     const saveButton = await within(div).findByRole('button', { name: /Save/ });
