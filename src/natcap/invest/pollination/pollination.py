@@ -1,5 +1,4 @@
 """Pollinator service model for InVEST."""
-from ast import keyword
 import collections
 import itertools
 import logging

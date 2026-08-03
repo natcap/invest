@@ -554,7 +554,7 @@ class InputTests(unittest.TestCase):
             [keywords.LULC.value, keywords.CARBON.value])
 
     def test_get_keywords_irregular_csv_input(self):
-        """Test that CSVInput.get_keywords works when columns None."""
+        """Test that CSVInput.get_keywords works when columns=None."""
         csv_input = spec.CSVInput(
             id="foo",
             about="Description.",
