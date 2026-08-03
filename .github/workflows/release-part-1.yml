@@ -139,6 +139,32 @@ jobs:
               --json url \
               --jq .[].url)" >> $GITHUB_ENV
 
+      - name: Instructions
+        if: env.RUN == 'true'
+        run: |
+          cat << 'EOF'
+
+          Next steps:
+
+          1. Review the automated changes made on this branch.
+             You can see the diff here:
+             https://github.com/natcap/invest/compare/main...$AUTORELEASE_BRANCH
+             If anything is incorrect, run the release rollback workflow,
+             fix the issues on main, and then initiate the release again.
+
+          2. Wait for the Github Actions checks on the tag to finish.
+             Follow their status here: $TAG_RUN_URL
+             If the checks fail due to an actual problem, run the release
+             rollback workflow, fix the issues on main, and then initiate
+             the release again.
+             If the checks fail due to an intermittent issue, re-run the
+             checks until they pass.
+
+          3. Initiate the release part 2 workflow:
+             https://github.com/natcap/invest/actions/workflows/release-part-2.yml
+
+          EOF
+
       - name: Roll back on failure
         if: failure()
         uses: ./.github/actions/rollback_release
