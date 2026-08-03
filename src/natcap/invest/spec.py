@@ -348,25 +348,6 @@ class Input(IOModel):
                         include_children=include_children)
         return list(set(keywords))
 
-    def get_keyword_objects(self, include_children=True):
-        """Get a list of keyword objects for this input and children.
-
-        Args:
-            include_children (bool): include the keywords of nested Input specs.
-
-        Returns:
-            list of dicts
-
-        """
-        keywords = []
-        if self.keywords:
-            keywords += [keyword.model_dump() for keyword in self.keywords]
-        if include_children:
-            for child in self.get_child_inputs():
-                keywords += child.get_keyword_objects(
-                    include_children=include_children)
-        return keywords
-
 
 class Output(IOModel):
     """A data output, or result, of an invest model.
