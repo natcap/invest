@@ -1020,7 +1020,7 @@ def base_model_id(model_id: str) -> str:
     return model_id.split('@')[0]
 
 
-def get_raster_pixel_size_in_tgt_projection_units(
+def get_raster_pixel_size_in_target_proj_units(
         raster_path, target_file_or_projection_wkt):
     """Get square pixel size of a raster in units of `target_projection_wkt`.
 
@@ -1098,12 +1098,12 @@ def get_raster_or_vector_projection(filepath):
           Known Text.
     """
     if pygeoprocessing.get_gis_type(filepath) == pygeoprocessing.RASTER_TYPE:
-        target_spatial_prj = pygeoprocessing.get_raster_info(
+        target_projection_wkt = pygeoprocessing.get_raster_info(
             filepath)['projection_wkt']
     elif pygeoprocessing.get_gis_type(filepath) == pygeoprocessing.VECTOR_TYPE:
-        target_spatial_prj = pygeoprocessing.get_vector_info(
+        target_projection_wkt = pygeoprocessing.get_vector_info(
             filepath)['projection_wkt']
     else:
         raise ValueError(f"{filepath} must be a GDAL vector or raster.")
 
-    return target_spatial_prj
+    return target_projection_wkt
