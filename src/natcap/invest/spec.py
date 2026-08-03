@@ -345,7 +345,8 @@ class Input(IOModel):
             for child in self.get_child_inputs():
                 if child.keywords:
                     keywords += child.get_keywords(
-                        include_children=include_children)
+                        include_children=include_children,
+                        include_aliases=include_aliases)
         return list(set(keywords))
 
 
