@@ -14,6 +14,12 @@ class Keyword(BaseModel):
     that are not usable in some contexts (e.g. as CKAN tags).
     """
 
+    def __new__(cls, *args, **kwargs):
+        if cls.__name__ == 'Keyword':
+            raise TypeError(
+                'Keyword is an abstract class and cannot be instantiated directly.')
+        return super().__new__(cls)
+
 
 class GCMDKeyword(Keyword):
     """A Keyword from the NASA Global Change Master Directory (GCMD)"""
