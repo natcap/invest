@@ -8,7 +8,7 @@ class TestKeywords(unittest.TestCase):
 
     def test_unique(self):
         """Test values, aliases, and uuids are all unique."""
-        values = set()  # values and aliases teogether must be unique
+        values = set()  # values and aliases together must be unique
         uuids = set()
         for keyword in keywords.to_list():
             self.assertNotIn(
