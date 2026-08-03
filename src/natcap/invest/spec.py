@@ -327,8 +327,7 @@ class Input(IOModel):
         """Get a list of unique keyword strings for this input and children.
 
         Args:
-            include_children (bool): include the keywords of nested Input or
-                Output specs.
+            include_children (bool): include the keywords of nested Input specs.
             include_aliases (bool): extend the list of keyword strings with the
                 list of the keyword's aliases
 
@@ -353,8 +352,7 @@ class Input(IOModel):
         """Get a list of keyword objects for this input and children.
 
         Args:
-            include_children (bool): include the keywords of nested Input or
-                Output specs.
+            include_children (bool): include the keywords of nested Input specs.
 
         Returns:
             list of dicts
