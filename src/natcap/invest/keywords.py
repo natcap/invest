@@ -1,8 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Keyword(BaseModel):
     """Base model for all keywords."""
+
+    model_config = ConfigDict(validate_assignment=True,
+                              extra='forbid',
+                              use_attribute_docstrings=True)
+
     value: str
     """The keyword string."""
     vocabulary: str
@@ -99,7 +104,8 @@ CROP_COEFFICIENT = InvestKeyword(value='CROP COEFFICIENT')
 CROP_PLANT_YIELDS = GCMDKeyword(
     value='CROP/PLANT YIELDS',
     uuid='f12d8026-f24a-4413-91d0-4704c243c9e7',
-    full_path='EARTH SCIENCE > AGRICULTURE > AGRICULTURAL PLANT SCIENCE > CROP/PLANT YIELDS')
+    full_path='EARTH SCIENCE > AGRICULTURE > AGRICULTURAL PLANT SCIENCE > CROP/PLANT YIELDS',
+    aliases=['CROP YIELDS'])
 
 CROP_TYPE = GCMDKeyword(
     value='CROP TYPE',
@@ -156,7 +162,7 @@ LULC = GCMDKeyword(
     value='LAND USE/LAND COVER',
     uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
     full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER',
-    alias=['LAND USE LAND COVER'])
+    aliases=['LAND USE LAND COVER'])
 
 # TODO: this is not currently in use. Instead biophysical tables are
 # tagged with LULC. Should we use this tag instead? It would not currently
