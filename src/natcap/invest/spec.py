@@ -395,15 +395,15 @@ class Input(IOModel):
         to describe in the MODEL_SPEC format, but use a common specification
         for the other args keys.
         Notes about overriding this method:
-          - should add the archived value to datastack.args
-          - should update datastack.files_found if any new files are included
-          - if this function copies data into datastack.target_dir, it _should_
-            be within its own folder (e.g.
-            {data_dir}/criteria_table_path_data/) to minimize chances of
-            stomping on other data.  But this is up to the function to
-            decide.
-          - The override function is responsible for logging whatever is
-            useful to include in the logfile.
+        - should add the archived value to datastack.args
+        - should update datastack.files_found if any new files are included
+        - if this function copies data into datastack.target_dir, it _should_
+          be within its own folder (e.g.
+          {data_dir}/criteria_table_path_data/) to minimize chances of
+          stomping on other data.  But this is up to the function to
+          decide.
+        - The override function is responsible for logging whatever is
+          useful to include in the logfile.
 
         Args:
             value (object): value of this input
@@ -499,7 +499,15 @@ class FileInput(Input):
         return col.apply(format_path).astype(pandas.StringDtype())
 
     def archive_for_datastack(self, value, datastack):
+        """Archive a given value of this input into a datastack.
 
+        Args:
+            value (object): value of this input
+            datastack (natcap.invest.datastack.Datastack): Datastack instance
+
+        Returns:
+            None
+        """
         if value in {None, ''}:
             LOGGER.info(
                 f'Skipping key {self.id}, value is empty and cannot point to '
@@ -588,7 +596,15 @@ class SpatialFileInput(FileInput):
         return col.apply(format_path).astype(pandas.StringDtype())
 
     def archive_for_datastack(self, value, datastack):
+        """Archive a given value of this input into a datastack.
 
+        Args:
+            value (object): value of this input
+            datastack (natcap.invest.datastack.Datastack): Datastack instance
+
+        Returns:
+            None
+        """
         if value in {None, ''}:
             datastack.args[self.id] = ''
             return
@@ -1256,7 +1272,15 @@ class CSVInput(FileInput):
         return [rst_line]
 
     def archive_for_datastack(self, value, datastack):
+        """Archive a given value of this input into a datastack.
 
+        Args:
+            value (object): value of this input
+            datastack (natcap.invest.datastack.Datastack): Datastack instance
+
+        Returns:
+            None
+        """
         if value in {None, ''}:
             datastack.args[self.id] = ''
             return
