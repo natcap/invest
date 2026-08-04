@@ -98,7 +98,6 @@ describe('InVEST subprocess testing', () => {
     tempTestWorkspace = fs.mkdtempSync(
       path.join(os.tmpdir(), 'workbench-test-')
     );
-    console.log(tempTestWorkspace)
   });
 
   afterAll(() => {
@@ -122,15 +121,13 @@ describe('InVEST subprocess testing', () => {
       fs.writeFileSync(payload.filepath, 'foo');
       return Promise.resolve({ text: () => 'foo' });
     });
-    // tempWorkspace = fs.mkdtempSync(os.tmpdir());
   });
 
   afterEach(async () => {
     await InvestJob.clearStore();
-    // fs.rmSync(tempWorkspace, { recursive: true });
   });
 
-  test.only('exit without error - expect log & alert display', async () => {
+  test('exit without error - expect log & alert display', async () => {
     const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
@@ -148,8 +145,8 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    console.log(tempWorkspace);
-    await userEvent.type(workspaceInput, tempWorkspace);
+    await userEvent.click(workspaceInput);
+    await userEvent.paste(tempWorkspace);
     // Write a report to the workspace because that's something
     // that execute will normally do.
     fs.writeFileSync(
@@ -194,7 +191,7 @@ describe('InVEST subprocess testing', () => {
     expect(status).toBeInTheDocument();
   });
 
-  test.only('exit with error - expect log & alert display', async () => {
+  test('exit with error - expect log & alert display', async () => {
     const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
@@ -212,8 +209,8 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    console.log(tempWorkspace);
-    await userEvent.type(workspaceInput, tempWorkspace);
+    await userEvent.click(workspaceInput);
+    await userEvent.paste(tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
@@ -272,7 +269,8 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, tempWorkspace);
+    await userEvent.click(workspaceInput);
+    await userEvent.paste(tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
@@ -326,7 +324,8 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, tempWorkspace);
+    await userEvent.click(workspaceInput);
+    await userEvent.paste(tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
