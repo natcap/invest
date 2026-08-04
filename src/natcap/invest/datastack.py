@@ -45,6 +45,14 @@ ParameterSet = collections.namedtuple('ParameterSet',
                                       'args model_id')
 
 
+class Datastack():
+    """Represent a datastack for the purposes of building an archive."""
+    def __init__(self, target_dir):
+        self.target_dir = target_dir
+        self.files_found = {}
+        self.args = {}
+
+
 def _tarfile_safe_extract(archive_path, dest_dir_path):
     """Extract a tarfile in a safe way.
 
@@ -121,14 +129,6 @@ def get_datastack_info(filepath, extract_path=None):
         pass
 
     return 'logfile', extract_parameters_from_logfile(filepath)
-
-
-class Datastack():
-
-    def __init__(self, target_dir):
-        self.target_dir = target_dir
-        self.files_found = {}
-        self.args = {}
 
 
 def build_datastack_archive(args, model_id, datastack_path):
