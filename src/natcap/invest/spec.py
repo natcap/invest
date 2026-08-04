@@ -264,7 +264,7 @@ class IOModel(ImmutableBaseModel):
             keywords_list (list[str]): sequence of keywords
             lineage_statement (str, optional) - string to describe origin of
                 the dataset
-            out_workspace (str, optional) - where to write metadata if different
+            out_workspace (str): (optional) where to write metadata if different
                 from data location
         Returns:
             None
