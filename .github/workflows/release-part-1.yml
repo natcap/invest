@@ -164,10 +164,3 @@ jobs:
              https://github.com/natcap/invest/actions/workflows/release-part-2.yml
 
           EOF
-
-      - name: Roll back on failure
-        if: failure()
-        uses: ./.github/actions/rollback_release
-        with:
-          VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
