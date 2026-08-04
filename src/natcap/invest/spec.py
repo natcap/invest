@@ -230,15 +230,13 @@ def _get_spatial_inputs_options(args, model_spec, projection_required=True):
         inp for inp in model_spec.inputs
         if (isinstance(inp, SpatialFileInput) and args.get(inp.id))
     ]
-    default_projection_input = [
-        inp for inp in model_spec.inputs
-        if (isinstance(inp, SpatialFileInput) and inp.is_default_projection)
-    ]
+    default_projection_input = model_spec.get_default_projection_input()
+
     # Always set default_projection_input first even if user hasn't entered it
     if default_projection_input:
-        ordered_inputs = default_projection_input + [
+        ordered_inputs = [default_projection_input] + [
             input_spec for input_spec in valid_spatial_inputs if (
-                input_spec.id != default_projection_input[0].id)]
+                input_spec.id != default_projection_input.id)]
     else:
         ordered_inputs = valid_spatial_inputs
 
@@ -309,12 +307,9 @@ def _get_pixel_size_options(args, model_spec, default_input_id=None):
     # a value associated with that id, default back to default projection
     projection_input_id = args.get('target_projection')
     if not projection_input_id or not args.get(projection_input_id):
-        default_projection_inputs = [
-            inp for inp in model_spec.inputs
-            if isinstance(inp, SpatialFileInput) and inp.is_default_projection
-        ]
-        if default_projection_inputs:
-            projection_input_id = default_projection_inputs[0].id
+        default_projection_input = model_spec.get_default_projection_input()
+        if default_projection_input:
+            projection_input_id = default_projection_input.id
 
     if projection_input_id and args.get(projection_input_id):
         current_projection = utils.get_raster_or_vector_projection(
@@ -2243,6 +2238,11 @@ class ModelSpec(ImmutableBaseModel):
 
         return self
 
+    def get_default_projection_input(self):
+        return next((inp for inp in self.inputs if (
+            isinstance(inp, SpatialFileInput) and inp.is_default_projection)),
+            None)
+
     def get_input(self, key: str) -> Input:
         """Get an Input of this model by its key."""
         return {_input.id: _input for _input in self.inputs}[key]
@@ -2332,15 +2332,9 @@ class ModelSpec(ImmutableBaseModel):
             #TODO: or do we want to set this just like with target pixel size?
             # pros: will find a suitable spatial input if one exists
             # cons: less transparent to user?
-            default_projection_inputs = [
-                input_spec for input_spec in self.inputs
-                if (
-                    isinstance(input_spec, SpatialFileInput)
-                    and input_spec.is_default_projection
-                )
-            ]
-            if default_projection_inputs:
-                args['target_projection'] = default_projection_inputs[0].id
+            default_projection_input = self.get_default_projection_input()
+            if default_projection_input:
+                args['target_projection'] = default_projection_input.id
             else:
                 raise ValueError("Target projection not able to be specified "
                                  "and no default option.")
