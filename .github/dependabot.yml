@@ -1,21 +1,5 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "workbench"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    rebase-strategy: "disabled"
-    versioning-strategy: increase-if-necessary
-
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    rebase-strategy: "disabled"
-    versioning-strategy: increase-if-necessary
-
   - package-ecosystem: "docker"
     directory: "docker"
     schedule:
