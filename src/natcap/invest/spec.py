@@ -1298,7 +1298,7 @@ class CSVInput(FileInput):
             datastack.args[self.id] = datastack.files_found[source_path]
             return
 
-        # check the CSV for columns that may be spatial.
+        # check the CSV for columns that may reference files.
         # But also, the columns specification might not be listed, so don't
         # require that 'columns' exists in the MODEL_SPEC.
 
