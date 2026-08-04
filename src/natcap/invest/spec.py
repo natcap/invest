@@ -260,7 +260,7 @@ class IOModel(ImmutableBaseModel):
         validation in ``describe``), this function will NOT create new metadata.
 
         Args:
-            datasource_path (str) - filepath to the data to describe
+            datasource_path (str): filepath to the data to describe
             keywords_list (list[str]): sequence of keywords
             lineage_statement (str, optional) - string to describe origin of
                 the dataset
