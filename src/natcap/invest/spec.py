@@ -182,7 +182,7 @@ def validate_permissions_string(permissions):
 
 
 def set_metadata_field_descriptions(field_specs, resource):
-    """Set field descriptions on a geometamaker resource.
+    """Set field or column descriptions on a geometamaker resource.
 
     Uses column or field specs from a CSV or vector input or output.
     Does not override existing metadata values.
