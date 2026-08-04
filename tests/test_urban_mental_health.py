@@ -1174,7 +1174,7 @@ class UMHTests(unittest.TestCase):
         file_reg = urban_mental_health.execute(args)
 
         # Output raster pixel size should be same as ndvi_base input but in m
-        expected_pixelsize = utils.get_raster_pixel_size_in_tgt_projection_units(
+        expected_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
             args[args['target_pixelsize']],
             target_file_or_projection_wkt=args[args['target_projection']])
         actual_pixelsize = pygeoprocessing.get_raster_info(

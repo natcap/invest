@@ -214,7 +214,7 @@ def _get_spatial_reference(filepath):
         raise TypeError("Input is not a raster or vector.")
 
 
-def _get_spatial_inputs(args, model_spec, projection_required=True):
+def _get_spatial_inputs_options(args, model_spec, projection_required=True):
     """Return spatial inputs and prj as dropdown Options, default first.
 
     Args:
@@ -298,7 +298,7 @@ def _get_pixel_size_options(args, model_spec, default_input_id=None):
     Returns:
         list of options for pixel size
     """
-    spatial_inputs = _get_spatial_inputs(args, model_spec, False)
+    spatial_inputs = _get_spatial_inputs_options(args, model_spec, False)
 
     # add default pixel size input to spatial inputs if not already in there
     if default_input_id and (
@@ -2681,7 +2681,7 @@ TARGET_PROJECTION = OptionSpatialInput( #TODO - add 'Custom' option to all lists
         "inputs will be reprojected."),
     required=False,  # models will fallback to using default target projections
     options=[],
-    dropdown_function=_get_spatial_inputs
+    dropdown_function=_get_spatial_inputs_options
 )
 TARGET_PIXELSIZE = OptionSpatialInput(
     id="target_pixelsize",
