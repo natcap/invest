@@ -95,7 +95,10 @@ describe('InVEST subprocess testing', () => {
       text: async () => 'foo',
     };
     fetch.mockResolvedValue(response);
-    tempTestWorkspace = fs.mkdtempSync(os.tmpdir());
+    tempTestWorkspace = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'workbench-test-')
+    );
+    console.log(tempTestWorkspace)
   });
 
   afterAll(() => {
@@ -128,7 +131,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test.only('exit without error - expect log & alert display', async () => {
-    const tempWorkspace = fs.mkdtempSync(tempTestWorkspace);
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
@@ -192,7 +195,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test.only('exit with error - expect log & alert display', async () => {
-    const tempWorkspace = fs.mkdtempSync(tempTestWorkspace);
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
@@ -252,7 +255,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('user terminates process - expect log & alert display', async () => {
-    const tempWorkspace = fs.mkdtempSync(tempTestWorkspace);
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
@@ -308,7 +311,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('Run & re-run a job - expect new log display', async () => {
-    const tempWorkspace = fs.mkdtempSync(tempTestWorkspace);
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
@@ -371,7 +374,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('Load Recent run & re-run it - expect new log display', async () => {
-    const tempWorkspace = fs.mkdtempSync(tempTestWorkspace);
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const argsValues = {
       workspace_dir: tempWorkspace,
