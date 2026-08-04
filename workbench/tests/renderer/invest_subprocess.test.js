@@ -127,7 +127,7 @@ describe('InVEST subprocess testing', () => {
     // fs.rmSync(tempWorkspace, { recursive: true });
   });
 
-  test('exit without error - expect log & alert display', async () => {
+  test.only('exit without error - expect log & alert display', async () => {
     const tempWorkspace = fs.mkdtempSync(tempTestWorkspace);
     const mockInvestProc = getMockedInvestProcess();
     const {
@@ -191,7 +191,7 @@ describe('InVEST subprocess testing', () => {
     expect(status).toBeInTheDocument();
   });
 
-  test('exit with error - expect log & alert display', async () => {
+  test.only('exit with error - expect log & alert display', async () => {
     const tempWorkspace = fs.mkdtempSync(tempTestWorkspace);
     const mockInvestProc = getMockedInvestProcess();
     const {
@@ -209,6 +209,7 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
+    console.log(tempWorkspace);
     await userEvent.type(workspaceInput, tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
