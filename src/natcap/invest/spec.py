@@ -261,7 +261,7 @@ class IOModel(ImmutableBaseModel):
 
         Args:
             datasource_path (str) - filepath to the data to describe
-            keywords_list (list) - sequence of strings
+            keywords_list (list[str]): sequence of keywords
             lineage_statement (str, optional) - string to describe origin of
                 the dataset
             out_workspace (str, optional) - where to write metadata if different
