@@ -17,7 +17,7 @@ import {
 import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench.electron;
+const { getFilePath, ipcRenderer } = window.Workbench.electron;
 
 export default function PluginModal(props) {
   const {
@@ -208,6 +208,67 @@ export default function PluginModal(props) {
     }
   };
 
+  /**
+   * Prevent the default case for onDragOver so onDrop event will be fired.
+   *
+   * @param {Event} event - dragover event
+   */
+  function dragOverHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.disabled) {
+      event.dataTransfer.dropEffect = 'none';
+    } else {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  function getDroppedFilePath(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.classList.remove('input-dragging');
+  
+    if (event.currentTarget.disabled) {
+      return undefined;
+    }
+  
+    const fileList = event.dataTransfer.files;
+    if (fileList.length !== 1) {
+      //return undefined;
+      alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
+      return undefined;
+    } 
+    
+    event.currentTarget.focus();
+    return getFilePath(fileList[0]);
+  }
+
+  const rejectDropHandler = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'none';
+    event.currentTarget.classList.remove('input-dragging');
+  };
+
+  function dragEnterHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.disabled) {
+      event.dataTransfer.dropEffect = 'none';
+    } else {
+      event.dataTransfer.dropEffect = 'copy';
+      event.currentTarget.classList.add('input-dragging');
+    }
+  }
+
+  function dragLeavingHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
+    event.currentTarget.classList.remove('input-dragging');
+  }
+
+
   const selectFile = async (event) => {
     const data = await ipcRenderer.invoke(
       ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openFile'] }
@@ -254,6 +315,8 @@ export default function PluginModal(props) {
             placeholder="https://github.com/owner/repo.git"
             value={url}
             onChange={(event) => setURL(event.currentTarget.value)}
+            onDragOver={rejectDropHandler}
+            onDrop={rejectDropHandler}
             aria-describedby={`about-git-url${pluginSourceMissingError ? ' url-error' : ''}`}
           />
           <Form.Text
@@ -309,6 +372,15 @@ export default function PluginModal(props) {
               : 'C:\\Documents\\path\\to\\plugin\\'}
             value={path}
             onChange={(event) => setPath(event.currentTarget.value)}
+            onDragOver={dragOverHandler}
+            onDragEnter={dragEnterHandler}
+            onDragLeave={dragLeavingHandler}
+            onDrop={(event) => {
+              const droppedPath = getDroppedFilePath(event);
+              if (droppedPath) {
+                setPath(droppedPath);
+              }
+            }}
             aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
           />
           <Button
@@ -514,6 +586,15 @@ export default function PluginModal(props) {
               type="text"
               value={condaPath || ''}
               onChange={(event) => setCondaPath(event.target.value)}
+              onDragOver={dragOverHandler}
+              onDragEnter={dragEnterHandler}
+              onDragLeave={dragLeavingHandler}
+              onDrop={(event) => {
+                const droppedPath = getDroppedFilePath(event);
+                if (droppedPath) {
+                  setCondaPath(droppedPath);
+                }
+              }}
               className="me-1"
             />
             <Button
@@ -565,6 +646,18 @@ export default function PluginModal(props) {
                 onChange={(event) => setPluginEnvs(
                   {...pluginEnvs, [pluginID]: event.target.value}
                 )}
+                onDragOver={dragOverHandler}
+                onDragEnter={dragEnterHandler}
+                onDragLeave={dragLeavingHandler}
+                onDrop={(event) => {
+                  const droppedPath = getDroppedFilePath(event);
+                  if (droppedPath) {
+                    setPluginEnvs({
+                      ...pluginEnvs,
+                      [pluginID]: droppedPath,
+                    });
+                  }
+                }}
                 className="me-1"
               />
               <Button

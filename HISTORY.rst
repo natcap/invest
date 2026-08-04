@@ -96,6 +96,9 @@ Workbench
   (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
 * React dependency has been updated to its latest stable version (19.2.7).
   (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
+* Fixed a bug in the Manage Plugins modal where dragging and dropping
+  a plugin directory into the local filepath would open a new window.
+  (`#2642 <https://github.com/natcap/invest/issues/2642>`_)
 
 3.20.0 (2026-06-11)
 -------------------
