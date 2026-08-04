@@ -72,6 +72,8 @@ General
   architectures, particularly on conda-forge.  This should also speed up
   the operation of ``setup.py``.
   (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
+* Added a security policy to the InVEST repository.
+  (`#2697 <https://github.com/natcap/invest/issues/2697>`_)
 
 Workbench
 =========
