@@ -172,7 +172,7 @@ def build_datastack_archive(args, model_id, datastack_path):
         if key not in module.MODEL_SPEC.inputs:
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
-        LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
+       
         module.MODEL_SPEC.get_input(key).archive_for_datastack(args[key], datastack)
 
     LOGGER.info('Args preprocessing complete')
