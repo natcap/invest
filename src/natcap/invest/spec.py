@@ -226,57 +226,37 @@ def _get_spatial_inputs_options(args, model_spec, projection_required=True):
     Returns:
         list of spatial inputs to model
     """
-    valid_spatial_inputs = [
-        inp for inp in model_spec.inputs
-        if (isinstance(inp, SpatialFileInput) and args.get(inp.id))
-    ]
-    default_projection_input = model_spec.get_default_projection_input()
-
-    # Always set default_projection_input first even if user hasn't entered it
-    if default_projection_input:
-        ordered_inputs = [default_projection_input] + [
-            input_spec for input_spec in valid_spatial_inputs if (
-                input_spec.id != default_projection_input.id)]
-    else:
-        ordered_inputs = valid_spatial_inputs
-
     target_projection_units = model_spec.get_input(
         'target_projection').projection_units
 
-    def get_display_name_and_check_prj(input_spec, target_projection_units):
-        """Get display name, which is composed of the name and projection
-
-        Only return an input's display name and projection if the
-        spatial input is correctly projected (with same projection units as
-        default) or input has default projection.
-        """
-        # the only "empty" input that would be passed to this function is the
-        # default target projection input
-        if not args.get(input_spec.id):
-            return "(Default) " + smart_title(input_spec.name)
-        srs = _get_spatial_reference(args[input_spec.id])
-
-        projection_warning = _check_projection(
-            srs, projection_required, target_projection_units)
-        if not projection_warning:
-            # Get the top-level name (Projected or Geographic)
-            prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
-            if input_spec.is_default_projection:
-                return "(Default) " + smart_title(input_spec.name) + f" ({prj_name})"
-            return smart_title(input_spec.name) + f" ({prj_name})"
-        else:
-            # return display name for default target proj input even if
-            # unprojected as inputs own validation will fail first.
-            if input_spec.is_default_projection:
-                return "(Default) " + smart_title(input_spec.name)
-        return None
-
     options = []
-    for inp in ordered_inputs:
-        display_name = get_display_name_and_check_prj(inp,
-                                                      target_projection_units)
-        if display_name:
-            options.append(Option(key=inp.id, display_name=display_name))
+    default_projection_input = model_spec.get_default_projection_input()
+    if default_projection_input:
+        # add default target proj input even if unprojected as
+        # input's own validation will fail first.
+        display_name = f"(Default) {smart_title(default_projection_input.name)}"
+        options.append(Option(key=default_projection_input.id,
+                              display_name=display_name))
+
+    for inp in model_spec.inputs:
+        if (isinstance(inp, SpatialFileInput) and args.get(inp.id)):
+            # Only add an input as an option if it's correctly projected
+            # (with same projection units as default, if defined)
+            srs = _get_spatial_reference(args[inp.id])
+            projection_warning = _check_projection(
+                srs, projection_required, target_projection_units)
+            if not projection_warning:
+                # Get the top-level name (Projected or Geographic)
+                prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
+                if inp is default_projection_input:
+                    # replace default option so display name has projection
+                    display_name = f"(Default) {smart_title(inp.name)} ({prj_name})"
+                    options[0] = Option(key=inp.id, display_name=display_name)
+                else:
+                    display_name = f"{smart_title(inp.name)} ({prj_name})"
+                    options.append(Option(key=inp.id,
+                                          display_name=display_name))
+
     return options
 
 
@@ -302,26 +282,35 @@ def _get_pixel_size_options(args, model_spec, default_input_id=None):
     if default_input_id and (
             default_input_id not in [inp.key for inp in spatial_inputs]):
         spatial_inputs.append(Option(key=default_input_id, display_name=''))
-
-    # if there is not a target_projection selected or user has not entered
-    # a value associated with that id, default back to default projection
-    projection_input_id = args.get('target_projection')
-    if not projection_input_id or not args.get(projection_input_id):
+    # if the dropdown function doesn't specify a default pixelsize,
+    # use the same default as target_projection if its a raster
+    elif default_input_id is None:
         default_projection_input = model_spec.get_default_projection_input()
-        if default_projection_input:
-            projection_input_id = default_projection_input.id
+        if isinstance(default_projection_input, SingleBandRasterInput) or \
+                isinstance(default_projection_input, RasterInput):
+            # does not allow RasterOrVectorInput bc no way to know if user will
+            # input a raster
+            default_input_id = default_projection_input.id
 
-    if projection_input_id and args.get(projection_input_id):
+    def _get_target_projection_input_id(args, model_spec):
+        projection_input_id = args.get("target_projection")
+
+        if projection_input_id and args.get(projection_input_id):
+            return projection_input_id
+        # if there is not a target_projection selected or user has not entered
+        # a value associated with that id, default back to default projection
+        default_projection_input = model_spec.get_default_projection_input()
+        if default_projection_input and args.get(default_projection_input.id):
+            return default_projection_input.id
+        return None
+
+    # Find the selected target projection so that pixel sizes can be
+    # transformed to the target projection's units
+    projection_input_id = _get_target_projection_input_id(args, model_spec)
+    current_projection = None
+    if projection_input_id:
         current_projection = utils.get_raster_or_vector_projection(
             args[projection_input_id])
-    else:
-        current_projection = None
-
-    if default_input_id is None:
-        default_inputs = [inp for inp in model_spec.inputs if (
-            isinstance(inp, SpatialFileInput) and inp.is_default_projection)]
-        if default_inputs:
-            default_input_id = default_inputs[0].id
 
     raster_inputs = [
         opt for opt in spatial_inputs if (
@@ -333,6 +322,11 @@ def _get_pixel_size_options(args, model_spec, default_input_id=None):
         return []
 
     options = []
+    if default_input_id is not None:
+        # first item in options should be default if one exists
+        default_name = smart_title(model_spec.get_input(default_input_id).name)
+        options.append(Option(key=default_input_id,
+                              display_name=f"(Default) {default_name}"))
     for opt in raster_inputs:
         inp_name = smart_title(model_spec.get_input(opt.key).name)
         # if default projection input hasn't been entered and target
@@ -347,21 +341,15 @@ def _get_pixel_size_options(args, model_spec, default_input_id=None):
             except ValueError:
                 # raised if current_projection is unprojected
                 formatted_pixelsize = ''
-
         else:
             formatted_pixelsize = ''
 
         if opt.key == default_input_id:
             display_name = "(Default) " + inp_name + f" {formatted_pixelsize}"
+            options[0] = Option(key=opt.key, display_name=display_name)
         else:
             display_name = inp_name + f" {formatted_pixelsize}"
-        options.append(Option(key=opt.key, display_name=display_name))
-
-    if default_input_id is not None:
-        default_options = [
-            opt for opt in options if opt.key == default_input_id]
-        options = default_options + [
-            opt for opt in options if opt.key != default_input_id]
+            options.append(Option(key=opt.key, display_name=display_name))
 
     return options
 
@@ -1779,6 +1767,14 @@ class OptionStringInput(Input):
     """A function that returns a list of the values that this input may take.
     Use this if the set of options must be dynamically generated."""
 
+    responsive_to: typing.Union[str, None] = None
+    """Another input ID that triggers a refresh of this option list if changed.
+
+    A different model input id which, when changed in the workbench,
+    will cause the option dropdown menu to re-call the dropdown function even
+    if the current selected option is still valid. This is useful for selecting
+    different default options for different scenarios."""
+
     type: typing.ClassVar[str] = 'option_string'
 
     rst_section: typing.ClassVar[str] = 'option'
@@ -1905,10 +1901,6 @@ class OptionSpatialInput(OptionStringInput):
 
     projected: typing.Union[bool, None] = None
     """Whether the selected input must be projected. Defaults to None."""
-
-    responsive_to: typing.Union[str, None] = None
-    """A different model input which, when changed in the workbench,
-    will cause the option dropdown menu to re-call dropdown function"""
 
     def validate(self, value):
         message = super().validate(value)
@@ -2328,13 +2320,14 @@ class ModelSpec(ImmutableBaseModel):
             dictionary mapping input keys to preprocessed input values
         """
         inputs_ids = [i.id for i in self.inputs]
+        args_copy = args.copy()
         if 'target_projection' in inputs_ids and not args.get('target_projection'):
             #TODO: or do we want to set this just like with target pixel size?
             # pros: will find a suitable spatial input if one exists
             # cons: less transparent to user?
             default_projection_input = self.get_default_projection_input()
             if default_projection_input:
-                args['target_projection'] = default_projection_input.id
+                args_copy['target_projection'] = default_projection_input.id
             else:
                 raise ValueError("Target projection not able to be specified "
                                  "and no default option.")
@@ -2343,15 +2336,15 @@ class ModelSpec(ImmutableBaseModel):
             all_options = self.get_input(
                 'target_pixelsize').dropdown_function(args, self)
             if all_options:
-                args['target_pixelsize'] = all_options[0].key
+                args_copy['target_pixelsize'] = all_options[0].key
                 LOGGER.info("Getting target pixel size from "
-                            f"{args[args['target_pixelsize']]}")
+                            f"{args_copy[args_copy['target_pixelsize']]}")
             else:
                 raise ValueError(
                     "Target pixel size not able to be specified as no valid "
                     "spatial input options.")
 
-        return args
+        return args_copy
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):
         """Create metadata for all items in an invest model output workspace.
@@ -2675,6 +2668,7 @@ TARGET_PROJECTION = OptionSpatialInput( #TODO - add 'Custom' option to all lists
         "inputs will be reprojected."),
     required=False,  # models will fallback to using default target projections
     options=[],
+    projected=True,
     dropdown_function=_get_spatial_inputs_options
 )
 TARGET_PIXELSIZE = OptionSpatialInput(
