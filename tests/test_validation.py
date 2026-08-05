@@ -314,6 +314,8 @@ class ValidatorTest(unittest.TestCase):
                 workspace_dir, 'projected_raster.tif')
             geographic_path = os.path.join(
                 workspace_dir, 'geographic_raster.tif')
+            projected_path_ft = os.path.join(
+                workspace_dir, 'projected_raster_ft.tif')
 
             raster_array = numpy.ones((2, 2), dtype=numpy.int32)
 
@@ -337,6 +339,16 @@ class ValidatorTest(unittest.TestCase):
                 geographic_srs.ExportToWkt(),
                 geographic_path)
 
+            projected_srs_ft = osr.SpatialReference()
+            projected_srs_ft.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
+            pygeoprocessing.numpy_array_to_raster(
+                raster_array,
+                -1,
+                (1, -1),
+                (461261, 4923265),
+                projected_srs_ft.ExportToWkt(),
+                projected_path_ft)
+
             selected_input = spec.SingleBandRasterInput(
                 id='source_raster',
                 data_type=int,
@@ -346,7 +358,7 @@ class ValidatorTest(unittest.TestCase):
             model_spec.get_input.return_value = selected_input
 
             option_input = spec.TARGET_PROJECTION.model_copy(update=dict(
-                projection_units=u.meter
+                projection_units=u.meter,
             ))
 
             args = {'source_raster': projected_path}
@@ -358,7 +370,21 @@ class ValidatorTest(unittest.TestCase):
             args['source_raster'] = geographic_path
             message = option_input.validate_with_context(
                 'source_raster', args, model_spec)
-            expected_message = 'Layer must be projected in this unit: "meter" but found this unit: "unknown"'
+            expected_message = 'Dataset must be projected in linear units.'
+            self.assertEqual(message, expected_message)
+
+            option_input = spec.TARGET_PROJECTION.model_copy(update=dict(
+                projection_units=u.meter,
+            ))
+
+            args = {'source_raster': projected_path}
+            message = option_input.validate_with_context(
+                'source_raster', args, model_spec)
+
+            args['source_raster'] = projected_path_ft
+            message = option_input.validate_with_context(
+                'source_raster', args, model_spec)
+            expected_message = 'Layer must be projected in this unit: "meter" but found this unit: "us_survey_foot"'
             self.assertEqual(message, expected_message)
 
 
