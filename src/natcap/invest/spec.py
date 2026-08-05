@@ -271,26 +271,19 @@ def _get_pixel_size_options(args, model_spec, default_input_id=None):
         model_spec (ModelSpec): model specification
         default_input_id (str): Optional input ID to label and order as the
              default. When ``None``, the input arg marked
-             ``is_default_projection`` is used.
+             ``is_default_pixelsize`` is used.
 
     Returns:
         list of options for pixel size
     """
     spatial_inputs = _get_spatial_inputs_options(args, model_spec, False)
 
+    if not default_input_id:
+        default_input_id = model_spec.get_default_pixelsize_input().id
+
     # add default pixel size input to spatial inputs if not already in there
-    if default_input_id and (
-            default_input_id not in [inp.key for inp in spatial_inputs]):
+    if default_input_id not in [inp.key for inp in spatial_inputs]:
         spatial_inputs.append(Option(key=default_input_id, display_name=''))
-    # if the dropdown function doesn't specify a default pixelsize,
-    # use the same default as target_projection if its a raster
-    elif default_input_id is None:
-        default_projection_input = model_spec.get_default_projection_input()
-        if isinstance(default_projection_input, SingleBandRasterInput) or \
-                isinstance(default_projection_input, RasterInput):
-            # does not allow RasterOrVectorInput bc no way to know if user will
-            # input a raster
-            default_input_id = default_projection_input.id
 
     def _get_target_projection_input_id(args, model_spec):
         projection_input_id = args.get("target_projection")
@@ -590,10 +583,16 @@ class SpatialFileInput(FileInput):
     is_default_projection: bool = False
     """Whether the input has the projection and alignment to which other
     inputs are reprojected and aligned by default. Only one ModelSpec input
-    can have ``is_default_projection=True``, and that input must be linearly
-    projected. A user can select a different input to represent the target
-    projection, but this input will be selected by default.
-    Defaults to False."""
+    can have ``is_default_projection=True``. A user can select a different
+    input to represent the target projection, but this input will be selected
+    by default. Defaults to False."""
+
+    is_default_pixelsize: bool = False
+    """Whether the input has the pixel size to which other inputs should be
+    resampled by default. Only one ModelSpec input can have
+    ``is_default_pixelsize=True``. A user can select a different input to
+    represent the target projection, but this input will be selected by
+    default. Defaults to False."""
 
     @model_validator(mode='after')
     def check_projected_projection_units(self):
@@ -2223,16 +2222,36 @@ class ModelSpec(ImmutableBaseModel):
         if len(default_proj_inputs) > 1:
             ids = [inp.id for inp in default_proj_inputs]
             raise ValueError(
-                'Exactly one spatial input must have '
+                'Only one spatial input can have '
                 f'is_default_projection=True, but found multiple: {ids}'
             )
         # fine if 0 inputs have is_default_projection=True
+        return self
 
+    @model_validator(mode='after')
+    def check_one_default_pixelsize(self):
+        default_pixelsize_inputs = [
+            inp for inp in self.inputs
+            if isinstance(inp, SpatialFileInput) and inp.is_default_pixelsize
+        ]
+
+        if len(default_pixelsize_inputs) > 1:
+            ids = [inp.id for inp in default_pixelsize_inputs]
+            raise ValueError(
+                'Only one spatial input can have '
+                f'is_default_pixelsize=True, but found multiple: {ids}'
+            )
+        # fine if 0 inputs have is_default_pixelsize=True
         return self
 
     def get_default_projection_input(self):
         return next((inp for inp in self.inputs if (
             isinstance(inp, SpatialFileInput) and inp.is_default_projection)),
+            None)
+
+    def get_default_pixelsize_input(self):
+        return next((inp for inp in self.inputs if (
+            isinstance(inp, SpatialFileInput) and inp.is_default_pixelsize)),
             None)
 
     def get_input(self, key: str) -> Input:
