@@ -1,0 +1,54 @@
+name: Release Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  rollback_release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure git
+        shell: bash
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "<>"
+          echo "GITHUB_TOKEN=${{ secrets.AUTORELEASE_BOT_PAT }}" >> $GITHUB_ENV
+
+      - name: Delete the tag (if it exists)
+        shell: bash
+        run: |
+          if git ls-remote --exit-code origin refs/tags/${{ inputs.version }}
+          then
+            echo "Deleting ${{ inputs.version }} tag"
+            git push origin --delete ${{ inputs.version }}
+          else
+            echo "${{ inputs.version }} tag not found in origin"
+          fi
+
+      - name: Delete the autorelease branch (if it exists)
+        shell: bash
+        run: |
+          if git ls-remote --exit-code origin autorelease/${{ inputs.version }}
+          then
+            echo "Deleting autorelease/${{ inputs.version }} branch"
+            git push origin --delete autorelease/${{ inputs.version }}
+          else
+            echo "autorelease/${{ inputs.version }} branch not found in origin"
+          fi
+
+      - name: Delete the Github release (if it exists)
+        shell: bash
+        run: |
+          if [ `gh release list | awk -F '\t' -v col=3 '{print $col}' | grep -x -F ${{ inputs.version }}` ]
+          then
+            echo "Deleting ${{ inputs.version }} GitHub release"
+            gh release delete ${{ inputs.version }} --yes
+          else
+            echo "${{ inputs.version }} GitHub release not found"
+          fi
