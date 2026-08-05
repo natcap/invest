@@ -29,10 +29,10 @@ jobs:
     name: Check for syntax errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -51,9 +51,9 @@ jobs:
     name: Check RST syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         name: Set up python
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
@@ -80,7 +80,7 @@ jobs:
             python-version: "3.10"
             platform-specific-dependencies: libxcrypt
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -89,7 +89,7 @@ jobs:
       # Test data is way, way faster by contrast (on the order of a few
       # seconds to archive).
       - name: Restore git-LFS test data cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
@@ -122,7 +122,7 @@ jobs:
         continue-on-error: true
         # Using 'dawidd6' since 'download-artifact' GH action doesn't
         # support downloading artifacts from prior workflow runs
-        uses: dawidd6/action-download-artifact@v11
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: build-and-test.yml
           # Get frozen conda env artifact from last successful workflow
@@ -174,20 +174,20 @@ jobs:
 
       # Only upload sdist from one of the matrix cases because they should all be the same
       - name: Upload sdist artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         with:
           name: Source distribution
           path: dist/*.tar.gz
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist/*.whl
 
       - name: Upload conda env artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
@@ -217,7 +217,7 @@ jobs:
     runs-on: windows-latest
     needs: check-syntax-errors
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -252,7 +252,7 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -270,13 +270,13 @@ jobs:
         run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
       - name: Set up node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -312,7 +312,7 @@ jobs:
             workspace-path: InVEST-failed-windows-workspace.tar
             binary-extension: exe
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -354,13 +354,13 @@ jobs:
         run: make CONDA="$MAMBA_EXE" binaries
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -425,14 +425,14 @@ jobs:
 
       - name: Upload workbench binary artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Workbench-${{ runner.os }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: InVEST-user-guide
           path: dist/InVEST_*_userguide.zip
@@ -465,7 +465,7 @@ jobs:
         run: npx cross-env CI=true yarn run test-electron-app
 
       - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ${{ runner.os }}_puppeteer_log.zip'
@@ -473,7 +473,7 @@ jobs:
 
       - name: Upload workspace on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: InVEST-failed-${{ runner.os }}-workspace
           path: ${{ github.workspace }}
@@ -483,7 +483,7 @@ jobs:
     needs: check-syntax-errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -494,7 +494,7 @@ jobs:
       - run: make sampledata sampledata_single
 
       - name: Upload sample data artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: InVEST-sample-data
           path: dist/*.zip

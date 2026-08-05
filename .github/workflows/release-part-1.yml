@@ -33,7 +33,7 @@ jobs:
             echo "RUN=false" >> $GITHUB_ENV
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.RUN == 'true'
         with:
           fetch-depth: 0  # fetch entire history, for versioning
