@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import i18n from 'i18next';
 
@@ -6,8 +6,11 @@ import Badge from 'react-bootstrap/Badge';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
+import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
 import Tooltip from 'react-bootstrap/Tooltip';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
@@ -29,27 +32,11 @@ import Changelog from './components/Changelog';
 
 const { ipcRenderer } = window.Workbench.electron;
 
-/**
- * Delete the job record from the store.
- * @param {string} jobHash - the unique identifier of a saved Job.
- */
-async function deleteJob(jobHash) {
-  await InvestJob.deleteJob(jobHash);
-  updateRecentJobs();
-}
-
-/**
- * Delete all the jobs from the store.
- */
-async function clearRecentJobs() {
-  await InvestJob.clearStore();
-  updateRecentJobs();
-}
-
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
  */
 export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}) {
+
   const [activeTab, setActiveTab] = useState('home');
   const [openJobs, setOpenJobs] = useState(new Map());
   const [investList, setInvestList] = useState(null);
@@ -61,20 +48,6 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMetadataModal, setShowMetadataModal] = useState(false);
   const [changelogDismissed, setChangelogDismissed] = useState(false);
-
-  /**
-   * Push data for a new InvestTab component to an array.
-   * @param {InvestJob} job - as constructed by new InvestJob()
-   */
-  const openInvestModel = useCallback((job) => {
-    const tabID = window.crypto.getRandomValues(
-      new Uint32Array(1)
-    ).toString();
-    const newOpenJobs = new Map(openJobs);
-    newOpenJobs.set(tabID, job);
-    setOpenJobs(newOpenJobs);
-    setActiveTab(tabID);
-  }, []);
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
   useEffect(() => {
@@ -112,6 +85,20 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
   function closeChangelogModal() {
     setShowChangelog(false);
     setChangelogDismissed(true);
+  }
+
+  /**
+   * Push data for a new InvestTab component to an array.
+   * @param {InvestJob} job - as constructed by new InvestJob()
+   */
+  function openInvestModel(job) {
+    const tabID = window.crypto.getRandomValues(
+      new Uint32Array(1)
+    ).toString();
+    const newOpenJobs = new Map(openJobs);
+    newOpenJobs.set(tabID, job);
+    setOpenJobs(newOpenJobs);
+    setActiveTab(tabID);
   }
 
   /**
@@ -166,6 +153,23 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
     }
   }
 
+  /**
+   * Delete the job record from the store.
+   * @param {string} jobHash - the unique identifier of a saved Job.
+   */
+  async function deleteJob(jobHash) {
+    await InvestJob.deleteJob(jobHash);
+    updateRecentJobs();
+  }
+
+  /**
+   * Delete all the jobs from the store.
+   */
+  async function clearRecentJobs() {
+    await InvestJob.clearStore();
+    updateRecentJobs();
+  }
+
   async function updateInvestList() {
     const coreModels = {};
     let investList = await getInvestModelIDs();
@@ -186,8 +190,9 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
       const recentJobs = await InvestJob.getJobStore();
       // filter out models that do not exist in current version of invest
       setRecentJobs(recentJobs.filter((job) => (
-        Object.keys(investList).includes(job.modelID)
-      )));
+          Object.keys(investList).includes(job.modelID)
+        ))
+      );
     }
   }
 
