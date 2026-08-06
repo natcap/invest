@@ -9,12 +9,10 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 import { useTranslation } from 'react-i18next';
-import {
-  BsTrash3,
-} from 'react-icons/bs';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
+import RecentJobCard from './RecentJobCard';
 
 const { logger } = window.Workbench;
 
@@ -150,73 +148,6 @@ HomeTab.propTypes = {
   clearRecentJobs: PropTypes.func.isRequired,
 };
 
-function CardItem(props) {
-  const {
-    job,
-    deleteJob,
-    handleClick
-  } = props;
-  const { t } = useTranslation();
-
-  let badge;
-  if (job.type === 'plugin') {
-    badge = <Badge className="me-1" bg="secondary">Plugin</Badge>;
-  }
-  return (
-    <Card
-      className="col-12 text-start recent-job-card me-2 w-100"
-    >
-      <Card.Header>
-        <div className="badge-container">
-          {badge}
-        </div>
-        <span className="header-title">{job.modelTitle}</span>
-        <Button
-          variant="outline-light"
-          onClick={() => deleteJob(job.hash)}
-          className="float-end border-0"
-          aria-label="delete"
-        >
-          <BsTrash3 size="1.5rem" />
-        </Button>
-      </Card.Header>
-      <Card.Body
-        className="text-start border-0"
-        as="button"
-        onClick={() => handleClick(job)}
-      >
-        <Card.Title>
-          <span className="text-heading">{'Workspace: '}</span>
-          <span className="text-mono">{job.argsValues.workspace_dir}</span>
-        </Card.Title>
-        <Card.Title>
-          <span className="text-heading">{'Suffix: '}</span>
-          <span className="text-mono">{job.argsValues.results_suffix}</span>
-        </Card.Title>
-        <Card.Footer>
-          <span className="timestamp">{job.humanTime}</span>
-          <span className="status">
-            {(job.status === 'success'
-              ? <span className="status-success">{t('Model Complete')}</span>
-              : <span className="status-error">{job.status}</span>
-            )}
-          </span>
-        </Card.Footer>
-      </Card.Body>
-    </Card>
-  );
-}
-
-const MemoizedCardItem = React.memo(({ job, deleteJob, handleClick }) => {
-  return (
-    <CardItem
-      job={job}
-      deleteJob={deleteJob}
-      handleClick={handleClick}
-    />
-  );
-});
-
 /**
  * Renders a button for each recent invest job.
  */
@@ -241,7 +172,7 @@ function RecentInvestJobs(props) {
   recentJobs.forEach((job) => {
     if (job && job.argsValues && job.modelTitle) {
       const card = (
-        <MemoizedCardItem
+        <RecentJobCard
           job={job}
           deleteJob={deleteJob}
           handleClick={handleClick}
@@ -273,20 +204,20 @@ function RecentInvestJobs(props) {
                 </Card.Title>
               </Card.Body>
             </Card>
-        )}
+          )}
       </Row>
       {recentButtons.length > 0
-        &&
-        <Row>
-          <Button
-            variant="secondary"
-            onClick={clearRecentJobs}
-            className="col-12"
-          >
-            {t('Clear all model runs')}
-          </Button>
-        </Row>
-      }
+        && (
+          <Row>
+            <Button
+              variant="secondary"
+              onClick={clearRecentJobs}
+              className="col-12"
+            >
+              {t('Clear all model runs')}
+            </Button>
+          </Row>
+        )}
     </Container>
   );
 }
