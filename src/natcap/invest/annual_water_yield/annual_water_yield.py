@@ -195,7 +195,8 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=int,
             units=None,
-            is_default_projection=True
+            is_default_projection=True,
+            is_default_pixelsize=True
         ),
         spec.SingleBandRasterInput(
             id="depth_to_root_rest_layer_path",
