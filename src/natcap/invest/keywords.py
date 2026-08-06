@@ -31,7 +31,7 @@ class GCMDKeyword(Keyword):
     uuid: str
     """The unique id from the GCMD."""
     full_path: str
-    """The full hierarchy of they keyword within the GCMD."""
+    """The full hierarchy of the keyword within the GCMD."""
     vocabulary: str = 'Global Change Master Directory (GCMD) Keywords'
 
 
