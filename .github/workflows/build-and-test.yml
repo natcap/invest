@@ -441,8 +441,7 @@ jobs:
         id: invest-autotest
         if : |
           (github.event_name == 'push' &&
-          (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
-          (github.event_name == 'pull_request' && startsWith(github.head_ref, 'autorelease'))
+          (startsWith(github.ref, 'refs/heads/release') || startsWith(github.head_ref, 'autorelease') || github.ref == 'refs/heads/main'))
         run: |
           mkdir autotest_dir
           make invest_autotest AUTOTEST_DIR=autotest_dir
