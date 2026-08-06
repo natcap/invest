@@ -217,9 +217,6 @@ export function main() {
   }
 
   app.on('ready', async () => {
-    // installExtension([REACT_DEVELOPER_TOOLS])
-    //   .then(([react]) => console.log(`Added Extensions: ${react.name}`))
-    //   .catch((err) => console.log('An error occurred: ', err));
     createWindow();
   });
   app.on('activate', () => {
