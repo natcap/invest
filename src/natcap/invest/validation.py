@@ -238,6 +238,12 @@ def validate(args, model_spec):
                                 nested_spec.required, expression_values)))
         try:
             warning_msg = parameter_spec.validate(args[key])
+            if not warning_msg:
+                warning_msg = parameter_spec.validate_with_context(
+                    args[key],
+                    args,
+                    model_spec,
+                )
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
@@ -358,6 +364,12 @@ def invest_validator(validate_func):
             # need to validate it.
             if args_value not in ('', None):
                 error_msg = args_key_spec.validate(args_value)
+                if error_msg is None:
+                    error_msg = args_key_spec.validate_with_context(
+                        args_value,
+                        args,
+                        model_module.MODEL_SPEC,
+                    )
 
             if error_msg is None:
                 warnings_ = []

@@ -127,16 +127,14 @@ def _check_projection(srs, projected, projection_units):
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
-
     """
     with GDALUseExceptions():
         empty_srs = osr.SpatialReference()
         if srs is None or srs.IsSame(empty_srs):
             return validation_messages.INVALID_PROJECTION
 
-        if projected:
-            if not srs.IsProjected():
-                return validation_messages.NOT_PROJECTED
+        if projected and not srs.IsProjected():
+            return validation_messages.NOT_PROJECTED
 
         if projection_units:
             # pint uses underscores in multi-word units e.g. 'survey_foot'
@@ -178,6 +176,175 @@ def validate_permissions_string(permissions):
             raise ValueError('permissions contains a duplicate letter')
         used_letters.add(letter)
     return permissions
+
+
+def smart_title(text):
+    words = text.split()
+    new_words = []
+
+    for word in words:
+        if word.isupper():
+            new_words.append(word)
+        else:
+            # Split by slash, capitalize each part, and rejoin with a slash
+            # e.g., to ensure Land Use/Land Cover gets correctly formatted
+            parts = [p.capitalize() for p in word.split('/')]
+            new_words.append('/'.join(parts))
+
+    return " ".join(new_words)
+
+
+def _get_spatial_reference(filepath):
+    with GDALUseExceptions():
+        gdal_path = utils._GDALPath.from_uri(filepath)
+        gis_type = pygeoprocessing.get_gis_type(filepath)
+
+        if gis_type == pygeoprocessing.RASTER_TYPE:
+            dataset = gdal.OpenEx(
+                gdal_path.to_normalized_path(),
+                gdal.OF_RASTER)
+            return dataset.GetSpatialRef()
+
+        if gis_type == pygeoprocessing.VECTOR_TYPE:
+            dataset = gdal.OpenEx(
+                gdal_path.to_normalized_path(),
+                gdal.OF_VECTOR)
+            return dataset.GetLayer().GetSpatialRef()
+
+        raise TypeError("Input is not a raster or vector.")
+
+
+def _get_spatial_inputs_options(args, model_spec, projection_required=True):
+    """Return spatial inputs and prj as dropdown Options, default first.
+
+    Args:
+        args (dict): input arguments for InVEST model
+        model_spec (ModelSpec): model specification
+        projection_required (bool): Whether returned spatial inputs must
+            be projected
+
+    Returns:
+        list of spatial inputs to model
+    """
+    target_projection_units = model_spec.get_input(
+        'target_projection').projection_units
+
+    options = []
+    default_projection_input = model_spec.get_default_projection_input()
+    if default_projection_input:
+        # add default target proj input even if unprojected as
+        # input's own validation will fail first.
+        display_name = f"(Default) {smart_title(default_projection_input.name)}"
+        options.append(Option(key=default_projection_input.id,
+                              display_name=display_name))
+
+    for inp in model_spec.inputs:
+        if (isinstance(inp, SpatialFileInput) and args.get(inp.id)):
+            # Only add an input as an option if it's correctly projected
+            # (with same projection units as default, if defined)
+            srs = _get_spatial_reference(args[inp.id])
+            projection_warning = _check_projection(
+                srs, projection_required, target_projection_units)
+            if not projection_warning:
+                # Get the top-level name (Projected or Geographic)
+                prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
+                if inp is default_projection_input:
+                    # replace default option so display name has projection
+                    display_name = f"(Default) {smart_title(inp.name)} ({prj_name})"
+                    options[0] = Option(key=inp.id, display_name=display_name)
+                else:
+                    display_name = f"{smart_title(inp.name)} ({prj_name})"
+                    options.append(Option(key=inp.id,
+                                          display_name=display_name))
+
+    return options
+
+
+def _get_pixel_size_options(args, model_spec, default_input_id=None):
+    """Return spatial inputs and pixel size as dropdown Options, default first
+
+    Pixel size units match the units specified in the current
+    ``target_projection`` input's projection
+
+    Args:
+        args (dict): model arguments
+        model_spec (ModelSpec): model specification
+        default_input_id (str): Optional input ID to label and order as the
+             default. When ``None``, the input arg marked
+             ``is_default_pixelsize`` is used.
+
+    Returns:
+        list of options for pixel size
+    """
+    spatial_inputs = _get_spatial_inputs_options(args, model_spec, False)
+
+    if not default_input_id:
+        default_input_id = model_spec.get_default_pixelsize_input().id
+
+    # add default pixel size input to spatial inputs if not already in there
+    if default_input_id not in [inp.key for inp in spatial_inputs]:
+        spatial_inputs.append(Option(key=default_input_id, display_name=''))
+
+    def _get_target_projection_input_id(args, model_spec):
+        projection_input_id = args.get("target_projection")
+
+        if projection_input_id and args.get(projection_input_id):
+            return projection_input_id
+        # if there is not a target_projection selected or user has not entered
+        # a value associated with that id, default back to default projection
+        default_projection_input = model_spec.get_default_projection_input()
+        if default_projection_input and args.get(default_projection_input.id):
+            return default_projection_input.id
+        return None
+
+    # Find the selected target projection so that pixel sizes can be
+    # transformed to the target projection's units
+    projection_input_id = _get_target_projection_input_id(args, model_spec)
+    current_projection = None
+    if projection_input_id:
+        current_projection = utils.get_raster_or_vector_projection(
+            args[projection_input_id])
+
+    raster_inputs = [
+        opt for opt in spatial_inputs if (
+            args.get(opt.key) and (
+                pygeoprocessing.get_gis_type(args[opt.key]) == pygeoprocessing.RASTER_TYPE))
+        or opt.key == default_input_id]
+
+    if not raster_inputs:
+        return []
+
+    options = []
+    if default_input_id is not None:
+        # first item in options should be default if one exists
+        default_name = smart_title(model_spec.get_input(default_input_id).name)
+        options.append(Option(key=default_input_id,
+                              display_name=f"(Default) {default_name}"))
+    for opt in raster_inputs:
+        inp_name = smart_title(model_spec.get_input(opt.key).name)
+        # if default projection input hasn't been entered and target
+        # projection hasn't been selected, i.e., changed from the default text,
+        # selected_projection_wkt will be None
+        if current_projection and args.get(opt.key):
+            # convert pixel size to be in same units as selected target projection
+            try:
+                trans_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
+                    args[opt.key], current_projection)
+                formatted_pixelsize = [float(round(pix, 3)) for pix in trans_pixelsize]
+            except ValueError:
+                # raised if current_projection is unprojected
+                formatted_pixelsize = ''
+        else:
+            formatted_pixelsize = ''
+
+        if opt.key == default_input_id:
+            display_name = "(Default) " + inp_name + f" {formatted_pixelsize}"
+            options[0] = Option(key=opt.key, display_name=display_name)
+        else:
+            display_name = inp_name + f" {formatted_pixelsize}"
+            options.append(Option(key=opt.key, display_name=display_name))
+
+    return options
 
 
 class ImmutableBaseModel(BaseModel):
@@ -303,6 +470,14 @@ class Input(IOModel):
 
         return [rst_line]
 
+    def validate(self, value):
+        """Validate this input's value in isolation."""
+        return None
+
+    def validate_with_context(self, value, args, model_spec):
+        """Validate this value using other model arguments."""
+        return None
+
 
 class Output(IOModel):
     """A data output, or result, of an invest model.
@@ -404,6 +579,20 @@ class SpatialFileInput(FileInput):
     projection_units: typing.Union[pint.Unit, None] = None
     """Defaults to None. If `projected` is `True`, and a specific unit of
     projection (such as meters) is required, indicate it here."""
+
+    is_default_projection: bool = False
+    """Whether the input has the projection and alignment to which other
+    inputs are reprojected and aligned by default. Only one ModelSpec input
+    can have ``is_default_projection=True``. A user can select a different
+    input to represent the target projection, but this input will be selected
+    by default. Defaults to False."""
+
+    is_default_pixelsize: bool = False
+    """Whether the input has the pixel size to which other inputs should be
+    resampled by default. Only one ModelSpec input can have
+    ``is_default_pixelsize=True``. A user can select a different input to
+    represent the target projection, but this input will be selected by
+    default. Defaults to False."""
 
     @model_validator(mode='after')
     def check_projected_projection_units(self):
@@ -1577,6 +1766,14 @@ class OptionStringInput(Input):
     """A function that returns a list of the values that this input may take.
     Use this if the set of options must be dynamically generated."""
 
+    responsive_to: typing.Union[str, None] = None
+    """Another input ID that triggers a refresh of this option list if changed.
+
+    A different model input id which, when changed in the workbench,
+    will cause the option dropdown menu to re-call the dropdown function even
+    if the current selected option is still valid. This is useful for selecting
+    different default options for different scenarios."""
+
     type: typing.ClassVar[str] = 'option_string'
 
     rst_section: typing.ClassVar[str] = 'option'
@@ -1689,6 +1886,48 @@ class OptionStringInput(Input):
 
         # prepend the indent to each line in the indented block
         return [rst_line] + ['\t' + line for line in indented_block]
+
+
+class OptionSpatialInput(OptionStringInput):
+    """A string input which has an additional projection_units attribute.
+
+    This corresponds to a dropdown menu in the workbench, where the user
+    is limited to a set of pre-defined options.
+    """
+    projection_units: typing.Union[pint.Unit, None] = None
+    """The units in which a selected spatial file input must be projected.
+    Defaults to None. """
+
+    projected: typing.Union[bool, None] = None
+    """Whether the selected input must be projected. Defaults to None."""
+
+    def validate(self, value):
+        message = super().validate(value)
+        if message:
+            return message
+
+    def validate_with_context(self, value, args, model_spec):
+        if not value:
+            return None
+
+        try:
+            selected_spec = model_spec.get_input(value)
+        except KeyError:
+            return validation_messages.MISSING_KEY
+        # otherwise leaving validation to the actual files
+
+        filepath = args.get(value)
+        if not filepath:
+            return validation_messages.FILE_NOT_FOUND
+
+        filepath = args.get(value)
+        projection_spec = selected_spec.model_copy(update={
+            # 'is_default_projection': True,
+            'projected': self.projected,
+            'projection_units': self.projection_units,
+        })
+
+        return projection_spec.validate(filepath)
 
 
 class FileOutput(Output):
@@ -1973,6 +2212,48 @@ class ModelSpec(ImmutableBaseModel):
                 f'Mismatch between keys in inputs and input_field_order')
         return self
 
+    @model_validator(mode='after')
+    def check_one_default_projection(self):
+        default_proj_inputs = [
+            inp for inp in self.inputs
+            if isinstance(inp, SpatialFileInput) and inp.is_default_projection
+        ]
+
+        if len(default_proj_inputs) > 1:
+            ids = [inp.id for inp in default_proj_inputs]
+            raise ValueError(
+                'Only one spatial input can have '
+                f'is_default_projection=True, but found multiple: {ids}'
+            )
+        # fine if 0 inputs have is_default_projection=True
+        return self
+
+    @model_validator(mode='after')
+    def check_one_default_pixelsize(self):
+        default_pixelsize_inputs = [
+            inp for inp in self.inputs
+            if isinstance(inp, SpatialFileInput) and inp.is_default_pixelsize
+        ]
+
+        if len(default_pixelsize_inputs) > 1:
+            ids = [inp.id for inp in default_pixelsize_inputs]
+            raise ValueError(
+                'Only one spatial input can have '
+                f'is_default_pixelsize=True, but found multiple: {ids}'
+            )
+        # fine if 0 inputs have is_default_pixelsize=True
+        return self
+
+    def get_default_projection_input(self):
+        return next((inp for inp in self.inputs if (
+            isinstance(inp, SpatialFileInput) and inp.is_default_projection)),
+            None)
+
+    def get_default_pixelsize_input(self):
+        return next((inp for inp in self.inputs if (
+            isinstance(inp, SpatialFileInput) and inp.is_default_pixelsize)),
+            None)
+
     def get_input(self, key: str) -> Input:
         """Get an Input of this model by its key."""
         return {_input.id: _input for _input in self.inputs}[key]
@@ -2043,6 +2324,46 @@ class ModelSpec(ImmutableBaseModel):
             values[_input.id] = _input.preprocess(
                 input_values.get(_input.id, None))
         return values
+
+    def preprocess_spatial_reference_args(self, args):
+        """Set target_projection and target_pixelsize if they aren't in args
+
+        The resulting dict will have set key `target_projection` and
+        `target_pixelsize` to the id of whichever arg has
+        `is_default_projection` if that arg exists.
+
+        Args:
+            args (dict): argument dictionary mapping input keys to input values
+
+        Returns:
+            dictionary mapping input keys to preprocessed input values
+        """
+        inputs_ids = [i.id for i in self.inputs]
+        args_copy = args.copy()
+        if 'target_projection' in inputs_ids and not args.get('target_projection'):
+            #TODO: or do we want to set this just like with target pixel size?
+            # pros: will find a suitable spatial input if one exists
+            # cons: less transparent to user?
+            default_projection_input = self.get_default_projection_input()
+            if default_projection_input:
+                args_copy['target_projection'] = default_projection_input.id
+            else:
+                raise ValueError("Target projection not able to be specified "
+                                 "and no default option.")
+
+        if 'target_pixelsize' in inputs_ids and not args.get('target_pixelsize'):
+            all_options = self.get_input(
+                'target_pixelsize').dropdown_function(args, self)
+            if all_options:
+                args_copy['target_pixelsize'] = all_options[0].key
+                LOGGER.info("Getting target pixel size from "
+                            f"{args_copy[args_copy['target_pixelsize']]}")
+            else:
+                raise ValueError(
+                    "Target pixel size not able to be specified as no valid "
+                    "spatial input options.")
+
+        return args_copy
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):
         """Create metadata for all items in an invest model output workspace.
@@ -2132,6 +2453,7 @@ class ModelSpec(ImmutableBaseModel):
             and model specification.
         """
         args = self.preprocess_inputs(args)
+        args = self.preprocess_spatial_reference_args(args)
         self.create_output_directories(args)
         file_registry = FileRegistry(
             outputs=self.outputs,
@@ -2214,6 +2536,7 @@ class ModelSpec(ImmutableBaseModel):
                 return
 
             preprocessed_args = self.preprocess_inputs(args)
+            preprocessed_args = self.preprocess_spatial_reference_args(preprocessed_args)
 
             if check_outputs:
                 # evaluate which outputs we expect to be created, given the
@@ -2355,6 +2678,28 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
         Option(key="D8", description="D8 flow direction"),
         Option(key="MFD", description="Multiple flow direction")
     ]
+)
+TARGET_PROJECTION = OptionSpatialInput( #TODO - add 'Custom' option to all lists and if its selected, another numerical input pixelsize is allowed
+    id="target_projection",
+    name=gettext("target projection"),
+    about=gettext(
+        "Input with target projection to which all other spatial "
+        "inputs will be reprojected."),
+    required=False,  # models will fallback to using default target projections
+    options=[],
+    projected=True,
+    dropdown_function=_get_spatial_inputs_options
+)
+TARGET_PIXELSIZE = OptionSpatialInput(
+    id="target_pixelsize",
+    name=gettext("target pixel size"),
+    about=gettext(
+        "Input with target pixel size to which all other spatial "
+        "inputs will be resampled. Units match those of the selected "
+        "Target Projection."),
+    required=False,  # models will fallback to using default target pixel size
+    options=[],
+    dropdown_function=_get_pixel_size_options
 )
 
 # Specs for common outputs ####################################################
