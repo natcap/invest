@@ -181,6 +181,9 @@ export const createWindow = async () => {
   setupWindowsMSVCHandlers();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
+    installExtension([REACT_DEVELOPER_TOOLS])
+      .then(([react]) => console.log(`Added Extensions: ${react.name}`))
+      .catch((err) => console.log('An error occurred: ', err));
     // The timing of this is fussy due a chromium bug. It seems to only
     // come up if there is an unrelated uncaught exception during page load.
     // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
@@ -188,9 +191,6 @@ export const createWindow = async () => {
     // Calling this in a 'did-finish-load' listener would make a lot of sense,
     // but most of the time it doesn't work.
     mainWindow.webContents.openDevTools();
-    installExtension([REACT_DEVELOPER_TOOLS])
-      .then(([react]) => console.log(`Added Extensions: ${react.name}`))
-      .catch((err) => console.log('An error occurred: ', err));
   }
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
