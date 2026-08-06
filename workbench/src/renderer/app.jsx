@@ -147,8 +147,17 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
    * @param {boolean} save - if true, save the updated job to persistent store
    */
   async function updateJobProperties(tabID, jobObj, save = false) {
+    const existingJob = openJobs.get(tabID);
+    // It's worth checking before updating state because this component
+    // has so many children and most of the time the job properties have
+    // not changed.
+    const skipUpdate = Object.keys(jobObj).every(
+      (key) => existingJob[key] === jobObj[key]
+    );
+    if (skipUpdate) { return; }
+
+    const updatedJob = { ...existingJob, ...jobObj };
     const newOpenJobs = new Map(openJobs);
-    const updatedJob = { ...openJobs.get(tabID), ...jobObj };
     newOpenJobs.set(tabID, updatedJob);
     setOpenJobs(newOpenJobs);
     if (save) {
