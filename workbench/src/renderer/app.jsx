@@ -140,7 +140,7 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
     // not changed.
     if (existingJob.isSuperSet(jobObj)) { return; }
 
-    const updatedJob = { ...existingJob, ...jobObj };
+    const updatedJob = new InvestJob({ ...existingJob, ...jobObj });
     const newOpenJobs = new Map(openJobs);
     newOpenJobs.set(tabID, updatedJob);
     setOpenJobs(newOpenJobs);
