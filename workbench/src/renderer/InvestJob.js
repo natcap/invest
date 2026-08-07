@@ -123,7 +123,7 @@ export default class InvestJob {
     {
       modelID,
       modelTitle,
-      argsValues,
+      argsValues = {},
       logfile,
       htmlfile,
       status,

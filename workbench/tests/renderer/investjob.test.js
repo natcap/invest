@@ -134,7 +134,7 @@ describe('InvestJob', () => {
     expect(recentJobs).toHaveLength(1);
   });
 
-  test('isSuperSet returns correct booleans', async () => {
+  test('isSuperSet is correct comparing top-level properties', async () => {
     const job = new InvestJob({
       modelID: 'foo',
       modelTitle: 'Foo',
@@ -143,10 +143,26 @@ describe('InvestJob', () => {
     });
 
     expect(job.isSuperSet({ status: undefined })).toBe(false);
+    expect(job.isSuperSet({ logfile: 'foo' })).toBe(false);
+  });
+
+  test('isSuperSet is correct comparing argsValues', async () => {
+    const job = new InvestJob({
+      modelID: 'foo',
+      modelTitle: 'Foo',
+      argsValues: baseArgsValues,
+      status: 'success',
+    });
     expect(job.isSuperSet({ argsValues: { ...baseArgsValues } })).toBe(true);
 
     const newArgsValues = { ...baseArgsValues };
     newArgsValues.workspace_dir = 'new dir';
     expect(job.isSuperSet({ argsValues: newArgsValues })).toBe(false);
+
+    const job2 = new InvestJob({
+      modelID: 'foo',
+      modelTitle: 'Foo',
+    });
+    expect(job2.isSuperSet({ argsValues: { foo: 'bar' } })).toBe(false);
   });
 });

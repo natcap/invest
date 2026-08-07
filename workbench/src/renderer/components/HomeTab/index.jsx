@@ -170,7 +170,7 @@ function RecentInvestJobs(props) {
 
   const recentButtons = [];
   recentJobs.forEach((job) => {
-    if (job && job.argsValues && job.modelTitle) {
+    if (job && job.argsValues.workspace_dir && job.modelTitle) {
       const card = (
         <RecentJobCard
           job={job}
