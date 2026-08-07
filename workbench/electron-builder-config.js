@@ -65,12 +65,12 @@ const config = {
   artifactName: ARTIFACT_NAME,
   mac: {
     category: 'public.app-category.business',
-    icon: 'resources/InVEST-2-574x574.ico',
+    icon: 'src/renderer/static/InVEST-Logo-registeredtm_202305_150dpi.png',
     target: 'dmg',
   },
   win: {
     target: 'nsis',
-    icon: 'resources/InVEST-2-256x256.ico',
+    icon: 'src/renderer/static/InVEST-Logo-registeredtm_202305_150dpi.png',
   },
   nsis: {
     allowToChangeInstallationDirectory: true,
