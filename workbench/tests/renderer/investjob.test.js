@@ -143,7 +143,7 @@ describe('InvestJob', () => {
     });
 
     expect(job.isSuperSet({ status: undefined })).toBe(false);
-    expect(job.isSuperSet({ argsValues: baseArgsValues })).toBe(true);
+    expect(job.isSuperSet({ argsValues: { ...baseArgsValues } })).toBe(true);
 
     const newArgsValues = { ...baseArgsValues };
     newArgsValues.workspace_dir = 'new dir';

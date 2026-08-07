@@ -95,15 +95,17 @@ export default class InvestJob {
    */
   isSuperSet(obj) {
     let isSuperSet;
-    isSuperSet = Object.keys(obj).every(
-      (key) => this[key] === obj[key]
-    );
-    if (!isSuperSet) { return false; }
-    if (Object.keys(obj).includes('argsValues')) {
+    const keys = new Set(Object.keys(obj));
+    if (keys.has('argsValues')) {
       isSuperSet = Object.keys(obj.argsValues).every(
         (key) => this.argsValues[key] === obj.argsValues[key]
       );
+      if (!isSuperSet) { return false; }
+      keys.delete('argsValues');
     }
+    isSuperSet = keys.values().every(
+      (key) => this[key] === obj[key]
+    );
     return isSuperSet;
   }
 
