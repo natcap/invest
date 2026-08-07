@@ -89,6 +89,25 @@ export default class InvestJob {
   }
 
   /**
+   * Check if this InvestJob contains all the properties and values of another object
+   * @param {object} obj - an object with properties to compare to this InvestJob
+   * @returns {boolean}
+   */
+  isSuperSet(obj) {
+    let isSuperSet;
+    isSuperSet = Object.keys(obj).every(
+      (key) => this[key] === obj[key]
+    );
+    if (!isSuperSet) { return false; }
+    if (Object.keys(obj).includes('argsValues')) {
+      isSuperSet = Object.keys(obj.argsValues).every(
+        (key) => this.argsValues[key] === obj.argsValues[key]
+      );
+    }
+    return isSuperSet;
+  }
+
+  /**
    * @param {object} obj - with the following properties
    * @param {string} obj.modelID - name to be passed to `invest run`
    * @param {string} obj.modelTitle - colloquial name of the invest model

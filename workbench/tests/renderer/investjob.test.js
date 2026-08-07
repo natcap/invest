@@ -133,4 +133,20 @@ describe('InvestJob', () => {
     recentJobs = await InvestJob.deleteJob(job1.hash);
     expect(recentJobs).toHaveLength(1);
   });
+
+  test('isSuperSet returns correct booleans', async () => {
+    const job = new InvestJob({
+      modelID: 'foo',
+      modelTitle: 'Foo',
+      argsValues: baseArgsValues,
+      status: 'success',
+    });
+
+    expect(job.isSuperSet({ status: undefined })).toBe(false);
+    expect(job.isSuperSet({ argsValues: baseArgsValues })).toBe(true);
+
+    const newArgsValues = { ...baseArgsValues };
+    newArgsValues.workspace_dir = 'new dir';
+    expect(job.isSuperSet({ argsValues: newArgsValues })).toBe(false);
+  });
 });

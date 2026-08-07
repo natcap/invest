@@ -130,7 +130,7 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
   /**
    * Update properties of an open InvestTab.
    * @param {string} tabID - the unique identifier of an open tab
-   * @param {obj} jobObj - key-value pairs of any job properties to be updated
+   * @param {object} jobObj - key-value pairs of any job properties to be updated
    * @param {boolean} save - if true, save the updated job to persistent store
    */
   async function updateJobProperties(tabID, jobObj, save = false) {
@@ -138,10 +138,7 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
     // It's worth checking before updating state because this component
     // has so many children and most of the time the job properties have
     // not changed.
-    const skipUpdate = Object.keys(jobObj).every(
-      (key) => existingJob[key] === jobObj[key]
-    );
-    if (skipUpdate) { return; }
+    if (existingJob.isSuperSet(jobObj)) { return; }
 
     const updatedJob = { ...existingJob, ...jobObj };
     const newOpenJobs = new Map(openJobs);
