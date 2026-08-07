@@ -14,6 +14,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
@@ -55,6 +56,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "A map of watershed outlets from which to delineate the watersheds."
                 " Required if Detect Pour Points is not checked."
             ),
+            keywords=[keywords.WATERSHED_DRAINAGE],
             required="not detect_pour_points",
             allowed="not detect_pour_points",
             geometry_types={

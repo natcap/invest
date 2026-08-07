@@ -316,20 +316,37 @@ class Input(IOModel):
         if hasattr(self, 'fields'):
             return self.fields
         if hasattr(self, 'columns'):
-            return self.columns
+            # columns can be None for irregular CSV like in HRA
+            if self.columns:
+                return self.columns
         if hasattr(self, 'contents'):
             return self.contents
         return []
 
-    def get_keywords(self, include_children=True):
-        """Get a list of unique keyword strings for this input and children."""
+    def get_keywords(self, include_children=True, include_aliases=True):
+        """Get a list of unique keyword strings for this input and children.
+
+        Args:
+            include_children (bool): include the keywords of nested Input specs.
+            include_aliases (bool): extend the list of keyword strings with the
+                list of the keyword's aliases
+
+        Returns:
+            list of strings
+
+        """
         keywords = []
         if self.keywords:
-            keywords += [keyword.value for keyword in self.keywords]
+            for keyword in self.keywords:
+                keywords.append(keyword.value)
+                if include_aliases:
+                    keywords.extend(keyword.aliases)
         if include_children:
             for child in self.get_child_inputs():
                 if child.keywords:
-                    keywords += child.get_keywords()
+                    keywords += child.get_keywords(
+                        include_children=include_children,
+                        include_aliases=include_aliases)
         return list(set(keywords))
 
 
@@ -2390,6 +2407,19 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
         Option(key="MFD", description="Multiple flow direction")
     ]
 )
+WATERSHED_VECTOR = VectorInput(
+    id="watersheds_path",
+    name=gettext("Watersheds"),
+    about=gettext(
+        "Map of the boundaries of the watershed(s) over which to aggregate"
+        " results."
+    ),
+    keywords=[keywords.WATERSHED_BOUNDARIES],
+    geometry_types={"POLYGON", "MULTIPOLYGON"},
+    fields=[]
+)
+PROJECTED_WATERSHED_VECTOR = WATERSHED_VECTOR.model_copy(
+    update=dict(projected=True))
 
 # Specs for common outputs ####################################################
 TASKGRAPH_CACHE = FileOutput(
@@ -2587,6 +2617,7 @@ def write_metadata_file(datasource_path, spec, keywords_list,
     resource.set_lineage(lineage_statement)
     # a pre-existing metadata doc could have keywords
     words = resource.get_keywords()
+    # TODO: there could also be keywords attached to the `spec`.
     resource.set_keywords(set(words + keywords_list))
 
     if spec.about:

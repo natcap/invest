@@ -11,6 +11,7 @@ from osgeo import gdal_array
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import validation
 from natcap.invest.sdr import sdr
@@ -59,18 +60,9 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SUFFIX,
         spec.N_WORKERS,
         spec.PROJECTED_DEM,
-        spec.SingleBandRasterInput(
-            id="lulc_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of land use/land cover codes. Each land use/land cover type must be"
-                " assigned a unique integer code. All values in this raster must have"
-                " corresponding entries in the Biophysical table."
-            ),
-            data_type=int,
-            units=u.none,
+        spec.LULC.model_copy(update=dict(
             projected=True
-        ),
+        )),
         spec.SingleBandRasterInput(
             id="runoff_proxy_path",
             name=gettext("nutrient runoff proxy"),
@@ -79,21 +71,12 @@ MODEL_SPEC = spec.ModelSpec(
                 " This can be a quickflow index or annual precipitation. Any units are"
                 " allowed since the values will be normalized by their average."
             ),
+            keywords=[keywords.RUNOFF],
             data_type=float,
             units=u.none,
             projected=None
         ),
-        spec.VectorInput(
-            id="watersheds_path",
-            name=gettext("watersheds"),
-            about=gettext(
-                "Map of the boundaries of the watershed(s) over which to aggregate the"
-                " model results."
-            ),
-            geometry_types={"POLYGON", "MULTIPOLYGON"},
-            fields=[],
-            projected=True
-        ),
+        spec.PROJECTED_WATERSHED_VECTOR,
         spec.CSVInput(
             id="biophysical_table_path",
             name=gettext("biophysical table"),
@@ -104,6 +87,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " Calculate Phosphorus is selected. All LULC codes in the LULC raster"
                 " must have corresponding entries in this table."
             ),
+            keywords=[keywords.PHOSPHOROUS, keywords.NITROGEN],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.OptionStringInput(

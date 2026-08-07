@@ -543,10 +543,26 @@ class InputTests(unittest.TestCase):
                     id='carbon', units=None, keywords=[keywords.CARBON]),
             ]
         )
-        expected_keywords = [keywords.LULC.value, keywords.CARBON.value]
-        self.assertCountEqual(csv_input.get_keywords(), expected_keywords)
         self.assertCountEqual(
-            csv_input.get_keywords(include_children=False), [keywords.LULC.value])
+            csv_input.get_keywords(),
+            [keywords.LULC.value, keywords.CARBON.value] + keywords.LULC.aliases)
+        self.assertCountEqual(
+            csv_input.get_keywords(include_children=False),
+            [keywords.LULC.value] + keywords.LULC.aliases)
+        self.assertCountEqual(
+            csv_input.get_keywords(include_aliases=False),
+            [keywords.LULC.value, keywords.CARBON.value])
+
+    def test_get_keywords_irregular_csv_input(self):
+        """Test that CSVInput.get_keywords works when columns=None."""
+        csv_input = spec.CSVInput(
+            id="foo",
+            about="Description.",
+            name="foo",
+            columns=None
+        )
+        expected_keywords = []
+        self.assertEqual(csv_input.get_keywords(), expected_keywords)
 
     def test_get_keywords_vector_input(self):
         """Test that VectorInput.get_keywords returns correct keywords."""
@@ -562,10 +578,12 @@ class InputTests(unittest.TestCase):
                     id='carbon', units=None, keywords=[keywords.CARBON]),
             ]
         )
-        expected_keywords = [keywords.LULC.value, keywords.CARBON.value]
-        self.assertCountEqual(vector_input.get_keywords(), expected_keywords)
         self.assertCountEqual(
-            vector_input.get_keywords(include_children=False), [keywords.LULC.value])
+            vector_input.get_keywords(),
+            [keywords.LULC.value, keywords.CARBON.value] + keywords.LULC.aliases)
+        self.assertCountEqual(
+            vector_input.get_keywords(include_children=False),
+            [keywords.LULC.value] + keywords.LULC.aliases)
 
     def test_immutable_input(self):
         """Test that Input instances are immutable."""

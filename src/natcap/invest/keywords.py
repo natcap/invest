@@ -1,23 +1,50 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Keyword(BaseModel):
+    """Base model for all keywords."""
+
+    model_config = ConfigDict(validate_assignment=True,
+                              extra='forbid',
+                              use_attribute_docstrings=True)
+
     value: str
+    """The keyword string."""
     vocabulary: str
+    """The name of a controlled vocabulary where this keyword is defined."""
+    aliases: list[str] = []
+    """A list of alternatives to the ``value`` string that carry the same meaning.
+
+    It is useful to alias some GCMD keywords when they include special characters
+    that are not usable in some contexts (e.g. as CKAN tags).
+    """
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__name__ == 'Keyword':
+            raise TypeError(
+                'Keyword is an abstract class and cannot be instantiated directly.')
+        return super().__new__(cls)
 
 
 class GCMDKeyword(Keyword):
-    value: str
+    """A Keyword from the NASA Global Change Master Directory (GCMD)"""
     uuid: str
+    """The unique id from the GCMD."""
     full_path: str
+    """The full hierarchy of the keyword within the GCMD."""
     vocabulary: str = 'Global Change Master Directory (GCMD) Keywords'
 
 
 class InvestKeyword(Keyword):
-    value: str
     definition: str = ''
+    """The meaning of the keyword."""
     vocabulary: str = 'InVEST Keywords'
 
+
+AGRICULTURE_PRODUCTION = GCMDKeyword(
+    value='AGRICULTURE PRODUCTION',
+    uuid='83741fb9-6f86-4670-abbb-c1f3b14a939d',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > ECONOMIC RESOURCES > AGRICULTURE PRODUCTION')
 
 BATHYMETRY = GCMDKeyword(
     value='BATHYMETRY',
@@ -40,6 +67,12 @@ CARBON = GCMDKeyword(
     uuid='6f6537f5-773f-4df1-862b-d9ab80eb5e04',
     full_path='EARTH SCIENCE > BIOSPHERE > VEGETATION > CARBON')
 
+CARBON_REGRESSION_PARAMETERS = InvestKeyword(
+    value='CARBON REGRESSION PARAMETERS',
+    definition=(
+        'Parameters used by the regression model in the InVEST Forest Carbon'
+        ' Edge Effect model.'))
+
 CARBON_SEQUESTRATION = GCMDKeyword(
     value='CARBON SEQUESTRATION',
     uuid='e58872a8-6104-4ff8-bbca-4b00ba4b38e8',
@@ -60,12 +93,30 @@ CONTINENTAL_MARGINS = GCMDKeyword(
     uuid='a91a00f7-05ed-4633-9fac-1772a48b6342',
     full_path='EARTH SCIENCE > OCEANS > BATHYMETRY/SEAFLOOR TOPOGRAPHY > CONTINENTAL MARGINS')
 
+CROP_CLIMATE_SUITABILITY = InvestKeyword(
+    value='CROP CLIMATE SUITABILITY',
+    definition=(
+        'An index describing the suitability of a location for a specific crop,'
+        ' based on relevant climate parameters'))
+
 CROP_COEFFICIENT = InvestKeyword(value='CROP COEFFICIENT')
+
+CROP_PLANT_YIELDS = GCMDKeyword(
+    value='CROP/PLANT YIELDS',
+    uuid='f12d8026-f24a-4413-91d0-4704c243c9e7',
+    full_path='EARTH SCIENCE > AGRICULTURE > AGRICULTURAL PLANT SCIENCE > CROP/PLANT YIELDS',
+    aliases=['CROP YIELDS'])
+
+CROP_TYPE = GCMDKeyword(
+    value='CROP TYPE',
+    uuid='e210bb78-19b6-453c-8dcb-81e389601329',
+    full_path='EARTH SCIENCE > AGRICULTURE > AGRICULTURAL PLANT SCIENCE > CROP TYPE')
 
 DEM = GCMDKeyword(
     value='DIGITAL ELEVATION/TERRAIN MODEL (DEM)',
     uuid='395372ad-2883-4b6a-a481-6383a310ca47',
-    full_path='EARTH SCIENCE > LAND SURFACE > TOPOGRAPHY > TERRAIN ELEVATION > DIGITAL ELEVATION/TERRAIN MODEL (DEM)')
+    full_path='EARTH SCIENCE > LAND SURFACE > TOPOGRAPHY > TERRAIN ELEVATION > DIGITAL ELEVATION/TERRAIN MODEL (DEM)',
+    aliases=['DEM', 'DIGITAL ELEVATION MODEL'])
 
 DRAINAGE = GCMDKeyword(
     value='DRAINAGE',
@@ -77,9 +128,22 @@ EVAPOTRANSPIRATION = GCMDKeyword(
     uuid='26fc4850-7ba9-44d8-a156-5c623e17b72f',
     full_path='EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC WATER VAPOR > WATER VAPOR PROCESSES > EVAPOTRANSPIRATION')
 
+FERTILIZERS = GCMDKeyword(
+    value='FERTILIZERS',
+    uuid='18a8197e-3a3f-408c-9c51-e9fe89dd6b45',
+    full_path='EARTH SCIENCE > AGRICULTURE > AGRICULTURAL CHEMICALS > FERTILIZERS')
+
 FLOOD_DAMAGE_VALUE = InvestKeyword(
     value='FLOOD DAMAGE VALUE',
     definition='The economic value of flood damage to a property.')
+
+HABITAT_SENSITIVITY = InvestKeyword(
+    value='HABITAT SENSITIVITY',
+    definition='Parameters related to the sensitivity of habitat to specific threats.')
+
+HABITAT_THREATS = InvestKeyword(
+    value='HABITAT THREATS',
+    definition='Geographic distribution and parameters related to threats to habitat.')
 
 HYDROELECTRIC_ENERGY = GCMDKeyword(
     value='HYDROELECTRIC ENERGY PRODUCTION/USE',
@@ -97,16 +161,85 @@ LANDMASS = InvestKeyword(
 LULC = GCMDKeyword(
     value='LAND USE/LAND COVER',
     uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
-    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER')
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER',
+    aliases=['LAND USE LAND COVER'])
 
+# TODO: this is not currently in use. Instead biophysical tables are
+# tagged with LULC. Should we use this tag instead? It would not currently
+# match any tags in use on the DH.
 LULC_CLASSES = GCMDKeyword(
     value='LAND USE/LAND COVER CLASSES',
-    uuid='e5815f58-8232-4c7f-b50d-ea71d73891a9',
-    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES')   
+    uuid='fe2f8240-4d8e-4b1f-b869-29fee59692f7',
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE CLASSES',
+    aliases=['LAND USE LAND COVER CLASSES'])
+
+NITROGEN = GCMDKeyword(
+    value='NITROGEN',
+    uuid='bf03dba8-2881-44ac-abfc-ba3353f67a24',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > WATER QUALITY/WATER CHEMISTRY > NUTRIENTS > NITROGEN')
+
+NUTRIENTS = GCMDKeyword(
+    value='NUTRIENTS',
+    uuid='9bcb805c-718e-42c3-913d-174bdf06d4c1',
+    full_path='EARTH SCIENCE > BIOSPHERE > VEGETATION > NUTRIENTS')
 
 PAWC = InvestKeyword(
     value='PLANT AVAILABLE WATER CONTENT',
     definition='The quantity of water in the soil that is available to plants.')
+
+PHOSPHOROUS = GCMDKeyword(
+    value='PHOSPHOROUS',
+    uuid='846d2db9-41cd-4ae8-b4ff-a34a9efb7428',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > WATER QUALITY/WATER CHEMISTRY > NUTRIENTS > PHOSPHOROUS')
+
+PLANT_COMMODITIES = GCMDKeyword(
+    value='PLANT COMMODITIES',
+    uuid='d6560f20-3bef-41c6-8eec-9f913329b9ac',
+    full_path='EARTH SCIENCE > AGRICULTURE > PLANT COMMODITIES')
+
+POLLINATION_SEASON = InvestKeyword(
+    value='POLLINATION SEASON',
+    definition='The season in which a crop is pollinated.')
+
+POLLINATOR_ABUNDANCE = InvestKeyword(
+    value='POLLINATOR ABUNDANCE',
+    definition=(
+        'The abundance of a population of a pollinator species/guild.'
+        ' Sometimes expressed as a proportion of the total'
+        ' amount of pollinators in the landscape.'))
+
+POLLINATOR_DEPENDENCE = InvestKeyword(
+    value='POLLINATOR DEPENDENCE',
+    definition=(
+        'Parameters related to the dependence of a crop on pollinators.'
+        ' For example, the proportion of farm output that is dependent on pollinators.'
+        ' Or the proportion of pollinators that are wild vs. managed.'))
+
+POLLINATOR_FLORAL_RESOURCES = InvestKeyword(
+    value='POLLINATOR FLORAL RESOURCES',
+    definition=(
+        'Parameters related to the availability of floral resources for'
+        ' pollinators. This may refer to seasonality of floral resources and'
+        ' the abundance of floral resources across the landscape.'))
+
+POLLINATOR_FORAGE_ACTIVITY = InvestKeyword(
+    value='POLLINATOR FORAGE ACTIVITY',
+    definition=(
+        'Parameters related to the foraging activites of a pollinator species.'
+        ' This may refer to seasonality of foraging and distance travelled by'
+        ' foragers.'))
+
+POLLINATOR_NESTING_SUITABILITY = InvestKeyword(
+    value='POLLINATOR NESTING SUITABILITY',
+    definition=(
+        'Parameters related to the suitability of a habitat type for'
+        ' pollinator nesting. This may refer to land cover classes that provide'
+        ' suitable nesting substrate.'))
+
+POLLINATOR_SPECIES = GCMDKeyword(
+    value='POLLINATOR SPECIES',
+    uuid='45950ee6-adc2-4f39-96a7-c00bacd1ba9e',
+    full_path='EARTH SCIENCE > BIOSPHERE > ECOLOGICAL DYNAMICS > SPECIES/POPULATION INTERACTIONS > POLLINATOR SPECIES')
 
 POPULATION_SIZE = GCMDKeyword(
     value='POPULATION SIZE',
@@ -123,6 +256,10 @@ PRECIPITATION_RATE = GCMDKeyword(
     uuid='ac50c468-df2f-429c-8394-9d63efcc6f9d',
     full_path='EARTH SCIENCE > ATMOSPHERE > PRECIPITATION > PRECIPITATION_RATE')
 
+PROTECTED_AREA = InvestKeyword(
+    value='PROTECTED AREA',
+    definition='An area managed for preservation of natural resources.')
+
 RAINFALL_EROSIVITY = InvestKeyword(
     value='RAINFALL EROSIVITY',
     definition='The capacity of rainfall to cause soil erosion.')
@@ -130,6 +267,11 @@ RAINFALL_EROSIVITY = InvestKeyword(
 REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(
     value='REFERENCE EVAPOTRANSPIRATION',
     definition='Evapotranspiration of a reference vegetation such as grass or alfalfa.')
+
+RUNOFF = GCMDKeyword(
+    value='RUNOFF',
+    uuid='f6a54329-486b-4d5f-b105-c639cec42351',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > RUNOFF')
 
 RUNOFF_CURVE_NUMBER = InvestKeyword(
     value='RUNOFF CURVE NUMBER (CN)',
@@ -143,7 +285,8 @@ SEA_LEVEL_RISE = GCMDKeyword(
 SHORELINES = GCMDKeyword(
     value='SHORELINES',
     uuid='1d3b4eb7-9931-44bf-8457-26847051b7a8',
-    full_path='EARTH SCIENCE > OCEANS > COASTAL PROCESSES > SHORELINES')
+    full_path='EARTH SCIENCE > OCEANS > COASTAL PROCESSES > SHORELINES',
+    aliases=['COASTLINE'])
 
 SOIL_ERODIBILITY = InvestKeyword(
     value='SOIL ERODIBILITY',
@@ -157,7 +300,8 @@ SOIL_EROSION = GCMDKeyword(
 SOIL_ROOTING_DEPTH = GCMDKeyword(
     value='SOIL ROOTING DEPTH',
     uuid='1b475201-a032-4a66-a3aa-a35605affaee',
-    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL ROOTING DEPTH')
+    full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL ROOTING DEPTH',
+    aliases=['DEPTH TO BEDROCK', 'ROOT RESTRICTING LAYER DEPTH'])
 
 USLE_C_FACTOR = InvestKeyword(
     value='USLE C FACTOR',
@@ -171,6 +315,11 @@ WATERSHED_BOUNDARIES = GCMDKeyword(
     value='WATERSHED BOUNDARIES',
     uuid='b98123fc-6a87-4396-8e1a-ae7406e76ff6',
     full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > WATERSHED CHARACTERISTICS > WATERSHED BOUNDARIES')
+
+WATERSHED_DRAINAGE = GCMDKeyword(
+    value='WATERSHED DRAINAGE',
+    uuid='ae36ad48-85f2-42a0-958f-efec71c34cc0',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > WATERSHED CHARACTERISTICS > WATERSHED DRAINAGE')
 
 WATER_BUDGET = GCMDKeyword(
     value='WATER BUDGET',
@@ -200,3 +349,11 @@ WIND_SPEED = GCMDKeyword(
     value='WIND SPEED',
     uuid='a7ce84a3-8329-4eb7-b5de-72d2dea8c6bf',
     full_path='EARTH SCIENCE > OCEANS > OCEAN WINDS > SURFACE WINDS > WIND SPEED')
+
+
+def to_list():
+    keywords = []
+    for attr in globals().values():
+        if isinstance(attr, Keyword):
+            keywords.append(attr)
+    return keywords
