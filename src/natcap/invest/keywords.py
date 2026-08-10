@@ -153,6 +153,10 @@ HABITATS_STRESSORS = InvestKeyword(
     value='HABITATS AND STRESSORS',
     definition='Geographic distribution and parameters related to habitats and their stressors.')
 
+HEIGHT = InvestKeyword(
+    value='HEIGHT',
+    definition='Distance above the ground.')
+
 HYDROELECTRIC_ENERGY = GCMDKeyword(
     value='HYDROELECTRIC ENERGY PRODUCTION/USE',
     uuid='7eba0eef-3a30-4282-a162-1f483370ddc4',
@@ -318,6 +322,10 @@ USLE_C_FACTOR = InvestKeyword(
 USLE_P_FACTOR = InvestKeyword(
     value='USLE P FACTOR',
     definition='Support-practice factor for the Universal Soil Loss Equation')
+
+VIEWSHED_OBSTRUCTION = InvestKeyword(
+    value='VIEWSHED OBSTRUCTION',
+    definition='Geographic features that obstruct the viewshed of an observer.')
 
 WATERSHED_BOUNDARIES = GCMDKeyword(
     value='WATERSHED BOUNDARIES',
