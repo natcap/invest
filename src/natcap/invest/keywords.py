@@ -141,9 +141,17 @@ HABITAT_SENSITIVITY = InvestKeyword(
     value='HABITAT SENSITIVITY',
     definition='Parameters related to the sensitivity of habitat to specific threats.')
 
+HABITAT_STRESSOR_CRITERIA = InvestKeyword(
+    value='HABITAT STRESSOR CRITERIA',
+    definition='Criteria related to how specific stressors impact specific habitats.')
+
 HABITAT_THREATS = InvestKeyword(
     value='HABITAT THREATS',
     definition='Geographic distribution and parameters related to threats to habitat.')
+
+HABITATS_STRESSORS = InvestKeyword(
+    value='HABITATS AND STRESSORS',
+    definition='Geographic distribution and parameters related to habitats and their stressors.')
 
 HYDROELECTRIC_ENERGY = GCMDKeyword(
     value='HYDROELECTRIC ENERGY PRODUCTION/USE',
