@@ -1366,7 +1366,7 @@ class CSVInput(FileInput):
 
                 LOGGER.debug(
                     f'Rewritten spatial CSV written to {target_csv_path}')
-                dataframe.to_csv(target_csv_path)
+                dataframe.to_csv(target_csv_path, index=self.index_col is not None)
         else:
             shutil.copyfile(source_path, target_csv_path)
         datastack.args[self.id] = target_csv_path
