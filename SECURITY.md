@@ -52,8 +52,8 @@ following are considered out of scope:
 
 * Theoretical attacks without a realistic proof of concept.
 * Standard automated scanner outputs without actionable validation.
-* Issues that assume a level of local access equal to or greater than what
-  running InVEST itself would grant.
+* Issues that assume a level of local access greater than what
+  running InVEST itself requires.
 * Denial-of-service or resource-exhaustion from a user's own oversized or
   malformed input data on their own local run. (Note: a *crafted* file
   that causes code execution or data exfiltration when opened by another,
