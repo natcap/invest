@@ -169,10 +169,12 @@ def build_datastack_archive(args, model_id, datastack_path):
         LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
-        if key not in module.MODEL_SPEC.inputs:
+        try:
+            input_spec = module.MODEL_SPEC.get_input(key)
+        except KeyError:
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
             continue
-        module.MODEL_SPEC.get_input(key).archive_for_datastack(args[key], datastack)
+        input_spec.archive_for_datastack(args[key], datastack)
 
     LOGGER.info('Args preprocessing complete')
     LOGGER.debug(f'found files: \n{pprint.pformat(datastack.files_found)}')
@@ -318,7 +320,6 @@ def build_parameter_set(args, model_id, paramset_path, relative=False):
             json.dumps(parameter_data,
                        indent=4,
                        sort_keys=True))
-
     return parameter_data
 
 
