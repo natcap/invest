@@ -399,18 +399,19 @@ class DatastackArchiveTests(unittest.TestCase):
                 ogr_geom_type=ogr.wkbPoint)
 
             # Create a json file only referenced by the CSV
-            nonspatial_path = os.path.join(self.workspace, 'nonspatial.json')
-            with open(nonspatial_path, 'w') as f:
+            rel_nonspatial_path = 'nonspatial.json'
+            abs_nonspatial_path = os.path.join(self.workspace, rel_nonspatial_path)
+            with open(abs_nonspatial_path, 'w') as f:
                 f.write('{"foo": 1}')
             # copy existing DEM
             # copy existing watersheds
             # new raster
             # new vector
             spatial_csv.write('ID,spatial_path,nonspatial_path\n')
-            spatial_csv.write(f"1,{params['raster']},{nonspatial_path}\n")
-            spatial_csv.write(f"2,{params['vector']},{nonspatial_path}\n")
-            spatial_csv.write(f'3,{target_csv_raster_path},{nonspatial_path}\n')
-            spatial_csv.write(f'4,{target_csv_vector_path},{nonspatial_path}\n')
+            spatial_csv.write(f"1,{params['raster']},{abs_nonspatial_path}\n")
+            spatial_csv.write(f"2,{params['vector']},{abs_nonspatial_path}\n")
+            spatial_csv.write(f'3,{target_csv_raster_path},{rel_nonspatial_path}\n')
+            spatial_csv.write(f'4,{target_csv_vector_path},{rel_nonspatial_path}\n')
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         with patch('natcap.invest.datastack.models') as p:

@@ -1360,7 +1360,7 @@ class CSVInput(FileInput):
                         row_index, column_spec.id] = target_filepath
                     datastack.files_found[source_filepath] = target_filepath
 
-            dataframe.to_csv(target_csv_path)
+            dataframe.to_csv(target_csv_path, index=self.index_col is not None)
             LOGGER.debug(f'CSV rewritten to {target_csv_path}')
         else:
             shutil.copyfile(source_path, target_csv_path)
