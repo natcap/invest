@@ -33,6 +33,7 @@ Please include the following details in your report:
 * A description of the issue and its potential impact.
 * Steps to reproduce the bug (including proof-of-concept code if available).
 * Any specific configurations or environments required to trigger the issue.
+* The InVEST version or versions known to exhibit this issue.
 
 ## Our Response Process
 
