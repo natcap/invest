@@ -691,6 +691,23 @@ class RasterInput(SpatialFileInput):
             if projection_warning:
                 return projection_warning
 
+    def configure_metadata(self, resource):
+        """Update a geometamaker resource with metadata for this output.
+
+        Will not overwrite existing values.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        super().configure_metadata(resource)
+        for band in self.bands:
+            if len(resource.get_band_description(band.band_id).units) < 1:
+                resource.set_band_description(
+                    band.band_id, units=format_unit(band.units))
+
 
 class SingleBandRasterInput(SpatialFileInput):
     """A single-band raster input, or parameter, of an invest model.
@@ -2060,6 +2077,23 @@ class RasterOutput(FileOutput):
     bands: list[RasterBand]
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
+
+    def configure_metadata(self, resource):
+        """Update a geometamaker resource with metadata for this output.
+
+        Will not overwrite existing values.
+
+        Args:
+            resource (geometamaker.Resource): metadata resource to update
+
+        Returns:
+            None
+        """
+        super().configure_metadata(resource)
+        for band in self.bands:
+            if len(resource.get_band_description(band.band_id).units) < 1:
+                resource.set_band_description(
+                    band.band_id, units=format_unit(band.units))
 
 
 class VectorOutput(FileOutput):
