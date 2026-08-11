@@ -114,7 +114,7 @@ jobs:
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             ${{ matrix.platform-specific-dependencies }}
             python=${{ matrix.python-version }}
-            twine
+            twine>=6.1.0
             gdal==${{ env.GDAL_VERSION_FOR_WHEEL_BUILD }}
             wheel
 
