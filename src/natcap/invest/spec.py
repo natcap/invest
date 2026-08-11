@@ -510,9 +510,6 @@ class FileInput(Input):
             None
         """
         if value in {None, ''}:
-            LOGGER.info(
-                f'Skipping key {self.id}, value is empty and cannot point to '
-                'a file.')
             datastack.args[self.id] = ''
             return
 
@@ -1356,7 +1353,6 @@ class CSVInput(FileInput):
                             target_filepath = os.path.relpath(
                                 target_filepath, csv_dir)
 
-
                     LOGGER.debug(
                         'File referenced in CSV copied from '
                         f'{source_filepath} --> {target_filepath}')
@@ -1364,9 +1360,8 @@ class CSVInput(FileInput):
                         row_index, column_spec.id] = target_filepath
                     datastack.files_found[source_filepath] = target_filepath
 
-                LOGGER.debug(
-                    f'Rewritten spatial CSV written to {target_csv_path}')
-                dataframe.to_csv(target_csv_path)
+            dataframe.to_csv(target_csv_path)
+            LOGGER.debug(f'CSV rewritten to {target_csv_path}')
         else:
             shutil.copyfile(source_path, target_csv_path)
         datastack.args[self.id] = target_csv_path
