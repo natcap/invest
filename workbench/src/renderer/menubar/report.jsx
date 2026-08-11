@@ -1,6 +1,5 @@
 import React from 'react';
-import ReactDom from 'react-dom';
-import {createRoot} from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import { Translation } from 'react-i18next';
 
 import i18n from '../i18n/i18n';
@@ -8,7 +7,7 @@ import {
   handleClickExternalURL,
   handleClickFindLogfiles
 } from './handlers';
-import investLogo from '../static/invest-logo.png';
+import investLogo from '../static/InVEST-Logo-registeredtm_202305_150dpi.png';
 import natcapLogo from '../static/NatCapLogo.jpg';
 
 await i18n.changeLanguage(window.Workbench.LANGUAGE);

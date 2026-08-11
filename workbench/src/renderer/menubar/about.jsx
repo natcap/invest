@@ -1,13 +1,12 @@
 import React from 'react';
-import ReactDom from 'react-dom';
-import {createRoot} from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import { Translation } from 'react-i18next';
 
 import i18n from '../i18n/i18n';
 
 import { handleClickExternalURL } from './handlers';
 import { ipcMainChannels } from '../../main/ipcMainChannels';
-import investLogo from '../static/invest-logo.png';
+import investLogo from '../static/InVEST-Logo-registeredtm_202305_150dpi.png';
 
 const { ipcRenderer } = window.Workbench.electron;
 

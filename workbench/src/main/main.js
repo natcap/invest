@@ -180,6 +180,10 @@ export const createWindow = async () => {
   setupWindowsMSVCHandlers();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
+    const { installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
+    installExtension([REACT_DEVELOPER_TOOLS])
+      .then(([react]) => console.log(`Added Extensions: ${react.name}`))
+      .catch((err) => console.log('An error occurred: ', err));
     // The timing of this is fussy due a chromium bug. It seems to only
     // come up if there is an unrelated uncaught exception during page load.
     // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215

@@ -101,6 +101,9 @@ Workbench
 * Fixed a bug in the Manage Plugins modal where dragging and dropping
   a plugin directory into the local filepath would open a new window.
   (`#2642 <https://github.com/natcap/invest/issues/2642>`_)
+* Some general performance enhancements related to React components
+  and the responsiveness of model input text fields.
+  (`#2699 <https://github.com/natcap/invest/issues/2699>`_)
 
 3.20.0 (2026-06-11)
 -------------------

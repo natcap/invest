@@ -1,12 +1,6 @@
 name: Release (Part 2 of 2)
 
 on:
-  # this workflow will run any time any PR into main is closed
-  pull_request:
-    types: [closed]
-    branches:
-      - main
-
   workflow_dispatch:
     inputs:
       version:
@@ -17,29 +11,10 @@ env:
   GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
 jobs:
-  roll_back_release:
-    # run this job if a PR from an autorelease branch into main was closed without merging
-    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged != true
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Extract version from autorelease branch name
-        run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
-
-      - name: Roll back on failure
-        uses: ./.github/actions/rollback_release
-        with:
-          VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
-
   publish_release:
-    # run this job if a PR was merged from an autorelease branch into main
-    # or if manually triggered, github.head_ref is undefined
-    if: ${{ ! github.head_ref || (startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == true) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install dependencies
         run: |
@@ -48,13 +23,10 @@ jobs:
           pip install "twine>=6.1.0"
           pip install -U packaging
 
-      - name: Extract version from autorelease branch name
-        if: ${{ github.head_ref }}
-        run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
-
       - name: Get version from manual trigger input
-        if: ${{ ! github.head_ref }}
-        run: echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+        run: |
+          echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          echo "AUTORELEASE_BRANCH=autorelease/${{ inputs.version }}" >> $GITHUB_ENV
 
       - name: Find actions run for the $VERSION tag
         run: |
@@ -115,6 +87,25 @@ jobs:
             --notes-file notes.rst \
             artifacts/*
 
+      - name: Create a PR from the autorelease branch into main
+        run: |
+          gh pr create \
+            --base main \
+            --head $AUTORELEASE_BRANCH \
+            --title "$VERSION release" \
+            --reviewer $GITHUB_ACTOR \
+            --assignee $GITHUB_ACTOR \
+            --body "
+            # Merge $AUTORELEASE_BRANCH into \`main\`
+
+            This PR contains automated changes made for the $VERSION release.
+            It was created by Part 2 of the automated release workflow.
+
+            Changes on the $AUTORELEASE_BRANCH branch should have already been
+            reviewed before the Part 2 workflow was run, and the release should
+            have been published automatically. Merging this PR is the final
+            manual step after the release has happened."
+
       - name: Create a PyPI release
         # this is the only step that can't be rolled back
         run: |
@@ -122,10 +113,3 @@ jobs:
             --username="__token__" \
             --password=${{ secrets.PYPI_NATCAP_INVEST_TOKEN }} \
             artifacts/natcap_invest*
-
-      - name: Roll back on failure
-        if: failure()
-        uses: ./.github/actions/rollback_release
-        with:
-          VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}

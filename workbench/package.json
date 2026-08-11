@@ -65,11 +65,11 @@
     "react-i18next": "^12.1.4",
     "toml": "^3.0.0",
     "upath": "^2.0.1",
-    "yauzl": "^3.2.0"
+    "yauzl": "^3.2.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.22.5",
-    "@babel/core": "^7.0.0",
+    "@babel/core": "^7.29.6",
     "@babel/eslint-parser": "^7.22.5",
     "@babel/plugin-transform-runtime": "^7.22.5",
     "@babel/preset-env": "^7.22.5",
@@ -84,8 +84,9 @@
     "bootstrap": "^5.0.0",
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
-    "electron": "^40.7.0",
-    "electron-builder": "^26.8.1",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
+    "electron-devtools-installer": "^4.0.0",
     "eslint": "^8.57.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-plugin-import": "^2.29.1",
@@ -106,7 +107,7 @@
     "react-dom": "^19.0.0",
     "react-icons": "^4.9.0",
     "rimraf": "^6.1.2",
-    "vite": "^5.4.14",
+    "vite": "^6.4.3",
     "yazl": "^3.3.1"
   }
 }
