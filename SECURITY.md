@@ -55,10 +55,12 @@ following are considered out of scope:
 * Issues that assume a level of local access greater than what
   running InVEST itself requires.
 * Denial-of-service or resource-exhaustion from a user's own oversized or
-  malformed input data on their own local run. (Note: a *crafted* file
+  malformed input data on their own local run. (Note: a crafted file
   that causes code execution or data exfiltration when opened by another,
-  unsuspecting user — e.g., a shared malicious raster/vector/plugin file —
-  **is** in scope.)
+  unsuspecting user, such as a shared malicious raster/vector file,
+  is in scope.  Security issues with plugins should be reported via the
+  instructions in the Plugin Registry repo:
+  <https://github.com/natcap/invest-plugin-registry>)
 * Vulnerabilities in third-party dependencies (GDAL, numpy,
   etc.) that are not specific to how InVEST uses them. Please report these
   upstream, and optionally notify us at
