@@ -65,7 +65,7 @@ const config = {
   artifactName: ARTIFACT_NAME,
   mac: {
     category: 'public.app-category.business',
-    icon: 'resources/InVEST-2-574x574.ico',
+    icon: 'resources/InVEST-2-574x574.icns',
     target: 'dmg',
   },
   win: {
