@@ -85,7 +85,7 @@ Workbench
   conda environment is used to run each plugin.
   (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
 * Improved handling of errors on plugin server startup.
-  (`#2637 https://github.com/natcap/invest/issues/2637`)
+  (`#2637 <https://github.com/natcap/invest/issues/2637>`_)
 * The "View Results" button now supports plugins.
   (`#2638 <https://github.com/natcap/invest/issues/2638>`_)
 * The base report template now better supports plugins by including a link to
