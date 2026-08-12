@@ -8,6 +8,7 @@ import {
   ipcMain
 } from 'electron';
 import contextMenu from 'electron-context-menu';
+import { installExtension, REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 
 import i18n from './i18n/i18n';
 import BASE_URL from './baseUrl';
@@ -180,7 +181,6 @@ export const createWindow = async () => {
   setupWindowsMSVCHandlers();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
-    const { installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
     installExtension([REACT_DEVELOPER_TOOLS])
       .then(([react]) => console.log(`Added Extensions: ${react.name}`))
       .catch((err) => console.log('An error occurred: ', err));
