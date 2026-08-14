@@ -2564,28 +2564,19 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-reproject-')
     file_ext, driver_name = _get_file_ext_and_driver_name(target_vector_path)
 
-    # Get the base and target spatial reference in Well Known Text
-    base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-        'projection_wkt']
+    # Get the target spatial reference in Well Known Text
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
         'projection_wkt']
 
     # Create path for the reprojected shapefile
     clipped_vector_path = os.path.join(
         temp_dir, 'clipped_vector' + file_ext)
-    reprojected_clip_path = os.path.join(
-        temp_dir, 'reprojected_clip_vector' + file_ext)
 
-    if base_sr_wkt != target_sr_wkt:
-        # Reproject clip vector to the spatial reference of the base vector.
-        # Note: reproject_vector can be expensive if vector has many features.
-        pygeoprocessing.reproject_vector(
-            clip_vector_path, base_sr_wkt, reprojected_clip_path,
-            driver_name=driver_name)
-
-    # Clip the base vector to the AOI
+    # Clip the base vector to the AOI.
+    # If the projections don't match, _clip_vector_by_vector will first
+    # reproject the clip vector to the base vector's SRS
     _clip_vector_by_vector(
-        base_vector_path, reprojected_clip_path, clipped_vector_path, temp_dir)
+        base_vector_path, clip_vector_path, clipped_vector_path, temp_dir)
 
     # Reproject the clipped base vector to the spatial reference of clip vector
     pygeoprocessing.reproject_vector(
@@ -2601,8 +2592,9 @@ def _clip_vector_by_vector(
     """Clip a vector from another vector keeping features.
 
     Create a new target vector where base features are contained in the
-        polygon in clip_vector_path. Assumes all data are in the same
-        projection.
+        polygon in clip_vector_path. If the base vector and clip vector do
+        not have the same projection, the clip vector will first be
+        reprojected to the base vector's SRS.
 
     Args:
         base_vector_path (str): path to a vector to clip.

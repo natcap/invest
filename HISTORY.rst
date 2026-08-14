@@ -63,9 +63,14 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+Wind Energy
+===========
+* Fixed a bug where the model would raise a ``RuntimeError`` if the input
+  land polygon and AOI had the same projection.
+  (`#2707 <https://github.com/natcap/invest/issues/2707>`_)
 
 3.20.1 (2026-08-13)
 -------------------
