@@ -12,6 +12,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -89,6 +90,7 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext(
                         "Path to a reference evapotranspiration raster for the month."
                     ),
+                    keywords=[keywords.REFERENCE_EVAPOTRANSPIRATION],
                     data_type=float,
                     units=u.millimeter / u.month,
                     projected=None
@@ -115,6 +117,7 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.SingleBandRasterInput(
                     id="path",
                     about=gettext("Path to a precipitation raster for the month."),
+                    keywords=[keywords.PRECIPITATION_RATE],
                     data_type=float,
                     units=u.millimeter / u.month,
                     projected=None
@@ -122,18 +125,9 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.DEM.model_copy(update=dict(id="dem_raster_path")),
-        spec.SingleBandRasterInput(
+        spec.LULC.model_copy(update=dict(
             id="lulc_raster_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of land use/land cover codes. Each land use/land cover type must be"
-                " assigned a unique integer code. All values in this raster MUST have"
-                " corresponding entries in the Biophysical Table."
-            ),
-            data_type=int,
-            units=None,
-            projected=True
-        ),
+            projected=True)),
         spec.SOIL_GROUP.model_copy(update=dict(
             projected=True,
             required="not user_defined_local_recharge",
@@ -161,6 +155,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " D so that there is one column for each soil group. Curve number"
                         " values must be greater than 0 and less than or equal to 100."
                     ),
+                    keywords=[keywords.HYDROLOGIC_SOIL_GROUP],
                     expression="0 < value <= 100",
                     units=u.none
                 ),
@@ -171,6 +166,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " each month. Replace [MONTH] with the numbers 1 to 12 so that"
                         " there is one column for each month."
                     ),
+                    keywords=[keywords.CROP_COEFFICIENT],
                     units=u.none
                 )
             ],
@@ -200,6 +196,7 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberInput(
                     id="events",
                     about=gettext("The number of rain events in that month."),
+                    keywords=[keywords.PRECIPITATION, keywords.WEATHER_EVENTS],
                     units=u.none
                 )
             ],
@@ -250,6 +247,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of local recharge data. Required if User-Defined Local Recharge is"
                 " selected."
             ),
+            keywords=[keywords.INFILTRATION_AMOUNT],
             required="user_defined_local_recharge",
             allowed="user_defined_local_recharge",
             data_type=float,
@@ -279,7 +277,8 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext(
                         "Climate zone ID numbers, corresponding to the values in the"
                         " Climate Zones map."
-                    )
+                    ),
+                    keywords=[keywords.CLIMATE_ZONES],
                 ),
                 spec.NumberInput(
                     id="[MONTH]",
@@ -289,6 +288,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec, so"
                         " that there is a column for each month."
                     ),
+                    keywords=[keywords.PRECIPITATION, keywords.WEATHER_EVENTS],
                     units=u.none
                 )
             ],
@@ -301,6 +301,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of climate zones. All values in this raster must have corresponding"
                 " entries in the Climate Zone Table."
             ),
+            keywords=[keywords.CLIMATE_ZONES],
             required="user_defined_climate_zones",
             allowed="user_defined_climate_zones",
             data_type=int,
@@ -321,6 +322,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Table of alpha values for each month. Required if Use Monthly Alpha"
                 " Table is selected."
             ),
+            keywords=[keywords.INFILTRATION_FREQUENCY],
             required="monthly_alpha",
             allowed="monthly_alpha",
             columns=[

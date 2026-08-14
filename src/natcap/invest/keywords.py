@@ -78,6 +78,12 @@ CARBON_SEQUESTRATION = GCMDKeyword(
     uuid='e58872a8-6104-4ff8-bbca-4b00ba4b38e8',
     full_path='EARTH SCIENCE > BIOSPHERE > ECOLOGICAL DYNAMICS > ECOSYSTEM FUNCTIONS > CARBON SEQUESTRATION')
 
+CLIMATE_ZONES = InvestKeyword(
+    value='CLIMATE ZONES',
+    definition=(
+        'Geographic distributions of climate groups based on seasonality,'
+        ' temperature, and precipitation'))
+
 COASTAL_LANDFORMS = GCMDKeyword(
     value='COASTAL LANDFORMS',
     uuid='c58320e6-3f1d-4c36-9bee-6bad73404c21',
@@ -165,6 +171,16 @@ HYDROELECTRIC_ENERGY = GCMDKeyword(
 HYDROLOGIC_SOIL_GROUPS = InvestKeyword(
     value='HYDROLOGIC SOIL GROUPS',
     definition='Groups representing rainfall runoff potential. A component of the USDA curve number method.')
+
+INFILTRATION_AMOUNT = GCMDKeyword(
+    value='INFILTRATION AMOUNT',
+    uuid='59ce52b5-0386-4b51-b5ac-049a0862e9cd',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > GROUND WATER > GROUND WATER PROCESSES/MEASUREMENTS > INFILTRATION > INFILTRATION AMOUNT')
+
+INFILTRATION_FREQUENCY = GCMDKeyword(
+    value='INFILTRATION FREQUENCY',
+    uuid='55642a14-2ff4-4892-b61a-ae3ece7fbcd7',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > GROUND WATER > GROUND WATER PROCESSES/MEASUREMENTS > INFILTRATION > INFILTRATION FREQUENCY')
 
 LANDMASS = InvestKeyword(
     value='LANDMASS',
@@ -355,6 +371,11 @@ WAVE_FETCH = GCMDKeyword(
 WAVE_POWER = InvestKeyword(
     value='WAVE POWER',
     definition='The power of surface ocean waves.')
+
+WEATHER_EVENTS = GCMDKeyword(
+    value='WEATHER EVENTS',
+    uuid='b7d562cf-9b9b-4461-900b-50423a8c4d29',
+    full_path='EARTH SCIENCE > ATMOSPHERE > WEATHER EVENTS')
 
 WIND_DIRECTION = GCMDKeyword(
     value='WIND DIRECTION',
