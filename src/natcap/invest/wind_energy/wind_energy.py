@@ -2568,19 +2568,19 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
         'projection_wkt']
 
-    # Create path for the reprojected shapefile
-    clipped_vector_path = os.path.join(
+    # Create path for the clipped base vector
+    clipped_base_vector_path = os.path.join(
         temp_dir, 'clipped_vector' + file_ext)
 
     # Clip the base vector to the AOI.
     # If the projections don't match, _clip_vector_by_vector will first
     # reproject the clip vector to the base vector's SRS
     _clip_vector_by_vector(
-        base_vector_path, clip_vector_path, clipped_vector_path, temp_dir)
+        base_vector_path, clip_vector_path, clipped_base_vector_path, temp_dir)
 
     # Reproject the clipped base vector to the spatial reference of clip vector
     pygeoprocessing.reproject_vector(
-        clipped_vector_path, target_sr_wkt, target_vector_path,
+        clipped_base_vector_path, target_sr_wkt, target_vector_path,
         driver_name=driver_name)
 
     shutil.rmtree(temp_dir, ignore_errors=True)
