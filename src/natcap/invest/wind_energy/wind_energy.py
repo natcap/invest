@@ -2574,7 +2574,9 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     # Clip the base vector to the AOI.
     # If the projections don't match, _clip_vector_by_vector will first
-    # reproject the clip vector to the base vector's SRS
+    # reproject the clip vector to the base vector's SRS. Reprojecting
+    # the base vector to match the AOI's SRS first could be computationally
+    # expensive if the base vector is very large.
     _clip_vector_by_vector(
         base_vector_path, clip_vector_path, clipped_base_vector_path, temp_dir)
 
@@ -2614,10 +2616,14 @@ def _clip_vector_by_vector(
     # Get the base and target spatial reference in Well Known Text
     base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
         'projection_wkt']
+    base_sr = osr.SpatialReference()
+    base_sr.ImportFromWkt(base_sr_wkt)
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
         'projection_wkt']
+    target_sr = osr.SpatialReference()
+    target_sr.ImportFromWkt(target_sr_wkt)
 
-    if base_sr_wkt != target_sr_wkt:
+    if not base_sr.IsSame(target_sr):
         # Reproject clip vector to the spatial reference of the base vector.
         # Note: reproject_vector can be expensive if vector has many features.
         temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-')
@@ -2655,11 +2661,11 @@ def _clip_vector_by_vector(
     target_layer = None
     target_vector = None
     clip_vector = None
-    clip_vector = None
+    clip_layer = None
     base_layer = None
     base_vector = None
 
-    if base_sr_wkt != target_sr_wkt:
+    if not base_sr.IsSame(target_sr):
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     if empty_clip:
