@@ -31,7 +31,7 @@ class GCMDKeyword(Keyword):
     uuid: str
     """The unique id from the GCMD."""
     full_path: str
-    """The full hierarchy of they keyword within the GCMD."""
+    """The full hierarchy of the keyword within the GCMD."""
     vocabulary: str = 'Global Change Master Directory (GCMD) Keywords'
 
 
@@ -228,7 +228,7 @@ LULC = GCMDKeyword(
 LULC_CLASSES = GCMDKeyword(
     value='LAND USE/LAND COVER CLASSES',
     uuid='fe2f8240-4d8e-4b1f-b869-29fee59692f7',
-    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES',
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE CLASSES',
     aliases=['LAND USE LAND COVER CLASSES'])
 
 NATURE_PROPORTION = InvestKeyword(
