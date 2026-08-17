@@ -12,6 +12,7 @@ from osgeo import gdal
 from osgeo import ogr, osr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -72,6 +73,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Gridded population data representing the number of people "
                 "per pixel."
             ),
+            keywords=[keywords.POPULATION_SIZE],
             data_type=int,
             units=u.people,
             projected=True,
@@ -111,6 +113,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "the model to estimate preventable cases by comparing current "
                 "rates with those projected under improved nature exposure "
                 "scenarios."),
+            keywords=[keywords.ILLNESS_INCIDENCE_RATE],
             geometry_types={"MULTIPOLYGON", "POLYGON"},
             fields=[
                 spec.RatioInput(
@@ -157,6 +160,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "This raster should extend beyond the AOI by at "
                 "least the search radius distance."
             ),
+            keywords=[keywords.NDVI],
             data_type=float,
             units=None,
             # require ndvi_base unless model_option is `lulc` and user enters
@@ -171,6 +175,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "This raster should extend beyond the AOI by at "
                 "least the search radius distance."
             ),
+            keywords=[keywords.NDVI],
             data_type=float,
             units=None,
             required="model_option=='ndvi'",
@@ -189,6 +194,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "(such as water) based on an accompanying LULC attribute "
                 "table."),
             data_type=int,
+            keywords=[keywords.LULC],
             units=None,
             required="model_option=='lulc' or lulc_attr_csv",
         ),
@@ -203,6 +209,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "corresponding entries. This raster should extend beyond the "
                 "AOI by at least the search radius distance."
             ),
+            keywords=[keywords.LULC],
             data_type=int,
             units=None,
             required="model_option=='lulc'",
@@ -220,11 +227,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "model_option is 'lulc' and a base NDVI raster is not provided."
             ),
             columns=[
-                spec.IntegerInput(
-                    id="lucode",
-                    about=gettext("LULC code."),
-                    required=True
-                ),
+                spec.LULC_TABLE_COLUMN,
                 spec.BooleanInput(
                     id="exclude",
                     about=gettext(
@@ -235,6 +238,7 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberInput(
                     id="ndvi",
                     about=gettext("NDVI value."),
+                    keywords=[keywords.NDVI],
                     units=None,
                     required=False
                     # required if "model_option=='lulc' and not ndvi_base"

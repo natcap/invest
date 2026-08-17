@@ -193,6 +193,10 @@ HYDROLOGIC_SOIL_GROUPS = InvestKeyword(
     value='HYDROLOGIC SOIL GROUPS',
     definition='Groups representing rainfall runoff potential. A component of the USDA curve number method.')
 
+ILLNESS_INCIDENCE_RATE = InvestKeyword(
+    value='ILLNESS INCIDENCE RATE',
+    definition='The prevalence rate of a specific illness or disease in a population.')
+
 INFILTRATION_AMOUNT = GCMDKeyword(
     value='INFILTRATION AMOUNT',
     uuid='59ce52b5-0386-4b51-b5ac-049a0862e9cd',
@@ -221,6 +225,12 @@ LULC_CLASSES = GCMDKeyword(
     uuid='fe2f8240-4d8e-4b1f-b869-29fee59692f7',
     full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES',
     aliases=['LAND USE LAND COVER CLASSES'])
+
+NDVI = GCMDKeyword(
+    value='NORMALIZED DIFFERENCE VEGETATION INDEX (NDVI)',
+    uuid='2297a00a-80f5-466e-b28e-b9ca42562d3f',
+    full_path='EARTH SCIENCE > BIOSPHERE > VEGETATION > VEGETATION INDEX > NORMALIZED DIFFERENCE VEGETATION INDEX (NDVI)',
+    aliases=['NDVI'])
 
 NITROGEN = GCMDKeyword(
     value='NITROGEN',
