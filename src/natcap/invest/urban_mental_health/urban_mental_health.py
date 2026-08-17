@@ -113,7 +113,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "the model to estimate preventable cases by comparing current "
                 "rates with those projected under improved nature exposure "
                 "scenarios."),
-            keywords=[keywords.ILLNESS_INCIDENCE_RATE],
+            keywords=[keywords.ILLNESS_INCIDENCE_RATE,
+                      keywords.ADMINISTRATIVE_DIVISIONS],
             geometry_types={"MULTIPOLYGON", "POLYGON"},
             fields=[
                 spec.RatioInput(

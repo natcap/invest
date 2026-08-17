@@ -41,6 +41,11 @@ class InvestKeyword(Keyword):
     vocabulary: str = 'InVEST Keywords'
 
 
+ADMINISTRATIVE_DIVISIONS = GCMDKeyword(
+    value='ADMINISTRATIVE DIVISIONS',
+    uuid='1ae304de-252c-45da-8dd8-df99a281e4f4',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > BOUNDARIES > ADMINISTRATIVE DIVISIONS')
+
 AGRICULTURE_PRODUCTION = GCMDKeyword(
     value='AGRICULTURE PRODUCTION',
     uuid='83741fb9-6f86-4670-abbb-c1f3b14a939d',
@@ -226,6 +231,10 @@ LULC_CLASSES = GCMDKeyword(
     full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE/LAND COVER CLASSES',
     aliases=['LAND USE LAND COVER CLASSES'])
 
+NATURE_PROPORTION = InvestKeyword(
+    value='NATURE PROPORTION',
+    definition='The proportion of an area that is comprised of natural environment or greenspace.')
+
 NDVI = GCMDKeyword(
     value='NORMALIZED DIFFERENCE VEGETATION INDEX (NDVI)',
     uuid='2297a00a-80f5-466e-b28e-b9ca42562d3f',
@@ -381,6 +390,10 @@ SOIL_ROOTING_DEPTH = GCMDKeyword(
     full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL ROOTING DEPTH',
     aliases=['DEPTH TO BEDROCK', 'ROOT RESTRICTING LAYER DEPTH'])
 
+TRAVEL_DISTANCE = InvestKeyword(
+    value='TRAVEL DISTANCE',
+    definition='The distance travelled to reach a destination.')
+
 USLE_C_FACTOR = InvestKeyword(
     value='USLE C FACTOR',
     definition='Cover-management factor for the Universal Soil Loss Equation')
@@ -392,6 +405,11 @@ USLE_P_FACTOR = InvestKeyword(
 VIEWSHED_OBSTRUCTION = InvestKeyword(
     value='VIEWSHED OBSTRUCTION',
     definition='Geographic features that obstruct the viewshed of an observer.')
+
+VULNERABLE_POPULATIONS = GCMDKeyword(
+    value='VULNERABLE POPULATIONS',
+    uuid='35b7c7cd-49c8-476c-83f2-f2e1f4097307',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > POPULATION > VULNERABLE POPULATIONS')
 
 WATERSHED_BOUNDARIES = GCMDKeyword(
     value='WATERSHED BOUNDARIES',
