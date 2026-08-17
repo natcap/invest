@@ -46,6 +46,11 @@ AGRICULTURE_PRODUCTION = GCMDKeyword(
     uuid='83741fb9-6f86-4670-abbb-c1f3b14a939d',
     full_path='EARTH SCIENCE > HUMAN DIMENSIONS > ECONOMIC RESOURCES > AGRICULTURE PRODUCTION')
 
+ALBEDO = GCMDKeyword(
+    value='ALBEDO',
+    uuid='136b1de3-4b2e-49e6-80cd-cf2e9bac2c48',
+    full_path='EARTH SCIENCE > LAND SURFACE > SURFACE RADIATIVE PROPERTIES > ALBEDO')
+
 BATHYMETRY = GCMDKeyword(
     value='BATHYMETRY',
     uuid='80d79c7e-6c64-4ada-bfcc-4093969758a5',
@@ -61,6 +66,10 @@ BUILDINGS = GCMDKeyword(
     value='BUILDINGS',
     uuid='d7742082-5461-4610-9ced-e0ec3bb64697',
     full_path='EARTH SCIENCE > HUMAN DIMENSIONS > INFRASTRUCTURE > BUILDINGS')
+
+BUILDING_COOLING_ENERGY = InvestKeyword(
+    value='BUILDING COOLING ENERGY',
+    definition='The energy consumption required for cooling a building')
 
 CARBON = GCMDKeyword(
     value='CARBON',
@@ -129,6 +138,10 @@ DRAINAGE = GCMDKeyword(
     uuid='269c7277-fa8f-4c1c-bd8b-ab772c1df4e5',
     full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > DRAINAGE')
 
+ELECTRICITY_COST = InvestKeyword(
+    value='ELECTRICITY COST',
+    definition='The monetary cost of electricity, typically per kilowatt-hour')
+
 EVAPOTRANSPIRATION = GCMDKeyword(
     value='EVAPOTRANSPIRATION',
     uuid='26fc4850-7ba9-44d8-a156-5c623e17b72f',
@@ -146,6 +159,10 @@ FERTILIZERS = GCMDKeyword(
 FLOOD_DAMAGE_VALUE = InvestKeyword(
     value='FLOOD DAMAGE VALUE',
     definition='The economic value of flood damage to a property.')
+
+FLOOR_AREA_RATIO = InvestKeyword(
+    value='FLOOR AREA RATIO',
+    definition='The ratio of the total floor area of a building to the area of the land parcel')
 
 HABITAT_SENSITIVITY = InvestKeyword(
     value='HABITAT SENSITIVITY',
@@ -327,6 +344,11 @@ SEA_LEVEL_RISE = GCMDKeyword(
     value='SEA LEVEL RISE',
     uuid='536a86bd-3dd1-4f4a-9b4a-222a12746db5',
     full_path='EARTH SCIENCE > CLIMATE INDICATORS > ATMOSPHERIC/OCEAN INDICATORS > SEA LEVEL RISE')
+
+SHADE_FRACTION = GCMDKeyword(
+    value='SHADE FRACTION',
+    uuid='87be8c1f-9f92-45f9-ba9b-f50efa5bcca0',
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > SHADE FRACTION')
 
 SHORELINES = GCMDKeyword(
     value='SHORELINES',
