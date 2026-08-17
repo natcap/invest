@@ -56,7 +56,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of locations of objects that negatively affect scenic quality. This"
                 " must have the same projection as the DEM."
             ),
-            keywords=[keywords.VIEWSHED_OBSTRUCTIONS],
+            keywords=[keywords.VIEWSHED_OBSTRUCTION],
             geometry_types={"POINT"},
             fields=[
                 spec.NumberInput(

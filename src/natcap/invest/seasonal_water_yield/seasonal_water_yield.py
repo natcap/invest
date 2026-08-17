@@ -155,7 +155,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " D so that there is one column for each soil group. Curve number"
                         " values must be greater than 0 and less than or equal to 100."
                     ),
-                    keywords=[keywords.HYDROLOGIC_SOIL_GROUP],
+                    keywords=[keywords.HYDROLOGIC_SOIL_GROUPS],
                     expression="0 < value <= 100",
                     units=u.none
                 ),

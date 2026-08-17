@@ -351,7 +351,7 @@ RUNOFF = GCMDKeyword(
     uuid='f6a54329-486b-4d5f-b105-c639cec42351',
     full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > RUNOFF')
 
-RUNOFF_COEFICIENT = InvestKeyword(
+RUNOFF_COEFFICIENT = InvestKeyword(
     value='RUNOFF COEFFICIENT',
     definition='The ratio between direct runoff and precipitation, typically as a function of soil, cover type, and hydrologic and antecedent conditions.')
 
