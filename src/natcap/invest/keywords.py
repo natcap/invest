@@ -134,6 +134,10 @@ EVAPOTRANSPIRATION = GCMDKeyword(
     uuid='26fc4850-7ba9-44d8-a156-5c623e17b72f',
     full_path='EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC WATER VAPOR > WATER VAPOR PROCESSES > EVAPOTRANSPIRATION')
 
+EVENT_MEAN_CONCENTRATION = InvestKeyword(
+    value='EVENT MEAN CONCENTRATION',
+    definition='The mean pollutant concentration in the discharge of a storm event')
+
 FERTILIZERS = GCMDKeyword(
     value='FERTILIZERS',
     uuid='18a8197e-3a3f-408c-9c51-e9fe89dd6b45',
@@ -214,6 +218,11 @@ NUTRIENTS = GCMDKeyword(
 PAWC = InvestKeyword(
     value='PLANT AVAILABLE WATER CONTENT',
     definition='The quantity of water in the soil that is available to plants.')
+
+PERCOLATION = GCMDKeyword(
+    value='PERCOLATION',
+    uuid='d64094ae-774b-4435-8f2e-a54d114e5555',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > GROUND WATER > GROUND WATER PROCESSES/MEASUREMENTS > PERCOLATION')
 
 PHOSPHOROUS = GCMDKeyword(
     value='PHOSPHOROUS',
@@ -296,10 +305,19 @@ REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(
     value='REFERENCE EVAPOTRANSPIRATION',
     definition='Evapotranspiration of a reference vegetation such as grass or alfalfa.')
 
+ROADS = GCMDKeyword(
+    value='ROADS',
+    uuid='648e6116-5f0c-4314-86a8-ede6dda6bbc1',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > INFRASTRUCTURE > TRANSPORTATION > ROADS')
+
 RUNOFF = GCMDKeyword(
     value='RUNOFF',
     uuid='f6a54329-486b-4d5f-b105-c639cec42351',
     full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > RUNOFF')
+
+RUNOFF_COEFICIENT = InvestKeyword(
+    value='RUNOFF COEFFICIENT',
+    definition='The ratio between direct runoff and precipitation, typically as a function of soil, cover type, and hydrologic and antecedent conditions.')
 
 RUNOFF_CURVE_NUMBER = InvestKeyword(
     value='RUNOFF CURVE NUMBER (CN)',
