@@ -353,11 +353,15 @@ RUNOFF = GCMDKeyword(
 
 RUNOFF_COEFFICIENT = InvestKeyword(
     value='RUNOFF COEFFICIENT',
-    definition='The ratio between direct runoff and precipitation, typically as a function of soil, cover type, and hydrologic and antecedent conditions.')
+    definition=(
+        'The ratio between direct runoff and precipitation, typically as a'
+        ' function of soil, cover type, and hydrologic antecedent conditions.'))
 
 RUNOFF_CURVE_NUMBER = InvestKeyword(
-    value='RUNOFF CURVE NUMBER (CN)',
-    definition='An index representing runoff as a function of soil, cover type, and hydrologic and antecedent conditions.')
+    value='RUNOFF CURVE NUMBER',
+    definition=(
+        'An index representing runoff as a function of soil, cover type,'
+        ' and hydrologic antecedent conditions.'))
 
 SEA_LEVEL_RISE = GCMDKeyword(
     value='SEA LEVEL RISE',
