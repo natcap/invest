@@ -37,13 +37,19 @@ Please include the following details in your report:
 
 ## Our Response Process
 
-* **Acknowledgment**: You will receive an acknowledgment within 72 hours.
+* **Acknowledgment**: You will receive an acknowledgment within 72 hours\*.
 * **Triage**: Our team will evaluate the report and update you on the status
-  within 7 days.
+  within 7 days\*.
 * **Fix**: If verified, we will coordinate a patch and appropriate notification
   across relevant channels and coordinate with you if an embargo is necessary.
   Fixed vulnerabilities will be disclosed via a GitHub Security Advisory, with
   credit to the reporter unless anonymity is requested.
+
+\*Please be aware that our software team adheres to the Stanford University
+administrative calendar (<https://cardinalatwork.stanford.edu/benefits-rewards/time-leaves/university-holiday-schedule>)
+which includes occasional holidays and a two-week winter closure.  During
+University closures, we will do our best to respond as soon as we can,
+but cannot guarantee adherence to specific timelines.
 
 ## Out of Scope
 
