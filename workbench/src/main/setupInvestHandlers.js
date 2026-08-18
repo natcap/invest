@@ -68,8 +68,10 @@ export function setupInvestRunHandlers() {
     if (resultsSuffix && !resultsSuffix.startsWith('_')) {
       resultsSuffix = `_${resultsSuffix}`;
     }
+    // Strip version info from plugin ID before forming report filepath.
+    const baseModelId = modelID.includes('@') ? modelID.split('@')[0] : modelID;
     const reportFilepath = path.join(
-      args.workspace_dir, `${modelID}_report${resultsSuffix}.html`
+      args.workspace_dir, `${baseModelId}_report${resultsSuffix}.html`
     );
 
     // Write a temporary datastack json for passing to invest CLI
@@ -94,10 +96,10 @@ export function setupInvestRunHandlers() {
     let port;
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelID)) {
-      cmd = settingsStore.get('micromamba');
+      cmd = settingsStore.get('userDefinedMicromamba') || settingsStore.get('micromamba');
       cmdArgs = [
         'run',
-        `--prefix "${settingsStore.get(`plugins.${modelID}.env`)}"`,
+        '--prefix', `"${plugins[modelID].userDefinedEnv || plugins[modelID].env}"`,
         // calling invest with python avoids issues with unescaped
         // spaces in the python path in the conda bin/invest script
         'python -m natcap.invest',
