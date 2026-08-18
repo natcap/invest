@@ -15,6 +15,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -70,6 +71,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="info_table_path",
             name=gettext("habitat stressor table"),
             about=gettext("A table describing each habitat and stressor."),
+            keywords=[keywords.HABITATS_STRESSORS],
             columns=[
                 spec.StringInput(
                     id="name",
@@ -131,6 +133,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="criteria_table_path",
             name=gettext("criteria scores table"),
             about=gettext("A table of criteria scores for all habitats and stressors."),
+            keywords=[keywords.HABITAT_STRESSOR_CRITERIA],
             columns=None,
             index_col=None
         ),
