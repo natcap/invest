@@ -15,7 +15,7 @@ import {
   createCoreServerProcess,
   shutdownPythonProcess
 } from './createPythonFlaskProcess';
-import { findInvestBinaries, findMicromambaExecutable } from './findBinaries';
+import { findInvestBinaries, setDefaultMicromambaExecutable } from './findBinaries';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupCheckFilePermissions from './setupCheckFilePermissions';
@@ -81,7 +81,7 @@ export const createWindow = async () => {
   splashScreen.loadURL(new URL('splash.html', BASE_URL).href);
 
   settingsStore.set('investExe', findInvestBinaries(ELECTRON_DEV_MODE));
-  settingsStore.set('micromamba', findMicromambaExecutable(ELECTRON_DEV_MODE));
+  settingsStore.set('micromamba', setDefaultMicromambaExecutable(ELECTRON_DEV_MODE));
   // No plugin server processes should persist between workbench sessions
   // In case any were left behind, remove them
   const plugins = settingsStore.get('plugins');
@@ -180,6 +180,10 @@ export const createWindow = async () => {
   setupWindowsMSVCHandlers();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
+    const { installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
+    installExtension([REACT_DEVELOPER_TOOLS])
+      .then(([react]) => console.log(`Added Extensions: ${react.name}`))
+      .catch((err) => console.log('An error occurred: ', err));
     // The timing of this is fussy due a chromium bug. It seems to only
     // come up if there is an unrelated uncaught exception during page load.
     // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
