@@ -226,18 +226,9 @@ def _get_spatial_inputs_options(args, model_spec, projection_required=True):
     Returns:
         list of options for spatial inputs to model where key is the input's ID
     """
-    target_projection_units = model_spec.get_input(
-        'target_projection').projection_units
+    default_projection_input = model_spec.get_default_projection_input()
 
     options = []
-    default_projection_input = model_spec.get_default_projection_input()
-    # if default_projection_input:
-    #     # add default target proj input even if unprojected as
-    #     # input's own validation will fail first.
-    #     display_name = f"(Default) {smart_title(default_projection_input.name)}"
-    #     options.append(Option(key=default_projection_input.id,
-    #                           display_name=display_name))
-
     for inp in model_spec.inputs:
         if (isinstance(inp, SpatialFileInput)):
             if inp is default_projection_input:
@@ -245,28 +236,11 @@ def _get_spatial_inputs_options(args, model_spec, projection_required=True):
             else:
                 display_name = f"{smart_title(inp.name)} "
             if args.get(inp.id):
-                # Only add an input as an option if it's correctly projected
-                # (with same projection units as default, if defined)
                 srs = _get_spatial_reference(args[inp.id])
-                projection_warning = _check_projection(
-                    srs, projection_required, target_projection_units)
-                if not projection_warning:
-                    # Get the top-level name (Projected or Geographic)
-                    prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
-                    display_name += f"({prj_name})"
-                    # if inp is default_projection_input:
-                    #     # replace default option so display name has projection
-                    #     display_name = f"(Default) {smart_title(inp.name)} ({prj_name})"
-                    #     options[0] = Option(key=inp.id, display_name=display_name)
-                    # else:
-                    #     display_name = f"{smart_title(inp.name)} ({prj_name})"
-                    options.append(Option(key=inp.id, display_name=display_name))
-                else:
-                    display_name += "(Invalid projection)"
-                    options.append(Option(key=inp.id, display_name=display_name))
-            else:
-                display_name += "(Filepath not yet entered)"
-                options.append(Option(key=inp.id, display_name=display_name))
+                # Get the top-level name (Projected or Geographic)
+                prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
+                display_name += f"({prj_name})"
+            options.append(Option(key=inp.id, display_name=display_name))
 
     # sort so default is first
     options.sort(key=lambda x: x.key != default_projection_input.id)
@@ -307,41 +281,18 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
 
         if srs.IsProjected():
             projection_units = srs.GetLinearUnitsName()
+            projection_units = projection_units.replace("metre", "meter")  # GDAL uses "metre"
         else:
             projection_units = srs.GetAngularUnitsName()
 
-
-    # spatial_inputs = _get_spatial_inputs_options(args, model_spec, False)
-
     if default_pixelsize_id is None and model_spec.get_default_pixelsize_input():
         default_pixelsize_id = model_spec.get_default_pixelsize_input().id
-        #     default_name = smart_title(model_spec.get_input(default_input_id).name)
-        # else:
-        #     # relevant if there is a conditional default input that has not
-        #     # been selected yet, e.g., before model_option is selected in UMH
-        #     default_name = ""
-    # else:
-    #     default_name = smart_title(model_spec.get_input(default_input_id).name)
 
     # TODO add model spec optionspatialinput validataion that either:
     #  is_default_pixelsize is attached to an input _or_
-    # dropdown_function get_pixel_size_options is overridden and returns a default_input_path
-
-    # filter out vector inputs and the default target projection input
-    # if not populated with a filepath yet
-    # raster_inputs = [
-    #     opt for opt in spatial_inputs if (
-    #         args.get(opt.key) and (
-    #             pygeoprocessing.get_gis_type(args[opt.key]) == pygeoprocessing.RASTER_TYPE))
-    #     or opt.key == default_input_id]
+    # dropdown_function get_pixel_size_options is overridden and returns a default_input_path?
 
     options = []
-    # if default_input_id is not None:
-    #     # first item in options should be default if one exists
-    #     default_name = smart_title(model_spec.get_input(default_input_id).name)
-    #     options.append(Option(key=default_input_id,
-    #                           display_name=f"(Default) {default_name}"))
-    # for opt in spatial_inputs:
     for inp in model_spec.inputs:
         if not isinstance(inp, SpatialFileInput) or isinstance(inp, VectorInput):
             continue
@@ -353,16 +304,14 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
             display_name = f"(Default) {smart_title(inp.name)}"
         else:
             display_name = smart_title(inp.name)
-        # if default projection input hasn't been entered and target
-        # projection hasn't been selected, i.e., changed from the default text,
-        # selected_projection_wkt will be None
         if current_projection and args.get(inp.id):
             # convert pixel size to be in same units as selected target projection
             try:
-                trans_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
+                # This function returns square pixels
+                pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
                     args[inp.id], current_projection)
-                formatted_pixelsize = f"{
-                    [float(round(pix, 3)) for pix in trans_pixelsize]} {projection_units}"
+                formatted_pixelsize = f"({round(pixelsize[0], 3)}, "\
+                    f"{round(abs(pixelsize[1]), 3)} {projection_units})"
             except ValueError:  # raised if current_projection is unprojected
                 formatted_pixelsize = ''
         else:
@@ -2371,9 +2320,6 @@ class ModelSpec(ImmutableBaseModel):
         inputs_ids = [i.id for i in self.inputs]
         args_copy = args.copy()
         if 'target_projection' in inputs_ids and not args.get('target_projection'):
-            #TODO: or do we want to set this just like with target pixel size?
-            # pros: will find a suitable spatial input if one exists
-            # cons: less transparent to user?
             default_projection_input = self.get_default_projection_input()
             if default_projection_input:
                 args_copy['target_projection'] = default_projection_input.id
