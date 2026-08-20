@@ -5194,9 +5194,9 @@ get-uri@^6.0.1:
     debug "^4.3.4"
 
 gettext-converter@^1.3.0:
-  version "1.3.1"
-  resolved "https://registry.yarnpkg.com/gettext-converter/-/gettext-converter-1.3.1.tgz#ac51273e09d5ecc2690d8a67653ab36d408f01a2"
-  integrity sha512-2BTfkX9g9EbfjJVEQFT5BMqY/2HbtZ0RTXWKTgn9xW7gzSXqkAfYAIFtpoiJ1A3/iL9MC9Sp/BlrshqHKP8wxQ==
+  version "1.3.3"
+  resolved "https://registry.yarnpkg.com/gettext-converter/-/gettext-converter-1.3.3.tgz#88e480617f5f8d64779119dc9c43013f6bffcdef"
+  integrity sha512-geN4Vc0T45a59rkUdjUYpu4PgpKdAcQ8bZPIAwNLw+ygYAahA7Ky/vwmVZ8v2szwQjHSRJDCuV8RG16PsE8a+Q==
   dependencies:
     arrify "^2.0.1"
     content-type "1.0.5"
