@@ -909,6 +909,7 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_datastack_criteria_table_override(self):
         """HRA: verify we store all data referenced in the criteria table."""
+        from natcap.invest.datastack import Datastack
         from natcap.invest.hra import hra
 
         criteria_table_path = os.path.join(
@@ -955,12 +956,12 @@ class HRAUnitTests(unittest.TestCase):
 
         data_dir = os.path.join(self.workspace_dir, 'datastack_data')
         csv_dir = os.path.join(data_dir, 'criteria_table_path_csv')
-        known_files = {}
+        datastack = Datastack(data_dir)
 
-        new_csv_path = hra._override_datastack_archive_criteria_table_path(
-            criteria_table_path, data_dir, known_files)
+        hra.MODEL_SPEC.get_input('criteria_table_path').archive_for_datastack(
+            criteria_table_path, datastack)
         self.assertEqual(
-            new_csv_path,
+            datastack.args['criteria_table_path'],
             os.path.join(csv_dir, os.path.basename(criteria_table_path))
         )
         output_criteria_data_dir = os.path.join(
@@ -968,7 +969,7 @@ class HRAUnitTests(unittest.TestCase):
         self.maxDiff = None
 
         self.assertEqual(
-            known_files, {
+            datastack.files_found, {
                 eelgrass_path: os.path.join(
                     output_criteria_data_dir, 'eelgrass_connectivity',
                     'eelgrass_connectivity.shp'),
@@ -978,7 +979,7 @@ class HRAUnitTests(unittest.TestCase):
                     output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')
             }
         )
-        for copied_filepath in known_files.values():
+        for copied_filepath in datastack.files_found.values():
             self.assertEqual(True, os.path.exists(copied_filepath))
             try:
                 spatial_file = gdal.OpenEx(copied_filepath)
