@@ -505,10 +505,6 @@ class SetupTab extends React.Component {
         newArgsDropdownOptions[argkey] = options;
 
         const currentValue = newArgsValues[argkey]?.value;
-        const currentValueExists = options.some(
-          (option) => option.key === currentValue
-        );
-
         const hasCurrentValue = (
           currentValue !== undefined &&
           currentValue !== null &&
@@ -519,26 +515,9 @@ class SetupTab extends React.Component {
           'target_pixelsize',
           'target_projection',
         ].includes(this.props.argsSpec[argkey]?.id);
-
-        // Handle user manually selecting a non-default input option
-        // and then deleting that filepath
-        if (
-          hasCurrentValue &&
-          isTargetSpatialDropdown &&
-          !currentValueExists
-        ) {
-          newArgsDropdownOptions[argkey] = [
-            {
-              key: currentValue,
-              display_name: `Select a new input`,
-              disabled: true,
-            },
-            ...options.filter((option) => option.key !== currentValue),
-          ];
-        } else {
-          newArgsDropdownOptions[argkey] = options;
-        }
       
+        // If the current value of target spatial dropdown is emtpy, set the
+        // value to the first option in the list, which will be the default value.
         if (!hasCurrentValue && isTargetSpatialDropdown) {
           newArgsValues[argkey] = {
             ...newArgsValues[argkey],
