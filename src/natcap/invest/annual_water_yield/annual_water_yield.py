@@ -162,7 +162,6 @@ MODEL_SPEC = spec.ModelSpec(
     about=_model_description,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
-        ["aoi_vector_path"],
         ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
         ["lulc_path", "biophysical_table_path", "seasonality_constant"],
         ["watersheds_path", "sub_watersheds_path"],
@@ -177,12 +176,6 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.AOI.model_copy(update=dict(
-            id="aoi_vector_path",
-            about=gettext("Map of the region over which to run the model."),
-            projected=True,
-            required=False
-        )),
         spec.SingleBandRasterInput(
             id="lulc_path",
             name=gettext("land use/land cover"),
@@ -636,10 +629,6 @@ def execute(args):
         args['workspace_dir'] (string): a path to the directory that will write
             output and other temporary files during calculation. (required)
 
-        args['aoi_path'] (str): (optional) Path to a polygon vector of the area
-            over which the model should be run. Must be projected in a
-            coordinate system.
-
         args['lulc_path'] (string): a path to a land use/land cover raster
             whose LULC indexes correspond to indexes in the biophysical table
             input. Used for determining soil retention and other biophysical
@@ -805,8 +794,6 @@ def execute(args):
     target_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
         target_pixelsize_path, target_projection_wkt)
     base_vector_path_list = [file_registry['watershed_results_wyield']]
-    if args['aoi_vector_path']:
-        base_vector_path_list.append(args['aoi_vector_path'])
 
     align_raster_stack_task = graph.add_task(
         pygeoprocessing.align_and_resize_raster_stack,
