@@ -158,6 +158,7 @@ class SetupTab extends React.Component {
     }, () => {
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
@@ -326,13 +327,21 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgTouched(key) {
-    const { argsValues } = this.state;
-    if (!argsValues[key].touched) {
-      argsValues[key].touched = true;
-      this.setState({
-        argsValues: argsValues,
-      });
-    }
+    this.setState((prevState) => {
+      if (prevState.argsValues[key].touched) {
+        return null;
+      }
+  
+      return {
+        argsValues: {
+          ...prevState.argsValues,
+          [key]: {
+            ...prevState.argsValues[key],
+            touched: true,
+          },
+        },
+      };
+    });
   }
 
   /** Update state with arg values as they change. And validate the args.
@@ -347,11 +356,48 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    const { argsValues } = this.state;
-    argsValues[key].value = value;
-    this.setState({
-      argsValues: argsValues,
-    }, () => {
+    const { argsSpec } = this.props;
+
+    const dependentArgkeys = Object.keys(argsSpec).filter(
+      (argkey) => argsSpec[argkey]?.responsive_to === key
+    );
+
+    this.setState((prevState) => {
+      const newArgsValues = {
+        ...prevState.argsValues,
+        [key]: {
+          ...prevState.argsValues[key],
+          value,
+        },
+      };
+  
+      const newArgsValidation = {
+        ...prevState.argsValidation,
+        [key]: {
+          ...prevState.argsValidation[key],
+          valid: undefined,
+          validationMessage: '',
+        },
+      };
+  
+      dependentArgkeys.forEach((argkey) => {
+        newArgsValues[argkey] = {
+          ...newArgsValues[argkey],
+          value: '',
+        };
+  
+        newArgsValidation[argkey] = {
+          ...prevState.argsValidation[argkey],
+          valid: undefined,
+          validationMessage: '',
+        };
+      });
+
+      return {
+        argsValues: newArgsValues,
+        argsValidation: newArgsValidation,
+      };
+      }, () => {
       this.props.updateJobProperties(this.props.tabID, {
         status: undefined, // Clear job status to hide model status indicator.
       });
@@ -386,6 +432,7 @@ class SetupTab extends React.Component {
       });
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
@@ -444,11 +491,49 @@ class SetupTab extends React.Component {
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await getDynamicDropdowns(payload);
-    Object.keys(results).forEach((argkey) => {
-      argsDropdownOptions[argkey] = results[argkey];
-    });
-    this.setState({ argsDropdownOptions: argsDropdownOptions });
-  }
+
+    this.setState((prevState) => {
+      const newArgsDropdownOptions = {
+        ...prevState.argsDropdownOptions,
+      };
+      const newArgsValues = {
+        ...prevState.argsValues,
+      };
+
+      Object.keys(results ?? {}).forEach((argkey) => {
+        const options = results[argkey];
+        newArgsDropdownOptions[argkey] = options;
+
+        const currentValue = newArgsValues[argkey]?.value;
+        const hasCurrentValue = (
+          currentValue !== undefined &&
+          currentValue !== null &&
+          currentValue !== ''
+        );
+
+        const isTargetSpatialDropdown = [
+          'target_pixelsize',
+          'target_projection',
+        ].includes(this.props.argsSpec[argkey]?.id);
+      
+        // If the current value of target spatial dropdown is emtpy, set the
+        // value to the first option in the list, which will be the default value.
+        if (!hasCurrentValue && isTargetSpatialDropdown) {
+          newArgsValues[argkey] = {
+            ...newArgsValues[argkey],
+            value: options[0]?.key ?? '',
+          };
+        }
+      });
+
+      return {
+        argsDropdownOptions: newArgsDropdownOptions,
+        argsValues: newArgsValues,
+      };
+  }, () => {
+    this.investValidate();
+  });
+}
 
   /** Get a debounced version of investValidate.
    *
@@ -471,14 +556,46 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investValidate() {
+    
     const { argsSpec, modelID } = this.props;
-    const { argsValues, argsValidation, argsValid } = this.state;
+    const { argsValues, argsValidation, argsValid, argsEnabled } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_id: modelID,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await fetchValidation(payload);
+
+    // Invalidate a target spatial dropdown when its selected input is disabled
+    const validateSpatialDropdownSelections = () => {
+      let invalidSelection = false;
+
+      Object.keys(argsSpec).forEach((argkey) => {
+        const isTargetSpatialDropdown = [
+          'target_pixelsize',
+          'target_projection',
+        ].includes(argsSpec[argkey]?.id);
+
+        if (!isTargetSpatialDropdown) {
+          return;
+        }
+
+        const selectedInputKey = argsValues[argkey]?.value;
+        const selectedInputIsDisabled = (
+          selectedInputKey &&
+          argsEnabled[selectedInputKey] === false
+        );
+
+        if (selectedInputIsDisabled) {
+          argsValidation[argkey].valid = false;
+          argsValidation[argkey].validationMessage =
+            'The selected input is disabled. Select a new input.';
+          invalidSelection = true;
+        }
+      });
+
+      return invalidSelection;
+    };
 
     // A) At least one arg was invalid:
     if (results.length) {
@@ -501,6 +618,7 @@ class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
+      validateSpatialDropdownSelections();
       if (this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
@@ -514,13 +632,24 @@ class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
+      const invalidSpatialDropdown = validateSpatialDropdownSelections();
+      // The model is valid only if no target dropdown points to
+      // an input that is currently disabled
+      const newArgsValid = !invalidSpatialDropdown;
+
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can
       // be avoided entirely.
-      if (!argsValid && this._isMounted) {
+      if (argsValid !== newArgsValid && this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
-          argsValid: true,
+          argsValid: newArgsValid,
+        });
+      } else if (invalidSpatialDropdown && this._isMounted) {
+        // The overall validity may already be false, but the dropdown's
+        // validation message still needs to be committed
+        this.setState({
+          argsValidation,
         });
       }
     }

@@ -165,10 +165,11 @@ MODEL_SPEC = spec.ModelSpec(
         ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
         ["lulc_path", "biophysical_table_path", "seasonality_constant"],
         ["watersheds_path", "sub_watersheds_path"],
-        ["demand_table_path", "valuation_table_path"]
+        ["demand_table_path", "valuation_table_path"],
+        ["target_projection", "target_pixelsize"]
     ],
     validate_spatial_overlap=True,
-    different_projections_ok=False,
+    different_projections_ok=True,
     aliases=("hwy", "awy"),
     module_name=__name__,
     inputs=[
@@ -182,11 +183,13 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of land use/land cover codes. Each land use/land cover"
                 " type must be assigned a unique integer code. All values in"
                 " this raster must have corresponding entries in the"
-                " Biophysical Table."
+                " Biophysical Table. This input defines the default target"
+                " projection and alignment for all other spatial data."
             ),
             data_type=int,
             units=None,
-            projected=True
+            is_default_projection=True,
+            is_default_pixelsize=True
         ),
         spec.SingleBandRasterInput(
             id="depth_to_root_rest_layer_path",
@@ -198,7 +201,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=float,
             units=u.millimeter,
-            projected=True
         ),
         spec.SingleBandRasterInput(
             id="precipitation_path",
@@ -206,7 +208,6 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Map of average annual precipitation."),
             data_type=float,
             units=u.millimeter / u.year,
-            projected=True
         ),
         spec.SingleBandRasterInput(
             id="pawc_path",
@@ -218,11 +219,9 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=float,
             units=None,
-            projected=True
         ),
         spec.SingleBandRasterInput(
             id="eto_path",
-            projected=True,
             name=gettext("reference evapotranspiration"),
             about=gettext("Map of reference evapotranspiration values."),
             data_type=float,
@@ -243,7 +242,6 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext("Unique identifier for each watershed.")
                 )
             ],
-            projected=True
         ),
         spec.VectorInput(
             id="sub_watersheds_path",
@@ -260,7 +258,6 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext("Unique identifier for each subwatershed.")
                 )
             ],
-            projected=True
         ),
         spec.CSVInput(
             id="biophysical_table_path",
@@ -415,7 +412,9 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ],
             index_col="ws_id"
-        )
+        ),
+        spec.TARGET_PROJECTION,
+        spec.TARGET_PIXELSIZE
     ],
     outputs=[
         spec.VectorOutput(
@@ -423,7 +422,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="output/watershed_results_wyield.shp",
             about=gettext(
                 "Shapefile containing biophysical output values per"
-                " watershed."
+                " watershed. Watershed reprojected to match target_projection."
             ),
             geometry_types={"POLYGON"},
             fields=WATERSHED_OUTPUT_FIELDS
@@ -443,7 +442,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="output/subwatershed_results_wyield.shp",
             about=gettext(
                 "Shapefile containing biophysical output values per"
-                " subwatershed."
+                " subwatershed. Subwatershed reprojected to match target_projection."
             ),
             geometry_types={"POLYGON"},
             fields=SUBWATERSHED_OUTPUT_FIELDS
@@ -691,6 +690,16 @@ def execute(args):
             valuation: 'ws_id', 'time_span', 'discount', 'efficiency',
             'fraction', 'cost', 'height', 'kw_price'
 
+        args['target_projection'] (string): (optional) if a non-empty string,
+            id of spatial input that defines the target projection. If that
+            spatial input is a raster, rather than a vector, it will also
+            represent the target alignment for other spatial inputs.
+
+        args['target_pixelsize'] (string): (optional) if a non-empty string,
+            id of spatial input that defines the target pixel size for other
+            spatial inputs. If ``target_projection`` is a vector, this spatial
+            input will also represent the target alignment.
+
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -700,6 +709,8 @@ def execute(args):
 
     """
     args, file_registry, graph = MODEL_SPEC.setup(args)
+    target_projection_path = args[args['target_projection']]
+    target_pixelsize_path = args[args['target_pixelsize']]
 
     # valuation_df is passed to create_vector_output()
     # which computes valuation if valuation_df is not None.
@@ -729,16 +740,34 @@ def execute(args):
                 'valuation table to see if they are missing: '
                 f'"{", ".join(str(x) for x in sorted(missing_ws_ids))}"')
 
+    # reproject watersheds_path to target_projection
+    target_projection_wkt = utils.get_raster_or_vector_projection(
+        target_projection_path)
+    # Reproject watersheds_path even if it has the `target_projection` to
+    # create a copy so we don't modify the original when doing zonal stats 
+    reproject_watersheds_task = graph.add_task(
+        pygeoprocessing.reproject_vector,
+        args=(args['watersheds_path'], target_projection_wkt,
+              file_registry['watershed_results_wyield']),
+        target_path_list=[file_registry['watershed_results_wyield']],
+        task_name='reproject_watersheds')
     watershed_paths_list = [(
-        args['watersheds_path'], 'ws_id',
-        file_registry['watershed_results_wyield'],
+        'ws_id', file_registry['watershed_results_wyield'],
         file_registry['watershed_results_wyield_csv'])]
+    dependent_tasks_for_watersheds_list = [reproject_watersheds_task]
 
     if args['sub_watersheds_path']:
+        reproject_sub_watersheds_task = graph.add_task(
+            pygeoprocessing.reproject_vector,
+            args=(args['sub_watersheds_path'], target_projection_wkt,
+                  file_registry['subwatershed_results_wyield']),
+            target_path_list=[file_registry['subwatershed_results_wyield']],
+            task_name='reproject_sub_watersheds')
         watershed_paths_list.append((
-            args['sub_watersheds_path'], 'subws_id',
-            file_registry['subwatershed_results_wyield'],
+            'subws_id', file_registry['subwatershed_results_wyield'],
             file_registry['subwatershed_results_wyield_csv']))
+        dependent_tasks_for_watersheds_list.append(
+            reproject_sub_watersheds_task)
 
     base_raster_path_list = [
         args['eto_path'],
@@ -754,17 +783,29 @@ def execute(args):
         file_registry['pawc'],
         file_registry['clipped_lulc']]
 
-    target_pixel_size = pygeoprocessing.get_raster_info(
-        args['lulc_path'])['pixel_size']
+    if pygeoprocessing.get_gis_type(
+            target_projection_path) == pygeoprocessing.RASTER_TYPE:
+        raster_align_index = base_raster_path_list.index(
+            target_projection_path)
+    else:
+        # fallback to aligning everything to the arg with default pixel size
+        raster_align_index = base_raster_path_list.index(
+            target_pixelsize_path)
+    target_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_projection_wkt)
+    base_vector_path_list = [file_registry['watershed_results_wyield']]
+
     align_raster_stack_task = graph.add_task(
         pygeoprocessing.align_and_resize_raster_stack,
         args=(base_raster_path_list, aligned_raster_path_list,
               ['near'] * len(base_raster_path_list),
               target_pixel_size, 'intersection'),
-        kwargs={'raster_align_index': 4,
-                'base_vector_path_list': [args['watersheds_path']]},
+        kwargs={'raster_align_index': raster_align_index,
+                'base_vector_path_list': base_vector_path_list,
+                'target_projection_wkt': target_projection_wkt},
         target_path_list=aligned_raster_path_list,
-        task_name='align_raster_stack')
+        task_name='align_raster_stack',
+        dependent_task_list=[reproject_watersheds_task])
     # Joining now since this task will always be the root node
     # and it's useful to have the raster info available.
     align_raster_stack_task.join()
@@ -853,8 +894,6 @@ def execute(args):
         dependent_task_list=[align_raster_stack_task],
         task_name='create_veg_raster')
 
-    dependent_tasks_for_watersheds_list = []
-
     LOGGER.info('Calculate PET from Ref Evap times Kc')
     calculate_pet_task = graph.add_task(
         func=pygeoprocessing.raster_map,
@@ -939,19 +978,11 @@ def execute(args):
 
     # Aggregate results to watershed polygons, and do the optional
     # scarcity and valuation calculations.
-    for base_ws_path, ws_id_name, target_ws_path, target_csv_path in watershed_paths_list:
-        # make a copy so we don't modify the original
-        # do zonal stats with the copy so that FIDS are correct
-        copy_watersheds_vector_task = graph.add_task(
-            func=copy_vector,
-            args=[base_ws_path, target_ws_path],
-            target_path_list=[target_ws_path],
-            task_name='create copy of watersheds vector')
-
+    for ws_id_name, target_ws_path, target_csv_path in watershed_paths_list:
         zonal_stats_task_list = []
         zonal_stats_pickle_list = []
 
-        # Do zonal stats with the input shapefiles provided by the user
+        # Do zonal stats with the input shapefiles provided by the users
         # and store results dictionaries in pickles
         for key_name, rast_path in raster_names_paths_list:
             target_stats_pickle = file_registry[f'{ws_id_name}_{key_name.lower()}']
@@ -960,9 +991,7 @@ def execute(args):
                 func=zonal_stats_tofile,
                 args=(target_ws_path, rast_path, target_stats_pickle),
                 target_path_list=[target_stats_pickle],
-                dependent_task_list=[
-                    *dependent_tasks_for_watersheds_list,
-                    copy_watersheds_vector_task],
+                dependent_task_list=dependent_tasks_for_watersheds_list,
                 task_name=f'{ws_id_name}_{key_name}_zonalstats'))
 
         # Add the zonal stats data to the output vector's attribute table
@@ -972,8 +1001,7 @@ def execute(args):
             args=(target_ws_path, ws_id_name, zonal_stats_pickle_list,
                   valuation_df),
             target_path_list=[target_ws_path],
-            dependent_task_list=[
-                *zonal_stats_task_list, copy_watersheds_vector_task],
+            dependent_task_list=zonal_stats_task_list,
             task_name=f'create_{ws_id_name}_vector_output')
 
         # Export a CSV with all the fields present in the output vector
@@ -990,22 +1018,6 @@ def execute(args):
 
 # wyield equation to pass to raster_map
 def wyield_op(fractp, precip): return (1 - fractp) * precip
-
-
-def copy_vector(base_vector_path, target_vector_path):
-    """Wrapper around CreateCopy that handles opening & closing the dataset.
-
-    Args:
-        base_vector_path: path to the vector to copy
-        target_vector_path: path to copy the vector to
-
-    Returns:
-        None
-    """
-    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
-    base_dataset = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    esri_shapefile_driver.CreateCopy(target_vector_path, base_dataset)
-    base_dataset = None
 
 
 def write_output_vector_attributes(target_vector_path, ws_id_name,
