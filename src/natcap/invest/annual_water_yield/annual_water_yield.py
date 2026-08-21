@@ -720,6 +720,8 @@ def execute(args):
 
     """
     args, file_registry, graph = MODEL_SPEC.setup(args)
+    target_projection_path = args[args['target_projection']]
+    target_pixelsize_path = args[args['target_pixelsize']]
 
     # valuation_df is passed to create_vector_output()
     # which computes valuation if valuation_df is not None.
@@ -751,7 +753,7 @@ def execute(args):
 
     # reproject watersheds_path to target_projection
     target_projection_wkt = utils.get_raster_or_vector_projection(
-        args[args['target_projection']])
+        target_projection_path)
     # Reproject watersheds_path even if it has the `target_projection` to
     # create a copy so we don't modify the original when doing zonal stats 
     reproject_watersheds_task = graph.add_task(
@@ -793,15 +795,15 @@ def execute(args):
         file_registry['clipped_lulc']]
 
     if pygeoprocessing.get_gis_type(
-            args[args['target_projection']]) == pygeoprocessing.RASTER_TYPE:
+            target_projection_path) == pygeoprocessing.RASTER_TYPE:
         raster_align_index = base_raster_path_list.index(
-            args[args['target_projection']])
+            target_projection_path)
     else:
         # fallback to aligning everything to the arg with default pixel size
         raster_align_index = base_raster_path_list.index(
-            args[args['target_pixelsize']])
+            target_pixelsize_path)
     target_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
-        args[args['target_pixelsize']], target_projection_wkt)
+        target_pixelsize_path, target_projection_wkt)
     base_vector_path_list = [file_registry['watershed_results_wyield']]
     if args['aoi_vector_path']:
         base_vector_path_list.append(args['aoi_vector_path'])

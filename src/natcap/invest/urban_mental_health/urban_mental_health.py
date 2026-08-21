@@ -669,12 +669,14 @@ def execute(args):
     """
     LOGGER.info("Starting Urban Mental Health Model")
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
+    target_projection = args[args['target_projection']]
+    target_pixelsize = args[args['target_pixelsize']]
 
     LOGGER.info("Start preprocessing")
 
     # get target pixel size for outputs
     pixel_size = _get_raster_pixel_size_in_meters(
-        args[args['target_pixelsize']], args[args['target_projection']])
+        target_pixelsize, target_projection)
 
     pixel_radius = int(round(args['search_radius']/pixel_size[0]))
     LOGGER.info(f"Search radius {args['search_radius']} results in "
@@ -695,7 +697,7 @@ def execute(args):
     # InVEST will take care of buffering the processing AOI to ensure
     # correct edge pixel calculation
     target_spatial_prj = utils.get_raster_or_vector_projection(
-        args[args['target_projection']])
+        target_projection)
     if args['target_projection'] != 'aoi_path':
         LOGGER.info("Reprojecting AOI to target projection defined in "
                     f"{args['target_projection']}")
@@ -740,8 +742,8 @@ def execute(args):
         # Note: population raster is not checked; it just needs to cover AOI
         # which seems straighforward enough to not require checking bounds
 
-    if args[args['target_pixelsize']] in input_align_list:
-        align_index = input_align_list.index(args[args['target_pixelsize']])
+    if target_pixelsize in input_align_list:
+        align_index = input_align_list.index(target_pixelsize)
     else:
         align_index = 0
     LOGGER.info(f"Aligning raster stack to {input_align_list[align_index]}")
