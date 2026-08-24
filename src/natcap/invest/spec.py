@@ -214,14 +214,12 @@ def _get_spatial_reference(filepath):
         raise TypeError("Input is not a raster or vector.")
 
 
-def _get_spatial_inputs_options(args, model_spec, projection_required=True):
+def _get_spatial_inputs_options(args, model_spec):
     """Return spatial inputs and prj as dropdown Options, default first.
 
     Args:
         args (dict): input arguments for InVEST model
         model_spec (ModelSpec): model specification
-        projection_required (bool): Whether returned spatial inputs must
-            be projected
 
     Returns:
         list of options for spatial inputs to model where key is the input's ID
@@ -237,13 +235,15 @@ def _get_spatial_inputs_options(args, model_spec, projection_required=True):
                 display_name = f"{smart_title(inp.name)} "
             if args.get(inp.id):
                 srs = _get_spatial_reference(args[inp.id])
-                # Get the top-level name (Projected or Geographic)
-                prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
-                display_name += f"({prj_name})"
+                if srs:
+                    # Get the top-level name (Projected or Geographic)
+                    prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
+                    display_name += f"({prj_name})"
             options.append(Option(key=inp.id, display_name=display_name))
 
     # sort so default is first
-    options.sort(key=lambda x: x.key != default_projection_input.id)
+    if default_projection_input:
+        options.sort(key=lambda x: x.key != default_projection_input.id)
     return options
 
 
@@ -297,6 +297,9 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
         if not isinstance(inp, SpatialFileInput) or isinstance(inp, VectorInput):
             continue
         if isinstance(inp, RasterOrVectorInput):
+            # NOTE: for HRA, CV, rec: on WB side will need to make sure
+            # dropdown menu options correctly update if input changes from
+            # raster to vector or vice versa
             if not args.get(inp.id) or not (
                     pygeoprocessing.get_gis_type(args[inp.id]) == pygeoprocessing.RASTER_TYPE):
                 continue
@@ -568,7 +571,7 @@ class SpatialFileInput(FileInput):
     """Whether the input has the pixel size to which other inputs should be
     resampled by default. Only one ModelSpec input can have
     ``is_default_pixelsize=True``. A user can select a different input to
-    represent the target projection, but this input will be selected by
+    represent the target pixel size, but this input will be selected by
     default. Defaults to False."""
 
     @model_validator(mode='after')
@@ -2335,17 +2338,19 @@ class ModelSpec(ImmutableBaseModel):
                 # Get default input from dropdown function, if it exists. This
                 # is a workaround for UMH, where default is specified per-model
                 try:
-                    default_dropdown_id = self.get_input(
+                    pixelsize_options = self.get_input(
                         'target_pixelsize').dropdown_function(
-                            args=args, model_spec=self)[0].key
-                except TypeError:
+                            args=args_copy, model_spec=self)
+                except TypeError as e:
                     raise TypeError(
-                        "Unable to determine a default target pixel size value"
-                        " as the custom dropdown function for target_pixelsize"
-                        " takes different arguments than expected (should take"
-                        " args, model_spec).")
-                if default_dropdown_id:
-                    args_copy['target_pixelsize'] = default_dropdown_id
+                        "Unable to determine default target pixel size value."
+                        " Possibly because the custom dropdown function for"
+                        " target_pixelsize takes different arguments than"
+                        " expected (should take args, model_spec). "
+                        f"Actual error: {e}")
+                default_pixelsize_id = pixelsize_options[0].key
+                if default_pixelsize_id:
+                    args_copy['target_pixelsize'] = default_pixelsize_id
                 else:
                     raise ValueError(
                         "Target pixel size not able to be specified and no "
