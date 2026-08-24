@@ -713,6 +713,7 @@ def execute(args):
     else:
         aoi = args['aoi_path']
         align_dependent_tasks = []
+    task_graph.join()  # wait for AOI reprojection to finish before getting info
     aoi_info = pygeoprocessing.get_vector_info(aoi)
     aoi_projection = aoi_info["projection_wkt"]
     aoi_sr = osr.SpatialReference()
@@ -1038,28 +1039,17 @@ def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
                                      rtol=0, atol=1e-8)
         return False
 
-    raster_info = pygeoprocessing.get_raster_info(raster_path)
     spatial_wkt = utils.get_raster_or_vector_projection(spatial_path)
     if not _spatial_file_projected_in_m(spatial_wkt):
         raise ValueError(
             f"target_projection (from {spatial_path}) must be projected in m. "
             f"Current projection: {spatial_wkt}")
 
-    if _spatial_file_projected_in_m(raster_info['projection_wkt']):
-        tgt_pixel_size = numpy.mean([abs(raster_info["pixel_size"][0]),
-                                     abs(raster_info["pixel_size"][1])])
-        LOGGER.info(
-            "target_pixelsize raster is projected in meters; will use pixel "
-            f"size {tgt_pixel_size} as target in align_and_resize, which is "
-            "the native resolution of the raster (transformed to have square "
-            "pixels if it doesn't already).")
-        return (tgt_pixel_size, -tgt_pixel_size)
-    pixel_width, pixel_height = utils.get_raster_pixel_size_in_target_proj_units(
+    transformed_pixel_dims = utils.get_raster_pixel_size_in_target_proj_units(
         raster_path, spatial_path)
-    LOGGER.info("target_pixelsize raster is not projected in meters; will use "
-                f"transformed pixel size {pixel_width, pixel_height} as "
-                "target in align_and_resize")
-    return (pixel_width, pixel_height)
+    LOGGER.info("Outputs will use transformed pixel size "
+                f"{transformed_pixel_dims} as target in align_and_resize")
+    return transformed_pixel_dims
 
 
 def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
