@@ -1021,8 +1021,8 @@ def base_model_id(model_id: str) -> str:
 
 
 def get_raster_pixel_size_in_target_proj_units(
-        raster_path, target_file_or_projection_wkt):
-    """Get square pixel size of a raster in units of `target_projection_wkt`.
+        raster_path, target_file_or_projection_wkt, square_pixels=False):
+    """Get pixel size of a raster in units of `target_projection_wkt`.
 
     Use gdal to auto calculate the target pixel size if transforming
     the raster to a target projection. This is useful for getting the
@@ -1035,12 +1035,17 @@ def get_raster_pixel_size_in_target_proj_units(
             projection with the units into which to translate the original
             pixel size of ``raster_path``, or a path to raster or vector
             containing the target projection.
+        square_pixels (bool): Whether to return square pixels. If True, the
+            absolute value of the pixel width and height will be the same and
+            equal to the mean of the original pixel width and height in the
+            target projection units.
 
     Raises:
         ValueError if target projection is not projected.
 
     Returns:
-        tuple[float, float]: (pixel_width, pixel_height)
+        tuple[float, float]: (pixel_width, pixel_height) in the target
+            projection units.
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path)
     raster_wkt = raster_info["projection_wkt"]
@@ -1064,11 +1069,14 @@ def get_raster_pixel_size_in_target_proj_units(
 
     # Same projected CRS units: preserve native pixel size.
     if raster_srs.IsSame(target_srs):
-        native_pixel_size = numpy.mean([
-            abs(raster_info['pixel_size'][0]),
-            abs(raster_info['pixel_size'][1]),
-        ])
-        return (native_pixel_size, -native_pixel_size)
+        if square_pixels:
+            native_pixel_size = numpy.mean([
+                abs(raster_info['pixel_size'][0]),
+                abs(raster_info['pixel_size'][1]),
+            ])
+            return (native_pixel_size, -native_pixel_size)
+        else:
+            return raster_info['pixel_size']
     # Otherwise ask GDAL what the raster would look like warped to target CRS.
     src_ds = gdal.OpenEx(raster_path, gdal.OF_RASTER)
     transformer = gdal.Transformer(
@@ -1077,9 +1085,14 @@ def get_raster_pixel_size_in_target_proj_units(
     pixel_width = target_warp.geotransform[1]
     pixel_height = target_warp.geotransform[5]
     src_ds = None
-
-    tgt_pixel_size = float(numpy.mean([abs(pixel_width), abs(pixel_height)]))
-    return (tgt_pixel_size, -tgt_pixel_size)
+    if square_pixels:
+        tgt_pixel_size = float(numpy.mean([abs(pixel_width), abs(pixel_height)]))
+        return (tgt_pixel_size, -tgt_pixel_size)
+    else:
+        if pixel_height > 0:
+            raise ValueError
+        return pixel_width, pixel_height
+    
 
 
 def get_raster_or_vector_projection(filepath):

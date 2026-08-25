@@ -1046,7 +1046,7 @@ def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
             f"Current projection: {spatial_wkt}")
 
     transformed_pixel_dims = utils.get_raster_pixel_size_in_target_proj_units(
-        raster_path, spatial_path)
+        raster_path, spatial_path, square_pixels=True)
     LOGGER.info("Outputs will use transformed pixel size "
                 f"{transformed_pixel_dims} as target in align_and_resize")
     return transformed_pixel_dims
