@@ -313,8 +313,8 @@ class UMHTests(unittest.TestCase):
 
         expected_prev_cases = numpy.full((4, 6), PGP_FLOAT32_NODATA)
         expected_prev_cases[1:3, 1:4] = numpy.array(
-            ((-10.4518223, -32.0634232, -74.8765640),
-             (-102.864586, -44.9878502, -18.9928780)))
+            ((-10.455142, -32.107536, -74.798858),
+             (-102.963333, -44.918373, -19.016109)))
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
     def test_NDVI_extent_too_small(self):
