@@ -41,10 +41,20 @@ class InvestKeyword(Keyword):
     vocabulary: str = 'InVEST Keywords'
 
 
+ADMINISTRATIVE_DIVISIONS = GCMDKeyword(
+    value='ADMINISTRATIVE DIVISIONS',
+    uuid='1ae304de-252c-45da-8dd8-df99a281e4f4',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > BOUNDARIES > ADMINISTRATIVE DIVISIONS')
+
 AGRICULTURE_PRODUCTION = GCMDKeyword(
     value='AGRICULTURE PRODUCTION',
     uuid='83741fb9-6f86-4670-abbb-c1f3b14a939d',
     full_path='EARTH SCIENCE > HUMAN DIMENSIONS > ECONOMIC RESOURCES > AGRICULTURE PRODUCTION')
+
+ALBEDO = GCMDKeyword(
+    value='ALBEDO',
+    uuid='136b1de3-4b2e-49e6-80cd-cf2e9bac2c48',
+    full_path='EARTH SCIENCE > LAND SURFACE > SURFACE RADIATIVE PROPERTIES > ALBEDO')
 
 BATHYMETRY = GCMDKeyword(
     value='BATHYMETRY',
@@ -62,6 +72,10 @@ BUILDINGS = GCMDKeyword(
     uuid='d7742082-5461-4610-9ced-e0ec3bb64697',
     full_path='EARTH SCIENCE > HUMAN DIMENSIONS > INFRASTRUCTURE > BUILDINGS')
 
+BUILDING_COOLING_ENERGY = InvestKeyword(
+    value='BUILDING COOLING ENERGY',
+    definition='The energy consumption required for cooling a building')
+
 CARBON = GCMDKeyword(
     value='CARBON',
     uuid='6f6537f5-773f-4df1-862b-d9ab80eb5e04',
@@ -77,6 +91,12 @@ CARBON_SEQUESTRATION = GCMDKeyword(
     value='CARBON SEQUESTRATION',
     uuid='e58872a8-6104-4ff8-bbca-4b00ba4b38e8',
     full_path='EARTH SCIENCE > BIOSPHERE > ECOLOGICAL DYNAMICS > ECOSYSTEM FUNCTIONS > CARBON SEQUESTRATION')
+
+CLIMATE_ZONES = InvestKeyword(
+    value='CLIMATE ZONES',
+    definition=(
+        'Geographic distributions of climate groups based on seasonality,'
+        ' temperature, and precipitation'))
 
 COASTAL_LANDFORMS = GCMDKeyword(
     value='COASTAL LANDFORMS',
@@ -123,10 +143,18 @@ DRAINAGE = GCMDKeyword(
     uuid='269c7277-fa8f-4c1c-bd8b-ab772c1df4e5',
     full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > DRAINAGE')
 
+ELECTRICITY_COST = InvestKeyword(
+    value='ELECTRICITY COST',
+    definition='The monetary cost of electricity, typically per kilowatt-hour')
+
 EVAPOTRANSPIRATION = GCMDKeyword(
     value='EVAPOTRANSPIRATION',
     uuid='26fc4850-7ba9-44d8-a156-5c623e17b72f',
     full_path='EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC WATER VAPOR > WATER VAPOR PROCESSES > EVAPOTRANSPIRATION')
+
+EVENT_MEAN_CONCENTRATION = InvestKeyword(
+    value='EVENT MEAN CONCENTRATION',
+    definition='The mean pollutant concentration in the discharge of a storm event')
 
 FERTILIZERS = GCMDKeyword(
     value='FERTILIZERS',
@@ -137,13 +165,29 @@ FLOOD_DAMAGE_VALUE = InvestKeyword(
     value='FLOOD DAMAGE VALUE',
     definition='The economic value of flood damage to a property.')
 
+FLOOR_AREA_RATIO = InvestKeyword(
+    value='FLOOR AREA RATIO',
+    definition='The ratio of the total floor area of a building to the area of the land parcel')
+
 HABITAT_SENSITIVITY = InvestKeyword(
     value='HABITAT SENSITIVITY',
     definition='Parameters related to the sensitivity of habitat to specific threats.')
 
+HABITAT_STRESSOR_CRITERIA = InvestKeyword(
+    value='HABITAT STRESSOR CRITERIA',
+    definition='Criteria related to how specific stressors impact specific habitats.')
+
 HABITAT_THREATS = InvestKeyword(
     value='HABITAT THREATS',
     definition='Geographic distribution and parameters related to threats to habitat.')
+
+HABITATS_STRESSORS = InvestKeyword(
+    value='HABITATS AND STRESSORS',
+    definition='Geographic distribution and parameters related to habitats and their stressors.')
+
+HEIGHT = InvestKeyword(
+    value='HEIGHT',
+    definition='Distance above the ground.')
 
 HYDROELECTRIC_ENERGY = GCMDKeyword(
     value='HYDROELECTRIC ENERGY PRODUCTION/USE',
@@ -153,6 +197,20 @@ HYDROELECTRIC_ENERGY = GCMDKeyword(
 HYDROLOGIC_SOIL_GROUPS = InvestKeyword(
     value='HYDROLOGIC SOIL GROUPS',
     definition='Groups representing rainfall runoff potential. A component of the USDA curve number method.')
+
+ILLNESS_INCIDENCE_RATE = InvestKeyword(
+    value='ILLNESS INCIDENCE RATE',
+    definition='The prevalence rate of a specific illness or disease in a population.')
+
+INFILTRATION_AMOUNT = GCMDKeyword(
+    value='INFILTRATION AMOUNT',
+    uuid='59ce52b5-0386-4b51-b5ac-049a0862e9cd',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > GROUND WATER > GROUND WATER PROCESSES/MEASUREMENTS > INFILTRATION > INFILTRATION AMOUNT')
+
+INFILTRATION_FREQUENCY = GCMDKeyword(
+    value='INFILTRATION FREQUENCY',
+    uuid='55642a14-2ff4-4892-b61a-ae3ece7fbcd7',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > GROUND WATER > GROUND WATER PROCESSES/MEASUREMENTS > INFILTRATION > INFILTRATION FREQUENCY')
 
 LANDMASS = InvestKeyword(
     value='LANDMASS',
@@ -173,6 +231,16 @@ LULC_CLASSES = GCMDKeyword(
     full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > LAND USE CLASSES',
     aliases=['LAND USE LAND COVER CLASSES'])
 
+NATURE_PROPORTION = InvestKeyword(
+    value='NATURE PROPORTION',
+    definition='The proportion of an area that is comprised of natural environment or greenspace.')
+
+NDVI = GCMDKeyword(
+    value='NORMALIZED DIFFERENCE VEGETATION INDEX (NDVI)',
+    uuid='2297a00a-80f5-466e-b28e-b9ca42562d3f',
+    full_path='EARTH SCIENCE > BIOSPHERE > VEGETATION > VEGETATION INDEX > NORMALIZED DIFFERENCE VEGETATION INDEX (NDVI)',
+    aliases=['NDVI'])
+
 NITROGEN = GCMDKeyword(
     value='NITROGEN',
     uuid='bf03dba8-2881-44ac-abfc-ba3353f67a24',
@@ -186,6 +254,11 @@ NUTRIENTS = GCMDKeyword(
 PAWC = InvestKeyword(
     value='PLANT AVAILABLE WATER CONTENT',
     definition='The quantity of water in the soil that is available to plants.')
+
+PERCOLATION = GCMDKeyword(
+    value='PERCOLATION',
+    uuid='d64094ae-774b-4435-8f2e-a54d114e5555',
+    full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > GROUND WATER > GROUND WATER PROCESSES/MEASUREMENTS > PERCOLATION')
 
 PHOSPHOROUS = GCMDKeyword(
     value='PHOSPHOROUS',
@@ -268,19 +341,37 @@ REFERENCE_EVAPOTRANSPIRATION = InvestKeyword(
     value='REFERENCE EVAPOTRANSPIRATION',
     definition='Evapotranspiration of a reference vegetation such as grass or alfalfa.')
 
+ROADS = GCMDKeyword(
+    value='ROADS',
+    uuid='648e6116-5f0c-4314-86a8-ede6dda6bbc1',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > INFRASTRUCTURE > TRANSPORTATION > ROADS')
+
 RUNOFF = GCMDKeyword(
     value='RUNOFF',
     uuid='f6a54329-486b-4d5f-b105-c639cec42351',
     full_path='EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > RUNOFF')
 
+RUNOFF_COEFFICIENT = InvestKeyword(
+    value='RUNOFF COEFFICIENT',
+    definition=(
+        'The ratio between direct runoff and precipitation, typically as a'
+        ' function of soil, cover type, and hydrologic antecedent conditions.'))
+
 RUNOFF_CURVE_NUMBER = InvestKeyword(
-    value='RUNOFF CURVE NUMBER (CN)',
-    definition='An index representing runoff as a function of soil, cover type, and hydrologic and antecedent conditions.')
+    value='RUNOFF CURVE NUMBER',
+    definition=(
+        'An index representing runoff as a function of soil, cover type,'
+        ' and hydrologic antecedent conditions.'))
 
 SEA_LEVEL_RISE = GCMDKeyword(
     value='SEA LEVEL RISE',
     uuid='536a86bd-3dd1-4f4a-9b4a-222a12746db5',
     full_path='EARTH SCIENCE > CLIMATE INDICATORS > ATMOSPHERIC/OCEAN INDICATORS > SEA LEVEL RISE')
+
+SHADE_FRACTION = GCMDKeyword(
+    value='SHADE FRACTION',
+    uuid='87be8c1f-9f92-45f9-ba9b-f50efa5bcca0',
+    full_path='EARTH SCIENCE > LAND SURFACE > LAND USE/LAND COVER > SHADE FRACTION')
 
 SHORELINES = GCMDKeyword(
     value='SHORELINES',
@@ -303,6 +394,10 @@ SOIL_ROOTING_DEPTH = GCMDKeyword(
     full_path='EARTH SCIENCE > LAND SURFACE > SOILS > SOIL ROOTING DEPTH',
     aliases=['DEPTH TO BEDROCK', 'ROOT RESTRICTING LAYER DEPTH'])
 
+TRAVEL_DISTANCE = InvestKeyword(
+    value='TRAVEL DISTANCE',
+    definition='The distance travelled to reach a destination.')
+
 USLE_C_FACTOR = InvestKeyword(
     value='USLE C FACTOR',
     definition='Cover-management factor for the Universal Soil Loss Equation')
@@ -310,6 +405,15 @@ USLE_C_FACTOR = InvestKeyword(
 USLE_P_FACTOR = InvestKeyword(
     value='USLE P FACTOR',
     definition='Support-practice factor for the Universal Soil Loss Equation')
+
+VIEWSHED_OBSTRUCTION = InvestKeyword(
+    value='VIEWSHED OBSTRUCTION',
+    definition='Geographic features that obstruct the viewshed of an observer.')
+
+VULNERABLE_POPULATIONS = GCMDKeyword(
+    value='VULNERABLE POPULATIONS',
+    uuid='35b7c7cd-49c8-476c-83f2-f2e1f4097307',
+    full_path='EARTH SCIENCE > HUMAN DIMENSIONS > POPULATION > VULNERABLE POPULATIONS')
 
 WATERSHED_BOUNDARIES = GCMDKeyword(
     value='WATERSHED BOUNDARIES',
@@ -339,6 +443,11 @@ WAVE_FETCH = GCMDKeyword(
 WAVE_POWER = InvestKeyword(
     value='WAVE POWER',
     definition='The power of surface ocean waves.')
+
+WEATHER_EVENTS = GCMDKeyword(
+    value='WEATHER EVENTS',
+    uuid='b7d562cf-9b9b-4461-900b-50423a8c4d29',
+    full_path='EARTH SCIENCE > ATMOSPHERE > WEATHER EVENTS')
 
 WIND_DIRECTION = GCMDKeyword(
     value='WIND DIRECTION',
