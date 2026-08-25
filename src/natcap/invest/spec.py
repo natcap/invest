@@ -288,10 +288,6 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     if default_pixelsize_id is None and model_spec.get_default_pixelsize_input():
         default_pixelsize_id = model_spec.get_default_pixelsize_input().id
 
-    # TODO add model spec optionspatialinput validataion that either:
-    #  is_default_pixelsize is attached to an input _or_
-    # dropdown_function get_pixel_size_options is overridden and returns a default_input_path?
-
     options = []
     for inp in model_spec.inputs:
         if not isinstance(inp, SpatialFileInput) or isinstance(inp, VectorInput):
@@ -2672,7 +2668,7 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
         Option(key="MFD", description="Multiple flow direction")
     ]
 )
-TARGET_PROJECTION = OptionSpatialInput( #TODO - add 'Custom' option to all lists and if its selected, another numerical input pixelsize is allowed
+TARGET_PROJECTION = OptionSpatialInput(
     id="target_projection",
     name=gettext("target projection"),
     about=gettext(
