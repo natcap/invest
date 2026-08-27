@@ -68,12 +68,29 @@ Unreleased Changes
 
 General
 =======
+* Added a security policy to the InVEST repository.
+  (`#2697 <https://github.com/natcap/invest/issues/2697>`_)
+
+Wind Energy
+===========
+* Fixed a bug where the model would raise a ``RuntimeError`` if the input
+  land polygon and AOI had the same projection.
+  (`#2707 <https://github.com/natcap/invest/issues/2707>`_)
+
+
+3.20.1 (2026-08-13)
+-------------------
+
+General
+=======
 * Fixed an issue with cross-compiling ``natcap.invest`` for non-native
   architectures, particularly on conda-forge.  This should also speed up
   the operation of ``setup.py``.
   (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
-* Added a security policy to the InVEST repository.
-  (`#2697 <https://github.com/natcap/invest/issues/2697>`_)
+* Fixed a bug that prevented non-spatial files referenced in CSVs from being added to datastack archives. Refactored some
+  datastack creation logic into class methods on input and output specs.
+  (`#2589 <https://github.com/natcap/invest/issues/2589>`_)
+
 
 Workbench
 =========
@@ -87,7 +104,7 @@ Workbench
   conda environment is used to run each plugin.
   (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
 * Improved handling of errors on plugin server startup.
-  (`#2637 https://github.com/natcap/invest/issues/2637`)
+  (`#2637 <https://github.com/natcap/invest/issues/2637>`_)
 * The "View Results" button now supports plugins.
   (`#2638 <https://github.com/natcap/invest/issues/2638>`_)
 * The base report template now better supports plugins by including a link to
