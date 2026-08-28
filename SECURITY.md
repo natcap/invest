@@ -45,9 +45,9 @@ Please include the following details in your report:
   Fixed vulnerabilities will be disclosed via a GitHub Security Advisory, with
   credit to the reporter unless anonymity is requested.
 
-\*Please be aware that our software team adheres to the Stanford University
-administrative calendar (<https://cardinalatwork.stanford.edu/benefits-rewards/time-leaves/university-holiday-schedule>)
-which includes occasional holidays and a two-week winter closure.  During
+\*Please be aware that our software team adheres to the [Stanford University
+administrative calendar](https://cardinalatwork.stanford.edu/benefits-rewards/time-leaves/university-holiday-schedule),
+which includes occasional holidays and a two-week winter closure. During
 University closures, we will do our best to respond as soon as we can,
 but cannot guarantee adherence to specific timelines.
 
