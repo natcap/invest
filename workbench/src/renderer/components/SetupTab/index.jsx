@@ -327,21 +327,14 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgTouched(key) {
-    this.setState((prevState) => {
-      if (prevState.argsValues[key].touched) {
-        return null;
-      }
-  
-      return {
-        argsValues: {
-          ...prevState.argsValues,
-          [key]: {
-            ...prevState.argsValues[key],
-            touched: true,
-          },
-        },
-      };
-    });
+    const { argsValues } = this.state;
+    if (!argsValues[key].touched) {
+      argsValues[key].touched = true;
+      this.setState({
+        argsValues: argsValues,
+      });
+    }
+
   }
 
   /** Update state with arg values as they change. And validate the args.
@@ -356,47 +349,11 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    const { argsSpec } = this.props;
+    const { argsValues } = this.state;
+    argsValues[key].value = value;
+    this.setState({
+      argsValues: argsValues,
 
-    const dependentArgkeys = Object.keys(argsSpec).filter(
-      (argkey) => argsSpec[argkey]?.responsive_to === key
-    );
-
-    this.setState((prevState) => {
-      const newArgsValues = {
-        ...prevState.argsValues,
-        [key]: {
-          ...prevState.argsValues[key],
-          value,
-        },
-      };
-  
-      const newArgsValidation = {
-        ...prevState.argsValidation,
-        [key]: {
-          ...prevState.argsValidation[key],
-          valid: undefined,
-          validationMessage: '',
-        },
-      };
-  
-      dependentArgkeys.forEach((argkey) => {
-        newArgsValues[argkey] = {
-          ...newArgsValues[argkey],
-          value: '',
-        };
-  
-        newArgsValidation[argkey] = {
-          ...prevState.argsValidation[argkey],
-          valid: undefined,
-          validationMessage: '',
-        };
-      });
-
-      return {
-        argsValues: newArgsValues,
-        argsValidation: newArgsValidation,
-      };
       }, () => {
       this.props.updateJobProperties(this.props.tabID, {
         status: undefined, // Clear job status to hide model status indicator.
@@ -491,49 +448,11 @@ class SetupTab extends React.Component {
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await getDynamicDropdowns(payload);
-
-    this.setState((prevState) => {
-      const newArgsDropdownOptions = {
-        ...prevState.argsDropdownOptions,
-      };
-      const newArgsValues = {
-        ...prevState.argsValues,
-      };
-
-      Object.keys(results ?? {}).forEach((argkey) => {
-        const options = results[argkey];
-        newArgsDropdownOptions[argkey] = options;
-
-        const currentValue = newArgsValues[argkey]?.value;
-        const hasCurrentValue = (
-          currentValue !== undefined &&
-          currentValue !== null &&
-          currentValue !== ''
-        );
-
-        const isTargetSpatialDropdown = [
-          'target_pixelsize',
-          'target_projection',
-        ].includes(this.props.argsSpec[argkey]?.id);
-      
-        // If the current value of target spatial dropdown is emtpy, set the
-        // value to the first option in the list, which will be the default value.
-        if (!hasCurrentValue && isTargetSpatialDropdown) {
-          newArgsValues[argkey] = {
-            ...newArgsValues[argkey],
-            value: options[0]?.key ?? '',
-          };
-        }
-      });
-
-      return {
-        argsDropdownOptions: newArgsDropdownOptions,
-        argsValues: newArgsValues,
-      };
-  }, () => {
-    this.investValidate();
-  });
-}
+    Object.keys(results ?? {}).forEach((argkey) => {
+      argsDropdownOptions[argkey] = results[argkey];
+    });
+    this.setState({ argsDropdownOptions: argsDropdownOptions });
+  }
 
   /** Get a debounced version of investValidate.
    *
