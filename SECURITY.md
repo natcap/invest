@@ -24,8 +24,8 @@ Please **do not open public GitHub issues** for security vulnerabilities.
 To report a vulnerability, please use one of the following private channels
 (GitHub Private Vulnerability Reporting preferred):
 
-1. **GitHub Private Vulnerability Reporting**: Navigate to the "Security" tab of
-   this repository, click "Vulnerability reporting", and select "Report a vulnerability".
+1. **GitHub Private Vulnerability Reporting**: Navigate to the ["Security and quality" tab](https://github.com/natcap/invest/security) of
+   this repository and select "Report a vulnerability".
 2. **Email**: Send a detailed report to <natcap-software@lists.stanford.edu>.
 
 Please include the following details in your report:
