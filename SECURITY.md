@@ -65,9 +65,9 @@ following are considered out of scope:
   malformed input data on their own local run. (Note: a crafted file
   that causes code execution or data exfiltration when opened by another,
   unsuspecting user, such as a shared malicious raster/vector file,
-  is in scope.  Security issues with plugins should be reported via the
+  is in scope. Security issues with plugins should be reported via the
   instructions in the Plugin Registry repo:
-  <https://github.com/natcap/invest-plugin-registry>)
+  <https://github.com/natcap/invest-plugin-registry>.)
 * Vulnerabilities in third-party dependencies (GDAL, numpy,
   etc.) that are not specific to how InVEST uses them. Please report these
   upstream, and optionally notify us at
