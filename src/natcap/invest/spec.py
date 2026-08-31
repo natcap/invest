@@ -197,7 +197,10 @@ def smart_title(text):
 def _get_spatial_reference(filepath):
     with GDALUseExceptions():
         gdal_path = utils._GDALPath.from_uri(filepath)
-        gis_type = pygeoprocessing.get_gis_type(filepath)
+        try:
+            gis_type = pygeoprocessing.get_gis_type(filepath)
+        except ValueError:
+            return None
 
         if gis_type == pygeoprocessing.RASTER_TYPE:
             dataset = gdal.OpenEx(
@@ -230,15 +233,15 @@ def _get_spatial_inputs_options(args, model_spec):
     for inp in model_spec.inputs:
         if (isinstance(inp, SpatialFileInput)):
             if inp is default_projection_input:
-                display_name = f"(Default) {smart_title(inp.name)} "
+                display_name = f"(Default) {smart_title(inp.name)}"
             else:
-                display_name = f"{smart_title(inp.name)} "
+                display_name = f"{smart_title(inp.name)}"
             if args.get(inp.id):
                 srs = _get_spatial_reference(args[inp.id])
                 if srs:
                     # Get the top-level name (Projected or Geographic)
                     prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
-                    display_name += f"({prj_name})"
+                    display_name += f" ({prj_name})"
             options.append(Option(key=inp.id, display_name=display_name))
 
     # sort so default is first
@@ -273,17 +276,20 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     current_projection = None
     projection_units = None
     if projection_input_id and args.get(projection_input_id):
-        current_projection = utils.get_raster_or_vector_projection(
-            args[projection_input_id])
+        try:
+            current_projection = utils.get_raster_or_vector_projection(
+                args[projection_input_id])
+            srs = osr.SpatialReference()
+            srs.ImportFromWkt(current_projection)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(current_projection)
-
-        if srs.IsProjected():
-            projection_units = srs.GetLinearUnitsName()
-            projection_units = projection_units.replace("metre", "meter")  # GDAL uses "metre"
-        else:
-            projection_units = srs.GetAngularUnitsName()
+            if srs.IsProjected():
+                projection_units = srs.GetLinearUnitsName()
+                projection_units = projection_units.replace("metre", "meter")  # GDAL uses "metre"
+            else:
+                projection_units = srs.GetAngularUnitsName()
+        except ValueError:
+            # raised if current_projection is unprojected
+            current_projection = None
 
     if default_pixelsize_id is None and model_spec.get_default_pixelsize_input():
         default_pixelsize_id = model_spec.get_default_pixelsize_input().id
@@ -309,14 +315,16 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
                 # This function returns square pixels
                 pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
                     args[inp.id], current_projection)
-                formatted_pixelsize = f"({round(pixelsize[0], 3)}, "\
+                formatted_pixelsize = f" ({round(pixelsize[0], 3)}, "\
                     f"{round(abs(pixelsize[1]), 3)} {projection_units})"
             except ValueError:  # raised if current_projection is unprojected
+                formatted_pixelsize = ''
+            except RuntimeError:
                 formatted_pixelsize = ''
         else:
             formatted_pixelsize = ''
 
-        display_name += f" {formatted_pixelsize}"
+        display_name += f"{formatted_pixelsize}"
         options.append(Option(key=inp.id, display_name=display_name))
 
     options.sort(key=lambda x: x.key != default_pixelsize_id)
@@ -2118,6 +2126,11 @@ class ModelSpec(ImmutableBaseModel):
 
     Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
     """
+
+    default_ui_params: dict = {}
+    """A dictionary of default values for the target spatial dropdown menus.
+    The values must match id's of the model's inputs. If a default value is
+    not specified for an input, the default value will be None."""
 
     inputs: list[Input]
     """A list of the data inputs, or parameters, to the model."""
