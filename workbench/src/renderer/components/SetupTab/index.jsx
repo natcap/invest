@@ -35,6 +35,7 @@ const { logger } = window.Workbench;
  *
  * @param {object} argsSpec - an InVEST model's MODEL_SPEC.args
  * @param {object} inputFieldOrder - the order in which to display the input fields.
+ * @param {object} defaultUiParams - key: value pairs of default values for spatial options args, or {}.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
  * @returns {object} to destructure into two args,
@@ -44,7 +45,7 @@ const { logger } = window.Workbench;
  *     {object} argsDropdownOptions - stores lists of dropdown options for
  *       args of type 'option_string'.
  */
-function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
+function initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultUiParams = {}) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
   const argsDropdownOptions = {};
@@ -60,6 +61,8 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
         value = argsDict[argkey];
       } else if (argsSpec[argkey].include_placeholder) { // default to placeholder
         value = "placeholderOpt";
+      } else if (defaultUiParams[`${argkey}_id`]) {
+        value = defaultUiParams[`${argkey}_id`];
       } else if (argsSpec[argkey].options.length > 0) { // default to first
         value = argsSpec[argkey].options[0].key;
       } else {
@@ -128,12 +131,12 @@ class SetupTab extends React.Component {
     * not on every re-render.
     */
     this._isMounted = true;
-    const { argsInitValues, argsSpec, inputFieldOrder } = this.props;
+    const { argsInitValues, argsSpec, inputFieldOrder, defaultUiParams } = this.props;
 
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {});
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {}, defaultUiParams || {});
 
     // map each arg to an empty object, to fill in later
     // here we use the argsSpec because it includes all args, even ones like
@@ -372,13 +375,15 @@ class SetupTab extends React.Component {
     const {
       argsSpec,
       inputFieldOrder,
+      defaultUiParams,
       updateJobProperties,
       tabID,
+
     } = this.props;
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, inputFieldOrder, argsDict);
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultUiParams || {});
 
     this.setState({
       argsValues: argsValues,
@@ -591,6 +596,7 @@ class SetupTab extends React.Component {
         userguide,
         isCoreModel,
         inputFieldOrder,
+        defaultUiParams,
         sidebarSetupElementId,
         sidebarFooterElementId,
         executeClicked,
@@ -647,6 +653,7 @@ class SetupTab extends React.Component {
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={inputFieldOrder}
+              defaultUiParams={defaultUiParams}
               userguide={userguide}
               isCoreModel={isCoreModel}
               updateArgValues={this.updateArgValues}
@@ -714,6 +721,7 @@ SetupTab.propTypes = {
     })
   ).isRequired,
   inputFieldOrder: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
+  defaultUiParams: PropTypes.objectOf(PropTypes.dict),
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool, PropTypes.number])),
   investExecute: PropTypes.func.isRequired,

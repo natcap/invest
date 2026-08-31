@@ -325,6 +325,7 @@ class InvestTab extends React.Component {
                     modelID={modelID}
                     argsSpec={argsSpec}
                     inputFieldOrder={modelSpec.input_field_order}
+                    defaultUiParams={modelSpec.default_ui_params}
                     argsInitValues={argsValues}
                     investExecute={this.investExecute}
                     sidebarSetupElementId={sidebarSetupElementId}
