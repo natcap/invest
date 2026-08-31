@@ -22,6 +22,14 @@ gdal.UseExceptions()
 class SpecUtilsUnitTests(unittest.TestCase):
     """Unit tests for natcap.invest.spec."""
 
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
     def test_format_unit(self):
         """spec: test converting units to strings with format_unit."""
         for unit_name, expected in [
@@ -39,6 +47,80 @@ class SpecUtilsUnitTests(unittest.TestCase):
         """spec: format_unit raises TypeError if not a pint.Unit."""
         with self.assertRaises(TypeError):
             spec.format_unit({})
+
+    def test_spatial_dropdown_options_with_valid_and_invalid_paths(self):
+        """Invalid spatial path retains option without spatial info.
+
+        Test that the display name of a spatial input option is still
+        generated even if the file path is invalid, for default and
+        non-default options. This is important for the UI to still show
+        the option even if the user has not yet selected a valid file."""
+        from natcap.invest.annual_water_yield import annual_water_yield
+        model_spec = annual_water_yield.MODEL_SPEC
+
+        lulc_path = os.path.join(
+            self.workspace_dir, 'lulc.tif')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        projection_wkt = srs.ExportToWkt()
+        origin = (461261, 4923265)
+
+        array = numpy.ones((5, 5), dtype=numpy.int32)
+        pixel_size = (1, -1)
+
+        pygeoprocessing.numpy_array_to_raster(
+            array, -1, pixel_size, origin, projection_wkt,
+            lulc_path)
+
+        args = {'lulc_path': lulc_path,
+                'precipitation_path': lulc_path,
+                'target_pixelsize': 'precipitation_path'}
+
+        projection_options = spec._get_spatial_inputs_options(args, model_spec)
+        pixelsize_options = spec._get_pixel_size_options(args, model_spec)
+
+        lulc_prj_option = next(option for option in projection_options
+                               if option.key == 'lulc_path')
+        precip_pixelsize_option = next(option for option in pixelsize_options
+                                       if option.key == 'precipitation_path')
+
+        # The display name of the selected spatial options should include
+        # the projection and pixel size info, respectively
+        self.assertEqual(
+            '(Default) Land Use/Land Cover (NAD83 / UTM zone 10N)',
+            lulc_prj_option.display_name)
+        self.assertEqual('Precipitation (1.0, 1.0 meter)',
+                         precip_pixelsize_option.display_name)
+
+        # Simulate user deleting one character from the filepath
+        args['lulc_path'] = lulc_path[:-1]
+
+        projection_options = spec._get_spatial_inputs_options(args, model_spec)
+        pixelsize_options = spec._get_pixel_size_options(args, model_spec)
+
+        lulc_prj_option = next(option for option in projection_options
+                               if option.key == 'lulc_path')
+        precip_pixelsize_option = next(option for option in pixelsize_options
+                                       if option.key == 'precipitation_path')
+
+        self.assertEqual(
+            '(Default) Land Use/Land Cover',
+            lulc_prj_option.display_name)
+        # selected pixel size option will lose units because no projection info
+        self.assertEqual('Precipitation',
+                         precip_pixelsize_option.display_name)
+
+        # Valid projection but deleted character from selected pixelsize
+        args['lulc_path'] = lulc_path
+        args["precipitation_path"] = lulc_path[:-1]
+
+        pixelsize_options = spec._get_pixel_size_options(args, model_spec)
+        precip_pixelsize_option = next(option for option in pixelsize_options
+                                       if option.key == 'precipitation_path')
+
+        # selected pixel size option will lose units because filepath invalid
+        self.assertEqual('Precipitation',
+                         precip_pixelsize_option.display_name)
 
 
 class TestDescribeArgFromSpec(unittest.TestCase):
