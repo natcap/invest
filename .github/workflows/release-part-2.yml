@@ -112,7 +112,7 @@ jobs:
       - name: Create a PyPI release
         # this is the only step that can't be rolled back
         run: |
-          twine upload \
+          twine upload --verbose \
             --username="__token__" \
             --password=${{ secrets.PYPI_NATCAP_INVEST_TOKEN }} \
             artifacts/natcap_invest*
