@@ -191,9 +191,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " projection and alignment for all other spatial data."
             ),
             data_type=int,
-            units=None,
-            is_default_projection=True,
-            is_default_pixelsize=True
+            units=None
         ),
         spec.SingleBandRasterInput(
             id="depth_to_root_rest_layer_path",

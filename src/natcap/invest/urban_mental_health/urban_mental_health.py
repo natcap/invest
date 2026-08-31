@@ -67,6 +67,9 @@ MODEL_SPEC = spec.ModelSpec(
         ["lulc_base", "lulc_alt", "lulc_attr_csv"],
         ["target_projection", "target_pixelsize"]
     ],
+    default_ui_params={
+        "target_projection_id": "aoi_path"
+    },
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
@@ -80,8 +83,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "as InVEST will buffer your AOI by the `search_radius` to "
                 "determine the processing area. Final outputs will be clipped "
                 "to this AOI."),
-            projected=True,
-            is_default_projection=True
+            projected=True
         )),
         spec.SingleBandRasterInput(
             id="population_raster",

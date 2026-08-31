@@ -227,12 +227,13 @@ def _get_spatial_inputs_options(args, model_spec):
     Returns:
         list of options for spatial inputs to model where key is the input's ID
     """
-    default_projection_input = model_spec.get_default_projection_input()
+    default_projection_input = model_spec.default_ui_params.get(
+        'target_projection_id')
 
     options = []
     for inp in model_spec.inputs:
         if (isinstance(inp, SpatialFileInput)):
-            if inp is default_projection_input:
+            if inp.id == default_projection_input:
                 display_name = f"(Default) {smart_title(inp.name)}"
             else:
                 display_name = f"{smart_title(inp.name)}"
@@ -246,7 +247,7 @@ def _get_spatial_inputs_options(args, model_spec):
 
     # sort so default is first
     if default_projection_input:
-        options.sort(key=lambda x: x.key != default_projection_input.id)
+        options.sort(key=lambda x: x.key != default_projection_input)
     return options
 
 
@@ -260,8 +261,8 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
         args (dict): model arguments
         model_spec (ModelSpec): model specification
         default_pixelsize_id (str): Optional input ID to label and order as the
-             default. When ``None``, the input arg marked
-             ``is_default_pixelsize`` is used.
+             default. When ``None``, the input arg specified by
+             ``default_ui_params[target_pixelsize_id]`` is used.
 
     Returns:
         list of options for pixel size where key is the input's ID
@@ -270,9 +271,8 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     # transformed to the target projection's units
     projection_input_id = args.get("target_projection")
     if not projection_input_id:
-        default_projection_input = model_spec.get_default_projection_input()
-        if default_projection_input:
-            projection_input_id = default_projection_input.id
+        projection_input_id = model_spec.default_ui_params.get(
+            'target_projection_id')
     current_projection = None
     projection_units = None
     if projection_input_id and args.get(projection_input_id):
@@ -291,8 +291,10 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
             # raised if current_projection is unprojected
             current_projection = None
 
-    if default_pixelsize_id is None and model_spec.get_default_pixelsize_input():
-        default_pixelsize_id = model_spec.get_default_pixelsize_input().id
+    default_pixelsize_input = model_spec.default_ui_params.get(
+        'target_pixelsize_id')
+    if default_pixelsize_id is None and default_pixelsize_input:
+        default_pixelsize_id = default_pixelsize_input
 
     options = []
     for inp in model_spec.inputs:
@@ -563,20 +565,6 @@ class SpatialFileInput(FileInput):
     projection_units: typing.Union[pint.Unit, None] = None
     """Defaults to None. If `projected` is `True`, and a specific unit of
     projection (such as meters) is required, indicate it here."""
-
-    is_default_projection: bool = False
-    """Whether the input has the projection and alignment to which other
-    inputs are reprojected and aligned by default. Only one ModelSpec input
-    can have ``is_default_projection=True``. A user can select a different
-    input to represent the target projection, but this input will be selected
-    by default. Defaults to False."""
-
-    is_default_pixelsize: bool = False
-    """Whether the input has the pixel size to which other inputs should be
-    resampled by default. Only one ModelSpec input can have
-    ``is_default_pixelsize=True``. A user can select a different input to
-    represent the target pixel size, but this input will be selected by
-    default. Defaults to False."""
 
     @model_validator(mode='after')
     def check_projected_projection_units(self):
@@ -1906,7 +1894,6 @@ class OptionSpatialInput(OptionStringInput):
 
         filepath = args.get(value)
         projection_spec = selected_spec.model_copy(update={
-            # 'is_default_projection': True,
             'projected': self.projected,
             'projection_units': self.projection_units,
         })
@@ -2129,8 +2116,19 @@ class ModelSpec(ImmutableBaseModel):
 
     default_ui_params: dict = {}
     """A dictionary of default values for the target spatial dropdown menus.
-    The values must match id's of the model's inputs. If a default value is
-    not specified for an input, the default value will be None."""
+    Contains the following keys:
+
+        - target_projection_id (str, optional): Whether the input has the projection (and typically,
+        alignment) to which other inputs are reprojected by default. A user can
+        select a different input to represent the target projection, but this
+        input will be selected by default.
+
+        - target_pixelsize_id (str, optional): Whether the input has the pixel size to which other
+        inputs should be resampled by default. A user can select a different input
+        to represent the target pixel size, but this input will be selected by
+        default.
+
+    The values must match id's of the model's inputs."""
 
     inputs: list[Input]
     """A list of the data inputs, or parameters, to the model."""
@@ -2202,48 +2200,35 @@ class ModelSpec(ImmutableBaseModel):
         return self
 
     @model_validator(mode='after')
-    def check_one_default_projection(self):
-        default_proj_inputs = [
-            inp for inp in self.inputs
-            if isinstance(inp, SpatialFileInput) and inp.is_default_projection
-        ]
-
-        if len(default_proj_inputs) > 1:
-            ids = [inp.id for inp in default_proj_inputs]
-            raise ValueError(
-                'Only one spatial input can have '
-                f'is_default_projection=True, but found multiple: {ids}'
-            )
-        # fine if 0 inputs have is_default_projection=True
+    def check_valid_target_projection_id(self):
+        if 'target_projection_id' in self.default_ui_params:
+            target_projection_id = self.default_ui_params['target_projection_id']
+            if target_projection_id not in [inp.id for inp in self.inputs]:
+                raise ValueError(
+                    f'target_projection_id {target_projection_id} is not a valid input id'
+                )
         return self
 
     @model_validator(mode='after')
-    def check_one_default_pixelsize(self):
-        default_pixelsize_inputs = [
-            inp for inp in self.inputs
-            if isinstance(inp, SpatialFileInput) and inp.is_default_pixelsize
-        ]
-
-        if len(default_pixelsize_inputs) > 1:
-            ids = [inp.id for inp in default_pixelsize_inputs]
-            raise ValueError(
-                'Only one spatial input can have '
-                f'is_default_pixelsize=True, but found multiple: {ids}'
-            )
-        # fine if 0 inputs have is_default_pixelsize=True
+    def check_valid_target_pixelsize_id(self):
+        if 'target_pixelsize_id' in self.default_ui_params:
+            target_pixelsize_id = self.default_ui_params['target_pixelsize_id']
+            if target_pixelsize_id not in [inp.id for inp in self.inputs]:
+                raise ValueError(
+                    f'target_pixelsize_id {target_pixelsize_id} is not a valid input id'
+                )
         return self
-
-    def get_default_projection_input(self):
-        return next((inp for inp in self.inputs if (
-            isinstance(inp, SpatialFileInput) and inp.is_default_projection)),
-            None)
-
-    def get_default_pixelsize_input(self):
-        return next((inp for inp in self.inputs if (
-            isinstance(inp, SpatialFileInput) and inp.is_default_pixelsize)),
-            None)
-        # NOTE this doesn't work for UMH because default is specified
-        # per-model within custom dropdown function
+    
+    @model_validator(mode='after')
+    def check_valid_default_ui_params_keys(self):
+        valid_keys = {'target_projection_id', 'target_pixelsize_id'}
+        for key in self.default_ui_params.keys():
+            if key not in valid_keys:
+                raise ValueError(
+                    f'default_ui_params key {key} is not a valid key. '
+                    f'Valid keys are: {valid_keys}'
+                )
+        return self
 
     def get_input(self, key: str) -> Input:
         """Get an Input of this model by its key."""
@@ -2320,8 +2305,9 @@ class ModelSpec(ImmutableBaseModel):
         """Set target_projection and target_pixelsize if they aren't in args
 
         The resulting dict will have set key `target_projection` and
-        `target_pixelsize` to the id of whichever arg has
-        `is_default_projection` if that arg exists.
+        `target_pixelsize` to the `target_projection_id` and
+        `target_pixelsize_id` specified in `default_ui_params`, if these
+        keys are present.
 
         Args:
             args (dict): argument dictionary mapping input keys to input values
@@ -2332,17 +2318,14 @@ class ModelSpec(ImmutableBaseModel):
         inputs_ids = [i.id for i in self.inputs]
         args_copy = args.copy()
         if 'target_projection' in inputs_ids and not args.get('target_projection'):
-            default_projection_input = self.get_default_projection_input()
-            if default_projection_input:
-                args_copy['target_projection'] = default_projection_input.id
-            else:
-                raise ValueError("Target projection not able to be specified "
-                                 "and no default option (or default is invalid).")
+            args_copy['target_projection'] = self.default_ui_params.get(
+                'target_projection_id')
 
         if 'target_pixelsize' in inputs_ids and not args.get('target_pixelsize'):
-            default_pixelsize_input = self.get_default_pixelsize_input()
+            default_pixelsize_input = self.default_ui_params.get(
+                'target_pixelsize_id')
             if default_pixelsize_input:
-                args_copy['target_pixelsize'] = default_pixelsize_input.id
+                args_copy['target_pixelsize'] = default_pixelsize_input
             else:
                 # Get default input from dropdown function, if it exists. This
                 # is a workaround for UMH, where default is specified per-model
