@@ -168,6 +168,10 @@ MODEL_SPEC = spec.ModelSpec(
         ["demand_table_path", "valuation_table_path"],
         ["target_projection", "target_pixelsize"]
     ],
+    default_ui_params={
+        "target_projection_id": "lulc_path",
+        "target_pixelsize_id": "lulc_path"
+    },
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("hwy", "awy"),
