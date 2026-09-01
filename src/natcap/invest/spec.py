@@ -753,6 +753,11 @@ class SingleBandRasterInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_RASTER)
             except RuntimeError:
+                # vsicurl is not currently safe for multithreaded use.
+                # A deadlock can occur in this codepath so we manually clear
+                # the global cache before returning. Future GDAL versions
+                # may resolve this.
+                # https://github.com/natcap/invest/issues/2724
                 gdal.VSICurlClearCache()
                 return validation_messages.NOT_GDAL_RASTER
 
