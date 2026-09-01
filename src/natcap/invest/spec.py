@@ -679,6 +679,7 @@ class RasterInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_RASTER)
             except RuntimeError:
+                gdal.VSICurlClearCache()
                 return validation_messages.NOT_GDAL_RASTER
 
             # Check that an overview .ovr file wasn't opened.
@@ -752,6 +753,7 @@ class SingleBandRasterInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_RASTER)
             except RuntimeError:
+                gdal.VSICurlClearCache()
                 return validation_messages.NOT_GDAL_RASTER
 
             # Check that an overview .ovr file wasn't opened.
@@ -873,6 +875,7 @@ class VectorInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_VECTOR)
             except RuntimeError:
+                gdal.VSICurlClearCache()
                 return validation_messages.NOT_GDAL_VECTOR
 
             geom_map = {
