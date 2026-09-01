@@ -13,3 +13,4 @@ dependencies:
 - python=3.11
 - gdal>=3.4.2
 - pip
+- pygeoprocessing
