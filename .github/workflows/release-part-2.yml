@@ -42,7 +42,10 @@ jobs:
         run: |
           mkdir artifacts
           # this will download a folder containing each artifact
-          gh run download $RUN_ID --dir artifacts --pattern "Wheel for *"
+          # Download wheels for Windows, Mac, but not Linux
+          # https://github.com/natcap/invest/issues/2713
+          gh run download $RUN_ID --dir artifacts --pattern "Wheel for windows*"
+          gh run download $RUN_ID --dir artifacts --pattern "Wheel for macos*"
           # move the artifacts out of the folders
           mv artifacts/*/* artifacts
           rm -rf artifacts/Wheel*
@@ -109,7 +112,7 @@ jobs:
       - name: Create a PyPI release
         # this is the only step that can't be rolled back
         run: |
-          twine upload \
+          twine upload --verbose \
             --username="__token__" \
             --password=${{ secrets.PYPI_NATCAP_INVEST_TOKEN }} \
             artifacts/natcap_invest*
