@@ -67,9 +67,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["lulc_base", "lulc_alt", "lulc_attr_csv"],
         ["target_projection", "target_pixelsize"]
     ],
-    default_ui_params={
-        "target_projection_id": "aoi_path"
-    },
+    default_projection_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

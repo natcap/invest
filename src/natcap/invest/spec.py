@@ -227,13 +227,12 @@ def _get_spatial_inputs_options(args, model_spec):
     Returns:
         list of options for spatial inputs to model where key is the input's ID
     """
-    default_projection_input = model_spec.default_ui_params.get(
-        'default_projection_id')
+    default_projection_input = model_spec.get_default_projection_input()
 
     options = []
     for inp in model_spec.inputs:
         if (isinstance(inp, SpatialFileInput)):
-            if inp.id == default_projection_input:
+            if inp is default_projection_input:
                 display_name = f"(Default) {smart_title(inp.name)}"
             else:
                 display_name = f"{smart_title(inp.name)}"
@@ -247,7 +246,7 @@ def _get_spatial_inputs_options(args, model_spec):
 
     # sort so default is first
     if default_projection_input:
-        options.sort(key=lambda x: x.key != default_projection_input)
+        options.sort(key=lambda x: x.key != default_projection_input.id)
     return options
 
 
@@ -260,9 +259,9 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     Args:
         args (dict): model arguments
         model_spec (ModelSpec): model specification
-        default_pixelsize_id (str): Optional input ID to label and order as the
-             default. When ``None``, the input arg specified by
-             ``default_ui_params[default_pixelsize_id]`` is used.
+        default_pixelsize_id (str): Optional input ID to label as the default.
+            When ``None``, the input arg specified by ``default_pixelsize_id``
+            is used.
 
     Returns:
         list of options for pixel size where key is the input's ID
@@ -270,9 +269,8 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     # Find the selected target projection so that pixel sizes can be
     # transformed to the target projection's units
     projection_input_id = args.get("target_projection")
-    if not projection_input_id:
-        projection_input_id = model_spec.default_ui_params.get(
-            'default_projection_id')
+    if not projection_input_id and model_spec.get_default_projection_input():
+        projection_input_id = model_spec.get_default_projection_input().id
     current_projection = None
     projection_units = None
     if projection_input_id and args.get(projection_input_id):
@@ -291,10 +289,9 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
             # raised if current_projection is unprojected
             current_projection = None
 
-    default_pixelsize_input = model_spec.default_ui_params.get(
-        'default_pixelsize_id')
+    default_pixelsize_input = model_spec.get_default_pixelsize_input()
     if default_pixelsize_id is None and default_pixelsize_input:
-        default_pixelsize_id = default_pixelsize_input
+        default_pixelsize_id = default_pixelsize_input.id
 
     options = []
     for inp in model_spec.inputs:
@@ -2107,22 +2104,18 @@ class ModelSpec(ImmutableBaseModel):
     Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
     """
 
-    default_ui_params: dict = {}
-    """A dictionary of default values for the target spatial dropdown menus.
-    Contains the following keys:
+    default_projection_id: str = ''
+    """The ID of the input which has the projection (and typically, alignment)
+    to which other inputs are reprojected by default. A user can select a
+    different input to represent the target projection, but this input will be
+    selected by default. The value must match the id of another model input."""
 
-        - default_projection_id (str, optional): The ID of the input which has
-        the projection (and typically, alignment) to which other inputs are
-        reprojected by default. A user can select a different input to
-        represent the target projection, but this input will be selected
-        by default.
+    default_pixelsize_id: str = ''
+    """The ID of the input which has the pixel size to which other inputs
+    should be resampled by default. A user can select a different input to
+    represent the target pixel size, but this input will be selected by
+    default. The value must match the id of another model input."""
 
-        - default_pixelsize_id (str, optional): The ID of the input which has
-        the pixel size to which other inputs should be resampled by default. A
-        user can select a different input to represent the target pixel size,
-        but this input will be selected by default.
-
-    The values must match id's of the model's inputs."""
 
     inputs: list[Input]
     """A list of the data inputs, or parameters, to the model."""
@@ -2195,36 +2188,46 @@ class ModelSpec(ImmutableBaseModel):
 
     @model_validator(mode='after')
     def check_valid_default_projection_id(self):
-        default_projection_id = self.default_ui_params.get(
-            'default_projection_id')
-        if default_projection_id and default_projection_id not in [
-                inp.id for inp in self.inputs]:
-            raise ValueError(
-                f'default_projection_id "{default_projection_id}" is not a'
-                ' valid input id')
+        """Ensure default_projection_id points to valid spatial input ID"""
+        if self.default_projection_id:
+            try:
+                projection_input = self.get_input(self.default_projection_id)
+            except KeyError:
+                raise KeyError(
+                    'Invalid default_projection_id. No input with id '
+                    f'"{self.default_projection_id}"')
+            if not isinstance(projection_input, SpatialFileInput):
+                raise TypeError(
+                    'Invalid default_projection_id. Input with id '
+                    f'"{self.default_projection_id}" is not a spatial input')
         return self
 
     @model_validator(mode='after')
     def check_valid_default_pixelsize_id(self):
-        default_pixelsize_id = self.default_ui_params.get(
-            'default_pixelsize_id')
-        if default_pixelsize_id and default_pixelsize_id not in [
-                inp.id for inp in self.inputs]:
-            raise ValueError(
-                f'default_pixelsize_id "{default_pixelsize_id}" is not a '
-                ' valid input id')
+        """Ensure default_pixelsize_id points to valid raster input ID"""
+        if self.default_pixelsize_id:
+            try:
+                pixelsize_input = self.get_input(self.default_pixelsize_id)
+            except KeyError:
+                raise KeyError(
+                    'Invalid default_pixelsize_id. No input with id '
+                    f'"{self.default_pixelsize_id}"')
+            if not isinstance(pixelsize_input, (RasterInput,
+                                                SingleBandRasterInput)):
+                raise TypeError(
+                    'Invalid default_pixelsize_id. Input with id '
+                    f'"{self.default_pixelsize_id}" is not a raster input')
         return self
 
-    @model_validator(mode='after')
-    def check_valid_default_ui_params_keys(self):
-        valid_keys = {'default_projection_id', 'default_pixelsize_id'}
-        for key in self.default_ui_params.keys():
-            if key not in valid_keys:
-                raise ValueError(
-                    f'default_ui_params key "{key}" is not a valid key. '
-                    f'Valid keys are: {valid_keys}'
-                )
-        return self
+    def get_default_projection_input(self):
+        if self.default_projection_id:
+            return self.get_input(self.default_projection_id)
+        return None
+
+    def get_default_pixelsize_input(self):
+        if self.default_pixelsize_id:
+            return self.get_input(self.default_pixelsize_id)
+        return None
 
     def get_input(self, key: str) -> Input:
         """Get an Input of this model by its key."""
@@ -2300,10 +2303,10 @@ class ModelSpec(ImmutableBaseModel):
     def preprocess_spatial_reference_args(self, args):
         """Set target_projection and target_pixelsize if they aren't in args
 
-        The resulting dict will have set key `target_projection` and
-        `target_pixelsize` to the `default_projection_id` and
-        `default_pixelsize_id` specified in `default_ui_params`, if these
-        keys are present.
+        The resulting dict will have set key ``target_projection`` and
+        ``target_pixelsize`` to ``default_projection_id`` and
+        ``default_pixelsize_id``, respectively, if these attributes
+        are specified.
 
         Args:
             args (dict): argument dictionary mapping input keys to input values
@@ -2314,14 +2317,18 @@ class ModelSpec(ImmutableBaseModel):
         inputs_ids = [i.id for i in self.inputs]
         args_copy = args.copy()
         if 'target_projection' in inputs_ids and not args.get('target_projection'):
-            args_copy['target_projection'] = self.default_ui_params.get(
-                'default_projection_id')
+            target_projection_input = self.get_default_projection_input()
+            if target_projection_input:
+                args_copy['target_projection'] = target_projection_input.id
+            else:
+                raise ValueError(
+                    "Target projection not able to be specified and no "
+                    "default option (or default is invalid).")
 
         if 'target_pixelsize' in inputs_ids and not args.get('target_pixelsize'):
-            default_pixelsize_input = self.default_ui_params.get(
-                'default_pixelsize_id')
+            default_pixelsize_input = self.get_default_pixelsize_input()
             if default_pixelsize_input:
-                args_copy['target_pixelsize'] = default_pixelsize_input
+                args_copy['target_pixelsize'] = default_pixelsize_input.id
             else:
                 # Get default input from dropdown function, if it exists. This
                 # is a workaround for UMH, where default is specified per-model
