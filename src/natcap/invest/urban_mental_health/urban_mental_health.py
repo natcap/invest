@@ -21,18 +21,19 @@ LOGGER = logging.getLogger(__name__)
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
 
 
+def get_default_pixelsize_id(model_option):
+    if model_option == 'lulc':
+        return 'lulc_base'
+    return 'ndvi_base'
+
+
 def _get_pixelsize_umh(args, model_spec):
     """Return spatial inputs and pixel size as dropdown Options, default first
 
-    Pixel size units match the units specified in the current target_projection
-    input's projection. Note that if an input is not projected, it will not
-    appear in the dropdown list so if the default input is not projected, the
-    default behavior will be different from what is expected."""
-    if args['model_option'] == 'lulc':
-        default_for_model_option = 'lulc_base'
-    else:
-        default_for_model_option = 'ndvi_base'
+    Pixel size units match the units specified in the current
+    target_projection_id input's projection."""
 
+    default_for_model_option = get_default_pixelsize_id(args['model_option'])
     return spec._get_pixel_size_options(
         args, model_spec, default_pixelsize_id=default_for_model_option)
 
@@ -65,7 +66,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["model_option"],
         ["ndvi_base", "ndvi_alt"],
         ["lulc_base", "lulc_alt", "lulc_attr_csv"],
-        ["target_projection", "target_pixelsize"]
+        ["target_projection_id", "target_pixelsize_id"]
     ],
     default_projection_id="aoi_path",
     inputs=[
@@ -275,10 +276,10 @@ MODEL_SPEC = spec.ModelSpec(
                 "inputs will be resampled. Units match those of the selected "
                 "Target Projection. If the selected model option is 'LULC', "
                 "then will default to the baseline LULC raster pixel size. "
-                "Otherwise, will default to the baseline NDVI raster "
-                "pixel size."),
-            dropdown_function=_get_pixelsize_umh,
-            responsive_to='model_option'
+                "Otherwise, will default to the baseline NDVI raster pixel "
+                "size. If the selected input has a non-square pixel size, "
+                "this will be converted to sqaure during model execution."),
+            dropdown_function=_get_pixelsize_umh
         )),
         ],
     outputs=[
@@ -653,10 +654,10 @@ def execute(args):
                 and not ``args['ndvi_base']``. NDVI value of the LULC class.
             - ``exclude`` (bool): (required) Specifies whether to keep (0)
                 or mask out (1) the LULC class.
-        args['target_projection'] (string): (optional) if a non-empty string,
+        args['target_projection_id'] (string): (optional) if a non-empty string,
             path to input that defines the target projection and alignment
             for other spatial inputs.
-        args['target_pixelsize'] (string): (optional) if a non-empty string,
+        args['target_pixelsize_id'] (string): (optional) if a non-empty string,
             path to input that defines the target pixel size for other
             spatial inputs.
         args['n_workers'] (int): (optional) The number of worker processes to
@@ -669,8 +670,15 @@ def execute(args):
     """
     LOGGER.info("Starting Urban Mental Health Model")
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
-    target_projection = args[args['target_projection']]
-    target_pixelsize = args[args['target_pixelsize']]
+    if not args.get('target_projection_id'):
+        args['target_projection_id'] = 'aoi_path'
+    # Need to assign default by model (no global default)
+    if not args.get('target_pixelsize_id'):
+        args['target_pixelsize_id'] = get_default_pixelsize_id(
+            args['model_option'])
+
+    target_projection = args[args['target_projection_id']]
+    target_pixelsize = args[args['target_pixelsize_id']]
 
     LOGGER.info("Start preprocessing")
 
@@ -698,9 +706,9 @@ def execute(args):
     # correct edge pixel calculation
     target_spatial_prj = utils.get_raster_or_vector_projection(
         target_projection)
-    if args['target_projection'] != 'aoi_path':
+    if args['target_projection_id'] != 'aoi_path':
         LOGGER.info("Reprojecting AOI to target projection defined in "
-                    f"{args['target_projection']}")
+                    f"{args['target_projection_id']}")
         reproject_aoi_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(args['aoi_path'], target_spatial_prj,
@@ -1042,7 +1050,7 @@ def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
     spatial_wkt = utils.get_raster_or_vector_projection(spatial_path)
     if not _spatial_file_projected_in_m(spatial_wkt):
         raise ValueError(
-            f"target_projection (from {spatial_path}) must be projected in m. "
+            f"Target projection (from {spatial_path}) must be projected in m. "
             f"Current projection: {spatial_wkt}")
 
     transformed_pixel_dims = utils.get_raster_pixel_size_in_target_proj_units(
