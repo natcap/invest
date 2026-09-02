@@ -166,7 +166,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["lulc_path", "biophysical_table_path", "seasonality_constant"],
         ["watersheds_path", "sub_watersheds_path"],
         ["demand_table_path", "valuation_table_path"],
-        ["target_projection", "target_pixelsize"]
+        ["target_projection_id", "target_pixelsize_id"]
     ],
     default_projection_id="lulc_path",
     default_pixelsize_id="lulc_path",
@@ -422,7 +422,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="output/watershed_results_wyield.shp",
             about=gettext(
                 "Shapefile containing biophysical output values per"
-                " watershed. Watershed reprojected to match target_projection."
+                " watershed."
             ),
             geometry_types={"POLYGON"},
             fields=WATERSHED_OUTPUT_FIELDS
@@ -442,7 +442,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="output/subwatershed_results_wyield.shp",
             about=gettext(
                 "Shapefile containing biophysical output values per"
-                " subwatershed. Subwatershed reprojected to match target_projection."
+                " subwatershed."
             ),
             geometry_types={"POLYGON"},
             fields=SUBWATERSHED_OUTPUT_FIELDS
@@ -690,15 +690,17 @@ def execute(args):
             valuation: 'ws_id', 'time_span', 'discount', 'efficiency',
             'fraction', 'cost', 'height', 'kw_price'
 
-        args['target_projection'] (string): (optional) if a non-empty string,
-            id of spatial input that defines the target projection. If that
-            spatial input is a raster, rather than a vector, it will also
-            represent the target alignment for other spatial inputs.
+        args['target_projection_id'] (string): (optional) if a non-empty string,
+            ``id`` of a spatial input listed in ``MODEL_SEPC.inputs`` that defines
+            the target projection. If that spatial input is a raster, rather
+            than a vector, it will also represent the target alignment for
+            other spatial inputs.
 
-        args['target_pixelsize'] (string): (optional) if a non-empty string,
-            id of spatial input that defines the target pixel size for other
-            spatial inputs. If ``target_projection`` is a vector, this spatial
-            input will also represent the target alignment.
+        args['target_pixelsize_id'] (string): (optional) if a non-empty string,
+            ``id`` of a raster input listed in ``MODEL_SPEC`` that defines the
+            target pixel size for other spatial inputs. If
+            ``target_projection_id`` is a vector, this spatial input will also
+            represent the target alignment.
 
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
@@ -709,8 +711,9 @@ def execute(args):
 
     """
     args, file_registry, graph = MODEL_SPEC.setup(args)
-    target_projection_path = args[args['target_projection']]
-    target_pixelsize_path = args[args['target_pixelsize']]
+    args = MODEL_SPEC.preprocess_spatial_reference_args(args)
+    target_projection_path = args[args['target_projection_id']]
+    target_pixelsize_path = args[args['target_pixelsize_id']]
 
     # valuation_df is passed to create_vector_output()
     # which computes valuation if valuation_df is not None.
@@ -740,10 +743,10 @@ def execute(args):
                 'valuation table to see if they are missing: '
                 f'"{", ".join(str(x) for x in sorted(missing_ws_ids))}"')
 
-    # reproject watersheds_path to target_projection
+    # reproject watersheds_path to target_projection_id
     target_projection_wkt = utils.get_raster_or_vector_projection(
         target_projection_path)
-    # Reproject watersheds_path even if it has the `target_projection` to
+    # Reproject watersheds_path even if it has the `target_projection_id` to
     # create a copy so we don't modify the original when doing zonal stats 
     reproject_watersheds_task = graph.add_task(
         pygeoprocessing.reproject_vector,
