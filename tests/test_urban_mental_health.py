@@ -940,9 +940,10 @@ class UMHTests(unittest.TestCase):
 
         vector_path = os.path.join(self.workspace_dir, "aoi.shp")
         make_simple_vector(vector_path)
+        vector_wkt = pygeoprocessing.get_vector_info(vector_path)['projection_wkt']
 
         actual_pixel_size = urban_mental_health._get_raster_pixel_size_in_meters(
-            raster_path, vector_path)
+            raster_path, vector_wkt)
 
         self.assertEqual(actual_pixel_size, (100, -100))
 
@@ -955,6 +956,7 @@ class UMHTests(unittest.TestCase):
 
         # AOI stays in the default test CRS: EPSG 26910 (meters)
         make_simple_vector(vector_path)
+        vector_wkt = pygeoprocessing.get_vector_info(vector_path)['projection_wkt']
 
         raster_array = numpy.array(
             [[1, 2, 3],
@@ -978,7 +980,7 @@ class UMHTests(unittest.TestCase):
             raster_path)
 
         actual_pixel_size = urban_mental_health._get_raster_pixel_size_in_meters(
-            raster_path, vector_path)
+            raster_path, vector_wkt)
 
         # expected pixel size calculated by gdal.Warping the raster to the
         # vector CRS (EPSG 26910) and then getting pixel size
