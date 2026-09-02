@@ -35,7 +35,8 @@ const { logger } = window.Workbench;
  *
  * @param {object} argsSpec - an InVEST model's MODEL_SPEC.args
  * @param {object} inputFieldOrder - the order in which to display the input fields.
- * @param {object} defaultUiParams - key: value pairs of default values for spatial options args, or {}.
+ * @param {object} defaultProjectionId - default value for projection dropdown.
+ * @param {object} defaultPixelsizeId - default value for pixel size dropdown.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
  * @returns {object} to destructure into two args,
@@ -45,7 +46,7 @@ const { logger } = window.Workbench;
  *     {object} argsDropdownOptions - stores lists of dropdown options for
  *       args of type 'option_string'.
  */
-function initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultUiParams = {}) {
+function initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultProjectionId, defaultPixelsizeId) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
   const argsDropdownOptions = {};
@@ -61,8 +62,10 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultUiParam
         value = argsDict[argkey];
       } else if (argsSpec[argkey].include_placeholder) { // default to placeholder
         value = "placeholderOpt";
-      } else if (defaultUiParams[`${argkey}_id`]) {
-        value = defaultUiParams[`${argkey}_id`];
+      } else if (argsSpec[argkey].id === 'target_pixelsize_id' && defaultPixelsizeId) {
+        value = defaultPixelsizeId;
+      } else if (argsSpec[argkey].id === 'target_projection_id' && defaultProjectionId) {
+        value = defaultProjectionId;
       } else if (argsSpec[argkey].options.length > 0) { // default to first
         value = argsSpec[argkey].options[0].key;
       } else {
@@ -131,12 +134,12 @@ class SetupTab extends React.Component {
     * not on every re-render.
     */
     this._isMounted = true;
-    const { argsInitValues, argsSpec, inputFieldOrder, defaultUiParams } = this.props;
+    const { argsInitValues, argsSpec, inputFieldOrder, defaultProjectionId, defaultPixelsizeId } = this.props;
 
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {}, defaultUiParams || {});
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {}, defaultProjectionId, defaultPixelsizeId)
 
     // map each arg to an empty object, to fill in later
     // here we use the argsSpec because it includes all args, even ones like
@@ -375,7 +378,8 @@ class SetupTab extends React.Component {
     const {
       argsSpec,
       inputFieldOrder,
-      defaultUiParams,
+      defaultProjectionId,
+      defaultPixelsizeId,
       updateJobProperties,
       tabID,
 
@@ -383,7 +387,7 @@ class SetupTab extends React.Component {
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultUiParams || {});
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultProjectionId, defaultPixelsizeId);
 
     this.setState({
       argsValues: argsValues,
@@ -496,8 +500,8 @@ class SetupTab extends React.Component {
 
       Object.keys(argsSpec).forEach((argkey) => {
         const isTargetSpatialDropdown = [
-          'target_pixelsize',
-          'target_projection',
+          'target_pixelsize_id',
+          'target_projection_id',
         ].includes(argsSpec[argkey]?.id);
 
         if (!isTargetSpatialDropdown) {
@@ -596,7 +600,8 @@ class SetupTab extends React.Component {
         userguide,
         isCoreModel,
         inputFieldOrder,
-        defaultUiParams,
+        defaultProjectionId,
+        defaultPixelsizeId,
         sidebarSetupElementId,
         sidebarFooterElementId,
         executeClicked,
@@ -653,7 +658,8 @@ class SetupTab extends React.Component {
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={inputFieldOrder}
-              defaultUiParams={defaultUiParams}
+              defaultProjectionId={defaultProjectionId}
+              defaultPixelsizeId={defaultPixelsizeId}
               userguide={userguide}
               isCoreModel={isCoreModel}
               updateArgValues={this.updateArgValues}
@@ -721,7 +727,8 @@ SetupTab.propTypes = {
     })
   ).isRequired,
   inputFieldOrder: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
-  defaultUiParams: PropTypes.objectOf(PropTypes.dict),
+  defaultProjectionId: PropTypes.string,
+  defaultPixelsizeId: PropTypes.string,
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool, PropTypes.number])),
   investExecute: PropTypes.func.isRequired,
