@@ -1086,37 +1086,13 @@ class UMHTests(unittest.TestCase):
             "having a set NoData value, which can cause problems if the " in
             str(context.exception))
 
-    def test_target_pixelsize_correct_default(self):
-        """Test correct default pixelsize and projection"""
-        from natcap.invest.urban_mental_health import urban_mental_health
-
-        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
-        # not necessary but want to be explicit and guard against changing function
-        args['target_projection'] = ''
-        args['target_pixelsize'] = ''
-
-        resolved_args, _, task_graph = urban_mental_health.MODEL_SPEC.setup(args)
-        task_graph.close()
-        task_graph.join()
-
-        self.assertEqual(resolved_args['target_projection'], 'aoi_path')
-        self.assertEqual(resolved_args['target_pixelsize'], 'ndvi_base')
-
-        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
-        resolved_args, _, task_graph = urban_mental_health.MODEL_SPEC.setup(args)
-        task_graph.close()
-        task_graph.join()
-
-        self.assertEqual(resolved_args['target_projection'], 'aoi_path')
-        self.assertEqual(resolved_args['target_pixelsize'], 'lulc_base')
-
     def test_pixelsize_dropdown_default_first(self):
         """Test correct default options appear first"""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
-        args['target_projection'] = ''
-        args['target_pixelsize'] = ''
+        args['target_projection_id'] = ''
+        args['target_pixelsize_id'] = ''
 
         options = urban_mental_health._get_pixelsize_umh(
             args, urban_mental_health.MODEL_SPEC)
@@ -1131,21 +1107,39 @@ class UMHTests(unittest.TestCase):
         self.assertEqual(options[0].key, 'lulc_base')
         self.assertTrue(options[0].display_name.startswith('(Default)'))
 
-    def test_target_projection_correct_default(self):
-        """Test model if population raster is target projection and resolution"""
+    def test_target_projection_and_pixelsize_have_correct_defaults(self):
+        """Test model if default target projection"""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(5070)
+        projection_wkt = srs.ExportToWkt()
+
+        pixel_size = (101, -101)
+
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array, 0, pixel_size,
+            (ORIGIN_X, ORIGIN_Y), projection_wkt, args['ndvi_base'])
+
         file_reg = urban_mental_health.execute(args)
 
-        expected_projection_wkt = pygeoprocessing.get_raster_info(
-            args['ndvi_base'])['projection_wkt']
+        expected_projection_wkt = pygeoprocessing.get_vector_info(
+            args['aoi_path'])['projection_wkt']
+        expected_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+            args['ndvi_base'],
+            target_file_or_projection_wkt=expected_projection_wkt)
 
         # assert that outputs are in the same projection as ndvi
         actual_projection = pygeoprocessing.get_raster_info(
             file_reg['preventable_cases'])['projection_wkt']
+        actual_pixelsize = pygeoprocessing.get_raster_info(
+            file_reg['preventable_cases'])['pixel_size']
 
         self.assertEqual(actual_projection, expected_projection_wkt)
+        self.assertEqual(actual_pixelsize, expected_pixel_size)
 
     def test_projection_and_pixelsize_if_target_pixelsize_in_ft(self):
         """Test model if target pixelsize input projected in feet"""
@@ -1155,8 +1149,8 @@ class UMHTests(unittest.TestCase):
         # Create ndvi raster in a different projected CRS than other raster.
         raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
         args['ndvi_base'] = raster_path
-        args['target_projection'] = 'population_raster'
-        args['target_pixelsize'] = 'ndvi_base'
+        args['target_projection_id'] = 'population_raster'
+        args['target_pixelsize_id'] = 'ndvi_base'
 
         raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
         srs = osr.SpatialReference()
@@ -1175,8 +1169,8 @@ class UMHTests(unittest.TestCase):
 
         # Output raster pixel size should be same as ndvi_base input but in m
         expected_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
-            args[args['target_pixelsize']],
-            target_file_or_projection_wkt=args[args['target_projection']])
+            args[args['target_pixelsize_id']],
+            target_file_or_projection_wkt=args[args['target_projection_id']])
         actual_pixelsize = pygeoprocessing.get_raster_info(
             file_reg['baseline_cases'])['pixel_size']  # in meters
         numpy.testing.assert_allclose(actual_pixelsize, expected_pixelsize)
@@ -1189,8 +1183,8 @@ class UMHTests(unittest.TestCase):
         # make population raster in different projection the target projection
         raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
         args['population_raster'] = raster_path
-        args['target_projection'] = 'population_raster'
-        args['target_pixelsize'] = 'ndvi_base'
+        args['target_projection_id'] = 'population_raster'
+        args['target_pixelsize_id'] = 'ndvi_base'
 
         raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
         srs = osr.SpatialReference()
@@ -1212,7 +1206,7 @@ class UMHTests(unittest.TestCase):
             str(context.exception))
 
     def test_error_if_target_projection_set_to_input_w_invalid_prj(self):
-        """Error raised if target_projection input not projected in m"""
+        """Error raised if target_projection_id input not projected in m"""
         from natcap.invest.urban_mental_health import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
@@ -1226,7 +1220,7 @@ class UMHTests(unittest.TestCase):
         projectionwkt = srs.ExportToWkt()
         pygeoprocessing.numpy_array_to_raster(lulc_array, -9999, pixelsize,
                                               origin, projectionwkt, lulc_path)
-        args['target_projection'] = 'lulc_base'
+        args['target_projection_id'] = 'lulc_base'
 
         with self.assertRaises(ValueError) as context:
             urban_mental_health.execute(args)

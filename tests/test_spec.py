@@ -74,9 +74,10 @@ class SpecUtilsUnitTests(unittest.TestCase):
 
         args = {'lulc_path': lulc_path,
                 'precipitation_path': lulc_path,
-                'target_pixelsize': 'precipitation_path'}
+                'target_pixelsize_id': 'precipitation_path'}
 
-        projection_options = spec._get_spatial_inputs_options(args, model_spec)
+        projection_options = spec._get_projection_inputs_options(args,
+                                                                 model_spec)
         pixelsize_options = spec._get_pixel_size_options(args, model_spec)
 
         lulc_prj_option = next(option for option in projection_options
@@ -95,7 +96,8 @@ class SpecUtilsUnitTests(unittest.TestCase):
         # Simulate user deleting one character from the filepath
         args['lulc_path'] = lulc_path[:-1]
 
-        projection_options = spec._get_spatial_inputs_options(args, model_spec)
+        projection_options = spec._get_projection_inputs_options(args,
+                                                                 model_spec)
         pixelsize_options = spec._get_pixel_size_options(args, model_spec)
 
         lulc_prj_option = next(option for option in projection_options
@@ -634,18 +636,18 @@ class InputTests(unittest.TestCase):
         model_spec.get_input.return_value = spatial_input
 
         option_input = spec.OptionSpatialInput(
-            id='target_projection',
+            id='target_projection_id',
             options=[],
             projected=True,
             projection_units=u.meter)
 
         args = {
             'source_raster': 'source.tif',
-            'target_projection': 'source_raster',
+            'target_projection_id': 'source_raster',
         }
 
         message = option_input.validate_with_context(
-            args['target_projection'],
+            args['target_projection_id'],
             args,
             model_spec,
         )

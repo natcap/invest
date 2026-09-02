@@ -551,15 +551,16 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
         # not necessary but want to be explicit and guard against changing function
-        args['target_projection'] = ''
-        args['target_pixelsize'] = ''
+        args['target_projection_id'] = ''
+        args['target_pixelsize_id'] = ''
 
         resolved_args, _, task_graph = annual_water_yield.MODEL_SPEC.setup(args)
+        resolved_args = annual_water_yield.MODEL_SPEC.preprocess_spatial_reference_args(resolved_args)
         task_graph.close()
         task_graph.join()
 
-        self.assertEqual(resolved_args['target_projection'], 'lulc_path')
-        self.assertEqual(resolved_args['target_pixelsize'], 'lulc_path')
+        self.assertEqual(resolved_args['target_projection_id'], 'lulc_path')
+        self.assertEqual(resolved_args['target_pixelsize_id'], 'lulc_path')
 
     def test_correct_output_projection_if_target_not_default(self):
         """Test output projection if watersheds vector is target projection"""
@@ -575,7 +576,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         pygeoprocessing.reproject_vector(
             args['watersheds_path'], target_projection_wkt, target_path)
         args['watersheds_path'] = target_path
-        args['target_projection'] = 'watersheds_path'
+        args['target_projection_id'] = 'watersheds_path'
         file_reg = annual_water_yield.execute(args)
 
         # assert that output is in the same projection as watersheds
