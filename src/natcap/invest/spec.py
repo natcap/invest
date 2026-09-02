@@ -271,14 +271,14 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     projection_input_id = args.get("target_projection_id")
     if not projection_input_id and model_spec.get_default_projection_input():
         projection_input_id = model_spec.get_default_projection_input().id
-    current_projection = None
+    current_projection_wkt = None
     projection_units = None
     if projection_input_id and args.get(projection_input_id):
         try:
-            current_projection = utils.get_raster_or_vector_projection(
+            current_projection_wkt = utils.get_raster_or_vector_projection(
                 args[projection_input_id])
             srs = osr.SpatialReference()
-            srs.ImportFromWkt(current_projection)
+            srs.ImportFromWkt(current_projection_wkt)
 
             if srs.IsProjected():
                 projection_units = srs.GetLinearUnitsName()
@@ -286,8 +286,8 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
             else:
                 projection_units = srs.GetAngularUnitsName()
         except ValueError:
-            # raised if current_projection is unprojected
-            current_projection = None
+            # raised if current_projection_wkt is unprojected
+            current_projection_wkt = None
 
     default_pixelsize_input = model_spec.get_default_pixelsize_input()
     if default_pixelsize_id is None and default_pixelsize_input:
@@ -301,15 +301,15 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
             display_name = f"(Default) {smart_title(inp.name)}"
         else:
             display_name = smart_title(inp.name)
-        if current_projection and args.get(inp.id):
+        if current_projection_wkt and args.get(inp.id):
             # convert pixel size to be in same units as selected target projection
             try:
                 # This function returns square pixels
                 pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
-                    args[inp.id], current_projection)
+                    args[inp.id], current_projection_wkt)
                 formatted_pixelsize = f" ({round(pixelsize[0], 3)}, "\
                     f"{round(abs(pixelsize[1]), 3)} {projection_units})"
-            except ValueError:  # raised if current_projection is unprojected
+            except ValueError:  # raised if current_projection_wkt is unprojected
                 formatted_pixelsize = ''
             except RuntimeError:
                 formatted_pixelsize = ''

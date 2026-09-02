@@ -274,10 +274,11 @@ MODEL_SPEC = spec.ModelSpec(
                 "Input with target pixel size to which all other spatial "
                 "inputs will be resampled. Units match those of the selected "
                 "Target Projection. If the selected model option is 'LULC', "
-                "then will default to the baseline LULC raster pixel size. "
-                "Otherwise, will default to the baseline NDVI raster pixel "
-                "size. If the selected input has a non-square pixel size, "
-                "this will be converted to sqaure during model execution."),
+                "then this will default to the baseline LULC raster pixel "
+                "size. Otherwise, this will default to the baseline NDVI "
+                "raster pixel size. If the selected input has a non-square "
+                "pixel size, this will be converted to sqaure during model"
+                "execution."),
             dropdown_function=_get_pixelsize_umh
         )),
         ],
@@ -676,14 +677,16 @@ def execute(args):
         args['target_pixelsize_id'] = get_default_pixelsize_id(
             args['model_option'])
 
-    target_projection = args[args['target_projection_id']]
-    target_pixelsize = args[args['target_pixelsize_id']]
+    target_projection_path = args[args['target_projection_id']]
+    target_pixelsize_path = args[args['target_pixelsize_id']]
 
     LOGGER.info("Start preprocessing")
 
     # get target pixel size for outputs
+    target_spatial_wkt = utils.get_raster_or_vector_projection(
+        target_projection_path)
     pixel_size = _get_raster_pixel_size_in_meters(
-        target_pixelsize, target_projection)
+        target_pixelsize_path, target_spatial_wkt)
 
     pixel_radius = int(round(args['search_radius']/pixel_size[0]))
     LOGGER.info(f"Search radius {args['search_radius']} results in "
@@ -703,14 +706,12 @@ def execute(args):
     # Users should input the AOI to which they want outputs clipped
     # InVEST will take care of buffering the processing AOI to ensure
     # correct edge pixel calculation
-    target_spatial_prj = utils.get_raster_or_vector_projection(
-        target_projection)
     if args['target_projection_id'] != 'aoi_path':
         LOGGER.info("Reprojecting AOI to target projection defined in "
                     f"{args['target_projection_id']}")
         reproject_aoi_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
-            args=(args['aoi_path'], target_spatial_prj,
+            args=(args['aoi_path'], target_spatial_wkt,
                   file_registry['aoi_reprojected']),
             kwargs={'driver_name': 'GPKG'},
             target_path_list=[file_registry['aoi_reprojected']],
@@ -750,8 +751,8 @@ def execute(args):
         # Note: population raster is not checked; it just needs to cover AOI
         # which seems straighforward enough to not require checking bounds
 
-    if target_pixelsize in input_align_list:
-        align_index = input_align_list.index(target_pixelsize)
+    if target_pixelsize_path in input_align_list:
+        align_index = input_align_list.index(target_pixelsize_path)
     else:
         align_index = 0
     LOGGER.info(f"Aligning raster stack to {input_align_list[align_index]}")
@@ -761,7 +762,7 @@ def execute(args):
               pixel_size, aoi_buffered_bbox),
         kwargs={
             'raster_align_index': align_index,
-            'target_projection_wkt': target_spatial_prj},
+            'target_projection_wkt': target_spatial_wkt},
         target_path_list=output_align_list,
         dependent_task_list=align_dependent_tasks,
         task_name='align input rasters')
@@ -782,7 +783,7 @@ def execute(args):
                 'population_aligned'],
             'target_pixel_size': pixel_size,
             'target_bb': target_snapped_bbox,
-            'target_projection_wkt': target_spatial_prj,
+            'target_projection_wkt': target_spatial_wkt,
             'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['population_aligned']],
@@ -1016,7 +1017,7 @@ def execute(args):
     return file_registry.registry
 
 
-def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
+def _get_raster_pixel_size_in_meters(raster_path, target_spatial_wkt):
     """Get square pixel size of raster in meters.
 
     This is necessary because we do not want to force users to initially
@@ -1027,8 +1028,8 @@ def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
     Args:
         raster_path (str): Path to baseline LULC or baseline NDVI raster,
             which may or may not be projected in meters.
-        spatial_path (str): Path to a spatial file in a projected CRS with
-            units in meters.
+        target_spatial_wkt (str): The WKT string for a projected CRS
+            using meter units.
 
     Returns:
         tuple[float, float]: (pixel_width_m, pixel_height_m), which will be
@@ -1036,26 +1037,24 @@ def _get_raster_pixel_size_in_meters(raster_path, spatial_path):
             raster stack.
     """
     def _spatial_file_projected_in_m(projection_wkt):
-        if projection_wkt:
-            srs = osr.SpatialReference()
-            srs.ImportFromWkt(projection_wkt)
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(projection_wkt)
 
-            if srs.IsProjected():
-                linear_units = srs.GetLinearUnits()
-                return numpy.isclose(linear_units, 1.0,
-                                     rtol=0, atol=1e-8)
+        if srs.IsProjected():
+            linear_units = srs.GetLinearUnits()
+            return numpy.isclose(linear_units, 1.0,
+                                 rtol=0, atol=1e-8)
         return False
 
-    spatial_wkt = utils.get_raster_or_vector_projection(spatial_path)
-    if not _spatial_file_projected_in_m(spatial_wkt):
+    if not _spatial_file_projected_in_m(target_spatial_wkt):
         raise ValueError(
-            f"Target projection (from {spatial_path}) must be projected in m. "
-            f"Current projection: {spatial_wkt}")
+            f"Target projection must be projected in m. "
+            f"Current projection: {target_spatial_wkt}")
 
     transformed_pixel_dims = utils.get_raster_pixel_size_in_target_proj_units(
-        raster_path, spatial_path, square_pixels=True)
+        raster_path, target_spatial_wkt, square_pixels=True)
     LOGGER.info("Outputs will use transformed pixel size "
-                f"{transformed_pixel_dims} as target in align_and_resize")
+                f"{transformed_pixel_dims} as target in for resampled rasters")
     return transformed_pixel_dims
 
 
