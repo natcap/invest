@@ -1089,10 +1089,7 @@ def get_raster_pixel_size_in_target_proj_units(
         tgt_pixel_size = float(numpy.mean([abs(pixel_width), abs(pixel_height)]))
         return (tgt_pixel_size, -tgt_pixel_size)
     else:
-        if pixel_height > 0:
-            raise ValueError
         return pixel_width, pixel_height
-    
 
 
 def get_raster_or_vector_projection(filepath):
@@ -1110,10 +1107,11 @@ def get_raster_or_vector_projection(filepath):
         projection_wkt (string): projection of the vector or raster in Well
           Known Text.
     """
-    if pygeoprocessing.get_gis_type(filepath) == pygeoprocessing.RASTER_TYPE:
+    gis_type = pygeoprocessing.get_gis_type(filepath)
+    if gis_type == pygeoprocessing.RASTER_TYPE:
         target_projection_wkt = pygeoprocessing.get_raster_info(
             filepath)['projection_wkt']
-    elif pygeoprocessing.get_gis_type(filepath) == pygeoprocessing.VECTOR_TYPE:
+    elif gis_type == pygeoprocessing.VECTOR_TYPE:
         target_projection_wkt = pygeoprocessing.get_vector_info(
             filepath)['projection_wkt']
     else:
