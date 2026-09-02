@@ -217,7 +217,7 @@ def _get_spatial_reference(filepath):
         raise TypeError("Input is not a raster or vector.")
 
 
-def _get_spatial_inputs_options(args, model_spec):
+def _get_projection_inputs_options(args, model_spec):
     """Return spatial inputs and prj as dropdown Options, default first.
 
     Args:
@@ -254,7 +254,7 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     """Return spatial inputs and pixel size as dropdown Options, default first
 
     Pixel size units match the units specified in the current
-    ``target_projection`` input's projection
+    ``target_projection_id`` input's projection
 
     Args:
         args (dict): model arguments
@@ -268,7 +268,7 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     """
     # Find the selected target projection so that pixel sizes can be
     # transformed to the target projection's units
-    projection_input_id = args.get("target_projection")
+    projection_input_id = args.get("target_projection_id")
     if not projection_input_id and model_spec.get_default_projection_input():
         projection_input_id = model_spec.get_default_projection_input().id
     current_projection = None
@@ -1728,14 +1728,6 @@ class OptionStringInput(Input):
     """A function that returns a list of the values that this input may take.
     Use this if the set of options must be dynamically generated."""
 
-    responsive_to: typing.Union[str, None] = None
-    """Another input ID that triggers a refresh of this option list if changed.
-
-    A different model input id which, when changed in the workbench,
-    will cause the option dropdown menu to re-call the dropdown function even
-    if the current selected option is still valid. This is useful for selecting
-    different default options for different scenarios."""
-
     type: typing.ClassVar[str] = 'option_string'
 
     rst_section: typing.ClassVar[str] = 'option'
@@ -1876,7 +1868,6 @@ class OptionSpatialInput(OptionStringInput):
             selected_spec = model_spec.get_input(value)
         except KeyError:
             return validation_messages.MISSING_KEY
-        # otherwise leaving validation to the actual files
 
         filepath = args.get(value)
         if not filepath:
@@ -2219,6 +2210,16 @@ class ModelSpec(ImmutableBaseModel):
                     f'"{self.default_pixelsize_id}" is not a raster input')
         return self
 
+    @model_validator(mode='after')
+    def check_default_projection_if_target_projection_input(self):
+        """If model has target_projection_id, default_projection_id required."""
+        has_target_projection_input = 'target_projection_id' in [
+            i.id for i in self.inputs]
+        if has_target_projection_input and not self.default_projection_id:
+            raise ValueError('Model has a target_projection_id input but no '
+                             'default_projection_id specified')
+        return self
+
     def get_default_projection_input(self):
         if self.default_projection_id:
             return self.get_input(self.default_projection_id)
@@ -2301,12 +2302,11 @@ class ModelSpec(ImmutableBaseModel):
         return values
 
     def preprocess_spatial_reference_args(self, args):
-        """Set target_projection and target_pixelsize if they aren't in args
+        """Set target_projection_id and target_pixelsize_id to defaults if not set
 
-        The resulting dict will have set key ``target_projection`` and
-        ``target_pixelsize`` to ``default_projection_id`` and
-        ``default_pixelsize_id``, respectively, if these attributes
-        are specified.
+        The resulting dict will have set key ``target_projection_id`` to
+        ``default_projection_id`` and ``target_pixelsize_id`` to
+        ``default_pixelsize_id``, if the latter is specified.
 
         Args:
             args (dict): argument dictionary mapping input keys to input values
@@ -2314,43 +2314,16 @@ class ModelSpec(ImmutableBaseModel):
         Returns:
             dictionary mapping input keys to preprocessed input values
         """
-        inputs_ids = [i.id for i in self.inputs]
         args_copy = args.copy()
-        if 'target_projection' in inputs_ids and not args.get('target_projection'):
-            target_projection_input = self.get_default_projection_input()
-            if target_projection_input:
-                args_copy['target_projection'] = target_projection_input.id
-            else:
-                raise ValueError(
-                    "Target projection not able to be specified and no "
-                    "default option (or default is invalid).")
+        if not args.get('target_projection_id'):
+            args_copy['target_projection_id'] = self.get_default_projection_input().id
 
-        if 'target_pixelsize' in inputs_ids and not args.get('target_pixelsize'):
+        if not args.get('target_pixelsize_id'):
             default_pixelsize_input = self.get_default_pixelsize_input()
+            # NOTE: UMH does not have a default_pixelsize_id, it sets default
+            # dynamically in the dropdown function.
             if default_pixelsize_input:
-                args_copy['target_pixelsize'] = default_pixelsize_input.id
-            else:
-                # Get default input from dropdown function, if it exists. This
-                # is a workaround for UMH, where default is specified per-model
-                try:
-                    pixelsize_options = self.get_input(
-                        'target_pixelsize').dropdown_function(
-                            args=args_copy, model_spec=self)
-                except TypeError as e:
-                    raise TypeError(
-                        "Unable to determine default target pixel size value."
-                        " Possibly because the custom dropdown function for"
-                        " target_pixelsize takes different arguments than"
-                        " expected (should take args, model_spec). "
-                        f"Actual error: {e}")
-                default_pixelsize_id = pixelsize_options[0].key
-                if default_pixelsize_id:
-                    args_copy['target_pixelsize'] = default_pixelsize_id
-                else:
-                    raise ValueError(
-                        "Target pixel size not able to be specified and no "
-                        "default option (or default is invalid).")
-
+                args_copy['target_pixelsize_id'] = default_pixelsize_input.id
         return args_copy
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):
@@ -2441,7 +2414,6 @@ class ModelSpec(ImmutableBaseModel):
             and model specification.
         """
         args = self.preprocess_inputs(args)
-        args = self.preprocess_spatial_reference_args(args)
         self.create_output_directories(args)
         file_registry = FileRegistry(
             outputs=self.outputs,
@@ -2668,7 +2640,7 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
     ]
 )
 TARGET_PROJECTION = OptionSpatialInput(
-    id="target_projection",
+    id="target_projection_id",
     name=gettext("target projection"),
     about=gettext(
         "Input with target projection to which all other spatial "
@@ -2676,10 +2648,10 @@ TARGET_PROJECTION = OptionSpatialInput(
     required=False,  # models will fallback to using default target projections
     options=[],
     projected=True,
-    dropdown_function=_get_spatial_inputs_options
+    dropdown_function=_get_projection_inputs_options
 )
 TARGET_PIXELSIZE = OptionSpatialInput(
-    id="target_pixelsize",
+    id="target_pixelsize_id",
     name=gettext("target pixel size"),
     about=gettext(
         "Input with target pixel size to which all other spatial "
