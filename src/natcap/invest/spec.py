@@ -2496,7 +2496,6 @@ class ModelSpec(ImmutableBaseModel):
                 return
 
             preprocessed_args = self.preprocess_inputs(args)
-            preprocessed_args = self.preprocess_spatial_reference_args(preprocessed_args)
 
             if check_outputs:
                 # evaluate which outputs we expect to be created, given the
