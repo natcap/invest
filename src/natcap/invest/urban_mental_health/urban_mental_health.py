@@ -81,8 +81,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "the search radius to ensure correct edge pixel calculation, "
                 "as InVEST will buffer your AOI by the `search_radius` to "
                 "determine the processing area. Final outputs will be clipped "
-                "to this AOI."),
-            projected=True
+                "to this AOI.")
         )),
         spec.SingleBandRasterInput(
             id="population_raster",
@@ -794,7 +793,7 @@ def execute(args):
         func=pygeoprocessing.mask_raster,
         args=(
             (file_registry['population_aligned'], 1),
-            args['aoi_path'],
+            aoi,
             file_registry['population_aligned_clipped']),
         target_path_list=[file_registry['population_aligned_clipped']],
         dependent_task_list=[population_align_task],
@@ -925,7 +924,7 @@ def execute(args):
         func=pygeoprocessing.mask_raster,
         args=(
             (file_registry['ndvi_base_buffer_mean'], 1),
-            args['aoi_path'],
+            aoi,
             file_registry['ndvi_base_buffer_mean_clipped']),
         target_path_list=[file_registry['ndvi_base_buffer_mean_clipped']],
         dependent_task_list=[mean_buffered_base_ndvi_task],
@@ -935,7 +934,7 @@ def execute(args):
         func=pygeoprocessing.mask_raster,
         args=(
             (file_registry['ndvi_alt_buffer_mean'], 1),
-            args['aoi_path'],
+            aoi,
             file_registry['ndvi_alt_buffer_mean_clipped']),
         target_path_list=[file_registry['ndvi_alt_buffer_mean_clipped']],
         dependent_task_list=[mean_buffered_alt_ndvi_task],
@@ -980,7 +979,7 @@ def execute(args):
     )
 
     zonal_stats_inputs = [
-        args['aoi_path'], args['model_option'],
+        aoi, args['model_option'],
         file_registry['preventable_cases_cost_sum_table'],
         file_registry['preventable_cases_cost_sum_vector'],
         file_registry['preventable_cases']]
