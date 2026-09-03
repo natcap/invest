@@ -554,10 +554,8 @@ class AnnualWaterYieldTests(unittest.TestCase):
         args['target_projection_id'] = ''
         args['target_pixelsize_id'] = ''
 
-        resolved_args, _, task_graph = annual_water_yield.MODEL_SPEC.setup(args)
+        resolved_args = annual_water_yield.MODEL_SPEC.preprocess_inputs(args)
         resolved_args = annual_water_yield.MODEL_SPEC.preprocess_spatial_reference_args(resolved_args)
-        task_graph.close()
-        task_graph.join()
 
         self.assertEqual(resolved_args['target_projection_id'], 'lulc_path')
         self.assertEqual(resolved_args['target_pixelsize_id'], 'lulc_path')
