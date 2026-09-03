@@ -248,7 +248,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        os: [windows-latest, macos-15-intel]
+        os: [windows-latest, macos-15-intel, macos-15]
 
     steps:
       - name: Check out repo
@@ -301,15 +301,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-15-intel]
+        os: [windows-latest, macos-15-intel, macos-15]
         include:
           - os: macos-15-intel
             puppeteer-log: ~/Library/Logs/invest-workbench/
-            workspace-path: InVEST-failed-mac-workspace.tar
+            workspace-path: InVEST-failed-mac-x64-workspace.tar
             binary-extension: dmg
+            micromamba-subdir: osx-x64
+          - os: macos-15
+            puppeteer-log: ~/Library/Logs/invest-workbench/
+            workspace-path: InVEST-failed-mac-arm64-workspace.tar
+            binary-extension: dmg
+            micromamba-subdir: osx-arm64
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
-            workspace-path: InVEST-failed-windows-workspace.tar
+            workspace-path: InVEST-failed-windows-x64-workspace.tar
             binary-extension: exe
     steps:
       - uses: actions/checkout@v7
@@ -373,9 +379,9 @@ jobs:
           yarn install
 
       - name: Download micromamba for distribution (MacOS)
-        if: matrix.os == 'macos-15-intel'
+        if: runner.os == 'macOS'  # capture both intel and arm runners
         run: |
-          curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
+          curl -Ls https://micro.mamba.pm/api/micromamba/${{ matrix.micromamba-subdir }}/latest | tar -xvj bin/micromamba
           mv bin/micromamba dist/
           ./dist/micromamba --help  # make sure the executable works
 
@@ -427,7 +433,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: Workbench-${{ runner.os }}-binary
+          name: Workbench-${{ runner.os }}-${{ runner.arch }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
@@ -467,14 +473,14 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: ${{ runner.os }}_puppeteer_log.zip'
+          name: ${{ runner.os }}_${{ runner.arch }}_puppeteer_log.zip'
           path: ${{ matrix.puppeteer-log }}
 
       - name: Upload workspace on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: InVEST-failed-${{ runner.os }}-workspace
+          name: InVEST-failed-${{ runner.os }}-${{ runner.arch }}-workspace
           path: ${{ github.workspace }}
 
   build-sampledata:
