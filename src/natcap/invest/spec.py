@@ -194,29 +194,6 @@ def smart_title(text):
     return " ".join(new_words)
 
 
-def _get_spatial_reference(filepath):
-    with GDALUseExceptions():
-        gdal_path = utils._GDALPath.from_uri(filepath)
-        try:
-            gis_type = pygeoprocessing.get_gis_type(filepath)
-        except ValueError:
-            return None
-
-        if gis_type == pygeoprocessing.RASTER_TYPE:
-            dataset = gdal.OpenEx(
-                gdal_path.to_normalized_path(),
-                gdal.OF_RASTER)
-            return dataset.GetSpatialRef()
-
-        if gis_type == pygeoprocessing.VECTOR_TYPE:
-            dataset = gdal.OpenEx(
-                gdal_path.to_normalized_path(),
-                gdal.OF_VECTOR)
-            return dataset.GetLayer().GetSpatialRef()
-
-        raise TypeError("Input is not a raster or vector.")
-
-
 def _get_projection_inputs_options(args, model_spec):
     """Return spatial inputs and prj as dropdown Options, default first.
 
@@ -237,11 +214,12 @@ def _get_projection_inputs_options(args, model_spec):
             else:
                 display_name = f"{smart_title(inp.name)}"
             if args.get(inp.id):
-                srs = _get_spatial_reference(args[inp.id])
+                try:
+                    srs = utils.get_raster_or_vector_projection(args[inp.id])
+                except ValueError:  # raised if invalid filepath
+                    srs = None
                 if srs:
-                    # Get the top-level name (Projected or Geographic)
-                    prj_name = srs.GetAttrValue('PROJCS') or srs.GetAttrValue('GEOGCS')
-                    display_name += f" ({prj_name})"
+                    display_name += f" ({srs.GetName()})"
             options.append(Option(key=inp.id, display_name=display_name))
 
     # sort so default is first
@@ -269,7 +247,7 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
     # Find the selected target projection so that pixel sizes can be
     # transformed to the target projection's units
     projection_input_id = args.get("target_projection_id")
-    if not projection_input_id and model_spec.get_default_projection_input():
+    if not projection_input_id:
         projection_input_id = model_spec.get_default_projection_input().id
     current_projection_wkt = None
     projection_units = None
@@ -304,7 +282,6 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
         if current_projection_wkt and args.get(inp.id):
             # convert pixel size to be in same units as selected target projection
             try:
-                # This function returns square pixels
                 pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
                     args[inp.id], current_projection_wkt)
                 formatted_pixelsize = f" ({round(pixelsize[0], 3)}, "\
@@ -1871,7 +1848,7 @@ class OptionSpatialInput(OptionStringInput):
 
         filepath = args.get(value)
         if not filepath:
-            return validation_messages.FILE_NOT_FOUND
+            return f"Source dataset: {selected_spec.name} is missing"
 
         filepath = args.get(value)
         projection_spec = selected_spec.model_copy(update={
