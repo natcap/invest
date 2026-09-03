@@ -1021,7 +1021,7 @@ def base_model_id(model_id: str) -> str:
 
 
 def get_raster_pixel_size_in_target_proj_units(
-        raster_path, target_file_or_projection_wkt, square_pixels=False):
+        raster_path, target_projection_wkt, square_pixels=False):
     """Get pixel size of a raster in units of `target_projection_wkt`.
 
     Use gdal to auto calculate the target pixel size if transforming
@@ -1031,10 +1031,9 @@ def get_raster_pixel_size_in_target_proj_units(
 
     Args:
         raster_path (str): Path to projected raster
-        target_file_or_projection_wkt (str): Either a Well-Known Text
-            projection with the units into which to translate the original
-            pixel size of ``raster_path``, or a path to raster or vector
-            containing the target projection.
+        target_projection_wkt (str): A Well-Known Text projection with the
+            units into which to translate the original pixel size of
+            ``raster_path``.
         square_pixels (bool): Whether to return square pixels. If True, the
             absolute value of the pixel width and height will be the same and
             equal to the mean of the original pixel width and height in the
@@ -1053,19 +1052,8 @@ def get_raster_pixel_size_in_target_proj_units(
     raster_srs = osr.SpatialReference()
     raster_srs.ImportFromWkt(raster_wkt)
 
-    if os.path.isfile(target_file_or_projection_wkt):
-        target_projection_wkt = get_raster_or_vector_projection(
-            target_file_or_projection_wkt)
-        target_srs = osr.SpatialReference()
-        target_srs.ImportFromWkt(target_projection_wkt)
-    else:
-        target_srs = osr.SpatialReference()
-        target_srs.ImportFromWkt(target_file_or_projection_wkt)
-
-    target_projected = target_srs.IsProjected()
-
-    if not target_projected:
-        raise ValueError('Target projection must be projected.')
+    target_srs = osr.SpatialReference()
+    target_srs.ImportFromWkt(target_projection_wkt)
 
     # Same projected CRS units: preserve native pixel size.
     if raster_srs.IsSame(target_srs):
