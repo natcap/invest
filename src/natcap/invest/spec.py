@@ -178,22 +178,6 @@ def validate_permissions_string(permissions):
     return permissions
 
 
-def smart_title(text):
-    words = text.split()
-    new_words = []
-
-    for word in words:
-        if word.isupper():
-            new_words.append(word)
-        else:
-            # Split by slash, capitalize each part, and rejoin with a slash
-            # e.g., to ensure Land Use/Land Cover gets correctly formatted
-            parts = [p.capitalize() for p in word.split('/')]
-            new_words.append('/'.join(parts))
-
-    return " ".join(new_words)
-
-
 def _get_projection_inputs_options(args, model_spec):
     """Return spatial inputs and prj as dropdown Options, default first.
 
@@ -210,12 +194,13 @@ def _get_projection_inputs_options(args, model_spec):
     for inp in model_spec.inputs:
         if (isinstance(inp, SpatialFileInput)):
             if inp is default_projection_input:
-                display_name = f"(Default) {smart_title(inp.name)}"
+                display_name = f"(Default) {inp.name}"
             else:
-                display_name = f"{smart_title(inp.name)}"
+                display_name = inp.name
             if args.get(inp.id):
                 try:
-                    srs = utils.get_raster_or_vector_projection(args[inp.id])
+                    srs = osr.SpatialReference()
+                    srs.ImportFromWkt(utils.get_raster_or_vector_projection(args[inp.id]))
                 except ValueError:  # raised if invalid filepath
                     srs = None
                 if srs:
@@ -276,9 +261,9 @@ def _get_pixel_size_options(args, model_spec, default_pixelsize_id=None):
         if not isinstance(inp, (SingleBandRasterInput, RasterInput)):
             continue
         if inp.id == default_pixelsize_id:
-            display_name = f"(Default) {smart_title(inp.name)}"
+            display_name = f"(Default) {inp.name}"
         else:
-            display_name = smart_title(inp.name)
+            display_name = inp.name
         if current_projection_wkt and args.get(inp.id):
             # convert pixel size to be in same units as selected target projection
             try:
