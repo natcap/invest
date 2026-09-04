@@ -160,7 +160,7 @@ class EndpointFunctionTests(unittest.TestCase):
         target_filepath = os.path.join(self.workspace_dir, 'data.tgz')
         data_path = os.path.join(self.workspace_dir, 'data.csv')
         with open(data_path, 'w') as file:
-            file.write('hello')
+            file.write('lucode,c_above,c_below,c_soil,c_dead')
 
         payload = {
             'filepath': target_filepath,
