@@ -63,8 +63,31 @@
 
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.20.2 (2026-09-02)
+-------------------
+
+General
+=======
+* Fixed a bug that prevented non-spatial files referenced in CSVs from being
+  added to datastack archives. Refactored some datastack creation logic into
+  class methods on input and output specs.
+  (`#2589 <https://github.com/natcap/invest/issues/2589>`_)
+* Fixed a bug where an error state while reading a remote GDAL dataset
+  could result in a deadlock during invest validation.
+  (`#2724 <https://github.com/natcap/invest/issues/2724>`_)
+
+Wind Energy
+===========
+* Fixed a bug where the model would raise a ``RuntimeError`` if the input
+  land polygon and AOI had the same projection.
+  (`#2707 <https://github.com/natcap/invest/issues/2707>`_)
+
+3.20.1 (2026-08-13)
+-------------------
 
 General
 =======
@@ -78,19 +101,30 @@ Workbench
 * Added a file browse button to the input field for selecting a
   local plugin directory to install.
   (`#2641 <https://github.com/natcap/invest/issues/2641>`_)
-* Bootstrap and React Bootstrap dependencies have been updated to their latest
-  stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
-  (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
 * Added an option in the Manage Plugins modal to configure which
   conda executable is used to run plugins.
   (`#2645 <https://github.com/natcap/invest/issues/2645>`_)
 * Added an option in the Manage Plugins modal to configure which
   conda environment is used to run each plugin.
   (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
+* Improved handling of errors on plugin server startup.
+  (`#2637 <https://github.com/natcap/invest/issues/2637>`_)
+* The "View Results" button now supports plugins.
+  (`#2638 <https://github.com/natcap/invest/issues/2638>`_)
+* The base report template now better supports plugins by including a link to
+  plugin-specific documentation instead of a link to the InVEST User Guide.
+  (`#2640 <https://github.com/natcap/invest/issues/2640>`_)
+* Bootstrap and React Bootstrap dependencies have been updated to their latest
+  stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
+  (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
 * React dependency has been updated to its latest stable version (19.2.7).
   (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
-* Improved handling of errors on plugin server startup
-  (`#2637 https://github.com/natcap/invest/issues/2637`)
+* Fixed a bug in the Manage Plugins modal where dragging and dropping
+  a plugin directory into the local filepath would open a new window.
+  (`#2642 <https://github.com/natcap/invest/issues/2642>`_)
+* Some general performance enhancements related to React components
+  and the responsiveness of model input text fields.
+  (`#2699 <https://github.com/natcap/invest/issues/2699>`_)
 
 3.20.0 (2026-06-11)
 -------------------
