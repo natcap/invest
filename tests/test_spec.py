@@ -88,9 +88,9 @@ class SpecUtilsUnitTests(unittest.TestCase):
         # The display name of the selected spatial options should include
         # the projection and pixel size info, respectively
         self.assertEqual(
-            '(Default) Land Use/Land Cover (NAD83 / UTM zone 10N)',
+            '(Default) land use/land cover (NAD83 / UTM zone 10N)',
             lulc_prj_option.display_name)
-        self.assertEqual('Precipitation (1.0, 1.0 meter)',
+        self.assertEqual('precipitation (1.0, 1.0 meter)',
                          precip_pixelsize_option.display_name)
 
         # Simulate user deleting one character from the filepath
@@ -106,10 +106,10 @@ class SpecUtilsUnitTests(unittest.TestCase):
                                        if option.key == 'precipitation_path')
 
         self.assertEqual(
-            '(Default) Land Use/Land Cover',
+            '(Default) land use/land cover',
             lulc_prj_option.display_name)
         # selected pixel size option will lose units because no projection info
-        self.assertEqual('Precipitation',
+        self.assertEqual('precipitation',
                          precip_pixelsize_option.display_name)
 
         # Valid projection but deleted character from selected pixelsize
@@ -121,7 +121,7 @@ class SpecUtilsUnitTests(unittest.TestCase):
                                        if option.key == 'precipitation_path')
 
         # selected pixel size option will lose units because filepath invalid
-        self.assertEqual('Precipitation',
+        self.assertEqual('precipitation',
                          precip_pixelsize_option.display_name)
 
 

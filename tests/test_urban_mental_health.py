@@ -1132,7 +1132,7 @@ class UMHTests(unittest.TestCase):
             args['aoi_path'])['projection_wkt']
         expected_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
             args['ndvi_base'],
-            target_file_or_projection_wkt=expected_projection_wkt)
+            target_projection_wkt=expected_projection_wkt)
 
         # assert that outputs are in the same projection as ndvi
         actual_projection = pygeoprocessing.get_raster_info(
@@ -1168,11 +1168,13 @@ class UMHTests(unittest.TestCase):
             raster_path)
 
         file_reg = urban_mental_health.execute(args)
+        target_projection_wkt = pygeoprocessing.get_raster_info(
+            args[args['target_projection_id']])['projection_wkt']
 
         # Output raster pixel size should be same as ndvi_base input but in m
         expected_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
             args[args['target_pixelsize_id']],
-            target_file_or_projection_wkt=args[args['target_projection_id']])
+            target_projection_wkt=target_projection_wkt)
         actual_pixelsize = pygeoprocessing.get_raster_info(
             file_reg['baseline_cases'])['pixel_size']  # in meters
         numpy.testing.assert_allclose(actual_pixelsize, expected_pixelsize)
