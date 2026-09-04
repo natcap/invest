@@ -307,11 +307,21 @@ describe('Arguments form interactions', () => {
 
   test('Type slow & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
+
+    jest.spyOn(
+      SetupTab.WrappedComponent.prototype,
+      'callDropdownFunctions'
+    ).mockImplementation(() => {});
+
     const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
+    // Wait for componentDidMount's direct validation
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
     spy.mockClear(); // it was already called once on render
 
     // Slow typing, expect validation call after each character
@@ -514,6 +524,73 @@ describe('UI spec functionality', () => {
     });
     const arg6 = await queryByText('F');
     expect(arg6).toBeNull();
+  });
+
+  test('target_pixelsize dropdown options update when a spatial input changes', async () => {
+    fetchValidation.mockResolvedValue([]);
+    fetchArgsEnabled.mockResolvedValue({
+      spatial_input: true,
+      target_pixelsize: true,
+    });
+
+    getDynamicDropdowns.mockImplementation(async ({ args }) => {
+      const argsValues = JSON.parse(args);
+
+      if (argsValues.spatial_input) {
+        return {
+          target_pixelsize: [
+            {
+              key: '30',
+              display_name: '30',
+            },
+          ],
+        };
+      }
+
+      return {
+        target_pixelsize: [],
+      };
+    });
+
+    const spec = {
+      model_spec: 'eco_model',
+      args: {
+        spatial_input: {
+          name: 'afoo',
+          type: 'raster',
+        },
+        target_pixelsize: {
+          id: 'target_pixelsize',
+          name: 'Target Pixel Size',
+          type: 'option_string',
+          options: [],
+          dropdown_function: 'retrieve pixel sizes from spatial inputs',
+        },
+      },
+    };
+
+    const inputFieldOrder = [Object.keys(spec.args)];
+
+    const {
+      findByLabelText,
+      queryByText,
+      findByText,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+
+    const spatialInput = await findByLabelText(
+      (content) => content.startsWith(spec.args.spatial_input.name)
+    );
+
+    expect(queryByText('30')).toBeNull();
+
+    await userEvent.type(spatialInput, '/path/to/raster.tif');
+
+    expect(await findByText('30')).toBeInTheDocument();
+
+    expect(getDynamicDropdowns).toHaveBeenCalledWith({
+      model_id: spec.model_id ?? 'eco_model',
+      args: expect.stringContaining('/path/to/raster.tif'),
+    });
   });
 });
 

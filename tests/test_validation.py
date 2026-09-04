@@ -14,6 +14,7 @@ from unittest.mock import Mock
 
 import numpy
 import pandas
+import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -2100,6 +2101,67 @@ class TestValidationFromSpec(unittest.TestCase):
         for warning in actual_warnings:
             self.assertTrue(warning in expected_warnings)
 
+    def test_option_spatial_input_validate_with_context(self):
+        """Test OptionSpatialInput validates the selected projection units."""
+        from natcap.invest.urban_mental_health import urban_mental_health
+        projected_path = os.path.join(
+            self.workspace_dir, 'projected_raster.tif')
+        geographic_path = os.path.join(
+            self.workspace_dir, 'geographic_raster.tif')
+        projected_path_ft = os.path.join(
+            self.workspace_dir, 'projected_raster_ft.tif')
+
+        raster_array = numpy.ones((2, 2), dtype=numpy.int32)
+
+        projected_srs = osr.SpatialReference()
+        projected_srs.ImportFromEPSG(26910)
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array,
+            -1,
+            (30, -30),
+            (461261, 4923265),
+            projected_srs.ExportToWkt(),
+            projected_path)
+
+        geographic_srs = osr.SpatialReference()
+        geographic_srs.ImportFromEPSG(4326)
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array,
+            -1,
+            (0.01, -0.01),
+            (-123, 49),
+            geographic_srs.ExportToWkt(),
+            geographic_path)
+
+        projected_srs_ft = osr.SpatialReference()
+        projected_srs_ft.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array,
+            -1,
+            (1, -1),
+            (461261, 4923265),
+            projected_srs_ft.ExportToWkt(),
+            projected_path_ft)
+
+        model_spec = urban_mental_health.MODEL_SPEC
+        option_input = model_spec.get_input('target_projection_id')
+
+        args = {'ndvi_base': projected_path}
+        message = option_input.validate_with_context(
+            'ndvi_base', args, model_spec)
+        self.assertIsNone(message)
+
+        args['ndvi_base'] = geographic_path
+        message = option_input.validate_with_context(
+            'ndvi_base', args, model_spec)
+        expected_message = 'Dataset must be projected in linear units.'
+        self.assertEqual(message, expected_message)
+
+        args['ndvi_base'] = projected_path_ft
+        message = option_input.validate_with_context(
+            'ndvi_base', args, model_spec)
+        expected_message = 'Layer must be projected in this unit: "meter" but found this unit: "us_survey_foot"'
+        self.assertEqual(message, expected_message)
 
 class TestArgsEnabled(unittest.TestCase):
 

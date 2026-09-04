@@ -10,6 +10,8 @@ import pygeoprocessing
 from shapely import Polygon
 from osgeo import gdal, ogr, osr
 
+from natcap.invest import utils
+
 from .utils import assert_complete_execute
 
 gdal.UseExceptions()
@@ -311,8 +313,8 @@ class UMHTests(unittest.TestCase):
 
         expected_prev_cases = numpy.full((4, 6), PGP_FLOAT32_NODATA)
         expected_prev_cases[1:3, 1:4] = numpy.array(
-            ((-10.4518223, -32.0634232, -74.8765640),
-             (-102.864586, -44.9878502, -18.9928780)))
+            ((-10.455142, -32.107536, -74.798858),
+             (-102.963333, -44.918373, -19.016109)))
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
     def test_NDVI_extent_too_small(self):
@@ -938,9 +940,10 @@ class UMHTests(unittest.TestCase):
 
         vector_path = os.path.join(self.workspace_dir, "aoi.shp")
         make_simple_vector(vector_path)
+        vector_wkt = pygeoprocessing.get_vector_info(vector_path)['projection_wkt']
 
         actual_pixel_size = urban_mental_health._get_raster_pixel_size_in_meters(
-            raster_path, vector_path)
+            raster_path, vector_wkt)
 
         self.assertEqual(actual_pixel_size, (100, -100))
 
@@ -953,6 +956,7 @@ class UMHTests(unittest.TestCase):
 
         # AOI stays in the default test CRS: EPSG 26910 (meters)
         make_simple_vector(vector_path)
+        vector_wkt = pygeoprocessing.get_vector_info(vector_path)['projection_wkt']
 
         raster_array = numpy.array(
             [[1, 2, 3],
@@ -960,7 +964,7 @@ class UMHTests(unittest.TestCase):
              [7, 8, 9]])
 
         # Create raster in a projected CRS with US survey feet so that
-        # _raster_projected_in_m returns False and the helper uses
+        # _spatial_file_projected_in_m returns False and the helper uses
         # gdal.SuggestedWarpOutput in the vector CRS.
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
@@ -976,7 +980,7 @@ class UMHTests(unittest.TestCase):
             raster_path)
 
         actual_pixel_size = urban_mental_health._get_raster_pixel_size_in_meters(
-            raster_path, vector_path)
+            raster_path, vector_wkt)
 
         # expected pixel size calculated by gdal.Warping the raster to the
         # vector CRS (EPSG 26910) and then getting pixel size
@@ -1082,4 +1086,139 @@ class UMHTests(unittest.TestCase):
             urban_mental_health.execute(args)
         self.assertTrue(
             "having a set NoData value, which can cause problems if the " in
+            str(context.exception))
+
+    def test_pixelsize_dropdown_default_first(self):
+        """Test correct default options appear first"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        args['target_projection_id'] = ''
+        args['target_pixelsize_id'] = ''
+
+        options = urban_mental_health._get_pixelsize_umh(
+            args, urban_mental_health.MODEL_SPEC)
+
+        self.assertEqual(options[0].key, 'ndvi_base')
+        self.assertTrue(options[0].display_name.startswith('(Default)'))
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+        options = urban_mental_health._get_pixelsize_umh(
+            args, urban_mental_health.MODEL_SPEC)
+
+        self.assertEqual(options[0].key, 'lulc_base')
+        self.assertTrue(options[0].display_name.startswith('(Default)'))
+
+    def test_target_projection_and_pixelsize_have_correct_defaults(self):
+        """Test model if default target projection"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(5070)
+        projection_wkt = srs.ExportToWkt()
+
+        pixel_size = (101, -101)
+
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array, 0, pixel_size,
+            (ORIGIN_X, ORIGIN_Y), projection_wkt, args['ndvi_base'])
+
+        file_reg = urban_mental_health.execute(args)
+
+        expected_projection_wkt = pygeoprocessing.get_vector_info(
+            args['aoi_path'])['projection_wkt']
+        expected_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+            args['ndvi_base'],
+            target_projection_wkt=expected_projection_wkt)
+
+        # assert that outputs are in the same projection as ndvi
+        actual_projection = pygeoprocessing.get_raster_info(
+            file_reg['preventable_cases'])['projection_wkt']
+        actual_pixelsize = pygeoprocessing.get_raster_info(
+            file_reg['preventable_cases'])['pixel_size']
+
+        self.assertEqual(actual_projection, expected_projection_wkt)
+        self.assertEqual(actual_pixelsize, expected_pixel_size)
+
+    def test_projection_and_pixelsize_if_target_pixelsize_in_ft(self):
+        """Test model if target pixelsize input projected in feet"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        # Create ndvi raster in a different projected CRS than other raster.
+        raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
+        args['ndvi_base'] = raster_path
+        args['target_projection_id'] = 'population_raster'
+        args['target_pixelsize_id'] = 'ndvi_base'
+
+        raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
+        projection_wkt = srs.ExportToWkt()
+
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array.astype(numpy.float32),
+            FLOAT32_NODATA,
+            (10, -10),
+            (6019339.53, 2499628.03),
+            projection_wkt,
+            raster_path)
+
+        file_reg = urban_mental_health.execute(args)
+        target_projection_wkt = pygeoprocessing.get_raster_info(
+            args[args['target_projection_id']])['projection_wkt']
+
+        # Output raster pixel size should be same as ndvi_base input but in m
+        expected_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
+            args[args['target_pixelsize_id']],
+            target_projection_wkt=target_projection_wkt)
+        actual_pixelsize = pygeoprocessing.get_raster_info(
+            file_reg['baseline_cases'])['pixel_size']  # in meters
+        numpy.testing.assert_allclose(actual_pixelsize, expected_pixelsize)
+
+    def test_error_if_population_raster_is_target_prj_in_ft(self):
+        """Test model if target projection projected in feet"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'ndvi')
+        # make population raster in different projection the target projection
+        raster_path = os.path.join(self.workspace_dir, "feet_raster.tif")
+        args['population_raster'] = raster_path
+        args['target_projection_id'] = 'population_raster'
+        args['target_pixelsize_id'] = 'ndvi_base'
+
+        raster_array = numpy.arange(10, 100, 10).reshape(3, 3)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(2230)  # NAD83 / California zone 6 (ftUS)
+        projection_wkt = srs.ExportToWkt()
+
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array.astype(numpy.float32),
+            FLOAT32_NODATA,
+            (10, -10),
+            (6019339.53, 2499628.03),
+            projection_wkt,
+            raster_path)
+
+        with self.assertRaises(ValueError) as context:
+            urban_mental_health.execute(args)
+        self.assertTrue(
+            "must be projected in m" in
+            str(context.exception))
+
+    def test_error_if_target_projection_not_projected(self):
+        """Error raised if target_projection_id input not projected"""
+        from natcap.invest.urban_mental_health import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
+        # Default projection input (AOI) in geographic CRS (not projected)
+        make_simple_vector(args['aoi_path'], epsg=4326)
+
+        with self.assertRaises(ValueError) as context:
+            urban_mental_health.execute(args)
+        self.assertTrue(
+            "must be projected in m." in
             str(context.exception))

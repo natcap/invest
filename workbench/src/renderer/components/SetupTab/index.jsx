@@ -35,6 +35,8 @@ const { logger } = window.Workbench;
  *
  * @param {object} argsSpec - an InVEST model's MODEL_SPEC.args
  * @param {object} inputFieldOrder - the order in which to display the input fields.
+ * @param {object} defaultProjectionId - default value for projection dropdown.
+ * @param {object} defaultPixelsizeId - default value for pixel size dropdown.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
  * @returns {object} to destructure into two args,
@@ -44,7 +46,7 @@ const { logger } = window.Workbench;
  *     {object} argsDropdownOptions - stores lists of dropdown options for
  *       args of type 'option_string'.
  */
-function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
+function initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultProjectionId, defaultPixelsizeId) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
   const argsDropdownOptions = {};
@@ -60,6 +62,10 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
         value = argsDict[argkey];
       } else if (argsSpec[argkey].include_placeholder) { // default to placeholder
         value = "placeholderOpt";
+      } else if (argsSpec[argkey].id === 'target_pixelsize_id' && defaultPixelsizeId) {
+        value = defaultPixelsizeId;
+      } else if (argsSpec[argkey].id === 'target_projection_id' && defaultProjectionId) {
+        value = defaultProjectionId;
       } else if (argsSpec[argkey].options.length > 0) { // default to first
         value = argsSpec[argkey].options[0].key;
       } else {
@@ -128,12 +134,12 @@ class SetupTab extends React.Component {
     * not on every re-render.
     */
     this._isMounted = true;
-    const { argsInitValues, argsSpec, inputFieldOrder } = this.props;
+    const { argsInitValues, argsSpec, inputFieldOrder, defaultProjectionId, defaultPixelsizeId } = this.props;
 
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {});
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {}, defaultProjectionId, defaultPixelsizeId)
 
     // map each arg to an empty object, to fill in later
     // here we use the argsSpec because it includes all args, even ones like
@@ -158,6 +164,7 @@ class SetupTab extends React.Component {
     }, () => {
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
@@ -333,6 +340,7 @@ class SetupTab extends React.Component {
         argsValues: argsValues,
       });
     }
+
   }
 
   /** Update state with arg values as they change. And validate the args.
@@ -351,7 +359,8 @@ class SetupTab extends React.Component {
     argsValues[key].value = value;
     this.setState({
       argsValues: argsValues,
-    }, () => {
+
+      }, () => {
       this.props.updateJobProperties(this.props.tabID, {
         status: undefined, // Clear job status to hide model status indicator.
       });
@@ -369,13 +378,16 @@ class SetupTab extends React.Component {
     const {
       argsSpec,
       inputFieldOrder,
+      defaultProjectionId,
+      defaultPixelsizeId,
       updateJobProperties,
       tabID,
+
     } = this.props;
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, inputFieldOrder, argsDict);
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultProjectionId, defaultPixelsizeId);
 
     this.setState({
       argsValues: argsValues,
@@ -386,6 +398,7 @@ class SetupTab extends React.Component {
       });
       this.investValidate();
       this.investArgsEnabled();
+      this.callDropdownFunctions();
     });
   }
 
@@ -444,7 +457,7 @@ class SetupTab extends React.Component {
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await getDynamicDropdowns(payload);
-    Object.keys(results).forEach((argkey) => {
+    Object.keys(results ?? {}).forEach((argkey) => {
       argsDropdownOptions[argkey] = results[argkey];
     });
     this.setState({ argsDropdownOptions: argsDropdownOptions });
@@ -471,14 +484,46 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investValidate() {
+    
     const { argsSpec, modelID } = this.props;
-    const { argsValues, argsValidation, argsValid } = this.state;
+    const { argsValues, argsValidation, argsValid, argsEnabled } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_id: modelID,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await fetchValidation(payload);
+
+    // Invalidate a target spatial dropdown when its selected input is disabled
+    const validateSpatialDropdownSelections = () => {
+      let invalidSelection = false;
+
+      Object.keys(argsSpec).forEach((argkey) => {
+        const isTargetSpatialDropdown = [
+          'target_pixelsize_id',
+          'target_projection_id',
+        ].includes(argsSpec[argkey]?.id);
+
+        if (!isTargetSpatialDropdown) {
+          return;
+        }
+
+        const selectedInputKey = argsValues[argkey]?.value;
+        const selectedInputIsDisabled = (
+          selectedInputKey &&
+          argsEnabled[selectedInputKey] === false
+        );
+
+        if (selectedInputIsDisabled) {
+          argsValidation[argkey].valid = false;
+          argsValidation[argkey].validationMessage =
+            'The selected input is disabled. Select a new input.';
+          invalidSelection = true;
+        }
+      });
+
+      return invalidSelection;
+    };
 
     // A) At least one arg was invalid:
     if (results.length) {
@@ -501,6 +546,7 @@ class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
+      validateSpatialDropdownSelections();
       if (this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
@@ -514,13 +560,24 @@ class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
+      const invalidSpatialDropdown = validateSpatialDropdownSelections();
+      // The model is valid only if no target dropdown points to
+      // an input that is currently disabled
+      const newArgsValid = !invalidSpatialDropdown;
+
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can
       // be avoided entirely.
-      if (!argsValid && this._isMounted) {
+      if (argsValid !== newArgsValid && this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
-          argsValid: true,
+          argsValid: newArgsValid,
+        });
+      } else if (invalidSpatialDropdown && this._isMounted) {
+        // The overall validity may already be false, but the dropdown's
+        // validation message still needs to be committed
+        this.setState({
+          argsValidation,
         });
       }
     }
@@ -543,6 +600,8 @@ class SetupTab extends React.Component {
         userguide,
         isCoreModel,
         inputFieldOrder,
+        defaultProjectionId,
+        defaultPixelsizeId,
         sidebarSetupElementId,
         sidebarFooterElementId,
         executeClicked,
@@ -599,6 +658,8 @@ class SetupTab extends React.Component {
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={inputFieldOrder}
+              defaultProjectionId={defaultProjectionId}
+              defaultPixelsizeId={defaultPixelsizeId}
               userguide={userguide}
               isCoreModel={isCoreModel}
               updateArgValues={this.updateArgValues}
@@ -666,6 +727,8 @@ SetupTab.propTypes = {
     })
   ).isRequired,
   inputFieldOrder: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
+  defaultProjectionId: PropTypes.string,
+  defaultPixelsizeId: PropTypes.string,
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool, PropTypes.number])),
   investExecute: PropTypes.func.isRequired,
