@@ -80,6 +80,12 @@ General
   could result in a deadlock during invest validation.
   (`#2724 <https://github.com/natcap/invest/issues/2724>`_)
 
+Urban Mental Health
+===================
+* ``_get_raster_pixel_size_in_meters`` now always returns the target pixel
+  size transformed into the target projection, instead of only converting if
+  the target pixel size was not already projected in meters.
+
 Wind Energy
 ===========
 * Fixed a bug where the model would raise a ``RuntimeError`` if the input
