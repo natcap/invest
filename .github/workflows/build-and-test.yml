@@ -74,7 +74,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        os: [windows-latest, macos-15-intel, ubuntu-latest]
+        os: [windows-latest, macos-26-intel, ubuntu-latest]
         include:
           - os: ubuntu-latest
             python-version: "3.10"
@@ -175,7 +175,7 @@ jobs:
       # Only upload sdist from one of the matrix cases because they should all be the same
       - name: Upload sdist artifact
         uses: actions/upload-artifact@v7
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-26-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         with:
           name: Source distribution
           path: dist/*.tar.gz
@@ -209,7 +209,7 @@ jobs:
 
       # Only upload sdist from one of the matrix cases because they should all be the same
       - name: Deploy sdist to GCS
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-26-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         run: make deploy_sdist
 
   validate-resources:
@@ -248,7 +248,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        os: [windows-latest, macos-15-intel]
+        os: [windows-latest, macos-26-intel, macos-latest]
 
     steps:
       - name: Check out repo
@@ -283,16 +283,24 @@ jobs:
 
       - name: Install workbench dependencies
         if: steps.nodemodules-cache.outputs.cache-hit != 'true'
+        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         working-directory: workbench
         run: |
+          echo "Node version: $(node --version)"
+          echo "Node path: $(which node)"
           yarn config set network-timeout 600000 -g
           yarn install
 
       - name: Run workbench tests
         working-directory: workbench
+        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         env:
           CI: true
-        run: yarn test
+        run: |
+          echo "Node version: $(node --version)"
+          echo "Node path: $(which node)"
+          echo "Yarn path: $(which yarn)"
+          yarn test
 
   build-binaries:
     name: Build binaries
@@ -301,15 +309,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-15-intel]
+        os: [windows-latest, macos-26-intel, macos-latest]
         include:
-          - os: macos-15-intel
+          - os: macos-26-intel
             puppeteer-log: ~/Library/Logs/invest-workbench/
-            workspace-path: InVEST-failed-mac-workspace.tar
+            workspace-path: InVEST-failed-mac-x64-workspace.tar
             binary-extension: dmg
+            micromamba-subdir: osx-x64
+          - os: macos-latest
+            puppeteer-log: ~/Library/Logs/invest-workbench/
+            workspace-path: InVEST-failed-mac-arm64-workspace.tar
+            binary-extension: dmg
+            micromamba-subdir: osx-arm64
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
-            workspace-path: InVEST-failed-windows-workspace.tar
+            workspace-path: InVEST-failed-windows-x64-workspace.tar
             binary-extension: exe
     steps:
       - uses: actions/checkout@v7
@@ -367,15 +381,18 @@ jobs:
 
       - name: Install Workbench Dependencies
         if: steps.nodemodules-cache.outputs.cache-hit != 'true'
+        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         working-directory: workbench
         run: |
+          echo "Node version: $(node --version)"
+          echo "Node path: $(which node)"
           yarn config set network-timeout 600000 -g
           yarn install
 
       - name: Download micromamba for distribution (MacOS)
-        if: matrix.os == 'macos-15-intel'
+        if: runner.os == 'macOS'  # capture both intel and arm runners
         run: |
-          curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
+          curl -Ls https://micro.mamba.pm/api/micromamba/${{ matrix.micromamba-subdir }}/latest | tar -xvj bin/micromamba
           mv bin/micromamba dist/
           ./dist/micromamba --help  # make sure the executable works
 
@@ -400,6 +417,7 @@ jobs:
 
       - name: Build Workbench
         working-directory: workbench
+        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
@@ -427,7 +445,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: Workbench-${{ runner.os }}-binary
+          name: Workbench-${{ runner.os }}-${{ runner.arch }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
@@ -460,6 +478,7 @@ jobs:
           gcloud storage rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
 
       - name: Test electron app with puppeteer
+        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
@@ -467,14 +486,14 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: ${{ runner.os }}_puppeteer_log.zip'
+          name: ${{ runner.os }}_${{ runner.arch }}_puppeteer_log.zip'
           path: ${{ matrix.puppeteer-log }}
 
       - name: Upload workspace on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: InVEST-failed-${{ runner.os }}-workspace
+          name: InVEST-failed-${{ runner.os }}-${{ runner.arch }}-workspace
           path: ${{ github.workspace }}
 
   build-sampledata:
