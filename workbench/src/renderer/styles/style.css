@@ -632,6 +632,20 @@ exceed 100% of window.*/
   opacity: 0.2;
 }
 
+.args-form .accordion {
+  --bs-accordion-border-width: 0;
+}
+
+.args-form .accordion-header {
+  --bs-accordion-active-bg: white;
+  --bs-accordion-btn-padding-y: 0;
+  border-bottom: 0;
+}
+
+.args-form .accordion-button {
+  box-shadow: none;
+}
+
 .arg-group {
   display: flex;
   flex-direction: column;

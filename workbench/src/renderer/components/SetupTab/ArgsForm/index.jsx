@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Accordion from 'react-bootstrap/Accordion'
 import Form from 'react-bootstrap/Form';
 
 import ArgInput from '../ArgInput';
@@ -129,9 +130,10 @@ class ArgsForm extends React.Component {
       scrollEventCount,
     } = this.props;
     const formItems = [];
+    const defaultActiveKeys = [];
     let k = 0;
     argsOrder.forEach((groupArray) => {
-      k += 1;
+      let anyEnabled = false;
       const groupItems = [];
       groupArray.forEach((argkey) => {
         groupItems.push(
@@ -154,12 +156,26 @@ class ArgsForm extends React.Component {
             scrollEventCount={scrollEventCount}
           />
         );
+        if (argsEnabled[argkey]) {
+          anyEnabled = true;
+        }
       });
       formItems.push(
-        <div className="arg-group" key={k}>
-          {groupItems}
-        </div>
+        <Accordion.Item key={k} eventKey={k}>
+          <Accordion.Header className="input-group-header"></Accordion.Header>
+          <Accordion.Body>
+          <div className="arg-group">
+            {groupItems}
+          </div>
+          </Accordion.Body>
+        </Accordion.Item>
       );
+      // Input groups that have at least one enabled input will start with
+      // their accordion expanded. Fully disabled groups will be collapsed.
+      if (anyEnabled) {
+        defaultActiveKeys.push(k);
+      }
+      k += 1;
     });
 
     return (
@@ -173,7 +189,9 @@ class ArgsForm extends React.Component {
         onDragEnter={this.dragEnterHandler}
         onDragLeave={this.dragLeaveHandler}
       >
-        {formItems}
+        <Accordion defaultActiveKey={defaultActiveKeys} alwaysOpen>
+          {formItems}
+        </Accordion>
       </Form>
     );
   }
