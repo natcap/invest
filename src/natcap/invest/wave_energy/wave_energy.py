@@ -21,6 +21,7 @@ from natcap.invest import spec
 from natcap.invest.unit_registry import u
 from natcap.invest import validation
 from natcap.invest import gettext
+from natcap.invest import keywords
 
 
 LOGGER = logging.getLogger(__name__)
@@ -187,6 +188,9 @@ MODEL_SPEC = spec.ModelSpec(
                 " state data from the base wave dataset onto this matrix to determine"
                 " performance."
             ),
+            keywords=[
+                keywords.WAVE_ENERGY_PERFORMANCE,
+                keywords.WAVE_PERIOD, keywords.WAVE_HEIGHT],
             columns=None,
             index_col=None
         ),
@@ -194,6 +198,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="machine_param_path",
             name=gettext("machine parameter table"),
             about=gettext("Table of parameters for the wave energy machine in use."),
+            keywords=[
+                keywords.WAVE_ENERGY_CAPACITY, keywords.WAVE_HEIGHT,
+                keywords.WAVE_PERIOD],
             columns=[
                 spec.StringInput(
                     id="name",
@@ -218,6 +225,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="dem_path",
             name=gettext("bathymetry"),
             about=gettext("Map of ocean depth. Values should be negative."),
+            keywords=[keywords.BATHYMETRY],
             data_type=float,
             units=u.meter,
             projected=None
@@ -235,6 +243,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "A table of data for each connection point. Required if Run Valuation is"
                 " selected."
             ),
+            keywords=[keywords.ENERGY_GRID_CONNECTION_POINTS],
             required="valuation_container",
             allowed="valuation_container",
             columns=[
@@ -274,6 +283,9 @@ MODEL_SPEC = spec.ModelSpec(
                 "Table of economic parameters for the wave energy machine. Required if"
                 " Run Valuation is selected."
             ),
+            keywords=[
+                keywords.ELECTRICITY_COST, keywords.WAVE_ENERGY_CAPITAL_COSTS,
+                keywords.WAVE_ENERGY_CAPACITY],
             required="valuation_container",
             allowed="valuation_container",
             columns=[

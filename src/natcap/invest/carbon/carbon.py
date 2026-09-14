@@ -96,29 +96,31 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "A table that maps each LULC code to carbon pool data for that LULC type."
             ),
-            keywords=[
-                keywords.BIOPHYSICAL_TABLE,
-                keywords.CARBON],
+            keywords=[keywords.CARBON],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(
                     id="c_above",
                     about=gettext("Carbon density of aboveground biomass."),
+                    keywords=[keywords.ABOVEGROUND_BIOMASS_CARBON],
                     units=u.metric_ton / u.hectare
                 ),
                 spec.NumberInput(
                     id="c_below",
                     about=gettext("Carbon density of belowground biomass."),
+                    keywords=[keywords.BELOWGROUND_BIOMASS_CARBON],
                     units=u.metric_ton / u.hectare
                 ),
                 spec.NumberInput(
                     id="c_soil",
                     about=gettext("Carbon density of soil."),
+                    keywords=[keywords.SOIL_ORGANIC_CARBON],
                     units=u.metric_ton / u.hectare
                 ),
                 spec.NumberInput(
                     id="c_dead",
                     about=gettext("Carbon density of dead matter."),
+                    keywords=[keywords.DEAD_BIOMASS_CARBON],
                     units=u.metric_ton / u.hectare
                 )
             ],

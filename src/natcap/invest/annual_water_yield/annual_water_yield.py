@@ -262,7 +262,6 @@ MODEL_SPEC = spec.ModelSpec(
                 " values in the LULC raster must have corresponding entries in"
                 " this table."
             ),
-            keywords=[keywords.BIOPHYSICAL_TABLE],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.IntegerInput(
@@ -313,7 +312,6 @@ MODEL_SPEC = spec.ModelSpec(
                 " the LULC raster must have a corresponding row in this table. "
                 " Required if 'valuation_table_path' is provided."
             ),
-            keywords=[keywords.BIOPHYSICAL_TABLE],
             required="valuation_table_path",
             columns=[
                 spec.LULC_TABLE_COLUMN,
