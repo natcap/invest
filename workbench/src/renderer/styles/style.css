@@ -644,6 +644,22 @@ exceed 100% of window.*/
 
 .args-form .accordion-button {
   box-shadow: none;
+
+.arg-group-dotted-fieldset {
+  border: none;
+  border-top: 2px dotted #dee2e6;
+  padding-top: 1rem;
+  margin-top: 1.5rem;
+}
+
+.arg-group-dotted-legend {
+  float: none;
+  width: auto;
+  padding: 0 0.75rem 0 0;
+  margin-bottom: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6c757d;
 }
 
 .arg-group {
@@ -652,10 +668,6 @@ exceed 100% of window.*/
   gap: 16px;
   margin: 0;
   padding: 1rem 0;
-  border-bottom: 1px dotted;
-  &:last-of-type {
-    border-bottom: none;
-  }
 }
 
 .arg-hide {

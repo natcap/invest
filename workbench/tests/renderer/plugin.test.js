@@ -44,7 +44,7 @@ describe('Manage Plugins modal', () => {
           type: 'raster',
         },
       },
-      input_field_order: [['workspace_dir', 'input_path']],
+      input_field_order: [{ label: '', input_ids: ['workspace_dir', 'input_path']}],
     });
 
     fetchArgsEnabled.mockResolvedValue({

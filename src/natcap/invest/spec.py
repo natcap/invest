@@ -218,6 +218,18 @@ def set_metadata_field_descriptions(field_specs, resource):
             LOGGER.debug(error)
 
 
+class InputGroup(BaseModel):
+    """Represent a group of input fields for display in the workbench."""
+
+    label: str = ''
+    """Optional label that will be displayed in the workbench above
+       this group of inputs."""
+
+    input_ids: list[str]
+    """List of model input ids that belong to this group. Each string must
+       match the id of an Input in the model."""
+
+
 class ImmutableBaseModel(BaseModel):
     """BaseModel with frozen attributes."""
 
@@ -2299,18 +2311,26 @@ class ModelSpec(ImmutableBaseModel):
     Example: ``"https://github.com/natcap/invest-demo-plugin/blob/main/README.md"``
     """
 
-    input_field_order: list[list[str]]
-    """A list that specifies the order and grouping of model inputs.
-    Inputs will be displayed in the input form from top to bottom in the order
-    listed here. Sub-lists represent groups of inputs that will be visually
-    separated by a horizontal line. This improves UX by breaking up long lists
-    and visually grouping related inputs. If you do not wish to use groups,
-    all inputs may go in the same sub-list. It is a convention to begin with a
-    group of ``workspace_dir`` and ``results_suffix``. Each item in the
-    sub-lists must match the key of an ``Input`` in ``inputs``. The key of each
+    input_field_order: list[InputGroup | list[str]]
+    """A list that specifies the order and grouping of model inputs that will be
+    displayed in the workbench input form. This list may contain lists and/or
+    spec.InputGroups. Each sub-list or InputGroup represents a group of inputs
+    that will be visually separated by a horizontal line. This improves UX by
+    breaking up long lists and visually grouping related inputs. You can give a
+    group a label, which will be displayed in the workbench, by using an
+    InputGroup and setting the ``label`` property. Note that groups and their
+    labels only affect workbench rendering and have no effect
+
+    The InputGroup was added to allow labeling groups. Using plain lists is
+    still supported for backwards compatibility. If you do not wish to use
+    groups, all inputs may go in the same sub-list.
+
+    It is a convention to begin with a group of ``workspace_dir`` and
+    ``results_suffix``. Each item in each sub-list or InputGroup.input_ids
+    list must match the key of an ``Input`` in ``inputs``. The key of each
     ``Input`` must be included exactly once, unless it is hidden.
 
-    Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
+    Example: ``[['workspace_dir', 'results_suffix'], InputGroup(label='Group A', input_ids=['bar', baz'])``
     """
 
     inputs: list[Input]
@@ -2366,6 +2386,8 @@ class ModelSpec(ImmutableBaseModel):
         or are marked as hidden."""
         found_keys = set()
         for group in self.input_field_order:
+            if isinstance(group, InputGroup):
+                group = group.input_ids
             for key in group:
                 if key in found_keys:
                     raise ValueError(
@@ -2432,6 +2454,20 @@ class ModelSpec(ImmutableBaseModel):
         spec_dict.pop('inputs')
         spec_dict['args'] = {_input.id: _input for _input in self.inputs}
         spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
+        spec_dict['input_field_order'] = []
+        # Encode the input field order as a list of dicts, where each dict
+        # contains a single item representing an input group. Each dict has two
+        # entries: 'name' which stores the group label (or '' if no label),
+        # and 'input_keys' and the value is the list of input ids in that group.
+        for input_group in self.input_field_order:
+            if isinstance(input_group, InputGroup):
+                spec_dict['input_field_order'].append({
+                    'label': input_group.label,
+                    'input_ids': input_group.input_ids})
+            else:  # is a list of keys
+                spec_dict['input_field_order'].append({
+                    'label': '',
+                    'input_ids': input_group})
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 
     def preprocess_inputs(self, input_values):

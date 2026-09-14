@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -564,3 +565,80 @@ class ModelSpecTests(unittest.TestCase):
         from natcap.invest.carbon import MODEL_SPEC
         with self.assertRaises(ValidationError):
             MODEL_SPEC.model_id = 'foo'
+
+    def test_json_serialization(self):
+        """Test serizalizing the ModelSpec."""
+        test_spec = spec.ModelSpec(
+            model_id="foo",
+            model_title="Foo",
+            userguide="",
+            reporter="",
+            about="",
+            validate_spatial_overlap=True,
+            different_projections_ok=False,
+            aliases=(),
+            module_name=__name__,
+            input_field_order=[
+                ["workspace_dir"],
+                spec.InputGroup(label="Group A", input_ids=["baz"])
+            ],
+            inputs=[
+                spec.WORKSPACE,
+                spec.NumberInput(id="baz", data_type=int, units=None)
+            ],
+            outputs=[
+                spec.SingleBandRasterOutput(
+                    id="c_storage_bas",
+                    path="c_storage_bas.tif",
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                )
+            ]
+        )
+        self.assertEqual(json.loads(test_spec.to_json()), {
+            'model_id': 'foo',
+            'model_title': 'Foo',
+            'userguide': '',
+            'aliases': 'set()',
+            'reporter': '',
+            'about': '',
+            'input_field_order': [
+                {'label': '', 'input_ids': ['workspace_dir']},
+                {'label': 'Group A', 'input_ids': ['baz']}
+            ],
+            'different_projections_ok': False,
+            'validate_spatial_overlap': True,
+            'args': {
+                'workspace_dir': {
+                    'about': spec.WORKSPACE.about,
+                    'required': True,
+                    'allowed': True,
+                    'hidden': False,
+                    'id': 'workspace_dir',
+                    'name': 'workspace directory',
+                    'type': 'workspace'
+                },
+                'baz': {
+                    'id': 'baz',
+                    'about': None,
+                    'name': None,
+                    'required': True,
+                    'allowed': True,
+                    'hidden': False,
+                    'units': None,
+                    'expression': None,
+                    'type': 'number'
+                }
+            },
+            'outputs': {
+                'c_storage_bas': {
+                    'id': 'c_storage_bas',
+                    'about': None,
+                    'created_if': True,
+                    'path': 'c_storage_bas.tif',
+                    'data_type': 'number',
+                    'units': 't/ha'
+                }
+            },
+            'module_name': __name__
+        })

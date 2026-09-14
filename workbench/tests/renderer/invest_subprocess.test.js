@@ -47,7 +47,7 @@ describe('InVEST subprocess testing', () => {
         type: 'freestyle_string',
       },
     },
-    input_field_order: [['workspace_dir', 'results_suffix']],
+    input_field_order: [{ label: '', input_ids: ['workspace_dir', 'results_suffix']}],
     model_title: 'Eco Model',
     model_id: 'eco',
     module_name: 'natcap.invest.eco',

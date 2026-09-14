@@ -132,10 +132,10 @@ class ArgsForm extends React.Component {
     const formItems = [];
     const defaultActiveKeys = [];
     let k = 0;
-    argsOrder.forEach((groupArray) => {
+    argsOrder.forEach((inputGroup) => {
       let anyEnabled = false;
       const groupItems = [];
-      groupArray.forEach((argkey) => {
+      inputGroup.input_ids.forEach((argkey) => {
         groupItems.push(
           <ArgInput
             argkey={argkey}
@@ -160,15 +160,31 @@ class ArgsForm extends React.Component {
           anyEnabled = true;
         }
       });
+      // Separate each group of input fields with a dotted line and label if
+      // applicable. Omit the dotted line above the first group if it has
+      // no label.
+      let fieldsetClassName = "arg-group-dotted-fieldset";
+      if (k === 0 && !inputGroup.label) {
+        fieldsetClassName = "mt-3"
+      }
       formItems.push(
-        <Accordion.Item key={k} eventKey={k}>
-          <Accordion.Header className="input-group-header"></Accordion.Header>
-          <Accordion.Body>
-          <div className="arg-group">
-            {groupItems}
-          </div>
-          </Accordion.Body>
-        </Accordion.Item>
+        <fieldset className={fieldsetClassName} key={k}>
+          <Accordion.Item eventKey={k}>
+            <Accordion.Header className="input-group-header">
+              {
+                inputGroup.label &&
+                <legend className="arg-group-dotted-legend">
+                  {inputGroup.label}
+                </legend>
+              }
+            </Accordion.Header>
+            <Accordion.Body>
+            <Form.Group className="arg-group">
+              {groupItems}
+            </Form.Group>
+            </Accordion.Body>
+          </Accordion.Item>
+        </fieldset>
       );
       // Input groups that have at least one enabled input will start with
       // their accordion expanded. Fully disabled groups will be collapsed.
