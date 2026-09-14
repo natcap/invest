@@ -24,7 +24,7 @@ import pint
 import pygeoprocessing
 from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_validator, model_serializer, model_validator
+    field_serializer, field_validator, model_serializer, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
@@ -507,6 +507,10 @@ class Input(IOModel):
         if hasattr(self, 'contents'):
             return self.contents
         return []
+
+    @field_serializer('keywords')
+    def serialize_keywords(self, _):
+        return(self.get_keywords())
 
     def get_keywords(self, include_children=True, include_aliases=True):
         """Get a list of unique keyword strings for this input and children.
@@ -2715,9 +2719,7 @@ class ModelSpec(ImmutableBaseModel):
         # In addition, flatten each top-level input's ``keywords`` into a
         # single list of strings, to facilitate Data Hub search.
         spec_dict.pop('inputs')
-        spec_dict['args'] = {
-            _input.id: _input.model_copy(update={'keywords': _input.get_keywords()})
-            for _input in self.inputs}
+        spec_dict['args'] = {_input.id: _input for _input in self.inputs}
         spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 

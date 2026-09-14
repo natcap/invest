@@ -45,9 +45,10 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(
             set(spec),
             {'model_id', 'model_title', 'userguide', 'aliases', 'reporter',
-             'about', 'input_field_order', 'default_projection_id',
-             'default_pixelsize_id', 'different_projections_ok',
-             'validate_spatial_overlap', 'args', 'outputs', 'module_name'})
+             'about', 'input_field_order', 'aoi_input_id',
+             'default_projection_id', 'default_pixelsize_id',
+             'different_projections_ok', 'validate_spatial_overlap', 'args',
+             'outputs', 'module_name'})
 
     def test_get_invest_validate(self):
         """UI server: get_invest_validate endpoint."""
