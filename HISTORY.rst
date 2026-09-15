@@ -80,11 +80,17 @@ General
   could result in a deadlock during invest validation.
   (`#2724 <https://github.com/natcap/invest/issues/2724>`_)
 
+General
+=======
+* Added a security policy to the InVEST repository.
+  (`#2697 <https://github.com/natcap/invest/issues/2697>`_)
+
 Wind Energy
 ===========
 * Fixed a bug where the model would raise a ``RuntimeError`` if the input
   land polygon and AOI had the same projection.
   (`#2707 <https://github.com/natcap/invest/issues/2707>`_)
+
 
 3.20.1 (2026-08-13)
 -------------------
@@ -95,6 +101,7 @@ General
   architectures, particularly on conda-forge.  This should also speed up
   the operation of ``setup.py``.
   (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
+
 
 Workbench
 =========
