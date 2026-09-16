@@ -229,6 +229,9 @@ class InputGroup(BaseModel):
     """List of model input ids that belong to this group. Each string must
        match the id of an Input in the model."""
 
+    tight_spacing: bool = False
+    """Whether to render the input group with tight table-like spacing."""
+
 
 class ImmutableBaseModel(BaseModel):
     """BaseModel with frozen attributes."""
@@ -2463,11 +2466,13 @@ class ModelSpec(ImmutableBaseModel):
             if isinstance(input_group, InputGroup):
                 spec_dict['input_field_order'].append({
                     'label': input_group.label,
-                    'input_ids': input_group.input_ids})
+                    'input_ids': input_group.input_ids,
+                    'tightSpacing': input_group.tight_spacing})
             else:  # is a list of keys
                 spec_dict['input_field_order'].append({
                     'label': '',
-                    'input_ids': input_group})
+                    'input_ids': input_group,
+                    'tightSpacing': False})
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 
     def preprocess_inputs(self, input_values):
