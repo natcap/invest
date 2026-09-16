@@ -2610,10 +2610,10 @@ class ModelSpec(ImmutableBaseModel):
             try:
                 aoi_input = self.get_input(self.aoi_input_id)
             except KeyError:
-                raise KeyError(
-                    f'Invalid aoi_input_id. No input with id {self.aoi_input_id}.')
+                raise ValueError('Invalid aoi_input_id. No input with id '
+                                 f'{self.aoi_input_id}.')
             if not isinstance(aoi_input, VectorInput):
-                raise TypeError('aoi_input_id must refer to a VectorInput.')
+                raise ValueError('aoi_input_id must refer to a VectorInput.')
         return self
 
     @model_validator(mode='after')
@@ -2716,8 +2716,6 @@ class ModelSpec(ImmutableBaseModel):
 
         spec_dict = self.__dict__.copy()
         # rename 'inputs' to 'args' to stay consistent with the old api
-        # In addition, flatten each top-level input's ``keywords`` into a
-        # single list of strings, to facilitate Data Hub search.
         spec_dict.pop('inputs')
         spec_dict['args'] = {_input.id: _input for _input in self.inputs}
         spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
