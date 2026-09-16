@@ -73,7 +73,6 @@ MODEL_SPEC = spec.ModelSpec(
         ],
         ["search_radius_mode", "decay_function", "search_radius"]
     ],
-    aoi_input_id="admin_boundaries_vector_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

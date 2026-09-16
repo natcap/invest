@@ -220,7 +220,6 @@ MODEL_SPEC = spec.ModelSpec(
         ["landcover_raster_path", "landcover_to_crop_table_path",
          "aggregate_polygon_path"]
     ],
-    aoi_input_id="aggregate_polygon_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

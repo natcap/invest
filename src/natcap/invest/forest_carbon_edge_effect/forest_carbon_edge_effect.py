@@ -53,7 +53,6 @@ MODEL_SPEC = spec.ModelSpec(
         ],
         ["aoi_vector_path"]
     ],
-    aoi_input_id="aoi_vector_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

@@ -142,7 +142,6 @@ MODEL_SPEC = spec.ModelSpec(
         ["n_overlapping_stressors"],
         ["visualize_outputs"]
     ],
-    aoi_input_id="aoi_vector_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
