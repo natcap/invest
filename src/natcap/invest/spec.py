@@ -2462,11 +2462,11 @@ class ModelSpec(ImmutableBaseModel):
         for input_group in self.input_field_order:
             if isinstance(input_group, InputGroup):
                 spec_dict['input_field_order'].append({
-                    'label': input_group.label,
+                    'group_label': input_group.label,
                     'input_ids': input_group.input_ids})
             else:  # is a list of keys
                 spec_dict['input_field_order'].append({
-                    'label': '',
+                    'group_label': '',
                     'input_ids': input_group})
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 

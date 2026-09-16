@@ -603,8 +603,8 @@ class ModelSpecTests(unittest.TestCase):
             'reporter': '',
             'about': '',
             'input_field_order': [
-                {'label': '', 'input_ids': ['workspace_dir']},
-                {'label': 'Group A', 'input_ids': ['baz']}
+                {'group_label': '', 'input_ids': ['workspace_dir']},
+                {'group_label': 'Group A', 'input_ids': ['baz']}
             ],
             'different_projections_ok': False,
             'validate_spatial_overlap': True,
