@@ -2319,7 +2319,7 @@ class ModelSpec(ImmutableBaseModel):
     breaking up long lists and visually grouping related inputs. You can give a
     group a label, which will be displayed in the workbench, by using an
     InputGroup and setting the ``label`` property. Note that groups and their
-    labels only affect workbench rendering and have no effect
+    labels only affect workbench rendering and have no effect on the python side.
 
     The InputGroup was added to allow labeling groups. Using plain lists is
     still supported for backwards compatibility. If you do not wish to use
