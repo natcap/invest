@@ -12,6 +12,7 @@ import type { DataHubSearchResult } from '../models';
 import DataHubSearchResultCard from '../DataHubSearchResultCard';
 
 import { openLinkInBrowser } from '../../../utils';
+import { handleClickFindLogfiles } from '../../../menubar/handlers';
 
 interface IntroBodyProps {
   aoiInputName: string,
@@ -185,6 +186,9 @@ export function DataHubSearchResultsFooter(
   return (
       searchError &&
       <>
+          <Button variant="outline-primary" onClick={handleClickFindLogfiles}>
+            {t('Find my logs')}
+          </Button>
         <Button onClick={search}>{t('Search again')}</Button>
       </>
   );
