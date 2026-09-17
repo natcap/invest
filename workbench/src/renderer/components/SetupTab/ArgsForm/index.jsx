@@ -154,9 +154,6 @@ class ArgsForm extends React.Component {
           />
         );
       });
-      // Separate each group of input fields with a dotted line and label if
-      // applicable. Omit the dotted line above the first group if it has
-      // no label.
       formItems.push(
         <fieldset className="arg-group-fieldset" key={k}>
           {inputGroup.group_label &&
