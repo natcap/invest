@@ -23,8 +23,11 @@ import pandas
 import pint
 import pygeoprocessing
 from pygeoprocessing.utils import GDALUseExceptions
-from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_validator, model_serializer, model_validator
+from pydantic import AfterValidator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import field_serializer, field_validator
+from pydantic import model_serializer, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
@@ -228,6 +231,13 @@ class InputGroup(BaseModel):
     input_ids: list[str]
     """List of model input ids that belong to this group. Each string must
        match the id of an Input in the model."""
+
+    @model_serializer()
+    def serialize(self):
+        return {
+            'group_label': self.label,
+            'input_ids': self.input_ids
+        }
 
 
 class ImmutableBaseModel(BaseModel):
@@ -2366,6 +2376,16 @@ class ModelSpec(ImmutableBaseModel):
     about: str = ''
     """A brief description of the model."""
 
+    @field_validator('input_field_order', mode='after')
+    @classmethod
+    def standardize_input_groups(
+            cls, input_field_order: list[InputGroup | list[str]]
+    ) -> list[InputGroup]:
+        """Convert any lists in the input_field_order to InputGroups."""
+        return [
+            InputGroup(label='', input_ids=group) if isinstance(
+                group, list) else group for group in input_field_order]
+
     @field_validator('reporter', mode='after')
     @classmethod
     def check_reporter(cls, value: str) -> str:
@@ -2412,20 +2432,17 @@ class ModelSpec(ImmutableBaseModel):
         """Get an Output of this model by its key."""
         return {_output.id: _output for _output in self.outputs}[key]
 
-    def to_json(self):
-        """Serialize an MODEL_SPEC dict to a JSON string.
-
-        Args:
-            spec (dict): An invest model's MODEL_SPEC.
+    @model_serializer()
+    def serialize(self):
+        """Serialize a MODEL_SPEC to a JSON-compatible dict.
 
         Raises:
             TypeError if any object type within the spec is not handled by
             json.dumps or by the fallback serializer.
 
         Returns:
-            JSON String
+            dict
         """
-
         def fallback_serializer(obj):
             """Serialize objects that are otherwise not JSON serializeable."""
             if isinstance(obj, pint.Unit):
@@ -2454,21 +2471,11 @@ class ModelSpec(ImmutableBaseModel):
         spec_dict.pop('inputs')
         spec_dict['args'] = {_input.id: _input for _input in self.inputs}
         spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
-        spec_dict['input_field_order'] = []
-        # Encode the input field order as a list of dicts, where each dict
-        # contains a single item representing an input group. Each dict has two
-        # entries: 'name' which stores the group label (or '' if no label),
-        # and 'input_keys' and the value is the list of input ids in that group.
-        for input_group in self.input_field_order:
-            if isinstance(input_group, InputGroup):
-                spec_dict['input_field_order'].append({
-                    'group_label': input_group.label,
-                    'input_ids': input_group.input_ids})
-            else:  # is a list of keys
-                spec_dict['input_field_order'].append({
-                    'group_label': '',
-                    'input_ids': input_group})
-        return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
+
+        # dump to json so that we can apply the fallback serializer,
+        # then convert back to a dictionary.
+        return json.loads(json.dumps(
+            spec_dict, default=fallback_serializer, ensure_ascii=False))
 
     def preprocess_inputs(self, input_values):
         """Preprocess a dictionary of input values.

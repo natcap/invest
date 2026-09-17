@@ -595,50 +595,53 @@ class ModelSpecTests(unittest.TestCase):
                 )
             ]
         )
-        self.assertEqual(json.loads(test_spec.to_json()), {
-            'model_id': 'foo',
-            'model_title': 'Foo',
-            'userguide': '',
-            'aliases': 'set()',
-            'reporter': '',
-            'about': '',
-            'input_field_order': [
-                {'group_label': '', 'input_ids': ['workspace_dir']},
-                {'group_label': 'Group A', 'input_ids': ['baz']}
-            ],
-            'different_projections_ok': False,
-            'validate_spatial_overlap': True,
-            'args': {
-                'workspace_dir': {
-                    'about': spec.WORKSPACE.about,
-                    'required': True,
-                    'allowed': True,
-                    'hidden': False,
-                    'id': 'workspace_dir',
-                    'name': 'workspace directory',
-                    'type': 'workspace'
+        self.assertEqual(
+            json.loads(test_spec.model_dump_json()),
+            {
+                'model_id': 'foo',
+                'model_title': 'Foo',
+                'userguide': '',
+                'aliases': 'set()',
+                'reporter': '',
+                'about': '',
+                'input_field_order': [
+                    {'group_label': '', 'input_ids': ['workspace_dir']},
+                    {'group_label': 'Group A', 'input_ids': ['baz']}
+                ],
+                'different_projections_ok': False,
+                'validate_spatial_overlap': True,
+                'args': {
+                    'workspace_dir': {
+                        'about': spec.WORKSPACE.about,
+                        'required': True,
+                        'allowed': True,
+                        'hidden': False,
+                        'id': 'workspace_dir',
+                        'name': 'workspace directory',
+                        'type': 'workspace'
+                    },
+                    'baz': {
+                        'id': 'baz',
+                        'about': None,
+                        'name': None,
+                        'required': True,
+                        'allowed': True,
+                        'hidden': False,
+                        'units': None,
+                        'expression': None,
+                        'type': 'number'
+                    }
                 },
-                'baz': {
-                    'id': 'baz',
-                    'about': None,
-                    'name': None,
-                    'required': True,
-                    'allowed': True,
-                    'hidden': False,
-                    'units': None,
-                    'expression': None,
-                    'type': 'number'
-                }
-            },
-            'outputs': {
-                'c_storage_bas': {
-                    'id': 'c_storage_bas',
-                    'about': None,
-                    'created_if': True,
-                    'path': 'c_storage_bas.tif',
-                    'data_type': 'number',
-                    'units': 't/ha'
-                }
-            },
-            'module_name': __name__
-        })
+                'outputs': {
+                    'c_storage_bas': {
+                        'id': 'c_storage_bas',
+                        'about': None,
+                        'created_if': True,
+                        'path': 'c_storage_bas.tif',
+                        'data_type': 'number',
+                        'units': 't/ha'
+                    }
+                },
+                'module_name': __name__
+            }
+        )
