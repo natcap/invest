@@ -74,6 +74,8 @@ General
   as well as lists. The ``spec.InputGroup.label`` will be displayed on that
   section of the model input form in the workbench.
   (`#1602 <https://github.com/natcap/invest/issues/1602>`_)
+* The ``to_json`` method of ``spec.ModelSpec`` has been removed. Serialization
+  should now be done using the pydantic ``model_dump_json`` method.
 
 
 3.20.2 (2026-09-02)
