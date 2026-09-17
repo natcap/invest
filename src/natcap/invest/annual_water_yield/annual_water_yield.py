@@ -413,8 +413,20 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col="ws_id"
         ),
-        spec.TARGET_PROJECTION,
-        spec.TARGET_PIXELSIZE
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            about=spec.TARGET_PROJECTION.about + gettext(
+                " If this input is a raster, it will set the target"
+                " alignment for other spatial inputs (otherwise, the"
+                " Target Pixel Size input will set the alignment)."
+                " The default option is the LULC raster.")
+        )),
+        spec.TARGET_PIXELSIZE.model_copy(update=dict(
+            about=spec.TARGET_PIXELSIZE.about + gettext(
+                " If the Target Projection input is a vector, then"
+                " the Target Pixel Size input will set the target"
+                "alignment for other spatial inputs. The default"
+                " option is the LULC raster."),
+        )),
     ],
     outputs=[
         spec.VectorOutput(
@@ -690,11 +702,12 @@ def execute(args):
             valuation: 'ws_id', 'time_span', 'discount', 'efficiency',
             'fraction', 'cost', 'height', 'kw_price'
 
-        args['target_projection_id'] (string): (optional) if a non-empty string,
-            ``id`` of a spatial input listed in ``MODEL_SEPC.inputs`` that defines
-            the target projection. If that spatial input is a raster, rather
-            than a vector, it will also represent the target alignment for
-            other spatial inputs.
+        args['target_projection_id'] (string): (optional) if a non-empty
+            string, ``id`` of a spatial input listed in ``MODEL_SEPC.inputs``
+            that defines the target projection. If this spatial input is
+            a raster, rather than a vector, it will also represent the
+            target alignment for other spatial inputs (otherwise,
+            ``target_pixelsize_id`` will set the alignment).
 
         args['target_pixelsize_id'] (string): (optional) if a non-empty string,
             ``id`` of a raster input listed in ``MODEL_SPEC`` that defines the
