@@ -3009,8 +3009,10 @@ TARGET_PROJECTION = OptionSpatialInput(
     id="target_projection_id",
     name=gettext("target projection"),
     about=gettext(
-        "Input with target projection to which all other spatial "
-        "inputs will be reprojected."),
+        "Input with target projection to which all other spatial inputs "
+        "will be reprojected. If there are no valid options, you will "
+        "need to reproject one of the spatial inputs (ideally the default "
+        "target) before entering it into the model."),
     required=False,  # models will fallback to using default target projections
     options=[],
     projected=True,
