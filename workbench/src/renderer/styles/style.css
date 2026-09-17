@@ -624,7 +624,17 @@ exceed 100% of window.*/
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 1.5rem;
+  padding: 0 1.5rem 1rem;
+
+  &:has(.arg-group-fieldset:first-of-type > legend) {
+    padding-top: 1rem;
+  }
+
+  &:has(.arg-group-fieldset > legend) {
+    .arg-group {
+      padding-left: 1.5rem;
+    }
+  }
 }
 
 /* InVEST Argument Forms */
