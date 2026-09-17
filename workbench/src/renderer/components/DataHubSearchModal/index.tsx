@@ -22,6 +22,9 @@ import {
   DataHubSearchSearchingBody
 } from './DataHubSearchModalViews';
 
+// @ts-ignore
+const { logger } = window.Workbench;
+
 interface DataHubSearchModalProps {
   show: boolean,
   closeModal: () => {},
@@ -52,7 +55,6 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
   const { t } = useTranslation();
 
   const [step, setStep] = useState<number>(0);
-  const [searching, setSearching] = useState<boolean>(false);
   const [numSearchResults, setNumSearchResults] = useState<number>(0);
   const [searchResults, setSearchResults] = useState<DataHubSearchResult[]>([]);
   const [allExpanded, setAllExpanded] = useState<boolean>(false);
@@ -61,10 +63,6 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
 
   const autoFocusRef: RefObject<any> = useRef(null);
 
-  const nextStep = () => {
-    setStep(step + 1);
-  };
-
   useEffect(() => {
     // Modal automatically receives focus when it first opens.
     // This effect re-focuses the modal when its content changes,
@@ -72,10 +70,38 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
     autoFocusRef.current?.dialog?.focus();
   }, [step]);
 
-  const search = () => {
+  const search = async () => {
     setStep(SEARCHING_STEP);
     setSearchError(false);
-    setSearching(true);
+
+    const params = new DHALSearchParams(query);
+    const requestUrl = `${DHAL_BASE_URL}?${params}`;
+
+    try {
+      const response = await fetch(requestUrl);
+      const responseBody = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          `HTTP request failed.
+          Request URL: ${requestUrl}
+          HTTP error ${response.status} (${response.statusText}): ${responseBody.error_message}`
+        );
+      } else {
+        const {count, datasets} = responseBody;
+        setNumSearchResults(count);
+        setSearchResults(datasets.map((d: DHALDataset) => transformDHALSearchResult(d)));
+        collapseAllCards();
+        logger.info(
+          `HTTP request succeeded.
+          Request URL: ${requestUrl}`
+        );
+      }
+    } catch (error) {
+      setSearchError(true);
+      logger.error((error as Error).message);
+    } finally {
+      setStep(RESULTS_STEP);
+    }
   };
 
   const goToAoiInput = () => {
@@ -111,35 +137,8 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
     // @TODO: ¿consider preserving step number to prevent repeated user interactions,
     // perhaps resetting step number only if/when query params have changed?
     setStep(0);
-    setSearching(false);
     closeModal();
   };
-
-  useEffect(() => {
-    if (searching) {
-      const params = new DHALSearchParams(query);
-      fetch(`${DHAL_BASE_URL}?${params}`)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(({ count, datasets }) => {
-          setNumSearchResults(count);
-          setSearchResults(datasets.map((d: DHALDataset) => transformDHALSearchResult(d)));
-          collapseAllCards();
-        })
-        .catch((error) => {
-          setSearchError(true);
-          console.error((error as Error).message);
-        })
-        .finally(() => {
-          setSearching(false);
-          nextStep();
-        })
-    }
-  }, [searching]);
 
   useEffect(() => {
     allExpanded ? expandAllCards() : collapseAllCards();
