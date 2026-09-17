@@ -311,4 +311,4 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_model_specs_serialize(self):
         """MODEL_SPEC: test each arg spec can serialize to JSON."""
         for module in models.pyname_to_module.values():
-            module.MODEL_SPEC.to_json()
+            module.MODEL_SPEC.model_dump_json()
