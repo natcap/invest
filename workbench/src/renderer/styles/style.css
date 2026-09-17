@@ -665,7 +665,7 @@ exceed 100% of window.*/
   flex-direction: column;
   gap: 16px;
   margin: 0;
-  padding: 1rem 0;
+  padding: 1.5rem 0;
 }
 
 .arg-hide {
