@@ -737,7 +737,8 @@ input[type=text]::placeholder {
 
 .args-form .input-group {
   .form-select,
-  .form-select.is-valid {
+  .form-select.is-valid,
+  .form-select.is-invalid {
     --caret-width: 1.875rem;
     padding-right: var(--form-field-padding-right);
     /* Custom dropdown icon is react-icons/md/MdKeyboardArrowDown, as a URL-encoded SVG */
