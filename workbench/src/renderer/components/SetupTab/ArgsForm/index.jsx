@@ -130,10 +130,9 @@ class ArgsForm extends React.Component {
     } = this.props;
     const formItems = [];
     let k = 0;
-    argsOrder.forEach((groupArray) => {
-      k += 1;
+    argsOrder.forEach((inputGroup) => {
       const groupItems = [];
-      groupArray.forEach((argkey) => {
+      inputGroup.input_ids.forEach((argkey) => {
         groupItems.push(
           <ArgInput
             argkey={argkey}
@@ -156,10 +155,17 @@ class ArgsForm extends React.Component {
         );
       });
       formItems.push(
-        <div className="arg-group" key={k}>
-          {groupItems}
-        </div>
+        <fieldset className="arg-group-fieldset" key={k}>
+          {inputGroup.group_label &&
+            <legend>{inputGroup.group_label}</legend>
+          }
+          <Form.Group className="arg-group">
+            {groupItems}
+          </Form.Group>
+        </fieldset>
+
       );
+      k += 1;
     });
 
     return (
