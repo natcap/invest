@@ -172,30 +172,25 @@ class ArgsForm extends React.Component {
       let group = groupItems;
       if (anyEnabled) {
         formItems.push(
-          <fieldset className={fieldsetClassName} key={k}>
-            {
-              inputGroup.label &&
-              <legend className="arg-group-dotted-legend">
-                {inputGroup.label}
-              </legend>
+          <fieldset className="arg-group-fieldset" key={k}>
+            {inputGroup.group_label &&
+              <legend>{inputGroup.group_label}</legend>
             }
-            <Form.Group className={inputGroup.tightSpacing ? 'arg-group-tight' : 'arg-group'}>
+            <Form.Group className="arg-group">
               {groupItems}
             </Form.Group>
           </fieldset>
+
         );
       } else {
         // Input groups that have all their inputs disabled will be rendered
         // as a collapsed accordion section.
         formItems.push(
-          <fieldset className={fieldsetClassName} key={k}>
+          <fieldset className="arg-group-fieldset" key={k}>
             <Accordion.Item eventKey={k}>
               <Accordion.Header className="input-group-header">
-                {
-                  inputGroup.label &&
-                  <legend className="arg-group-dotted-legend-disabled">
-                    {inputGroup.label}
-                  </legend>
+                {inputGroup.group_label &&
+                  <legend>{inputGroup.group_label}</legend>
                 }
               </Accordion.Header>
               <Accordion.Body>

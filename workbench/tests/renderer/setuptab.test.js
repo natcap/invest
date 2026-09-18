@@ -53,7 +53,7 @@ const BASE_ARGS_ENABLED = {}
 Object.keys(BASE_MODEL_SPEC.args).forEach((arg) => {
   BASE_ARGS_ENABLED[arg] = true;
 });
-const INPUT_FIELD_ORDER = [{ label: '', input_ids: Object.keys(BASE_MODEL_SPEC.args)}];
+const INPUT_FIELD_ORDER = [{ group_label: '', input_ids: Object.keys(BASE_MODEL_SPEC.args)}];
 
 /**
  * Render a SetupTab component given the necessary specs.
@@ -410,7 +410,7 @@ describe('UI spec functionality', () => {
     };
     fetchArgsEnabled.mockResolvedValue({ arg1: false, arg2: true });
 
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
     const arg1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
@@ -441,7 +441,7 @@ describe('UI spec functionality', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     const {
       findByLabelText, findByText, queryByText,
@@ -492,10 +492,10 @@ describe('UI spec functionality', () => {
 
     // intentionally leaving out arg6, it should not be in the setup form
     const inputFieldOrder = [
-      { label: '', input_ids: ['arg4'] },
-      { label: '', input_ids: ['arg3', 'arg2'] },
-      { label: 'Group A', input_ids: ['arg1'] },
-      { label: '', input_ids: ['arg5'] }
+      { group_label: '', input_ids: ['arg4'] },
+      { group_label: '', input_ids: ['arg3', 'arg2'] },
+      { group_label: 'Group A', input_ids: ['arg1'] },
+      { group_label: '', input_ids: ['arg5'] }
     ];
 
     const { findByTestId, queryByText } = renderSetupFromSpec(spec, inputFieldOrder);
@@ -542,7 +542,7 @@ describe('Misc form validation stuff', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     // Mocking to return the payload so we can assert we always send
     // correct payload to this endpoint.
@@ -574,7 +574,7 @@ describe('Misc form validation stuff', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     const vectorValue = './vector.shp';
     const expectedVal1 = '-84.9';
     const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
@@ -635,7 +635,7 @@ describe('Misc form validation stuff', () => {
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     const { findByLabelText, queryByText } = renderSetupFromSpec(
       spec, inputFieldOrder, { arg1: false, arg2: false } );
@@ -687,7 +687,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -737,7 +737,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -785,7 +785,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -836,7 +836,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -876,7 +876,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -926,7 +926,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -975,7 +975,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
@@ -1027,7 +1027,7 @@ describe('loadParametersFromFile', () => {
         },
       },
     };
-    const inputFieldOrder = [{ label: '', input_ids: Object.keys(spec.args)}];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     const mockDatastack = {
       model_id: 'coastal_purple_carbon',
       model_title: 'Coastal Purple Carbon',

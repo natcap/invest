@@ -652,7 +652,17 @@ exceed 100% of window.*/
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 1.5rem;
+  padding: 0 1.5rem 1rem;
+
+  &:has(.arg-group-fieldset:first-of-type > legend) {
+    padding-top: 1rem;
+  }
+
+  &:has(.arg-group-fieldset > legend) {
+    .arg-group {
+      padding-left: 1.5rem;
+    }
+  }
 }
 
 /* InVEST Argument Forms */
@@ -680,12 +690,8 @@ exceed 100% of window.*/
   --bs-accordion-btn-padding-y: 0;
 }
 
-.arg-group-dotted-fieldset {
+.arg-group-fieldset {
   border: none;
-  border-top: 2px dotted #dee2e6;
-  padding-top: 1rem;
-  margin-top: 1.5rem;
-}
 
 .arg-group-dotted-legend {
   float: none;
@@ -705,6 +711,19 @@ exceed 100% of window.*/
   font-size: inherit;
   font-weight: 600;
   color: #888888;
+  &:not(:first-of-type),
+  &:first-of-type:has(> legend) {
+    border-top: 0.125rem dotted;
+  }
+
+  & > legend {
+    float: none;
+    width: auto;
+    padding: 0 0.5rem 0 0;
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
 }
 
 .arg-group {
@@ -712,7 +731,7 @@ exceed 100% of window.*/
   flex-direction: column;
   gap: 16px;
   margin: 0;
-  padding: 1rem 0;
+  padding: 1.5rem 0;
 }
 
 .arg-group-tight {
@@ -810,7 +829,8 @@ input[type=text]::placeholder {
   margin-top: -1px;
   position: relative;
   .form-select,
-  .form-select.is-valid {
+  .form-select.is-valid,
+  .form-select.is-invalid {
     --caret-width: 1.875rem;
     padding-right: var(--form-field-padding-right);
     /* Custom dropdown icon is react-icons/md/MdKeyboardArrowDown, as a URL-encoded SVG */
