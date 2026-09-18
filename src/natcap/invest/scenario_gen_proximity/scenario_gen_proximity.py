@@ -43,6 +43,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["convert_farthest_from_edge", "convert_nearest_to_edge",
          "n_fragmentation_steps"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

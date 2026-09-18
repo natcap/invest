@@ -24,7 +24,7 @@ import pint
 import pygeoprocessing
 from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_validator, model_serializer, model_validator
+    field_serializer, field_validator, model_serializer, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
@@ -507,6 +507,10 @@ class Input(IOModel):
         if hasattr(self, 'contents'):
             return self.contents
         return []
+
+    @field_serializer('keywords')
+    def serialize_keywords(self, _):
+        return(self.get_keywords())
 
     def get_keywords(self, include_children=True, include_aliases=True):
         """Get a list of unique keyword strings for this input and children.
@@ -2509,6 +2513,14 @@ class ModelSpec(ImmutableBaseModel):
     Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
     """
 
+    aoi_input_id: str = ''
+    """The ``id`` of the model input that functions as the Area of Interest
+    (AOI). While some models explicitly call this input "Area of Interest",
+    others do not. (For example, the "Watersheds" vector functions as the AOI
+    in some hydrological models.) If an ``aoi_input_id`` is specified, it must
+    refer to a ``VectorInput``.
+    """
+
     default_projection_id: str = ''
     """The ID of the input which has the projection (and typically, alignment)
     to which other inputs are reprojected by default. A user can select a
@@ -2589,6 +2601,19 @@ class ModelSpec(ImmutableBaseModel):
         if found_keys != set([s.id for s in self.inputs]):
             raise ValueError(
                 f'Mismatch between keys in inputs and input_field_order')
+        return self
+
+    @model_validator(mode='after')
+    def check_aoi_input_id(self):
+        """Make sure ``aoi_input_id`` refers to a valid vector input."""
+        if self.aoi_input_id:
+            try:
+                aoi_input = self.get_input(self.aoi_input_id)
+            except KeyError:
+                raise ValueError('Invalid aoi_input_id. No input with id '
+                                 f'{self.aoi_input_id}.')
+            if not isinstance(aoi_input, VectorInput):
+                raise ValueError('aoi_input_id must refer to a VectorInput.')
         return self
 
     @model_validator(mode='after')

@@ -57,6 +57,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["flow_dir_algorithm", "threshold_flow_accumulation", "k_param",
          "sdr_max", "ic_0_param", "l_max"]
     ],
+    aoi_input_id="watersheds_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

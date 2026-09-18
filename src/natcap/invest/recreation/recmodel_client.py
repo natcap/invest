@@ -129,6 +129,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["compute_regression", "predictor_table_path", "scenario_predictor_table_path"],
         ["grid_aoi", "grid_type", "cell_size"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

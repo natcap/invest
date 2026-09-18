@@ -56,6 +56,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["do_productivity_valuation", "avg_rel_humidity"],
         ["cc_weight_shade", "cc_weight_albedo", "cc_weight_eti"]
     ],
+    aoi_input_id="aoi_vector_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

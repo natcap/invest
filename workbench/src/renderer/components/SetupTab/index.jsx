@@ -604,6 +604,7 @@ class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         modelID,
+        aoiInputId,
       } = this.props;
 
       const SaveAlerts = [];
@@ -663,6 +664,7 @@ class SetupTab extends React.Component {
               loadParametersFromFile={this.loadParametersFromFile}
               scrollEventCount={scrollEventCount}
               triggerScrollEvent={this.triggerScrollEvent}
+              aoiInputId={aoiInputId}
             />
           </Row>
           <Portal elId={sidebarSetupElementId}>

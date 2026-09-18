@@ -6,7 +6,11 @@ import logging
 from flask import Flask
 from flask import request
 from flask_cors import CORS
+from osgeo import osr
+
 import geometamaker
+import pygeoprocessing
+
 import natcap.invest
 from natcap.invest import cli
 from natcap.invest import datastack
@@ -310,4 +314,33 @@ def set_geometamaker_profile():
     return {
         'message': 'Metadata profile saved',
         'error': False
+    }
+
+
+@app.route(f'/{PREFIX}/get_vector_bounding_box', methods=['POST'])
+def get_vector_bounding_box():
+    """Get the bounding box of a given vector.
+
+    Body (JSON string): deserializes to a dict with key:
+        vector_path: path to AOI vector
+
+    Returns:
+        A dictionary containing the following:
+        - 'vector_bbox' (list[float]): [xmin, ymin, xmax, ymax]
+    """
+    payload = request.get_json()
+    vector_info = pygeoprocessing.get_vector_info(
+        payload['vector_path'])
+    # Convert to WGS84 because that's what the DHAL expects.
+    wgs84srs = osr.SpatialReference()
+    wgs84srs.ImportFromEPSG(4326)  # EPSG4326 is WGS84 lat/lng
+    vector_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
+        vector_info['bounding_box'], vector_info['projection_wkt'],
+        wgs84srs.ExportToWkt())
+    # Limit precision for UI purposes and for query length purposes.
+    vector_wgs84_bounding_box = [
+        round(bound, 6) for bound in vector_wgs84_bounding_box]
+
+    return {
+        'vector_bbox': vector_wgs84_bounding_box,
     }

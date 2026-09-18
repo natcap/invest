@@ -32,6 +32,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["lulc_path", "curve_number_table_path", "soils_hydrological_group_raster_path"],
         ["built_infrastructure_vector_path", "infrastructure_damage_loss_table_path"]
     ],
+    aoi_input_id="aoi_watersheds_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
@@ -834,7 +835,7 @@ def _s_max_op(cn_array, cn_nodata, result_nodata):
     result[valid_mask] = 25400 / cn_array[valid_mask] - 254
     # Curve Number of 0 means infitite retention so set s_max to a value
     # higher than any possible storm depth. Largest storm depth is recorded
-    # at 6,433mm. 
+    # at 6,433mm.
     result[zero_mask] = 100000
     return result
 

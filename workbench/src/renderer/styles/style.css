@@ -7,6 +7,7 @@
   --secondary-gray: #585858;
   --bootstrap-secondary-gray:#6c757d;
   --bootstrap-gray-100: #f8f9fa;
+  --bootstrap-gray-200: #e9ecef;
   --bootstrap-gray-300: #dee2e6;
   --lagunita-light: #009AB4; /* From Stanford brand guidelines. Suitable for non-text elements only. */
   --lagunita-light-opacity-50: #009AB480; /* Equivalent to Lagunita Light with 50% opacity (for Bootstrap-style focus indicators). */
@@ -30,14 +31,21 @@ body {
   overflow-y: hidden;
 }
 
-/* Default focus styles for buttons & links, to override system defaults.
-   Bootstrap-styled buttons have different focus styles, based on element/background colors.
-   This is a fallback, to be applied to elements whose focus styles are not defined by Bootstrap. */
-a,
-button {
-  &:focus {
-    outline-color: var(--invest-green);
-  }
+/* Workbench-default focus styles, applied to elements whose focus styles are
+   not defined by Bootstrap. Mainly for non-Bootstrap buttons/links, but also
+   for other keyboard-focused elements and (less commonly) elements that may
+   receive focus programmatically. Interactive elements (e.g., buttons, links,
+   form fields) styled by Bootstrap have different focus styles, based on
+   element/background colors. */
+a:focus,
+button:focus,
+*:focus-visible {
+  outline-color: var(--invest-green);
+  outline-offset: 0.125rem;
+  border-radius: 0.25rem;
+}
+button:focus {
+  border-radius: 0.375rem;
 }
 
 .btn-link {
@@ -739,7 +747,8 @@ input[type=text]::placeholder {
   color: #000;
   padding: 0 1rem;
   &:focus-visible {
-    outline-color: var(--invest-green);
+    outline-offset: -0.125rem;
+    border-radius: 0.5rem;
   }
 }
 
@@ -930,4 +939,167 @@ code {
 
 .text-italic {
   font-style: italic;
+}
+
+/* Search Modal */
+.search-modal {
+  width: 45rem;
+  min-height: 30rem;
+
+  .modal-body {
+    &:has(.search-spinner) {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  dl {
+    display: grid;
+    column-gap: 1rem;
+    row-gap: 0.5rem;
+
+    dd {
+      margin: 0;
+      display: flex;
+      /* Allow text to sink to bottom of container if first column (the <dt>)
+      spans more lines. */
+      align-items: flex-end;
+    }
+
+    &.search-params {
+      background: var(--bootstrap-gray-200);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      grid-template-columns: repeat(8, 1fr);
+      dd {
+        /* Width can be up to 7/8 of the line width (automatically shortened
+        if first column's content (the <dt>) requires more space). */
+        grid-column: span 7;
+      }
+    }
+
+    &.search-result-metadata {
+      grid-template-columns: repeat(5, 1fr);
+      dd {
+        /* Width can be up to 4/5 of the line width (automatically shortened
+        if first column's content (the <dt>) requires more space). */
+        grid-column: span 4;
+      }
+    }
+  }
+
+  .search-spinner {
+    display: block;
+    height: 8rem;
+    width: 8rem;
+    margin: auto;
+    border-width: 1rem;
+    color: var(--invest-green);
+  }
+
+  .search-modal-content-heading {
+    &:focus-visible {
+      outline-style: dotted;
+      outline-width: 2px;
+      outline-offset: 6px;
+    }
+
+    &:has(+ .search-error) {
+      outline-color: var(--digital-red);
+    }
+  }
+
+  .search-error {
+    color: var(--digital-red);
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 2rem auto;
+    max-width: fit-content;
+    .error-icon {
+      font-size: 6rem;
+      min-width: fit-content;
+    }
+    & > p {
+      margin: 0;
+    }
+    .aoi-input-name {
+      display: block;
+      text-transform: capitalize;
+      margin: 1rem 0 0 0;
+    }
+  }
+
+  .search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .search-results-header {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 0 1rem 0;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .form-switch {
+    margin: 0;
+    padding: 0;
+    transform: none;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 0.5rem;
+
+    input {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+  }
+
+  .search-result {
+    border: 0.125rem solid var(--bootstrap-secondary-gray);
+    border-radius: 0.25rem;
+    padding: 1rem;
+
+    .search-result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0;
+    }
+
+    &.search-result-expanded {
+      .search-result-header {
+        margin: 0 0 1rem 0;
+      }
+    }
+
+    .search-result-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      .details-button {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        svg {
+          font-size: 1.5rem;
+        }
+      }
+    }
+  }
+
+  .no-results-icon {
+    font-size: 6rem;
+    display: flex;
+    margin: 1rem auto 2rem;
+  }
 }

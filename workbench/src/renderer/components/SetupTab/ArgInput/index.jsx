@@ -8,10 +8,12 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
-import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
+import { MdFolderOpen, MdInfo, MdOpenInNew, MdSearch } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import i18n from '../../../i18n/i18n';
+
+import DataHubSearchModal from '../../DataHubSearchModal';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -157,7 +159,10 @@ export default function ArgInput({
   argkey, argSpec, userguide, isCoreModel, value = undefined,
   touched = false, isValid = undefined, validationMessage = '',
   updateArgValues, handleFocus, selectFile, enabled,
-  dropdownOptions = undefined, inputDropHandler, scrollEventCount = 0
+  dropdownOptions = undefined, inputDropHandler, scrollEventCount = 0,
+  aoiInputName, aoiIsValid, searchExtent, updateSearchExtent,
+  searchCollections, clearSearchCollections, searchSiblingType, selectSearchResult,
+  requestFocusOnAoiInput, setReadyToFocusOnAoi, resetAoiFocusState, autoFocus,
 }) {
   const uniqueId = useId();
   const inputRef = useRef();
@@ -179,6 +184,7 @@ export default function ArgInput({
     /** Pass input value up to SetupTab for storage & validation. */
     const { name, value } = event.currentTarget;
     updateArgValues(name, value);
+    clearSearchCollections(searchSiblingType);
   }
 
   // Messages with this pattern include validation feedback about
@@ -221,7 +227,7 @@ export default function ArgInput({
       <Button
         aria-label={`browse for ${argSpec.name}`}
         className="ms-2"
-        id={inputId}
+        id={`browse-${inputId}`}
         variant="outline-dark"
         value={argSpec.type} // dialog will limit options accordingly
         name={argkey}
@@ -230,6 +236,71 @@ export default function ArgInput({
       >
         <MdFolderOpen />
       </Button>
+    );
+  }
+
+  // @TODO: ¿move search-related stuff to a separate module?
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const searchQuery = {
+    tags: argSpec.keywords || [],
+    datatype: argSpec.type,
+    extent: searchExtent,
+    collections: searchCollections,
+  };
+
+  const openSearch = () => {
+    setShowSearchModal(true);
+    setReadyToFocusOnAoi(false);
+    updateSearchExtent();
+  };
+
+  const handleFocusOnSearchBtn = () => {
+    // Focus automatically returns to search button after modal closes.
+    // After that happens, we can signal to ArgsForm that it is now OK to
+    // shift focus to AOI field (if focus on AOI has been requested).
+    setReadyToFocusOnAoi(true);
+  };
+
+  if (autoFocus) {
+    // This is the AOI input, and ArgsForm has signaled that
+    // the <input> element should immediately be focused.
+    inputRef.current?.focus();
+    // It's now crucial to reset ArgsForm's state relevant to
+    // AOI focus in order to prevent an unwanted focus trap.
+    resetAoiFocusState();
+  }
+
+  const onSelectSearchResult = (argkey, url, collections) => {
+    selectSearchResult(argkey, url, collections, searchSiblingType);
+  };
+
+  let searchButton = <React.Fragment />;
+  // @TODO: refine this condition if needed (e.g., should any input w/o keywords be skipped?)
+  if (isCoreModel && aoiInputName && aoiInputName !== argSpec.name
+      && ['csv', 'raster'].includes(argSpec.type)
+  ) {
+    searchButton = (
+      <>
+        <Button
+          aria-label={`search for ${argSpec.name}`}
+          className="ms-2"
+          id={`search-${inputId}`}
+          variant="outline-dark"
+          onClick={openSearch}
+          onFocus={handleFocusOnSearchBtn}
+        >
+          <MdSearch />
+        </Button>
+        <DataHubSearchModal
+          show={showSearchModal}
+          closeModal={() => setShowSearchModal(false)}
+          query={searchQuery}
+          aoiInputName={aoiInputName}
+          aoiIsValid={aoiIsValid}
+          requestFocusOnAoiInput={requestFocusOnAoiInput}
+          selectSearchResult={(url, collections) => onSelectSearchResult(argkey, url, collections)}
+        />
+      </>
     );
   }
 
@@ -302,6 +373,7 @@ export default function ArgInput({
           aria-describedby={`${argkey}-feedback`}
         />
         {fileSelector}
+        {searchButton}
       </React.Fragment>
     );
   }
@@ -346,6 +418,7 @@ ArgInput.propTypes = {
     type: PropTypes.string.isRequired,
     required: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
     units: PropTypes.string, // for numbers only
+    keywords: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
   userguide: PropTypes.string.isRequired,
   isCoreModel: PropTypes.bool.isRequired,

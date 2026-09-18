@@ -138,6 +138,7 @@ MODEL_SPEC = spec.ModelSpec(
          "grid_points_path", "avg_grid_distance", "price_table",
          "wind_schedule", "wind_price", "rate_change"]
     ],
+    aoi_input_id="aoi_vector_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

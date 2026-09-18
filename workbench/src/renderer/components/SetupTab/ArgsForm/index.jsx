@@ -6,6 +6,8 @@ import Form from 'react-bootstrap/Form';
 import ArgInput from '../ArgInput';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { withTranslation } from 'react-i18next';
+import { getVectorBoundingBox } from '../../../server_requests';
+import { DataHubSearchSiblingType } from '../../DataHubSearchModal/models';
 
 const { getFilePath, ipcRenderer } = window.Workbench.electron;
 
@@ -28,6 +30,15 @@ class ArgsForm extends React.Component {
     this.dragLeaveHandler = this.dragLeaveHandler.bind(this);
     this.formRef = React.createRef(); // For dragging CSS
     this.dragDepth = 0; // To determine Form dragging CSS
+    this.state = {
+      focusOnAoiRequested: false,
+      readyToFocusOnAoi: false,
+      searchExtent: [],
+      searchCollections: {
+        [DataHubSearchSiblingType.LULC]: [],
+        [DataHubSearchSiblingType.BIOPHYSICAL_TABLE]: [],
+      },
+    };
   }
 
   async onArchiveDragDrop(event) {
@@ -116,6 +127,100 @@ class ArgsForm extends React.Component {
     }
   }
 
+  cachedAoiPath = '';
+  updateSearchExtent = () => {
+    const { aoiInputId, argsValidation, argsValues } = this.props;
+    const aoiIsValid = argsValidation[aoiInputId]?.valid || false;
+    const aoiPath = argsValues[aoiInputId]?.value || '';
+    // Fetch AOI bounding box if we don't already have it
+    // (i.e., if aoiPath has changed since the last bounding box calculation).
+    if (aoiIsValid && aoiPath !== this.cachedAoiPath) {
+      // Clear extent to avoid displaying previous values while awaiting update.
+      this.setState({searchExtent: []});
+      getVectorBoundingBox(
+        { vector_path: aoiPath }
+      ).then(({ vector_bbox }) => {
+        this.setState({
+          ...this.state,
+          searchExtent: vector_bbox
+        });
+        this.cachedAoiPath = aoiPath;
+      });
+    }
+  };
+
+  selectSearchResult = (argkey, url, collections, siblingType) => {
+    this.props.updateArgValues(argkey, url);
+    this.props.updateArgTouched(argkey);
+    this.props.triggerScrollEvent();
+    if (
+      siblingType === DataHubSearchSiblingType.LULC
+      || siblingType === DataHubSearchSiblingType.BIOPHYSICAL_TABLE
+    ) {
+      this.setState({
+        ...this.state,
+        searchCollections: {
+          ...this.state.searchCollections,
+          [siblingType]: collections,
+        },
+      });
+    }
+  };
+
+  requestFocusOnAoiInput = () => {
+    this.setState({
+      ...this.state,
+      focusOnAoiRequested: true,
+    });
+  };
+
+  setReadyToFocusOnAoi = (newState) => {
+    this.setState({
+      ...this.state,
+      readyToFocusOnAoi: newState,
+    });
+  };
+
+  resetAoiFocusState = () => {
+    this.setState({
+      ...this.state,
+      focusOnAoiRequested: false,
+      readyToFocusOnAoi: false,
+    });
+  };
+
+  getSiblingType = (argkey) => {
+    // These hard-coded values support AWY, NDR, and SDR.
+    // @TODO: add support for all search-enabled models (via model spec, probably).
+    if (argkey === 'lulc_path') {
+      return DataHubSearchSiblingType.LULC;
+    } else if (argkey === 'biophysical_table_path') {
+      return DataHubSearchSiblingType.BIOPHYSICAL_TABLE;
+    }
+    return DataHubSearchSiblingType.NONE;
+  };
+
+  getSiblingCollections = (siblingType) => {
+    if (siblingType === DataHubSearchSiblingType.LULC) {
+      return this.state.searchCollections[DataHubSearchSiblingType.BIOPHYSICAL_TABLE];
+    } else if (siblingType === DataHubSearchSiblingType.BIOPHYSICAL_TABLE) {
+      return this.state.searchCollections[DataHubSearchSiblingType.LULC];
+    }
+    return [];
+  };
+
+  clearSearchCollections = (siblingType) => {
+    if (siblingType === DataHubSearchSiblingType.LULC || siblingType === DataHubSearchSiblingType.BIOPHYSICAL_TABLE) {
+      this.setState({
+        ...this.state,
+        searchCollections: {
+          ...this.state.searchCollections,
+          [siblingType]: [],
+        },
+      });
+    }
+  };
+
   render() {
     const {
       argsOrder,
@@ -127,6 +232,7 @@ class ArgsForm extends React.Component {
       userguide,
       isCoreModel,
       scrollEventCount,
+      aoiInputId,
     } = this.props;
     const formItems = [];
     let k = 0;
@@ -134,6 +240,8 @@ class ArgsForm extends React.Component {
       k += 1;
       const groupItems = [];
       groupArray.forEach((argkey) => {
+        const siblingType = this.getSiblingType(argkey);
+        const siblingCollections = this.getSiblingCollections(siblingType);
         groupItems.push(
           <ArgInput
             argkey={argkey}
@@ -152,6 +260,18 @@ class ArgsForm extends React.Component {
             validationMessage={argsValidation[argkey].validationMessage}
             value={argsValues[argkey].value}
             scrollEventCount={scrollEventCount}
+            aoiInputName={argsSpec[aoiInputId]?.name || ''}
+            aoiIsValid={argsValidation[aoiInputId]?.valid || false}
+            searchExtent={this.state.searchExtent}
+            updateSearchExtent={this.updateSearchExtent}
+            searchCollections={siblingCollections}
+            clearSearchCollections={this.clearSearchCollections}
+            searchSiblingType={siblingType}
+            selectSearchResult={this.selectSearchResult}
+            requestFocusOnAoiInput={this.requestFocusOnAoiInput}
+            setReadyToFocusOnAoi={this.setReadyToFocusOnAoi}
+            resetAoiFocusState={this.resetAoiFocusState}
+            autoFocus={(argkey === aoiInputId) && this.state.readyToFocusOnAoi && this.state.focusOnAoiRequested}
           />
         );
       });

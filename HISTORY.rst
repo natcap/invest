@@ -73,6 +73,14 @@ General
   input defines the output pixel size and projection.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
 
+
+Workbench
+=========
+* Some models now offer the option to search the Natural Capital Alliance Data
+  Hub for datasets you can use in InVEST without having to download them first.
+  (`#2702 <https://github.com/natcap/invest/issues/2702>`_)
+  (`#2703 <https://github.com/natcap/invest/issues/2703>`_)
+
 Annual Water Yield
 ==================
 * A user may now select which model inputs define the target projection and

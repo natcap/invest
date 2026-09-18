@@ -119,6 +119,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["valuation_container", "land_gridPts_path",
          "machine_econ_path", "number_of_machines"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

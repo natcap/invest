@@ -44,6 +44,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["do_valuation", "valuation_function", "a_coef", "b_coef",
          "max_valuation_radius"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,

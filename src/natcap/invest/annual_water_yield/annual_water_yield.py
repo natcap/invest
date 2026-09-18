@@ -169,6 +169,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["demand_table_path", "valuation_table_path"],
         ["target_projection_id", "target_pixelsize_id"]
     ],
+    aoi_input_id="watersheds_path",
     default_projection_id="lulc_path",
     default_pixelsize_id="lulc_path",
     validate_spatial_overlap=True,
@@ -743,7 +744,7 @@ def execute(args):
     target_projection_wkt = utils.get_raster_or_vector_projection(
         target_projection_path)
     # Reproject watersheds_path even if it has the `target_projection_id` to
-    # create a copy so we don't modify the original when doing zonal stats 
+    # create a copy so we don't modify the original when doing zonal stats
     reproject_watersheds_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['watersheds_path'], target_projection_wkt,

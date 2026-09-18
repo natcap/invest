@@ -63,6 +63,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["user_defined_climate_zones", "rain_events_table_path",
          "climate_zone_table_path", "climate_zone_raster_path"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
