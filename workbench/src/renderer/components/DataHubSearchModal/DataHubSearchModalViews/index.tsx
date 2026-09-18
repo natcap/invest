@@ -43,9 +43,8 @@ export function DataHubSearchIntroContent(
               </p>
             </div>
             <p>
-              {t('When you search the Data Hub for spatial datasets (e.g., rasters), '
-                + 'search results will be filtered to include only datasets that intersect '
-                + `the bounding box of the ${aoiInputName} input.`)}
+              {t(`To help you select compatible datasets, the Workbench will use the `
+                + `bounding box of the ${aoiInputName} input to filter search results.`)}
             </p>
           </>
         }
