@@ -1,7 +1,7 @@
 # Internationalization
 
 ## Summary of files
-None of the translation files (`.pot`, `.po`, `.mo`) should be manually edited by us.
+For the most part, we should not manually edit any of the translation files (`.pot`, `.po`, `.mo`). The vast majority of updates to those files will be handled by our automated tooling (i.e., `pybabel`). The only exception is when we need to correct improperly applied `python-format` tags (see steps 2 and 4 in the [Before requesting translation](#before-requesting-translation) section), since we do not currently have a way to automate that process.
 
 ### `messages.pot`
 Message catalog template file. This contains all the strings ("messages") that are translated, without any translations. All the `.po` files are derived from this.
@@ -15,7 +15,15 @@ Locale directory. The contents of this directory are organized in a specific str
 ### `locales/<lang>/LC_MESSAGES/messages.po`
 Human-readable message catalog file. Messages are added to this file from the PO template (`.pot` file), and translations for the messages are added by the translator.
 
-Messages in `.po` files may be annotated with flags (comma-separated strings immediately preceding a `msgid`). Some flags are defined by the translation tooling and built into its automated processes; others may be custom, with special meaning and processes defined by a particular project or dev team.
+Messages in `.po` files may be annotated with flags (comma-separated strings on the line preceding a `msgid`).
+
+For example:
+```
+#, fuzzy, python-brace-format, my-custom-flag
+msgid ""
+```
+
+Some flags are defined by the translation tooling and built into its automated processes; others may be custom, with special meaning and processes defined by a particular project or dev team.
 
 Common flags in the `invest` codebase include the following:
 - `fuzzy` indicates a translation needs verification. This label can be applied in two scenarios: (1) the automated tools have attempted to translate the message based on similar messages that have already been translated, or (2) a translator has some doubt about the translation and has intentionally flagged it for review (e.g., using Poedit's "Needs work" button).
