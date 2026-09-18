@@ -196,8 +196,8 @@ MODEL_SPEC = spec.ModelSpec(
             required="grid_aoi",
             allowed="grid_aoi",
             options=[
-                spec.Option(key="square"),
-                spec.Option(key="hexagon")
+                spec.Option(key="square", display_name=gettext("square")),
+                spec.Option(key="hexagon", display_name=gettext("hexagon"))
             ]
         ),
         spec.NumberInput(
