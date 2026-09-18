@@ -885,9 +885,8 @@ input[type=text]::placeholder {
   }
 }
 
-/* Manage Plugins modal */
+/* Plugin Manager modal */
 .plugin-modal {
-  width: 40rem;
   form {
     & > div,
     & > button {
@@ -919,10 +918,6 @@ input[type=text]::placeholder {
   margin: 0.5rem 0 0;
 }
 
-.plugin-user-acknowledgment-error {
-  margin-bottom: 1rem;
-}
-
 .plugin-success {
   color: var(--digital-green);
   display: flex;
@@ -950,4 +945,147 @@ code {
 
 .text-italic {
   font-style: italic;
+}
+
+.plugin-modal-button {
+  color: white;
+  background-color: var(--invest-green);
+  border-color: var(--invest-green);
+  &:hover {
+    color: var(--invest-green);
+    background-color: white;
+    border-color: var(--invest-green);
+  }
+  &.active {
+    color: var(--invest-green);
+    background-color: white;
+    border-color: var(--pinvest-green);
+  }
+}
+
+.react-icons {
+  vertical-align: middle;
+  color: var(--invest-green);
+  height: 1.25em;
+  width: 1.25em;
+  margin-right: 0.5em;
+  &.react-icons-white {
+    color: white;
+  }
+}
+
+.plugin-small-text {
+  font-size: 0.875rem;
+}
+
+.plugin-modal-nav {
+  padding: 0;
+  border-right: 1px solid var(--bs-modal-header-border-color);
+}
+
+.plugin-modal-nav-item > a.nav-link {
+  color: var(--invest-green);
+  background-color: white;
+  margin: 0;
+  padding: 0.5rem;
+  border-radius: 0;
+  &:hover {
+    color: white;
+    background-color: var(--invest-green);
+  }
+  &.active {
+    color: white;
+    background-color: var(--invest-green);
+  }
+}
+
+.registry-pane {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    border-left: 1px solid var(--bs-modal-header-border-color);
+}
+
+.plugin-pane {
+    padding-bottom: 2rem;
+}
+
+.install-pane {
+    border-top: 1px solid var(--bs-modal-header-border-color);
+}
+
+.plugin-success-message {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 5px;
+  color: white;
+  background-color: var(--invest-green);
+}
+
+.plugin-table > tbody > tr > td {
+    padding-top: 0rem;
+    padding-bottom: 0rem;
+}
+
+.registry-list {
+    padding: 0;
+}
+
+.registry-list-group .registry-list-group-item {
+  font-size: 0.875rem;
+  text-align: start;
+  border-top: none;
+  border-right: none;
+  border-left: none;
+  border-bottom: 1px solid rgba(0,0,0,.125);
+  border-radius: 0;
+  margin-bottom: 0;
+  padding: 0.5rem;
+  &.plugin-registry-button {
+    display: flex;
+    align-items: center;
+    color: var(--invest-green);
+    background-color: white;
+    font-weight: 600;
+    &:hover {
+      color: white;
+      background-color: var(--invest-green);
+    }
+    &.active {
+      color: white;
+      background-color: var(--invest-green);
+    }
+  }
+}
+
+.registry-install-form {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  & form > div {
+    & > div, & > button {
+      margin-top: 1rem;
+    }
+  }
+}
+
+.registry-fetch-error {
+  display: flex;
+  padding: 3rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.registry-warning-icon {
+  height: 3em;
+  width: 3em;
+  margin-bottom: 1rem;
+  color: var(--digital-red);
+}
+
+.installed-plugin-row {
+  border-top: 1px solid var(--bs-modal-header-border-color);
 }

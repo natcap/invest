@@ -9,6 +9,7 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 import { useTranslation } from 'react-i18next';
+import { FaPlugCirclePlus } from "react-icons/fa6";
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
@@ -42,7 +43,8 @@ export default class HomeTab extends React.Component {
       investList,
       openInvestModel,
       deleteJob,
-      clearRecentJobs
+      clearRecentJobs,
+      showPluginModal
     } = this.props;
     let sortedModelIds = {};
     if (investList) {
@@ -102,6 +104,16 @@ export default class HomeTab extends React.Component {
         <Col md={6} className="invest-list-container">
           <ListGroup className="invest-list-group">
             {investButtons}
+            <ListGroup.Item
+              key="add-plugin"
+            >
+              <Button
+                className="open-button plugin-modal-button text-wrap"
+                onClick={showPluginModal}
+              >
+                <span className="pe-2"><FaPlugCirclePlus /></span>Add a Plugin
+              </Button>
+            </ListGroup.Item>
             <ListGroup.Item
               key="browse"
             >
