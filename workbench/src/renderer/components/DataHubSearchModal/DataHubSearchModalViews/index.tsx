@@ -37,11 +37,16 @@ export function DataHubSearchIntroBody(props: IntroBodyProps) {
         : <>
             <div className="search-error">
               <TbZoomCancel aria-label={t('Error')} className="error-icon" />
-              <span>
+              <p>
                 {t(`Before searching, you must specify a valid path for the following input:`)}
                 <strong className="aoi-input-name">{aoiInputName}</strong>
-              </span>
+              </p>
             </div>
+            <p>
+              {t('When you search the Data Hub for spatial datasets (e.g., rasters), '
+                + 'search results will be filtered to include only datasets that intersect '
+                + `the bounding box of the ${aoiInputName} input.`)}
+            </p>
           </>
         }
       </>
@@ -95,10 +100,10 @@ export function DataHubSearchResultsBody(props: ResultsBodyProps) {
             </h2>
             <div className="search-error">
               <TbZoomExclamation aria-hidden={true} className="error-icon" />
-              <span>
+              <p>
                 {t(`Please check your internet connection, then try again.
                   If the problem persists, consider reporting it on the NatCap Community Forum.`)}
-              </span>
+              </p>
             </div>
             <a
               href="https://community.naturalcapitalalliance.org/"

@@ -1021,6 +1021,9 @@ code {
       font-size: 6rem;
       min-width: fit-content;
     }
+    & > p {
+      margin: 0;
+    }
     .aoi-input-name {
       display: block;
       text-transform: capitalize;
