@@ -97,9 +97,9 @@ def describe_input(module_name, keys):
         attributes = []
 
         if _input.id == model_spec.default_projection_id:
-            attributes.append(f'**{gettext('default projection input')}**')
+            attributes.append(f"**{gettext('default projection input')}**")
         if _input.id == model_spec.default_pixelsize_id:
-            attributes.append(f'**{gettext('default pixel size input')}**')
+            attributes.append(f"**{gettext('default pixel size input')}**")
 
         if attributes:
             rst = rst.replace("): ", f', {", ".join(attributes)}): ')
