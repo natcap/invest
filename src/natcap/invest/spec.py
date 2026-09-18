@@ -2477,6 +2477,22 @@ class ModelSpec(ImmutableBaseModel):
         return json.loads(json.dumps(
             spec_dict, default=fallback_serializer, ensure_ascii=False))
 
+    def to_json(self):
+        """Serialize a MODEL_SPEC to a JSON string.
+
+        Raises:
+            TypeError if any object type within the spec is not handled by
+            json.dumps or by the fallback serializer.
+
+        Returns:
+            str
+        """
+        warnings.warn(
+            ("to_json method of spec.ModelSpec is deprecated and will be "
+             "removed in a future version. Use model_dump_json instead."),
+            DeprecationWarning)
+        return self.model_dump_json()
+
     def preprocess_inputs(self, input_values):
         """Preprocess a dictionary of input values.
 
