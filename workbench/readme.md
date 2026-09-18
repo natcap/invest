@@ -6,7 +6,7 @@ The Workbench is designed to provide a single entry point for all
 InVEST models, and to be extensible to future models or InVEST-relevant auxiliary workflows.
 
 ## To develop and launch this app
-1. From ``invest/``:
+1. From `invest/`:
     - activate a Python environment and install `natcap.invest`
 
 2. From `invest/workbench/`:
@@ -75,8 +75,8 @@ which only works on `jest.spyOn` mocks?
 
 ## Client logfile locations:
 * Windows: `C:\Users\dmf\AppData\Roaming\invest-workbench\logs\`
-* Mac: `\~/Library/Logs/invest-workbench/`
-* Linux: `\~/.config/invest-workbench/logs/`
+* Mac: `~/Library/Logs/invest-workbench/`
+* Linux: `~/.config/invest-workbench/logs/`
 
 ## Internationalization
 This section describes the internationalization setup & processes that are specific to the Workbench. Internationalization of core InVEST is handled separately: see the [InVEST Internationalization Readme](../src/natcap/invest/internationalization/README.md).
@@ -132,7 +132,7 @@ These instructions assume you have defined the two-letter locale code in an envi
 
 8. If you are preparing translation files for multiple languages, repeat steps 2 through 7 for each remaining language.
 
-9. Delete remaining temp files: `tmp.json` (if you generated a new one by following step 8), `main-messages.json`, and `renderer-messages.json`.
+9. Delete `main-messages.json` and `renderer-messages.json`.
 
 #### Request translation
 Send `src/main/i18n/$LL.po` and `src/renderer/i18n/$LL.po` to the translator. They will complete the translations, then send us the updated PO files.

@@ -61,7 +61,7 @@ There are times when we might want to know how many messages in the current cata
     pybabel update \
       --locale $LL \
       --input-file src/natcap/invest/internationalization/messages.pot \
-      --output-file src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po
+      --output-file src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po \
       --no-fuzzy-matching
     ```
 
