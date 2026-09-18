@@ -16,12 +16,12 @@ import {
 import { openLinkInBrowser } from '../../../utils';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
 
-interface IntroBodyProps {
-  aoiInputName: string,
-  aoiIsValid: boolean,
-}
-
-export function DataHubSearchIntroBody(props: IntroBodyProps) {
+export function DataHubSearchIntroContent(
+  props: {
+    aoiInputName: string,
+    aoiIsValid: boolean,
+  }
+) {
   const { aoiIsValid, aoiInputName } = props;
   const { t } = useTranslation();
 
@@ -53,7 +53,7 @@ export function DataHubSearchIntroBody(props: IntroBodyProps) {
   );
 }
 
-export function DataHubSearchSearchingBody() {
+export function DataHubSearchSearchingContent() {
   const { t } = useTranslation();
 
   return (
@@ -70,17 +70,17 @@ export function DataHubSearchSearchingBody() {
   );
 }
 
-interface ResultsBodyProps {
-  searchError: boolean,
-  numSearchResults: number,
-  searchResults: DataHubSearchResult[],
-  toggleExpandCard: (id: string) => void,
-  toggleExpandAll: (event: ChangeEvent) => void,
-  cardsExpanded: Map<string, boolean>,
-  selectDataset: (url: string, collections: string[]) => void,
-}
-
-export function DataHubSearchResultsBody(props: ResultsBodyProps) {
+export function DataHubSearchResultsContent(
+  props: {
+    searchError: boolean,
+    numSearchResults: number,
+    searchResults: DataHubSearchResult[],
+    toggleExpandCard: (id: string) => void,
+    toggleExpandAll: (event: ChangeEvent) => void,
+    cardsExpanded: Map<string, boolean>,
+    selectDataset: (url: string, collections: string[]) => void,
+  }
+) {
   const {
     searchError, numSearchResults, searchResults,
     toggleExpandCard, toggleExpandAll, cardsExpanded, selectDataset } = props;
@@ -199,7 +199,10 @@ export function DataHubSearchIntroFooter(
 }
 
 export function DataHubSearchResultsFooter(
-  props: {searchError: boolean, search: () => void}
+  props: {
+    searchError: boolean,
+    search: () => void
+  }
 ) {
   const { searchError, search } = props;
   const { t } = useTranslation();

@@ -15,11 +15,11 @@ import {
   type DataHubSearchQuery
 } from './DataHubSearchParams/models';
 import {
-  DataHubSearchIntroBody,
+  DataHubSearchIntroContent,
   DataHubSearchIntroFooter,
-  DataHubSearchResultsBody,
+  DataHubSearchResultsContent,
   DataHubSearchResultsFooter,
-  DataHubSearchSearchingBody
+  DataHubSearchSearchingContent
 } from './DataHubSearchModalViews';
 import DataHubSearchParams from './DataHubSearchParams';
 
@@ -187,18 +187,18 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
         }
         {
           step === INTRO_STEP &&
-          <DataHubSearchIntroBody
+          <DataHubSearchIntroContent
             aoiInputName={aoiInputName}
             aoiIsValid={aoiIsValid}
           />
         }
         {
           step === SEARCHING_STEP &&
-          <DataHubSearchSearchingBody />
+          <DataHubSearchSearchingContent />
         }
         {
           step === RESULTS_STEP &&
-          <DataHubSearchResultsBody
+          <DataHubSearchResultsContent
             searchError={searchError}
             numSearchResults={numSearchResults}
             searchResults={searchResults}
