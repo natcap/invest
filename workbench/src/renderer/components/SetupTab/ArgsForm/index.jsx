@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Accordion from 'react-bootstrap/Accordion'
 import Form from 'react-bootstrap/Form';
 
 import ArgInput from '../ArgInput';
@@ -129,8 +130,11 @@ class ArgsForm extends React.Component {
       scrollEventCount,
     } = this.props;
     const formItems = [];
+    const defaultActiveKeys = [];
     let k = 0;
     argsOrder.forEach((inputGroup) => {
+      console.log(inputGroup.tightSpacing);
+      let anyEnabled = false;
       const groupItems = [];
       inputGroup.input_ids.forEach((argkey) => {
         groupItems.push(
@@ -151,20 +155,53 @@ class ArgsForm extends React.Component {
             validationMessage={argsValidation[argkey].validationMessage}
             value={argsValues[argkey].value}
             scrollEventCount={scrollEventCount}
+            tightSpacing={inputGroup.tightSpacing}
           />
         );
+        if (argsEnabled[argkey]) {
+          anyEnabled = true;
+        }
       });
-      formItems.push(
-        <fieldset className="arg-group-fieldset" key={k}>
-          {inputGroup.group_label &&
-            <legend>{inputGroup.group_label}</legend>
-          }
-          <Form.Group className="arg-group">
-            {groupItems}
-          </Form.Group>
-        </fieldset>
+      // Separate each group of input fields with a dotted line and label if
+      // applicable. Omit the dotted line above the first group if it has
+      // no label.
+      let fieldsetClassName = "arg-group-dotted-fieldset";
+      if (k === 0 && !inputGroup.label) {
+        fieldsetClassName = "mt-3"
+      }
+      let group = groupItems;
+      if (anyEnabled) {
+        formItems.push(
+          <fieldset className="arg-group-fieldset" key={k}>
+            {inputGroup.group_label &&
+              <legend>{inputGroup.group_label}</legend>
+            }
+            <Form.Group className="arg-group">
+              {groupItems}
+            </Form.Group>
+          </fieldset>
 
-      );
+        );
+      } else {
+        // Input groups that have all their inputs disabled will be rendered
+        // as a collapsed accordion section.
+        formItems.push(
+          <fieldset className="arg-group-fieldset" key={k}>
+            <Accordion.Item eventKey={k}>
+              <Accordion.Header className="input-group-header">
+                {inputGroup.group_label &&
+                  <legend>{inputGroup.group_label}</legend>
+                }
+              </Accordion.Header>
+              <Accordion.Body>
+              <Form.Group className={inputGroup.tightSpacing ? 'arg-group-tight' : 'arg-group'}>
+                {groupItems}
+              </Form.Group>
+              </Accordion.Body>
+            </Accordion.Item>
+          </fieldset>
+        );
+      }
       k += 1;
     });
 
@@ -179,7 +216,9 @@ class ArgsForm extends React.Component {
         onDragEnter={this.dragEnterHandler}
         onDragLeave={this.dragLeaveHandler}
       >
-        {formItems}
+        <Accordion flush alwaysOpen>
+          {formItems}
+        </Accordion>
       </Form>
     );
   }

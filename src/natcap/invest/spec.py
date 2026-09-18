@@ -232,6 +232,9 @@ class InputGroup(BaseModel):
     """List of model input ids that belong to this group. Each string must
        match the id of an Input in the model."""
 
+    tight_spacing: bool = False
+    """Whether to render the input group with tight table-like spacing."""
+
     @model_serializer()
     def serialize(self):
         return {

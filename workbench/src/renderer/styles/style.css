@@ -52,17 +52,45 @@ button {
    components, but since there's currently only one button style in need of
    customization (the "info" color became too light in Bootstrap 5), a more
    complex approach doesn't seem worthwhile. */
-.btn-outline-info {
+.info-button {
+  margin-right: 2rem;
   color: var(--lagunita-light);
   border-color: var(--lagunita-light);
   &:hover, &:focus {
     color: ghostwhite;
-    background: var(--lagunita-light);
+    background: none;
     border-color: var(--lagunita-light);
   }
   &:focus, &:focus-visible {
     box-shadow: 0 0 0 .25rem var(--lagunita-light-opacity-50);
   }
+}
+
+.info-button-tight {
+  border: 0;
+  color: var(--lagunita-light);
+  border-color: var(--lagunita-light);
+  &:hover, &:focus {
+    background: none;
+  }
+  &:focus, &:focus-visible, &:active {
+    box-shadow: none !important;
+    background-color: inherit !important;
+  }
+}
+
+.info-btn-outline {
+  color: var(--lagunita-light);
+  background: none;
+  border-color: var(--lagunita-light);
+  /*&:hover, &:focus {
+    color: ghostwhite;
+    background: none;
+    border-color: var(--lagunita-light);
+  }
+  &:focus, &:focus-visible {
+    box-shadow: 0 0 0 .25rem var(--lagunita-light-opacity-50);
+  }*/
 }
 
 /* Bootstrap form control style overrides. */
@@ -642,9 +670,47 @@ exceed 100% of window.*/
   opacity: 0.2;
 }
 
+.args-form .accordion {
+  --bs-accordion-border-width: 0;
+  --bs-accordion-bg: none;
+  --bs-accordion-body-padding-x: 0;
+  --bs-accordion-body-padding-y: 0;
+}
+
+.args-form .accordion-header {
+  --bs-accordion-active-bg: white;
+  --bs-accordion-btn-padding-y: 0;
+  border-bottom: 0;
+}
+
+.args-form .accordion-button {
+  box-shadow: none;
+  --bs-accordion-active-bg: none;
+  --bs-accordion-btn-padding-x: 0;
+  --bs-accordion-btn-padding-y: 0;
+}
+
 .arg-group-fieldset {
   border: none;
 
+.arg-group-dotted-legend {
+  float: none;
+  width: auto;
+  padding: 0 0.75rem 0 0;
+  margin-bottom: 0;
+  font-size: inherit;
+  font-weight: 600;
+  color: black;
+}
+
+.arg-group-dotted-legend-disabled {
+  float: none;
+  width: auto;
+  padding: 0 0.75rem 0 0;
+  margin-bottom: 0;
+  font-size: inherit;
+  font-weight: 600;
+  color: #888888;
   &:not(:first-of-type),
   &:first-of-type:has(> legend) {
     border-top: 0.125rem dotted;
@@ -668,6 +734,12 @@ exceed 100% of window.*/
   padding: 1.5rem 0;
 }
 
+.arg-group-tight {
+  gap: 0;
+  margin-left: 40px;
+  margin-top: 20px;
+}
+
 .arg-hide {
   display: none;
 }
@@ -685,6 +757,16 @@ exceed 100% of window.*/
   font-weight: 600;
 }
 
+.argname-tight-spacing {
+  text-transform: capitalize;
+  font-weight: 600;
+  /*text-wrap: nowrap;*/
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
+  border: 1px solid gray;
+}
+
 .args-form {
   .form-control,
   .form-select {
@@ -698,8 +780,12 @@ exceed 100% of window.*/
 }
 
 .args-form .form-label {
-  padding-top: 0;
-  padding-bottom: 0;
+  /*padding-top: 0;*/
+  /*padding-bottom: 0;*/
+  margin-top: 4px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center
 }
 
 .args-form .form-control[type=text] {
@@ -731,11 +817,17 @@ input[type=text]::placeholder {
   padding-left: calc(3.5rem + 2px);
 }
 
+.invalid-feedback.tight-spacing {
+  padding-left: 0.5rem;
+}
+
 .args-form svg {
   font-size: 1.5rem;
 }
 
 .args-form .input-group {
+  margin-top: -1px;
+  position: relative;
   .form-select,
   .form-select.is-valid,
   .form-select.is-invalid {
@@ -747,6 +839,11 @@ input[type=text]::placeholder {
     background-position: center right calc((var(--form-field-padding-right) - var(--caret-width)) / 2);
     background-size: var(--caret-width);
   }
+}
+
+.input-field-tight {
+  border-radius: 0 !important;
+  height: 100%;
 }
 
 /* InVEST Log Tab */
