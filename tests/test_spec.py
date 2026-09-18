@@ -233,7 +233,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         )
         out = raster_spec.describe_rst()
         expected_rst = ([
-            '**Bar** (`raster <input_types.html#raster>`__, *required*): Description'
+            '**Bar** (`raster <input_types.html#raster>`__ [data type: **integer**], *required*): Description'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
@@ -241,12 +241,15 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             id="bar",
             data_type=float,
             units=u.millimeter/u.year,
+            projected=True,
+            projection_units=u.meter,
             about="Description",
             name="Bar"
         )
         out = raster_spec.describe_rst()
         expected_rst = ([
-            '**Bar** (`raster <input_types.html#raster>`__, units: **mm/year**, *required*): Description'
+            '**Bar** (`raster <input_types.html#raster>`__ [data type: **float**], '
+            'units: **mm/year**, projected [projection units: **meter**], *required*): Description'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
@@ -278,12 +281,13 @@ class TestDescribeArgFromSpec(unittest.TestCase):
                 )
             ],
             geometry_types={"POLYGON", "MULTIPOLYGON"},
+            projected=True,
             about="Description",
             name="Bar"
         )
         out = vector_spec.describe_rst()
         expected_rst = ([
-            '**Bar** (`vector <input_types.html#vector>`__, polygon/multipolygon, *required*): Description',
+            '**Bar** (`vector <input_types.html#vector>`__, polygon/multipolygon, projected, *required*): Description',
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 

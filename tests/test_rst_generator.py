@@ -79,6 +79,18 @@ class TestRSTGenerator(unittest.TestCase):
             set_locale('en')
             importlib.reload(importlib.import_module(name='natcap.invest.carbon'))
 
+    def test_describe_input_model_spec_default_spatial_attributes(self):
+        """Model-level default spatial attributes are included in input RST."""
+        from natcap.invest.annual_water_yield import annual_water_yield
+        actual_rst = rst_generator.describe_input(
+            'natcap.invest.annual_water_yield',
+            ['lulc_path'])
+        desc = annual_water_yield.MODEL_SPEC.get_input('lulc_path').about
+
+        expected_rst = f'.. _lulc-path:\n\n**land use/land cover** (`raster <input_types.html#raster>`__ [data type: **integer**], *required*, **default projection input**, **default pixel size input**): {desc}'
+
+        self.assertEqual(repr(actual_rst), repr(expected_rst))
+
 
 if __name__ == '__main__':
     unittest.main()
