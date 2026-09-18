@@ -21,6 +21,7 @@ import {
   DataHubSearchResultsFooter,
   DataHubSearchSearchingBody
 } from './DataHubSearchModalViews';
+import DataHubSearchParams from './DataHubSearchParams';
 
 // @ts-ignore
 const { logger } = window.Workbench;
@@ -41,6 +42,10 @@ const INTRO_STEP = 0;
 const SEARCHING_STEP = 1;
 const RESULTS_STEP = 2;
 
+export const searchModalContentHeadingCssClass = 'search-modal-content-heading';
+export const searchModalAutoFocusId = 'search-modal-auto-focus';
+const autoFocusSelector = `#${searchModalAutoFocusId}`;
+
 export default function DataHubSearchModal(props: DataHubSearchModalProps) {
   const {
     show,
@@ -54,7 +59,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
 
   const { t } = useTranslation();
 
-  const [step, setStep] = useState<number>(0);
+  const [step, setStep] = useState<number>(INTRO_STEP);
   const [numSearchResults, setNumSearchResults] = useState<number>(0);
   const [searchResults, setSearchResults] = useState<DataHubSearchResult[]>([]);
   const [allExpanded, setAllExpanded] = useState<boolean>(false);
@@ -64,10 +69,16 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
   const autoFocusRef: RefObject<any> = useRef(null);
 
   useEffect(() => {
-    // Modal automatically receives focus when it first opens.
-    // This effect re-focuses the modal when its content changes,
-    // to better support keyboard operability & screen reader navigation.
-    autoFocusRef.current?.dialog?.focus();
+    // This effect supports screen reader navigation by auto-focusing the
+    // element (typically a heading) that provides a summary of new content,
+    // whenever modal content changes. If a designated content summary element
+    // does not exist, the modal itself receives focus.
+    const contentSummaryElement: HTMLElement | null = autoFocusRef.current?.dialog?.querySelector(autoFocusSelector);
+    if (contentSummaryElement) {
+      contentSummaryElement.focus();
+    } else {
+      autoFocusRef.current?.dialog?.focus();
+    }
   }, [step]);
 
   const search = async () => {
@@ -144,15 +155,6 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
     allExpanded ? expandAllCards() : collapseAllCards();
   }, [allExpanded]);
 
-  const introTitle = t('Search the Data Hub');
-  const searchingTitle = t('Searching…');
-  const resultsTitle = t('Search Results');
-  const titles = [
-    introTitle,
-    searchingTitle,
-    resultsTitle,
-  ];
-
   return (
     <Modal
       show={show}
@@ -162,7 +164,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
       ref={autoFocusRef}
     >
       <Modal.Header>
-        <Modal.Title as="h1" className="h4">{titles[step]}</Modal.Title>
+        <Modal.Title as="h1" className="h4">{t('Search the Data Hub')}</Modal.Title>
         <Button
           variant="secondary-outline"
           onClick={close}
@@ -173,11 +175,21 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
       </Modal.Header>
       <Modal.Body>
         {
+          aoiIsValid &&
+          <>
+            <DataHubSearchParams
+              tags={query.tags}
+              datatype={query.datatype}
+              extent={query.extent}
+              collections={query.collections}
+            />
+          </>
+        }
+        {
           step === INTRO_STEP &&
           <DataHubSearchIntroBody
             aoiInputName={aoiInputName}
             aoiIsValid={aoiIsValid}
-            query={query}
           />
         }
         {
@@ -187,7 +199,6 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
         {
           step === RESULTS_STEP &&
           <DataHubSearchResultsBody
-            query={query}
             searchError={searchError}
             numSearchResults={numSearchResults}
             searchResults={searchResults}

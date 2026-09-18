@@ -6,10 +6,12 @@ import Spinner from 'react-bootstrap/esm/Spinner';
 import { useTranslation } from 'react-i18next';
 import { TbMapSearch, TbZoomCancel, TbZoomExclamation } from 'react-icons/tb';
 
-import DataHubSearchParams from '../DataHubSearchParams';
-import type { DataHubSearchQuery } from '../DataHubSearchParams/models';
 import type { DataHubSearchResult } from '../models';
 import DataHubSearchResultCard from '../DataHubSearchResultCard';
+import {
+  searchModalAutoFocusId,
+  searchModalContentHeadingCssClass,
+} from '../../DataHubSearchModal';
 
 import { openLinkInBrowser } from '../../../utils';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
@@ -17,28 +19,21 @@ import { handleClickFindLogfiles } from '../../../menubar/handlers';
 interface IntroBodyProps {
   aoiInputName: string,
   aoiIsValid: boolean,
-  query: DataHubSearchQuery,
 }
 
 export function DataHubSearchIntroBody(props: IntroBodyProps) {
-  const { aoiIsValid, aoiInputName, query } = props;
+  const { aoiIsValid, aoiInputName } = props;
   const { t } = useTranslation();
 
   return (
       <>
-        <p>
-          {t(`Search the Natural Capital Alliance Data Hub for datasets you can
-            use in InVEST without having to download them first.`)}
-        </p>
-        {/* @TODO: add loading spinner if/when awaiting AOI validation status and/or AOI extent. */}
+      {/* @TODO: add loading spinner if/when awaiting AOI validation status and/or AOI extent. */}
       {
         aoiIsValid
-        ? <DataHubSearchParams
-            tags={query.tags}
-            datatype={query.datatype}
-            extent={query.extent}
-            collections={query.collections}
-          />
+        ? <p>
+            {t(`Search the Natural Capital Alliance Data Hub for datasets you can
+              use in InVEST without having to download them first.`)}
+          </p>
         : <>
             <div className="search-error">
               <TbZoomCancel aria-label={t('Error')} className="error-icon" />
@@ -54,15 +49,23 @@ export function DataHubSearchIntroBody(props: IntroBodyProps) {
 }
 
 export function DataHubSearchSearchingBody() {
+  const { t } = useTranslation();
+
   return (
     <>
+      <h2
+        className="visually-hidden"
+        id={searchModalAutoFocusId}
+        tabIndex={0}
+      >
+        {t('Searching')}
+      </h2>
       <Spinner animation="border" role="status" className="search-spinner"></Spinner>
     </>
   );
 }
 
 interface ResultsBodyProps {
-  query: DataHubSearchQuery,
   searchError: boolean,
   numSearchResults: number,
   searchResults: DataHubSearchResult[],
@@ -74,25 +77,26 @@ interface ResultsBodyProps {
 
 export function DataHubSearchResultsBody(props: ResultsBodyProps) {
   const {
-    query, searchError, numSearchResults, searchResults,
+    searchError, numSearchResults, searchResults,
     toggleExpandCard, toggleExpandAll, cardsExpanded, selectDataset } = props;
   const { t } = useTranslation();
 
   return (
     <>
-      <DataHubSearchParams
-        tags={query.tags}
-        datatype={query.datatype}
-        extent={query.extent}
-        collections={query.collections}
-      />
       {
         searchError
         ? <>
+            <h2
+              className={`h5 m-0 ${searchModalContentHeadingCssClass}`}
+              id={searchModalAutoFocusId}
+              tabIndex={0}
+            >
+              {t('An error occurred.')}
+            </h2>
             <div className="search-error">
-              <TbZoomExclamation aria-label={t('Error')} className="error-icon" />
+              <TbZoomExclamation aria-hidden={true} className="error-icon" />
               <span>
-                {t(`An error occurred. Please check your internet connection, then try again.
+                {t(`Please check your internet connection, then try again.
                   If the problem persists, consider reporting it on the NatCap Community Forum.`)}
               </span>
             </div>
@@ -108,7 +112,13 @@ export function DataHubSearchResultsBody(props: ResultsBodyProps) {
             numSearchResults
             ? <>
                 <div className="search-results-header">
-                  <p>{numSearchResults == 1 ? t('1 result found.') : t(`${numSearchResults} results found.`)}</p>
+                  <h2
+                    className={`h5 m-0 ${searchModalContentHeadingCssClass}`}
+                    id={searchModalAutoFocusId}
+                    tabIndex={0}
+                  >
+                    {numSearchResults == 1 ? t('1 result found.') : t(`${numSearchResults} results found.`)}
+                  </h2>
                   <Form.Check
                     type="switch" // type="switch" controls styling
                     role="switch" // role="switch" communicates correct semantics to assistive tech
@@ -130,7 +140,13 @@ export function DataHubSearchResultsBody(props: ResultsBodyProps) {
                 </div>
               </>
             : <>
-                <p>{t('No results found.')}</p>
+                <h2
+                  className={`h5 m-0 ${searchModalContentHeadingCssClass}`}
+                  id={searchModalAutoFocusId}
+                  tabIndex={0}
+                >
+                  {t('No results found.')}
+                </h2>
                 <TbMapSearch className="no-results-icon" aria-hidden="true" />
                 <p>
                   {t(`We are actively working on adding more datasets to the Data Hub

@@ -39,7 +39,7 @@ export default function DataHubSearchResultCard(
   return (
     <div className={`search-result ${expanded ? 'search-result-expanded' : ''}`}>
       <div className="search-result-header">
-        <h2 className="h5 m-0" id={`${id}-title`}>{title}</h2>
+        <h3 className="h5 m-0" id={`${id}-title`}>{title}</h3>
         <div className="search-result-controls">
           <Button
             aria-describedby={`${id}-title`}
