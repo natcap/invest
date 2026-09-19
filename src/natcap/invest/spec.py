@@ -842,6 +842,15 @@ class SingleBandRasterInput(SpatialFileInput):
     def display_name(self):
         return gettext('raster')
 
+    def format_data_type(self):
+        """Return a string representation of the data type for this input."""
+        if self.data_type is int:
+            return gettext('integer')
+        elif self.data_type is float:
+            return gettext('float')
+        else:
+            return gettext('unknown')
+
     @timeout
     def validate(self, filepath: str):
         """Validate a raster file against the requirements for this input.
@@ -890,7 +899,11 @@ class SingleBandRasterInput(SpatialFileInput):
         name = self.name or self.id
         type_string = format_type_string(self)
 
-        in_parentheses = [type_string]
+        if self.data_type:
+            in_parentheses = [
+                f'{type_string} [{gettext("data type")}: **{self.format_data_type()}**]']
+        else:
+            in_parentheses = [type_string]
 
         if self.units:
             units_string = format_unit(self.units)
@@ -898,6 +911,13 @@ class SingleBandRasterInput(SpatialFileInput):
                 # pybabel can't find the message if it's in the f-string
                 translated_units = gettext("units")
                 in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        if self.projected:
+            if self.projection_units:
+                in_parentheses.append(
+                    f'{gettext("projected")} [{gettext("projection units")}: **{format_unit(self.projection_units)}**]')
+            else:
+                in_parentheses.append(gettext("projected"))
 
         required_string = self.format_required_string()
         in_parentheses.append(f'*{required_string}*')
@@ -1066,7 +1086,17 @@ class VectorInput(SpatialFileInput):
         type_string = format_type_string(self)
         required_string = self.format_required_string()
         geom_string = self.format_geometry_types_rst()
-        rst_line = f'**{name}** ({type_string}, {geom_string}, *{required_string}*)'
+        in_parentheses = [type_string, geom_string]
+
+        if self.projected:
+            if self.projection_units:
+                in_parentheses.append(
+                    f'{gettext("projected")} [{gettext("projection units")}: **{self.projection_units}**]')
+            else:
+                in_parentheses.append(f'{gettext("projected")}')
+
+        in_parentheses.append(f'*{required_string}*')
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
 
         # Nested args may not have an about section
         if self.about:
