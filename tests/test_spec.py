@@ -249,7 +249,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         out = raster_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`raster <input_types.html#raster>`__ [data type: **float**], '
-            'units: **mm/year**, projected [projection units: **meter**], *required*): Description'
+            'units: **mm/year**, projected [projection units: **m**], *required*): Description'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
