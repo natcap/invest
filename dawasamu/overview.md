@@ -1,0 +1,13 @@
+textyour_project/
+│
+├── run_sdr.ipynb               # Your active Jupyter notebook
+├── biophysical_table.csv       # Land-cover attributes table
+│
+├── data/                       # Input GIS files (Ensure matching projected CRS!)
+│   ├── catchment_boundary.shp  # Watershed vector
+│   ├── dem.tif                 # Filled elevation raster
+│   ├── lulc.tif                # Land-use integer raster
+│   ├── erosivity_r.tif         # Climate R-factor raster
+│   └── erodibility_k.tif       # Soil K-factor raster
+│
+└── outputs/                    # Empty folder (The script creates this)
