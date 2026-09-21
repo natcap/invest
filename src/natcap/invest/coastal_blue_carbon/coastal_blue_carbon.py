@@ -394,7 +394,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="price",
             name=gettext("price"),
             about=gettext(
-                "The price of CO2E at the baseline year. Required if Do Valuation is"
+                "The price of CO2E at the baseline year. Required if Run Valuation is"
                 " selected and Use Price Table is not selected."
             ),
             required="do_economic_analysis and (not use_price_table)",
@@ -405,7 +405,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="inflation_rate",
             name=gettext("interest rate"),
             about=gettext(
-                "Annual increase in the price of CO2E. Required if Do Valuation is"
+                "Annual increase in the price of CO2E. Required if Run Valuation is"
                 " selected and Use Price Table is not selected."
             ),
             required="do_economic_analysis and (not use_price_table)",
@@ -417,7 +417,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("price table"),
             about=gettext(
                 "Table of annual CO2E prices for each year from the baseline year to the"
-                " final snapshot or analysis year. Required if Do Valuation is selected"
+                " final snapshot or analysis year. Required if Run Valuation is selected"
                 " and Use Price Table is selected."
             ),
             required="use_price_table",
@@ -625,7 +625,7 @@ def execute(args):
             CSV table containing transition years and the LULC rasters
             representing that year. Required for transition analysis.
         args['analysis_year'] (int): the year of the final analysis.
-        args['do_economic_analysis'] (bool): Whether to do valuation.
+        args['do_economic_analysis'] (bool): Whether to Run Valuation.
         args['use_price_table'] (bool): Whether to use a table of annual carbon
             prices for valuation.  Defaults to ``False``.
         args['price_table_path'] (string): The path to a table of prices to use
@@ -1077,7 +1077,7 @@ def execute_transition_analysis(args):
             valuation.
         args['analysis_year'] (int): The analysis year.  Must be greater than
             or equal to the final transition year.
-        args['do_economic_analysis'] (bool): Whether to do valuation.
+        args['do_economic_analysis'] (bool): Whether to Run Valuation.
         args['baseline_lulc_raster'] (string): The path to the baseline lulc
             raster on disk.
         args['baseline_lulc_year'] (int): The year of the baseline scenario.
