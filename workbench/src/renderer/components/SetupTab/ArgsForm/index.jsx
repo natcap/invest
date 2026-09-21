@@ -1,8 +1,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { useContext } from 'react';
 
 import Accordion from 'react-bootstrap/Accordion'
+import AccordionContext from 'react-bootstrap/AccordionContext';
 import Form from 'react-bootstrap/Form';
+import { useAccordionButton } from 'react-bootstrap/AccordionButton';
 
 import ArgInput from '../ArgInput';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
@@ -15,6 +18,30 @@ function dragOverHandler(event) {
   event.preventDefault();
   event.stopPropagation();
   event.dataTransfer.dropEffect = 'copy';
+}
+
+function CustomToggle({ children, eventKey }) {
+
+  const { activeEventKey } = useContext(AccordionContext);
+
+  const decoratedOnClick = useAccordionButton(
+    eventKey,
+    () => {},
+  );
+
+  const isCurrentEventKey = activeEventKey === eventKey;
+  console.log('current event key', activeEventKey);
+  console.log('this event key', eventKey);
+
+  return (
+    // <legend
+    //   // onClick={useAccordionButton(eventKey, () => console.log('totally custom!')) }
+    // >
+      <Accordion.Button as='legend' eventKey={eventKey} >
+        {children}
+      </Accordion.Button>
+    // </legend>
+  );
 }
 
 /** Renders a form with a list of input components. */
@@ -165,7 +192,7 @@ class ArgsForm extends React.Component {
       // Separate each group of input fields with a dotted line and label if
       // applicable. Omit the dotted line above the first group if it has
       // no label.
-      let fieldsetClassName = "arg-group-dotted-fieldset";
+      let fieldsetClassName = "arg-group-fieldset";
       if (k === 0 && !inputGroup.label) {
         fieldsetClassName = "mt-3"
       }
@@ -176,7 +203,7 @@ class ArgsForm extends React.Component {
             {inputGroup.group_label &&
               <legend>{inputGroup.group_label}</legend>
             }
-            <Form.Group className="arg-group">
+            <Form.Group className={inputGroup.tightSpacing ? 'arg-group-tight' : 'arg-group'}>
               {groupItems}
             </Form.Group>
           </fieldset>
@@ -186,20 +213,18 @@ class ArgsForm extends React.Component {
         // Input groups that have all their inputs disabled will be rendered
         // as a collapsed accordion section.
         formItems.push(
-          <fieldset className="arg-group-fieldset" key={k}>
-            <Accordion.Item eventKey={k}>
-              <Accordion.Header className="input-group-header">
-                {inputGroup.group_label &&
-                  <legend>{inputGroup.group_label}</legend>
-                }
+          <Accordion.Item as='fieldset' eventKey={k} className="arg-group-fieldset" key={k}>
+            {inputGroup.group_label &&
+              <Accordion.Header as='legend' >
+                {inputGroup.group_label}
               </Accordion.Header>
-              <Accordion.Body>
+            }
+            <Accordion.Collapse eventKey={k}>
               <Form.Group className={inputGroup.tightSpacing ? 'arg-group-tight' : 'arg-group'}>
                 {groupItems}
               </Form.Group>
-              </Accordion.Body>
-            </Accordion.Item>
-          </fieldset>
+            </Accordion.Collapse>
+          </Accordion.Item>
         );
       }
       k += 1;

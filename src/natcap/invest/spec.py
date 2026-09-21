@@ -239,7 +239,8 @@ class InputGroup(BaseModel):
     def serialize(self):
         return {
             'group_label': self.label,
-            'input_ids': self.input_ids
+            'input_ids': self.input_ids,
+            'tightSpacing': self.tight_spacing
         }
 
 

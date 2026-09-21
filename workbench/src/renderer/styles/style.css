@@ -688,10 +688,40 @@ exceed 100% of window.*/
   --bs-accordion-active-bg: none;
   --bs-accordion-btn-padding-x: 0;
   --bs-accordion-btn-padding-y: 0;
+  color: black;
 }
 
 .arg-group-fieldset {
   border: none;
+
+  &:not(:first-of-type),
+  &:first-of-type:has(> legend) {
+    border-top: 0.125rem dotted;
+  }
+
+  & > legend {
+    float: none;
+    width: auto;
+    padding: 0 0.5rem 0 0;
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  & button {
+    font-size: 1.125rem;
+    font-weight: 600;
+
+  }
+
+  & :after {
+    margin-left: 0.5rem;
+  }
+}
+
+.arg-group-fieldset:has(.accordion-button.collapsed) {
+  margin-bottom: 1.5rem;
+}
 
 .arg-group-dotted-legend {
   float: none;
@@ -736,8 +766,8 @@ exceed 100% of window.*/
 
 .arg-group-tight {
   gap: 0;
-  margin-left: 40px;
-  margin-top: 20px;
+  margin: 20px;
+  margin-left: 60px;
 }
 
 .arg-hide {

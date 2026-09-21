@@ -77,12 +77,12 @@ FormLabel.propTypes = {
   units: PropTypes.string,
 };
 
-function Feedback({argkey, message = ''}) {
+function Feedback({argkey, message = '', tightSpacing}) {
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
     <Form.Control.Feedback
-      className="d-block tight-spacing col-1"
+      className={`d-block ${tightSpacing ? 'tight-spacing ': ''}col-1`}
       type="invalid"
       id={`${argkey}-feedback`}
     >
@@ -93,6 +93,7 @@ function Feedback({argkey, message = ''}) {
 Feedback.propTypes = {
   argkey: PropTypes.string.isRequired,
   message: PropTypes.string,
+  tightSpacing: PropTypes.boolean,
 };
 
 /**
@@ -199,6 +200,7 @@ export default function ArgInput({
         argkey={argkey}
         argtype={argSpec.type}
         message={validationMessage}
+        tightSpacing={tightSpacing}
       />
     );
   }
@@ -210,6 +212,7 @@ export default function ArgInput({
         argkey={argkey}
         argtype={argSpec.type}
         message={validationMessage}
+        tightSpacing={tightSpacing}
       />
     );
   }
@@ -307,17 +310,14 @@ export default function ArgInput({
   }
 
 
-  let classNames = [];
-  if (!enabled) {
-    classNames.push('arg-disable');
-  }
+  const className = enabled ? null : 'arg-disable';
   if (tightSpacing) {
     return (
       <Form.Group
         as={Row}
         key={argkey}
         data-testid={`group-${argkey}`}
-        className={classNames.join(' ')} // this grays out the label but doesn't actually disable the field
+        className={className} // this grays out the label but doesn't actually disable the field
       >
         <InputGroup className="d-flex flex-nowrap w-100">
           <Col sm='4' className='argname-tight-spacing'>
@@ -343,7 +343,7 @@ export default function ArgInput({
         as={Row}
         key={argkey}
         data-testid={`group-${argkey}`}
-        className={classNames.join(' ')} // this grays out the label but doesn't actually disable the field
+        className={className} // this grays out the label but doesn't actually disable the field
       >
         <FormLabel
           inputId={inputId}
