@@ -17,7 +17,7 @@ import {
 import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench.electron;
+const { getFilePath, ipcRenderer } = window.Workbench.electron;
 
 export default function PluginModal(props) {
   const {
@@ -31,6 +31,8 @@ export default function PluginModal(props) {
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
+  const [condaPath, setCondaPath] = useState('');
+  const [pluginEnvs, setPluginEnvs] = useState({});
   const [installErr, setInstallErr] = useState('');
   const [uninstallErr, setUninstallErr] = useState('');
   const [pluginToRemove, setPluginToRemove] = useState('');
@@ -61,6 +63,24 @@ export default function PluginModal(props) {
     setUserAcknowledgmentError(false);
     setPluginSourceMissingError(false);
   };
+
+  useEffect(() => {
+    Promise.all([
+      ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'micromamba'),
+      ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'userDefinedMicromamba')
+    ]).then(([micromamba, userDefinedMicromamba]) => {
+      setCondaPath(userDefinedMicromamba || micromamba);
+    });
+    ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'plugins'
+    ).then((data) => setPluginEnvs(
+      Object.fromEntries(
+        Object.keys(data).map(
+          (pluginID) => [pluginID, data[pluginID].userDefinedEnv || data[pluginID].env]
+        )
+      )
+    ))
+  }, []);
 
   useEffect(() => {
     clearFormErrors();
@@ -149,15 +169,114 @@ export default function PluginModal(props) {
     );
   };
 
+  const resetCondaPath = () => {
+    ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'micromamba'
+    ).then((data) => {
+      setCondaPath(data);
+    });
+  };
+
+  const saveCondaPath = () => {
+    ipcRenderer.send(
+      ipcMainChannels.SET_SETTING, 'userDefinedMicromamba', condaPath
+    );
+  };
+
+  const resetPluginEnv = (pluginID) => {
+    ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, `plugins.${pluginID}.env`
+    ).then((value) => {
+      setPluginEnvs({...pluginEnvs, [pluginID]: value});
+    });
+  };
+
+  const savePluginEnvs = () => {
+    Object.entries(pluginEnvs).forEach(([pluginID, envPath]) => {
+      ipcRenderer.send(
+        ipcMainChannels.SET_SETTING, `plugins.${pluginID}.userDefinedEnv`, envPath
+      );
+    });
+  };
+
   const selectDirectory = async (event) => {
     const data = await ipcRenderer.invoke(
       ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
-      // dialog defaults allow only 1 selection
-      setPath(data.filePaths[0]);
+      return data.filePaths[0];
+    }
+  };
+
+  /**
+   * Prevent the default case for onDragOver so onDrop event will be fired.
+   *
+   * @param {Event} event - dragover event
+   */
+  function dragOverHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.disabled) {
+      event.dataTransfer.dropEffect = 'none';
+    } else {
+      event.dataTransfer.dropEffect = 'copy';
     }
   }
+
+  function getDroppedFilePath(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.classList.remove('input-dragging');
+  
+    if (event.currentTarget.disabled) {
+      return undefined;
+    }
+  
+    const fileList = event.dataTransfer.files;
+    if (fileList.length !== 1) {
+      //return undefined;
+      alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
+      return undefined;
+    } 
+    
+    event.currentTarget.focus();
+    return getFilePath(fileList[0]);
+  }
+
+  const rejectDropHandler = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'none';
+    event.currentTarget.classList.remove('input-dragging');
+  };
+
+  function dragEnterHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.disabled) {
+      event.dataTransfer.dropEffect = 'none';
+    } else {
+      event.dataTransfer.dropEffect = 'copy';
+      event.currentTarget.classList.add('input-dragging');
+    }
+  }
+
+  function dragLeavingHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
+    event.currentTarget.classList.remove('input-dragging');
+  }
+
+
+  const selectFile = async (event) => {
+    const data = await ipcRenderer.invoke(
+      ipcMainChannels.SHOW_OPEN_DIALOG, { properties: ['openFile'] }
+    );
+    if (data.filePaths.length) {
+      return data.filePaths[0];
+    }
+  };
 
   useEffect(() => {
     ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
@@ -187,7 +306,6 @@ export default function PluginModal(props) {
   let pluginFields;
   if (installFrom === 'url') {
     pluginFields = (
-
       <Row>
         <Form.Group as={Col} xs={7}>
           <Form.Label htmlFor="url">{t('Git URL')}</Form.Label>
@@ -197,6 +315,8 @@ export default function PluginModal(props) {
             placeholder="https://github.com/owner/repo.git"
             value={url}
             onChange={(event) => setURL(event.currentTarget.value)}
+            onDragOver={rejectDropHandler}
+            onDrop={rejectDropHandler}
             aria-describedby={`about-git-url${pluginSourceMissingError ? ' url-error' : ''}`}
           />
           <Form.Text
@@ -252,13 +372,22 @@ export default function PluginModal(props) {
               : 'C:\\Documents\\path\\to\\plugin\\'}
             value={path}
             onChange={(event) => setPath(event.currentTarget.value)}
+            onDragOver={dragOverHandler}
+            onDragEnter={dragEnterHandler}
+            onDragLeave={dragLeavingHandler}
+            onDrop={(event) => {
+              const droppedPath = getDroppedFilePath(event);
+              if (droppedPath) {
+                setPath(droppedPath);
+              }
+            }}
             aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
           />
           <Button
             aria-label="browse for plugin directory"
             className="browse-button ms-2"
             variant="outline-dark"
-            onClick={selectDirectory}
+            onClick={async (event) => setPath(await selectDirectory(event) || path)}
           >
             <MdFolderOpen />
           </Button>
@@ -432,6 +561,134 @@ export default function PluginModal(props) {
             </Form.Text>
           }
         </div>
+      </Form>
+      <hr />
+      <Form aria-labelledby="configure-conda-form-title" aria-describedby="conda-executable-description">
+        <Form.Group>
+          <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable (Advanced)')}</h5>
+          <Form.Text
+            as="span"
+            id="conda-executable-description"
+            className="plugin-form-text mb-3"
+          >
+            {t('InVEST is distributed with a copy of micromamba, a conda-like '
+              + 'package manager that is used to manage plugin environments. '
+              + 'If you have conda or mamba installed elsewhere on the system, '
+              + 'you can configure InVEST to use that executable instead. This '
+              + 'may be useful if you run into limitations of the included '
+              + 'micromamba distribution. You can enter an absolute path, or '
+              + 'the name of an executable that is on the system PATH.')}
+          </Form.Text>
+          <Form.Label htmlFor="condaPath">{t('Conda or mamba executable')}</Form.Label>
+          <div className="d-flex flex-nowrap w-100">
+            <Form.Control
+              id="condaPath"
+              type="text"
+              value={condaPath || ''}
+              onChange={(event) => setCondaPath(event.target.value)}
+              onDragOver={dragOverHandler}
+              onDragEnter={dragEnterHandler}
+              onDragLeave={dragLeavingHandler}
+              onDrop={(event) => {
+                const droppedPath = getDroppedFilePath(event);
+                if (droppedPath) {
+                  setCondaPath(droppedPath);
+                }
+              }}
+              className="me-1"
+            />
+            <Button
+              aria-label="browse for conda executable"
+              className="browse-button ms-1 me-1"
+              variant="outline-dark"
+              onClick={async (event) => setCondaPath(await selectFile(event) || condaPath)}
+            >
+              <MdFolderOpen />
+            </Button>
+            <Button
+              className="text-nowrap ms-1"
+              onClick={resetCondaPath}
+            >
+              {t('Reset')}
+            </Button>
+          </div>
+          <Button onClick={saveCondaPath} className="text-nowrap mt-3">
+            {t('Save')}
+          </Button>
+        </Form.Group>
+      </Form>
+      <hr />
+      <Form aria-labelledby="configure-plugin-envs-form-title" aria-describedby="plugin-env-description">
+        <Form.Group>
+        <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments (Advanced)')}</h5>
+        <Form.Text
+            as="span"
+            id="plugin-env-description"
+            className="plugin-form-text mb-3"
+          >
+            {t('InVEST creates a separate conda environment for each installed '
+              + 'plugin. You may override this and provide a path to a different '
+              + 'conda environment, which may be useful for development and '
+              + 'debugging.')}
+          </Form.Text>
+        {Object.keys(plugins).map((pluginID) => (
+          <Form.Group key={`${pluginID}-env-group`}>
+            <Form.Label htmlFor={pluginID}>
+              {pluginID}
+            </Form.Label>
+            <div
+              className="d-flex flex-nowrap w-100 mb-1"
+            >
+              <Form.Control
+                id={pluginID}
+                type="text"
+                value={pluginEnvs[pluginID]}
+                onChange={(event) => setPluginEnvs(
+                  {...pluginEnvs, [pluginID]: event.target.value}
+                )}
+                onDragOver={dragOverHandler}
+                onDragEnter={dragEnterHandler}
+                onDragLeave={dragLeavingHandler}
+                onDrop={(event) => {
+                  const droppedPath = getDroppedFilePath(event);
+                  if (droppedPath) {
+                    setPluginEnvs({
+                      ...pluginEnvs,
+                      [pluginID]: droppedPath,
+                    });
+                  }
+                }}
+                className="me-1"
+              />
+              <Button
+                aria-label="browse for env"
+                className="browse-button ms-1 me-2"
+                variant="outline-dark"
+                onClick={async (event) => setPluginEnvs({
+                  ...pluginEnvs,
+                  [pluginID]: await selectDirectory(event) || pluginEnvs[pluginID]
+                })}
+              >
+                <MdFolderOpen />
+              </Button>
+              <Button
+                onClick={() => resetPluginEnv(pluginID)}
+                className="text-nowrap"
+              >
+                {t('Reset')}
+              </Button>
+            </div>
+          </Form.Group>
+        ))}
+        {Object.keys(pluginEnvs).length
+          ? <Button
+              onClick={savePluginEnvs}
+              className="text-nowrap mt-3">
+                {t('Save')}
+            </Button>
+          : <p>{t('No plugins to configure.')}</p>
+        }
+      </Form.Group>
       </Form>
     </Modal.Body>
   );
