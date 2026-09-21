@@ -13,6 +13,7 @@ BSOUP_HTML_PARSER = 'html.parser'
 def _get_render_args():
     return {
         'locale': 'en',
+        'model_id': 'test_model',
         'model_name': 'Test Model',
         'model_description': 'This is a test of the base template.',
         'userguide_page': 'testmodel.html',
@@ -53,6 +54,8 @@ class BaseTemplateTests(unittest.TestCase):
 
         render_args = _get_render_args()
         render_args['locale'] = 'es'
+        # Use a known core model ID to ensure locale appears in UG link.
+        render_args['model_id'] = 'carbon'
 
         html = TEMPLATE.render(render_args)
         soup = BeautifulSoup(html, BSOUP_HTML_PARSER)

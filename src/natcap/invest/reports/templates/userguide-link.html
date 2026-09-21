@@ -1,4 +1,6 @@
 <!--
+  - `locale` (str): the two-character string representing the current locale
+    (e.g., `en`, `es`, `zh`)
   - `model_id` (str): the `model_id` defined on the `MODEL_SPEC`. Checked
     against a list of known core model IDs to determine whether to link to the
     InVEST User Guide.
@@ -16,7 +18,7 @@
 \-->
 
 {% macro userguide_link(
-  model_id, userguide_page, model_name
+  locale, model_id, userguide_page, model_name
 ) -%}
   {% set core_models = [
     'annual_water_yield',
@@ -52,7 +54,7 @@
     <p>To learn more about the {{ model_name }} model, visit the
       <a
         target="_blank"
-        href="https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/{{ userguide_page }}"
+        href="https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/{{ locale }}/{{ userguide_page }}"
       >InVEST User Guide (opens in new browser window)</a>.
     </p>
     {% endtrans %}
