@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Create the container for distribution that has runtime dependencies.
-FROM mambaorg/micromamba:2.5-debian13-slim
+FROM mambaorg/micromamba:2.9-debian13-slim
 
 ARG PYTHON_VERSION="3.13"
 
