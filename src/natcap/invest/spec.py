@@ -463,7 +463,7 @@ class Input(IOModel):
         """
         return value
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
 
         Note that conditional requirements (where `required` is a string
@@ -842,15 +842,6 @@ class SingleBandRasterInput(SpatialFileInput):
     def display_name(self):
         return gettext('raster')
 
-    def format_data_type(self):
-        """Return a string representation of the data type for this input."""
-        if self.data_type is int:
-            return gettext('integer')
-        elif self.data_type is float:
-            return gettext('float')
-        else:
-            return gettext('unknown')
-
     @timeout
     def validate(self, filepath: str):
         """Validate a raster file against the requirements for this input.
@@ -890,7 +881,7 @@ class SingleBandRasterInput(SpatialFileInput):
             if projection_warning:
                 return projection_warning
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
 
         Returns:
@@ -898,12 +889,7 @@ class SingleBandRasterInput(SpatialFileInput):
         """
         name = self.name or self.id
         type_string = format_type_string(self)
-
-        if self.data_type:
-            in_parentheses = [
-                f'{type_string} [{gettext("data type")}: **{self.format_data_type()}**]']
-        else:
-            in_parentheses = [type_string]
+        in_parentheses = [type_string]
 
         if self.units:
             units_string = format_unit(self.units)
@@ -918,6 +904,9 @@ class SingleBandRasterInput(SpatialFileInput):
                     f'{gettext("projected")} [{gettext("projection units")}: **{format_unit(self.projection_units)}**]')
             else:
                 in_parentheses.append(gettext("projected"))
+
+        if additional_attributes:
+            in_parentheses += additional_attributes
 
         required_string = self.format_required_string()
         in_parentheses.append(f'*{required_string}*')
@@ -1076,7 +1065,7 @@ class VectorInput(SpatialFileInput):
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
 
         Returns:
@@ -1094,6 +1083,9 @@ class VectorInput(SpatialFileInput):
                     f'{gettext("projected")} [{gettext("projection units")}: **{self.projection_units}**]')
             else:
                 in_parentheses.append(f'{gettext("projected")}')
+
+        if additional_attributes:
+            in_parentheses += additional_attributes
 
         in_parentheses.append(f'*{required_string}*')
         rst_line = f'**{name}** ({", ".join(in_parentheses)})'
@@ -1412,7 +1404,7 @@ class CSVInput(FileInput):
         """
         return value if value else None
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
 
         Returns:
@@ -1705,7 +1697,7 @@ class NumberInput(Input):
         """
         return None if value in {None, ''} else float(value)
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
 
         Note that the `expression` attribute is not documented here because
@@ -1925,7 +1917,7 @@ class BooleanInput(Input):
         """
         return None if value in {None, ''} else bool(value)
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
 
         Returns:
@@ -2149,7 +2141,7 @@ class OptionStringInput(Input):
         """
         return None if value in {None, ''} else str(value).lower()
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
 
         Returns:

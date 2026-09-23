@@ -89,20 +89,17 @@ def describe_input(module_name, keys):
     # anchor names cannot contain underscores. sphinx will replace them
     # automatically, but lets explicitly replace them here
     anchor_name = '-'.join(keys).replace('_', '-')
-    rst = '\n\n'.join(_input.describe_rst())
 
+    additional_attributes = []
     # Only top-level model inputs can be designated as these special inputs
     if len(keys) == 1:
         model_spec = importlib.import_module(module_name).MODEL_SPEC
-        attributes = []
-
         if _input.id == model_spec.default_projection_id:
-            attributes.append(f"**{gettext('default projection input')}**")
+            additional_attributes.append(f"**{gettext('default projection input')}**")
         if _input.id == model_spec.default_pixelsize_id:
-            attributes.append(f"**{gettext('default pixel size input')}**")
+            additional_attributes.append(f"**{gettext('default pixel size input')}**")
 
-        if attributes:
-            rst = rst.replace("): ", f', {", ".join(attributes)}): ')
+    rst = '\n\n'.join(_input.describe_rst(additional_attributes=additional_attributes))
 
     return f'.. _{anchor_name}:\n\n{rst}'
 

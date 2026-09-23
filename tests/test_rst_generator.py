@@ -86,8 +86,8 @@ class TestRSTGenerator(unittest.TestCase):
             'natcap.invest.annual_water_yield',
             ['lulc_path'])
         desc = annual_water_yield.MODEL_SPEC.get_input('lulc_path').about
-
-        expected_rst = f'.. _lulc-path:\n\n**land use/land cover** (`raster <input_types.html#raster>`__ [data type: **integer**], *required*, **default projection input**, **default pixel size input**): {desc}'
+        print(repr(actual_rst))
+        expected_rst = f'.. _lulc-path:\n\n**land use/land cover** (`raster <input_types.html#raster>`__, **default projection input**, **default pixel size input**, *required*): {desc}'
 
         self.assertEqual(repr(actual_rst), repr(expected_rst))
 
