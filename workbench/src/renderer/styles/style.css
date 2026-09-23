@@ -53,12 +53,11 @@ button {
    customization (the "info" color became too light in Bootstrap 5), a more
    complex approach doesn't seem worthwhile. */
 .info-button {
-  margin-right: 2rem;
   color: var(--lagunita-light);
   border-color: var(--lagunita-light);
   &:hover, &:focus {
     color: ghostwhite;
-    background: none;
+    background: var(--lagunita-light);
     border-color: var(--lagunita-light);
   }
   &:focus, &:focus-visible {
@@ -79,18 +78,10 @@ button {
   }
 }
 
-.info-btn-outline {
+.info-button-outline {
   color: var(--lagunita-light);
   background: none;
   border-color: var(--lagunita-light);
-  /*&:hover, &:focus {
-    color: ghostwhite;
-    background: none;
-    border-color: var(--lagunita-light);
-  }
-  &:focus, &:focus-visible {
-    box-shadow: 0 0 0 .25rem var(--lagunita-light-opacity-50);
-  }*/
 }
 
 /* Bootstrap form control style overrides. */
@@ -720,12 +711,6 @@ exceed 100% of window.*/
 }
 
 .arg-table {
-/*  border: none;
-
-  &:not(:first-of-type),
-  &:first-of-type:has(> legend) {
-    border-top: 0.125rem dotted;
-  }*/
 
   background-color: inherit;
 
@@ -774,39 +759,6 @@ exceed 100% of window.*/
 
   & > button {
     color: #a5a5a5;
-  }
-}
-
-.arg-group-dotted-legend {
-  float: none;
-  width: auto;
-  padding: 0 0.75rem 0 0;
-  margin-bottom: 0;
-  font-size: inherit;
-  font-weight: 600;
-  color: black;
-}
-
-.arg-group-dotted-legend-disabled {
-  float: none;
-  width: auto;
-  padding: 0 0.75rem 0 0;
-  margin-bottom: 0;
-  font-size: inherit;
-  font-weight: 600;
-  color: #888888;
-  &:not(:first-of-type),
-  &:first-of-type:has(> legend) {
-    border-top: 0.125rem dotted;
-  }
-
-  & > legend {
-    float: none;
-    width: auto;
-    padding: 0 0.5rem 0 0;
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
   }
 }
 
@@ -864,8 +816,8 @@ exceed 100% of window.*/
 }
 
 .args-form .form-label {
-  /*padding-top: 0;*/
-  /*padding-bottom: 0;*/
+  padding-top: 0;
+  padding-bottom: 0;
   margin-top: 4px;
   margin-bottom: 4px;
   display: flex;

@@ -223,11 +223,11 @@ class ArgsForm extends React.Component {
       }
       let group = groupItems;
       formItems.push(
-        <fieldset className="arg-group-fieldset" key={k}>
+        <fieldset className={fieldsetClassName} key={k}>
           {inputGroup.group_label &&
             <legend>{inputGroup.group_label}</legend>
           }
-          <Form.Group className='arg-group'>
+          <Form.Group className="arg-group">
             {groupItems}
           </Form.Group>
         </fieldset>
