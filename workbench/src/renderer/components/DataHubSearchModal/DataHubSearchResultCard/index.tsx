@@ -25,8 +25,8 @@ export default function DataHubSearchResultCard(
   const { t } = useTranslation();
 
   const {
-    id, title, description, tags, places, collections, license,
-    author, lastUpdated, created, datasetUrl, webpageUrl
+    id, title, pixelSize, crsUnits, description, tags, places, collections,
+    license, author, lastUpdated, created, datasetUrl, webpageUrl
   } = datasetDetails;
 
   const descriptionPreviewLength = 430;
@@ -67,6 +67,20 @@ export default function DataHubSearchResultCard(
             {descriptionPreview}
           </p>
           <dl className="search-result-metadata">
+            {
+              pixelSize.length === 2 &&
+              <>
+                <dt>{t('Pixel Size')}</dt>
+                <dd>{pixelSize.map(num => num.toFixed(6)).join(', ')}</dd>
+              </>
+            }
+            {
+              crsUnits &&
+              <>
+                <dt>{t('CRS Units')}</dt>
+                <dd>{crsUnits}</dd>
+              </>
+            }
             <dt>{t('Tags')}</dt>
             <dd>{tags.join(', ')}</dd>
             <dt>{t('Places')}</dt>
