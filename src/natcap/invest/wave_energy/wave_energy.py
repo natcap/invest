@@ -112,15 +112,18 @@ MODEL_SPEC = spec.ModelSpec(
     aliases=(),
     module_name=__name__,
     input_field_order=[
-        spec.InputGroup(label='Group A', input_ids=["workspace_dir", "results_suffix"]),
+        spec.InputGroup(input_ids=["workspace_dir", "results_suffix"]),
         ["wave_base_data_table", "analysis_area", "aoi_path", "dem_path"],
         ["machine_perf_path", "machine_param_path"],
-        spec.InputGroup(
-            label='Machine Economic Parameters',
-            input_ids=['capmax', 'cc', 'cml', 'cul', 'col', 'omc', 'p',
-                       'r', 'smlpm'],
-            tight_spacing=True),
-        ["valuation_container", "land_gridPts_path", "number_of_machines"]
+        spec.InputGroup(input_ids=[
+            "valuation_container",
+            spec.InputTable(
+                label='Machine Economic Parameters',
+                input_ids=['capmax', 'cc', 'cml', 'cul', 'col', 'omc', 'p',
+                           'r', 'smlpm']),
+            "land_gridPts_path",
+            "number_of_machines"
+        ])
     ],
     inputs=[
         spec.WORKSPACE,

@@ -431,7 +431,7 @@ exceed 100% of window.*/
   background-color: transparent;
 }
 
-.card-header {
+.recent-job-card .card-header {
   --card-header-title-font-size: 1.25rem;
   --card-header-title-line-height: 1.2;
   --card-header-button-height: 2.625rem;
@@ -704,14 +704,10 @@ exceed 100% of window.*/
     width: auto;
     padding: 0 0.5rem 0 0;
     margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
   }
 
   & button {
-    font-size: 1.125rem;
     font-weight: 600;
-
   }
 
   & :after {
@@ -721,6 +717,64 @@ exceed 100% of window.*/
 
 .arg-group-fieldset:has(.accordion-button.collapsed) {
   margin-bottom: 1.5rem;
+}
+
+.arg-table {
+/*  border: none;
+
+  &:not(:first-of-type),
+  &:first-of-type:has(> legend) {
+    border-top: 0.125rem dotted;
+  }*/
+
+  background-color: inherit;
+
+  & > legend {
+    float: none;
+    width: auto;
+    padding: 0 0.5rem 0 0;
+    margin: 0;
+    font-size: inherit;
+    font-weight: 600;
+  }
+
+  & button {
+    font-weight: 600;
+  }
+
+  & :after {
+    margin-left: 0.5rem;
+  }
+}
+
+.arg-table .card-header {
+  font-weight: 600;
+}
+
+.arg-table .accordion-collapse {
+  background-color: var(--bs-card-cap-bg);
+}
+
+.arg-table .table-enabled {
+
+  & > ::after {
+    display: none;
+  }
+
+  & > button {
+    cursor: default;
+  }
+}
+
+.arg-table .table-disabled {
+
+  & > ::after {
+    color: #a5a5a5;
+  }
+
+  & > button {
+    color: #a5a5a5;
+  }
 }
 
 .arg-group-dotted-legend {
@@ -766,8 +820,7 @@ exceed 100% of window.*/
 
 .arg-group-tight {
   gap: 0;
-  margin: 20px;
-  margin-left: 60px;
+  margin: 16px;
 }
 
 .arg-hide {
@@ -785,6 +838,7 @@ exceed 100% of window.*/
 .argname {
   text-transform: capitalize;
   font-weight: 600;
+  padding-left: 16px;
 }
 
 .argname-tight-spacing {
