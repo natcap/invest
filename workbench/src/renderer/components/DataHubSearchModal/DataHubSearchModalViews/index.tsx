@@ -2,7 +2,7 @@ import type { ChangeEvent } from 'react';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
-import Spinner from 'react-bootstrap/esm/Spinner';
+import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
 import { TbMapSearch, TbZoomCancel, TbZoomExclamation } from 'react-icons/tb';
 
