@@ -68,6 +68,8 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
 
   const autoFocusRef: RefObject<any> = useRef(null);
 
+  const searchAllowed: boolean = aoiIsValid || query.datatype === 'csv';
+
   useEffect(() => {
     // This effect supports screen reader navigation by auto-focusing the
     // element (typically a heading) that provides a summary of new content,
@@ -175,7 +177,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
       </Modal.Header>
       <Modal.Body>
         {
-          aoiIsValid &&
+          searchAllowed &&
           <>
             <DataHubSearchParams
               tags={query.tags}
@@ -189,7 +191,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
           step === INTRO_STEP &&
           <DataHubSearchIntroContent
             aoiInputName={aoiInputName}
-            aoiIsValid={aoiIsValid}
+            searchAllowed={searchAllowed}
           />
         }
         {
@@ -213,7 +215,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
         step === INTRO_STEP &&
         <Modal.Footer>
           <DataHubSearchIntroFooter
-            aoiIsValid={aoiIsValid}
+            searchAllowed={searchAllowed}
             aoiInputName={aoiInputName}
             search={search}
             close={close}

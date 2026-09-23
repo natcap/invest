@@ -19,17 +19,17 @@ import { handleClickFindLogfiles } from '../../../menubar/handlers';
 export function DataHubSearchIntroContent(
   props: {
     aoiInputName: string,
-    aoiIsValid: boolean,
+    searchAllowed: boolean,
   }
 ) {
-  const { aoiIsValid, aoiInputName } = props;
+  const { searchAllowed, aoiInputName } = props;
   const { t } = useTranslation();
 
   return (
       <>
       {/* @TODO: add loading spinner if/when awaiting AOI validation status and/or AOI extent. */}
       {
-        aoiIsValid
+        searchAllowed
         ? <p>
             {t(`Search the Natural Capital Alliance Data Hub for datasets you can
               use in InVEST without having to download them first.`)}
@@ -177,18 +177,18 @@ export function DataHubSearchResultsContent(
 
 export function DataHubSearchIntroFooter(
   props: {
-    aoiIsValid: boolean,
+    searchAllowed: boolean,
     aoiInputName: string,
     search: () => void,
     close: () => void,
     goToAoiInput: () => void,
   }
 ) {
-  const { aoiIsValid, aoiInputName, search, close, goToAoiInput } = props;
+  const { searchAllowed, aoiInputName, search, close, goToAoiInput } = props;
   const { t } = useTranslation();
 
   return (
-      aoiIsValid
+      searchAllowed
       ? <Button onClick={search}>{t('Search')}</Button>
       : <>
           <Button variant="outline-primary" onClick={close}>{t('OK')}</Button>

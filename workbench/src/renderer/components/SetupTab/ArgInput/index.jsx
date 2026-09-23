@@ -244,7 +244,7 @@ export default function ArgInput({
   const searchQuery = {
     tags: argSpec.keywords || [],
     datatype: argSpec.type,
-    extent: searchExtent,
+    extent: argSpec.type === 'raster' ? searchExtent : [],
     collections: searchCollections,
   };
 
