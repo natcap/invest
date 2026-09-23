@@ -8,7 +8,7 @@ import { MdClose } from 'react-icons/md';
 import {
   transformDHALSearchResult,
   type DataHubSearchResult,
-  type DHALDataset
+  type DHALSearchResult
 } from './models';
 import {
   DHALSearchParams,
@@ -102,7 +102,9 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
       } else {
         const {count, datasets} = responseBody;
         setNumSearchResults(count);
-        setSearchResults(datasets.map((d: DHALDataset) => transformDHALSearchResult(d)));
+        setSearchResults(datasets.map(
+          (d: DHALSearchResult) => transformDHALSearchResult(d))
+        );
         collapseAllCards();
         logger.info(
           `HTTP request succeeded.
