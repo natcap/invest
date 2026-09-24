@@ -5,10 +5,10 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
-import { IconContext } from "react-icons";
 import { BsCheckCircle } from "react-icons/bs";
 
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+import { handleClickFindLogfiles } from '../../../menubar/handlers';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -24,24 +24,6 @@ export default function InstalledPluginsTab(props) {
 
   const { t } = useTranslation();
 
-  let removePluginTab;
-  if (uninstallErr) {
-    removePluginTab = (
-      <>
-        <h5>{t('Error removing plugin:')}</h5>
-        <div className="plugin-error plugin-install-remove-error">{uninstallErr}</div>
-        <Button
-          onClick={() => ipcRenderer.send(
-            ipcMainChannels.SHOW_ITEM_IN_FOLDER,
-            window.Workbench.ELECTRON_LOG_PATH,
-          )}
-        >
-          {t('Find workbench logs')}
-        </Button>
-      </>
-    );
-  }
-
   return (
     <>
       <div>
@@ -49,9 +31,7 @@ export default function InstalledPluginsTab(props) {
         {removalSuccess && (
           <>
             <div aria-live="polite" className="pt-3 pb-3 plugin-success-message">
-              <IconContext.Provider value={{ className: 'react-icons react-icons-white' }}>
-                <BsCheckCircle />
-              </IconContext.Provider>
+              <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" />
               <span>{t('Plugin successfully removed!')}</span>
             </div>
           </>
@@ -101,28 +81,23 @@ function InstalledPluginDetailItem(props) {
     <Row className="pt-2 pb-2 installed-plugin-row">
       <Col sm={9}>
         <h6>{pluginDetails.modelTitle} ({pluginDetails.version})</h6>
-        <ul className="list-unstyled plugin-small-text">
+        <dl className="plugin-dl">
           {pluginDetails.sourceType && (
-            <li>
-              <b>{t('Installed via: ')}</b>
-              {pluginDetails.sourceType}
-            </li>
+            <>
+              <dt className="bold-text">{t('Installed via: ')}</dt>
+              <dd>{pluginDetails.sourceType}</dd>
+            </>
           )}
-          <li>
-            <b>{t('Source: ')}</b>
-            {pluginDetails.source}
-          </li>
-        </ul>
+          <dt className="bold-text">{t('Source: ')}</dt>
+          <dd>{pluginDetails.source}</dd>
+        </dl>
         {uninstallErr &&
           (
             <>
               <h5>{t('Error removing plugin:')}</h5>
               <div className="plugin-error plugin-install-remove-error">{uninstallErrMsg}</div>
               <Button
-                onClick={() => ipcRenderer.send(
-                  ipcMainChannels.SHOW_ITEM_IN_FOLDER,
-                  window.Workbench.ELECTRON_LOG_PATH,
-                )}
+                onClick={handleClickFindLogfiles}
               >
                 {t('Find workbench logs')}
               </Button>
@@ -138,9 +113,7 @@ function InstalledPluginDetailItem(props) {
           {uninstallLoading
             ? (
               <div className="adding-button">
-                <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                  <span className="visually-hidden">{t('Removing...')}</span>
-                </Spinner>
+                <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
                 {t('Removing...')}
               </div>
             )
