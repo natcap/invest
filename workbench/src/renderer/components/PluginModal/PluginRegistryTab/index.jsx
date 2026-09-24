@@ -7,6 +7,10 @@ import Row from 'react-bootstrap/Row';
 
 import PluginDetailPane from './PluginDetailPane';
 
+export const thisVersionInstalled = "thisVersionInstalled";
+export const anotherVersionInstalled = "anotherVersionInstalled";
+export const notInstalled = "notInstalled";
+
 export default function PluginRegistryTab(props) {
   const {
     registryData,
@@ -62,11 +66,11 @@ export default function PluginRegistryTab(props) {
 
   function getInstallStatus(plugin) {
     if (installedPluginNamesVersions.includes(plugin.invest_package_name + '@' + plugin.version)) {
-      return "thisVersionInstalled";
+      return thisVersionInstalled;
     } else if (installedPluginNames.includes(plugin.invest_package_name)) {
-      return "anotherVersionInstalled";
+      return anotherVersionInstalled;
     } else {
-      return "notInstalled"
+      return notInstalled;
     }
   }
 
