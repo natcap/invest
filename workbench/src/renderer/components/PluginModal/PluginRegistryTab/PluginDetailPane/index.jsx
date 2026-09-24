@@ -6,12 +6,19 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
-import { IconContext } from "react-icons";
 import { BsExclamationCircle } from "react-icons/bs";
 import { BsCheckCircle } from "react-icons/bs";
+import { MdOpenInNew } from "react-icons/md";
 
 import { openLinkInBrowser } from '../../../../utils';
 import { ipcMainChannels } from '../../../../../main/ipcMainChannels';
+import { handleClickFindLogfiles } from '../../../../menubar/handlers';
+import {
+  thisVersionInstalled,
+  anotherVersionInstalled,
+  notInstalled
+} from '../../PluginRegistryTab';
+import { sourceTypeRegistry } from '../../../PluginModal';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -34,12 +41,12 @@ export default function PluginDetailPane(props) {
   const [userAcknowledgmentError, setUserAcknowledgmentError] = useState(false);
 
   const pluginTypes = {
-    "preprocessing": "Preprocessing",
-    "postprocessing": "Postprocessing",
-    "workflow": "Workflow",
-    "invest_model_variant": "InVEST Model Variant",
-    "new_model": "New Model",
-    "other": "Other"
+    preprocessing: "Preprocessing",
+    postprocessing: "Postprocessing",
+    workflow: "Workflow",
+    invest_model_variant: "InVEST Model Variant",
+    new_model: "New Model",
+    other: "Other"
   }
 
   const clearFormErrors = () => {
@@ -89,15 +96,11 @@ export default function PluginDetailPane(props) {
 
   let installPane = (
     <>
-      {(installStatus === "anotherVersionInstalled") &&
-        <div className="plugin-version-note">
-          <IconContext.Provider value={{ className: 'react-icons' }}>
-            <BsExclamationCircle />
-          </IconContext.Provider>
-          <span>
-            <b>{t('Note: ')}</b>
+      {(installStatus === anotherVersionInstalled) &&
+        <div>
+          <BsExclamationCircle className="plugin-modal-icons" />
+            <span className="bold-text">{t('Note: ')}</span>
             {t('A different version of this plugin is already installed.')}
-          </span>
         </div>
       }
       <Form aria-labelledby="add-plugin-form-title">
@@ -204,10 +207,7 @@ export default function PluginDetailPane(props) {
         <h5>{t('Error installing plugin:')}</h5>
         <div className="plugin-error plugin-install-remove-error">{installErrMsg}</div>
         <Button
-          onClick={() => ipcRenderer.send(
-            ipcMainChannels.SHOW_ITEM_IN_FOLDER,
-            window.Workbench.ELECTRON_LOG_PATH,
-          )}
+          onClick={handleClickFindLogfiles}
         >
           {t('Find workbench logs')}
         </Button>
@@ -218,9 +218,7 @@ export default function PluginDetailPane(props) {
   let alreadyInstalledPane = (
     <>
       <div className="pt-3 pb-3 plugin-version-note">
-        <IconContext.Provider value={{ className: 'react-icons' }}>
-          <BsCheckCircle />
-        </IconContext.Provider>
+        <BsCheckCircle className="plugin-modal-icons" />
         <span>{t('This plugin is installed!')}</span>
       </div>
     </>
@@ -230,82 +228,74 @@ export default function PluginDetailPane(props) {
     <>
       <div className="plugin-pane">
         <h5>{plugin.plugin_name}</h5>
-        <p className="plugin-small-text">
+        <p>
           {plugin.description}
         </p>
-        <Table borderless size="sm" className="plugin-small-text plugin-table">
-          <tbody>
-            <tr>
-              <td className="text-end"><b>Downloads:</b></td>
-              <td>
-                {plugin.download_count}
-              </td>
-            </tr>
-            {(plugin.authors.length > 0) &&
-            <tr>
-              <td className="text-end"><b>Authors:</b></td>
-              <td>
-                {plugin.authors.join("; ")}
-              </td>
-            </tr>
-            }
-            {(plugin.maintainers.length > 0) &&
-            <tr>
-              <td className="text-end"><b>Maintainers:</b></td>
-              <td>
-                {plugin.maintainers.join("; ")}
-              </td>
-            </tr>
-            }
-            <tr>
-              <td className="text-end"><b>Version:</b></td>
-              <td>
-                {plugin.version}, updated {plugin.date_last_updated}
-              </td>
-            </tr>
-            <tr>
-              <td className="text-end"><b>License:</b></td>
-              <td>
-                {plugin.license}
-              </td>
-            </tr>
-            <tr>
-              <td className="text-end"><b>More Info:</b></td>
-              <td>
-                <a
-                  href={plugin.registry_url}
-                  title={plugin.registry_url}
-                  aria-label={t("View on Plugin Registry (opens in web browser)")}
-                  onClick={openLinkInBrowser}
-                >View on Registry</a> | <a
-                  href={plugin.repository_url}
-                  title={plugin.repository_url}
-                  aria-label={t("Plugin source code (opens in web browser)")}
-                  onClick={openLinkInBrowser}
-                >Source Code</a> | <a
-                  href={plugin.documentation_url}
-                  title={plugin.documentation_url}
-                  aria-label={t("Plugin documentation (opens in web browser)")}
-                  onClick={openLinkInBrowser}
-                >Documentation</a> | <a
-                  href={plugin.issues_url}
-                  title={plugin.issues_url}
-                  aria-label={t("Plugin issue tracker (opens in web browser)")}
-                  onClick={openLinkInBrowser}
-                >Issue Tracker</a>
-              </td>
-            </tr>
-            <tr>
-              <td className="text-end"><b>Tags:</b></td>
-              <td>
-                {keywords}
-              </td>
-            </tr>
-          </tbody>
-        </Table>
+        <dl className="plugin-dl">
+          <dt>{t("Downloads:")}</dt>
+          <dd>{plugin.download_count}</dd>
+          {(plugin.authors.length > 0) &&
+          <>
+            <dt>{t("Authors:")}</dt>
+            <dd>{plugin.authors.join("; ")}</dd>
+          </>
+          }
+          {(plugin.maintainers.length > 0) &&
+          <>
+            <dt>{t("Maintainers:")}</dt>
+            <dd>{plugin.maintainers.join("; ")}</dd>
+          </>
+          }
+          <dt>{t("Version:")}</dt>
+          <dd>{plugin.version}, updated {plugin.date_last_updated}</dd>
+          <dt>{t("License:")}</dt>
+          <dd>{plugin.license}</dd>
+          <dt>{t("More Info:")}</dt>
+          <dd>
+            <a
+              href={plugin.registry_url}
+              title={plugin.registry_url}
+              onClick={openLinkInBrowser}
+            >
+              {t("View on Registry ")}
+              <MdOpenInNew
+                aria-label={t("(opens in web browser)")}
+              />
+            </a> | <a
+              href={plugin.repository_url}
+              title={plugin.repository_url}
+              onClick={openLinkInBrowser}
+            >{
+              t("Source Code ")}
+              <MdOpenInNew
+                aria-label={t("(opens in web browser)")}
+              />
+            </a> | <a
+              href={plugin.documentation_url}
+              title={plugin.documentation_url}
+              onClick={openLinkInBrowser}
+            >
+              {t("Documentation ")}
+              <MdOpenInNew
+                aria-label={t("(opens in web browser)")}
+              />
+            </a> | <a
+              href={plugin.issues_url}
+              title={plugin.issues_url}
+              onClick={openLinkInBrowser}
+            >
+              {t("Issue Tracker ")}
+              <MdOpenInNew
+                aria-label={t("(opens in web browser)")}
+              />
+            </a>
+          </dd>
+          <dt>{t("Tags:")}</dt>
+          <dd>{keywords}</dd>
+        </dl>
       </div>
       <div className="install-pane registry-install-form">
-        {(installStatus === "thisVersionInstalled")
+        {(installStatus === thisVersionInstalled)
           ? alreadyInstalledPane
           : installPane
         }
