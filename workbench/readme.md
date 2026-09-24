@@ -91,25 +91,14 @@ Nothing needs to be done during routine development. As we make changes to the W
 These instructions assume you have defined the two-letter locale code in an environment variable `$LL`.
 
 #### Before requesting translation
-1. You will need two Node packages available at the system (global) level.
-    - Check for an existing `i18next-parser` installation by running `i18next --version`. If this does not return a version number, run `npm install -g i18next-parser`.
-    - Check for an existing `i18next-gettext-converter` installation by running `i18next-conv --version`. If this does not return a version number, run `npm install -g i18next-conv`.
+1. Extract messages from source code and update existing message catalogs:
+   ```
+   yarn i18n-extract
+   ```
+   The `i18next-extract` command is defined in `package.json`. It uses `i18next-cli` to extract translatable messages from the source code and update the existing message catalogs (or generate them if they do not yet exist). This results in two JSON files (one for `main`, another for `renderer`) for each locale. Each JSON file maps each translatable message from the source code to either an existing translation (if it exists) or an empty string (if no translation exists yet).
 
-2. Extract messages from the source code:
-   ```
-   i18next "src/main/**/*.{js,jsx}" --output main-messages.json
-   i18next "src/renderer/**/*.{js,jsx}" --output renderer-messages.json
-   ```
-   The `i18next` command is provided by the `i18next-parser` package and configured by `workbench/i18next-parser.config.mjs`. Each output JSON file should contain a JSON object mapping each translatable message from the source code to an empty string.
+   For example:
 
-3. Merge extracted messages into the existing message catalog:
-   ```
-   jq -s add main-messages.json src/main/i18n/$LL.json > tmp.json
-   cat tmp.json > src/main/i18n/$LL.json
-   jq -s add renderer-messages.json src/renderer/i18n/$LL.json > tmp.json
-   cat tmp.json > src/renderer/i18n/$LL.json
-   ```
-   This will add new keys into the JSON message catalogs and leave existing translations intact:
    ```
    {
       "text that's already been translated": "translation",
@@ -117,22 +106,18 @@ These instructions assume you have defined the two-letter locale code in an envi
    }
    ```
 
-4. Examine the diff and make a note of how many lines were added to each JSON file. This number is equivalent to the number of messages that have not yet been translated, and it can be useful when gauging the need for updated translations or estimating the scope of work for an upcoming translation update.
+2. Examine the diff and make a note of how many lines were added to each JSON file. This number is equivalent to the number of messages that have not yet been translated, and it can be useful when gauging the need for updated translations or estimating the scope of work for an upcoming translation update.
 
-5. Commit the updated JSON files. Use a descriptive commit message, for example: "Extract messages from Workbench code and add new messages to es (.json) catalogs."
+3. Commit the updated JSON files. Use a descriptive commit message, for example: "Extract messages from Workbench code and add new messages to es (.json) catalogs."
 
-6. Convert the JSON files to PO files:
+4. Convert the JSON files to PO files:
    ```
    i18next-conv -l $LL -s src/main/i18n/$LL.json -t src/main/i18n/$LL.po
    i18next-conv -l $LL -s src/renderer/i18n/$LL.json -t src/renderer/i18n/$LL.po
    ```
    The translator will work with the PO files, and we will convert them back to JSON later.
 
-7. Delete `tmp.json`.
-
-8. If you are preparing translation files for multiple languages, repeat steps 2 through 7 for each remaining language.
-
-9. Delete `main-messages.json` and `renderer-messages.json`.
+5. If you are preparing translation files for multiple languages, repeat step 4 for each remaining language.
 
 #### Request translation
 Send `src/main/i18n/$LL.po` and `src/renderer/i18n/$LL.po` to the translator. They will complete the translations, then send us the updated PO files.
