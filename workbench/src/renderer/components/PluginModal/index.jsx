@@ -53,7 +53,6 @@ export default function PluginModal(props) {
   const [plugins, setPlugins] = useState({});
   const [registryData, setRegistryData] = useState([]);
   const [activePluginKey, setActivePluginKey] = useState('');
-  const [activePluginIndex, setActivePluginIndex] = useState(0);
   const [fetchError, setFetchError] = useState(false);
 
   const registryMetadataURL = "https://natcap.github.io/invest-plugin-registry/workbench_metadata.json";
@@ -148,13 +147,11 @@ export default function PluginModal(props) {
   useEffect(() => {
     if (Object.keys(registryData).length) {
       setActivePluginKey(registryData[0]['invest_package_name']);
-      setActivePluginIndex(0);
     }
   }, [registryData]);
 
   function handlePluginClick(pluginKey) {
     setActivePluginKey(pluginKey);
-    setActivePluginIndex(registryData.findIndex(i => i.invest_package_name === pluginKey));
   }
 
   const addPlugin = (pluginID, url, revision, path, sourceType) => {
@@ -349,11 +346,10 @@ export default function PluginModal(props) {
                       {t('Retry')}
                     </Button>
                   </div>
-                ) : (
+                ) : registryData.length ? (
                   <PluginRegistryTab
                     registryData={registryData}
                     activePluginKey={activePluginKey}
-                    activePluginIndex={activePluginIndex}
                     handlePluginClick={handlePluginClick}
                     fetchError={fetchError}
                     installedPlugins={plugins}
@@ -366,6 +362,8 @@ export default function PluginModal(props) {
                     needsMSVC={needsMSVC}
                     downloadMSVC={downloadMSVC}
                   />
+                ) : (
+                  <p>{t('No plugins found.')}</p>
                 )}
               </Tab.Pane>
               <Tab.Pane eventKey="installed">

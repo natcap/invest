@@ -70,7 +70,7 @@ export default function PluginRegistryTab(props) {
               >
                 <Nav.Link
                   eventKey={pluginObject.invest_package_name}
-                  onClick={(e) => handlePluginClick(pluginObject.invest_package_name, index)}
+                  onClick={(e) => handlePluginClick(pluginObject.invest_package_name)}
                 >
                   {pluginObject.plugin_name}
                 </Nav.Link>
