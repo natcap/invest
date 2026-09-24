@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Spinner from 'react-bootstrap/Spinner';
-import Table from 'react-bootstrap/Table';
 import { BsExclamationCircle } from "react-icons/bs";
 import { BsCheckCircle } from "react-icons/bs";
 import { MdOpenInNew } from "react-icons/md";
@@ -139,7 +138,7 @@ export default function PluginDetailPane(props) {
           <Button
             disabled={installLoading || installDisabled}
             onClick={handleAddPluginClick}
-            aria-describedby="plugin-installation-duration-notice"
+            aria-describedby={`${pluginID}-plugin-installation-disabled-notice ${pluginID}-plugin-installation-duration-notice`}
           >
             {installLoading
               ? (
