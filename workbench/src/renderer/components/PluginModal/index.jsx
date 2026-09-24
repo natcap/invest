@@ -8,7 +8,6 @@ import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Tab from 'react-bootstrap/Tab';
 import { useTranslation } from 'react-i18next';
-import { IconContext } from "react-icons";
 import {
   MdClose,
   MdOutlineWarningAmber
@@ -23,6 +22,11 @@ import ManualInstallTab from './ManualInstallTab';
 import PluginRegistryTab from './PluginRegistryTab';
 
 const { getFilePath, ipcRenderer } = window.Workbench.electron;
+const { logger } = window.Workbench;
+
+export const sourceTypeLocal = "local_path";
+export const sourceTypeURL = "git_url";
+export const sourceTypeRegistry = "registry";
 
 export default function PluginModal(props) {
   const {
@@ -101,11 +105,11 @@ export default function PluginModal(props) {
     }
 
     if (cacheJSON && !cacheStale) {
-        console.log('Using cached data');
+        logger.debug('Using cached data');
         setRegistryData(cacheJSON.data);
         setFetchError(false);
     } else {
-      console.log('Cache miss; fetching data...');
+      logger.debug('Cache miss; fetching data...');
       try {
         // Fetch data from the Registry if not cached
         const response = await fetch(registryMetadataURL);
@@ -126,7 +130,7 @@ export default function PluginModal(props) {
         setRegistryData(sortedPlugins);
         setFetchError(false);
       } catch (error) {
-        console.log(error.message);
+        logger.error(error.message);
         setFetchError(true);
       }
     }
@@ -304,7 +308,7 @@ export default function PluginModal(props) {
 
   const { t } = useTranslation();
 
-  let modalBody = (
+  const modalBody = (
     <Modal.Body>
       <Tab.Container id="plugin-modal-tabs" defaultActiveKey="registry">
         <Row>
@@ -332,9 +336,7 @@ export default function PluginModal(props) {
               <Tab.Pane eventKey="registry">
                 {fetchError ? (
                   <div className="registry-fetch-error">
-                    <IconContext.Provider value={{ className: 'registry-warning-icon' }}>
-                      <MdOutlineWarningAmber />
-                    </IconContext.Provider>
+                    <MdOutlineWarningAmber className="registry-warning-icon" />
                     <p>
                       {t(`An error occurred when loading the Plugin Registry data.
                         Please check your internet connection, then try again.
