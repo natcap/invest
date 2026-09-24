@@ -6,12 +6,19 @@ import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
-import { IconContext } from "react-icons";
 import { BsCheckCircle } from "react-icons/bs";
-import { MdFolderOpen } from 'react-icons/md';
+import {
+  MdFolderOpen,
+  MdOpenInNew
+} from 'react-icons/md';
 
 import { openLinkInBrowser } from '../../../utils';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+import { handleClickFindLogfiles } from '../../../menubar/handlers';
+import {
+  sourceTypeLocal,
+  sourceTypeURL
+} from '../../PluginModal';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -82,7 +89,7 @@ export default function ManualInstallTab(props) {
         installFrom === 'url' ? url : undefined,
         installFrom === 'url' ? revision : undefined,
         installFrom === 'path' ? path : undefined,
-        installFrom === 'path' ? 'local_path' : 'git_url'
+        installFrom === 'path' ? sourceTypeLocal : sourceTypeURL
       );
     }
   };
@@ -214,13 +221,17 @@ export default function ManualInstallTab(props) {
       <div>
         <h5 id="add-plugin-form-title" className="mb-3">{t('Manually Install a Plugin')}</h5>
         <p>
-          {t('For more information about creating a plugin, read our ')}
+          {t('More information about creating a plugin: ')}
           <a
             href={pluginDocsURL}
             title={pluginDocsURL}
-            aria-label={t("Plugins Developer's Guide (opens in web browser)")}
             onClick={openLinkInBrowser}
-          >{t("Developer's Guide")}</a>.
+          >
+            {t("Plugin Developer's Guide")}
+            <MdOpenInNew
+              aria-label={t("(opens in web browser)")}
+            />
+          </a>
         </p>
       </div>
       <hr />
@@ -319,9 +330,7 @@ export default function ManualInstallTab(props) {
       {(installSuccess === manualInstallID) &&
         <>
           <div aria-live="polite" className="mt-3 pt-3 pb-3 plugin-success-message">
-            <IconContext.Provider value={{ className: 'react-icons react-icons-white' }}>
-              <BsCheckCircle />
-            </IconContext.Provider>
+            <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" />
             <span>{t('Successfully installed plugin!')}</span>
           </div>
         </>
@@ -340,10 +349,7 @@ export default function ManualInstallTab(props) {
           {t('Return to form')}
         </Button>
         <Button
-          onClick={() => ipcRenderer.send(
-            ipcMainChannels.SHOW_ITEM_IN_FOLDER,
-            window.Workbench.ELECTRON_LOG_PATH,
-          )}
+          onClick={handleClickFindLogfiles}
         >
           {t('Find workbench logs')}
         </Button>
