@@ -8,7 +8,7 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, withTranslation } from 'react-i18next';
 import { FaPlugCirclePlus } from "react-icons/fa6";
 
 import OpenButton from '../OpenButton';
@@ -21,7 +21,7 @@ const { logger } = window.Workbench;
  * Renders a table of buttons for each invest model and
  * a list of cards for each cached invest job.
  */
-export default class HomeTab extends React.Component {
+class HomeTab extends React.Component {
   constructor(props) {
     super(props);
     this.handleClick = this.handleClick.bind(this);
@@ -44,7 +44,8 @@ export default class HomeTab extends React.Component {
       openInvestModel,
       deleteJob,
       clearRecentJobs,
-      showPluginModal
+      showPluginModal,
+      t
     } = this.props;
     let sortedModelIds = {};
     if (investList) {
@@ -111,7 +112,7 @@ export default class HomeTab extends React.Component {
                 className="open-button plugin-modal-button text-wrap"
                 onClick={showPluginModal}
               >
-                <span className="pe-2"><FaPlugCirclePlus /></span>Add a Plugin
+                <span className="pe-2"><FaPlugCirclePlus /></span>{t('Add a Plugin')}
               </Button>
             </ListGroup.Item>
             <ListGroup.Item
@@ -159,6 +160,8 @@ HomeTab.propTypes = {
   deleteJob: PropTypes.func.isRequired,
   clearRecentJobs: PropTypes.func.isRequired,
 };
+
+export default withTranslation()(HomeTab);
 
 /**
  * Renders a button for each recent invest job.
