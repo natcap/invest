@@ -24,7 +24,7 @@ export default function AppMenu(props) {
           as="button"
           onClick={props.openPluginModal}
         >
-          {t('Manage Plugins')}
+          {t('Plugin Manager')}
         </Dropdown.Item>
         <Dropdown.Item
           as="button"
