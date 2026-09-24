@@ -973,7 +973,6 @@ code {
     flex-direction: column;
     flex-wrap: wrap;
     justify-content: space-between;
-    border-left: 1px solid var(--bs-modal-header-border-color);
 }
 
 .plugin-pane {
