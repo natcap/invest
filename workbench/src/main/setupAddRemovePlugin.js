@@ -227,23 +227,21 @@ function storePluginMetadataSync(
  * @param  {string} version     the version of the plugin
  */
 async function logRegistryPluginInstall(projectName, packageName, version) {
-  logger.info('logging Plugin Registry plugin installation');
-  // START DEBUGGING:
-  console.log(`project_name: ${projectName}`);
-  console.log(`invest_package_name: ${packageName}`);
-  console.log(`version: ${version}`);
-  // END DEBUGGING
-
-  // TO DO: Plug in Cloud Run function endpoint
   try {
-    const response = await fetch("loggingURLGoesHere", {
-      method: "POST",
-      body: JSON.stringify({
-        project_name: projectName,
-        invest_package_name: packageName,
-        version: version
-      })
-    });
+    const response = await fetch(
+      "https://invest-plugin-download-stats-1098785064656.us-central1.run.app",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_name: projectName,
+          invest_package_name: packageName,
+          version: version
+        })
+      }
+    );
     if (!response.ok) {
       throw new Error(`Logging failed with non-OK status: ${response.status}`);
     }
@@ -335,17 +333,15 @@ export function setupAddPlugin(i18n) {
           );
           logger.info('successfully added plugin');
 
-          // TO DO: Log the plugin installation!
-          if (pluginSourceType === 'registry') {
+          // Log installation of plugins from the Registry
+          if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER
+              && pluginSourceType === 'registry') {
+            // revision will always equate to version for registry plugins
+            logger.info('logging Plugin Registry plugin installation');
             logRegistryPluginInstall(projectName, packageName, revision);
+          } else {
+            logger.info('skipping installation logging in dev / testing');
           }
-          // Commented out for testing purposes; ultimately we'll only want to log
-          // installations from the production Workbench
-          // if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER
-          //     && pluginSourceType === 'registry') {
-          //   // revision will always equate to version for registry plugins
-          //   logRegistryPluginInstall(projectName, packageName, revision);
-          // }
         } catch (error) {
           logger.info('Cleaning up failed installation environment.');
           await spawnWithLogging(
