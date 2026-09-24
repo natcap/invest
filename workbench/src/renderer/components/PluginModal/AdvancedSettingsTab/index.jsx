@@ -76,7 +76,7 @@ export default function AdvancedSettingsTab(props) {
     <>
       <Form aria-labelledby="configure-conda-form-title" aria-describedby="conda-executable-description">
         <Form.Group>
-          <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable (Advanced)')}</h5>
+          <h5 id="configure-conda-form-title" className="mb-3">{t('Configure conda executable')}</h5>
           <Form.Text
             as="span"
             id="conda-executable-description"
@@ -131,7 +131,7 @@ export default function AdvancedSettingsTab(props) {
       <hr />
       <Form aria-labelledby="configure-plugin-envs-form-title" aria-describedby="plugin-env-description">
         <Form.Group>
-        <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments (Advanced)')}</h5>
+        <h5 id="configure-plugin-envs-form-title" className="mb-3">{t('Configure plugin environments')}</h5>
         <Form.Text
             as="span"
             id="plugin-env-description"
