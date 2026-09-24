@@ -1,7 +1,10 @@
+/* Transformed search result metadata for use in React components. */
 export interface DataHubSearchResult {
   id: string,
   title: string,
   description: string,
+  pixelSize: number[],
+  crsUnits: string,
   tags: string[],
   places: string[],
   collections: string[],
@@ -13,7 +16,8 @@ export interface DataHubSearchResult {
   webpageUrl: string,
 }
 
-export interface DHALDataset {
+/* Raw search result metadata returned by Data Hub Abstraction Layer. */
+export interface DHALSearchResult {
   dataset_url: string,
   source_catalog_url: string,
   name: string,
@@ -35,22 +39,32 @@ export interface DHALDataset {
   last_updated: string,
 }
 
+/**
+ * Convert raw search result metadata (from DHAL)
+ * into the format the React components expect.
+ *
+ * This translation layer affords the Workbench robustness to future DHAL API
+ * changes, allowing us to make needed updates here rather than find & update
+ * multiple references scattered across React components.
+ */
 export function transformDHALSearchResult(
-  r: DHALDataset
+  d: DHALSearchResult
 ): DataHubSearchResult {
   return {
-    id: r.source_catalog_url,
-    title: r.name,
-    description: r.description,
-    tags: r.tags,
-    places: r.places,
-    collections: r.collection,
-    license: r.license.title,
-    author: r.author,
-    lastUpdated: r.last_updated,
-    created: r.created,
-    datasetUrl: r.dataset_url,
-    webpageUrl: r.source_catalog_url,
+    id: d.source_catalog_url,
+    title: d.name,
+    description: d.description,
+    pixelSize: d.pixel_size,
+    crsUnits: d.crs_units,
+    tags: d.tags,
+    places: d.places,
+    collections: d.collection,
+    license: d.license.title,
+    author: d.author,
+    lastUpdated: d.last_updated,
+    created: d.created,
+    datasetUrl: d.dataset_url,
+    webpageUrl: d.source_catalog_url,
   }
 }
 

@@ -8,7 +8,7 @@ import { MdClose } from 'react-icons/md';
 import {
   transformDHALSearchResult,
   type DataHubSearchResult,
-  type DHALDataset
+  type DHALSearchResult
 } from './models';
 import {
   DHALSearchParams,
@@ -68,6 +68,8 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
 
   const autoFocusRef: RefObject<any> = useRef(null);
 
+  const searchAllowed: boolean = aoiIsValid || query.datatype === 'csv';
+
   useEffect(() => {
     // This effect supports screen reader navigation by auto-focusing the
     // element (typically a heading) that provides a summary of new content,
@@ -100,7 +102,9 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
       } else {
         const {count, datasets} = responseBody;
         setNumSearchResults(count);
-        setSearchResults(datasets.map((d: DHALDataset) => transformDHALSearchResult(d)));
+        setSearchResults(datasets.map(
+          (d: DHALSearchResult) => transformDHALSearchResult(d))
+        );
         collapseAllCards();
         logger.info(
           `HTTP request succeeded.
@@ -175,7 +179,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
       </Modal.Header>
       <Modal.Body>
         {
-          aoiIsValid &&
+          searchAllowed &&
           <>
             <DataHubSearchParams
               tags={query.tags}
@@ -189,7 +193,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
           step === INTRO_STEP &&
           <DataHubSearchIntroContent
             aoiInputName={aoiInputName}
-            aoiIsValid={aoiIsValid}
+            searchAllowed={searchAllowed}
           />
         }
         {
@@ -213,7 +217,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
         step === INTRO_STEP &&
         <Modal.Footer>
           <DataHubSearchIntroFooter
-            aoiIsValid={aoiIsValid}
+            searchAllowed={searchAllowed}
             aoiInputName={aoiInputName}
             search={search}
             close={close}
