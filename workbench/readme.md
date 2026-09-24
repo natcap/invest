@@ -101,6 +101,12 @@ These instructions assume you have defined the two-letter locale code in an envi
    This calls commands provided by the `i18next-cli` package, which we configure separately for `main` and `renderer` so that the output files can go to their respective locations. The output JSON files should contain a JSON object mapping each translated message from the source code to an empty string.
 
    This will add new keys into the JSON message catalogs and leave those that already have translations:
+   ```
+   {
+      "text that's already been translated": "translation",
+      "new text that doesn't have a translation yet": ""
+   }
+   ```
 
 2. Commit the changes:
    ```
