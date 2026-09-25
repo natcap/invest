@@ -1,16 +1,28 @@
+import importlib.util
 import os
 import platform
 import subprocess
 
 import numpy
-import pygeoprocessing
 from Cython.Build import cythonize
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
 
-include_dirs = [numpy.get_include(),
-                os.path.join(pygeoprocessing.__path__[0], 'extensions')]
+include_dirs = [numpy.get_include()]
+
+pygeoprocessing_spec = importlib.util.find_spec("pygeoprocessing")
+if pygeoprocessing_spec is not None and pygeoprocessing_spec.submodule_search_locations:
+    # Don't import all of pygeoprocessing, just get the include dir from
+    # package metadata.
+    # This should avoid issues with conda-forge when cross-compiling to
+    # non-native architectures like linux-ppcle64.
+    include_dirs.append(os.path.join(
+        pygeoprocessing_spec.submodule_search_locations[0], 'extensions'))
+else:
+    raise ModuleNotFoundError(
+        "Pygeoprocessing is required to compile natcap.invest")
+
 if platform.system() == 'Windows':
     compiler_args = ['/std:c++20']
     compiler_and_linker_args = []

@@ -332,7 +332,7 @@ class RasterPlotDatatypeAndTransformTests(unittest.TestCase):
 
 
 @unittest.skipIf(
-    MPL_VERSION < (3, 11, 0), 'Snapshots were created with matplotlib 3.11.0')
+    MPL_VERSION < (3, 11, 1), 'Snapshots were created with matplotlib 3.11.1')
 class RasterPlotLegendTests(unittest.TestCase):
     """Snapshot tests for legend placement on nominal rasters."""
 

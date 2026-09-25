@@ -20,45 +20,57 @@ async function getFreePort() {
   });
 }
 
-/** Find out if the Flask server is online, waiting until it is.
- *
- * @param {number} i - the number or previous tries
- * @param {number} retries - number of recursive calls this function is allowed.
- * @returns { Promise } resolves text indicating success.
+/**
+ * Wait for the server to become responsive.
+ * @param {string} url - URL to poll for server status
+ * @param {signal} signal - AbortController signal to abort trying to connect
+ * @param {number} maxRetries - number of retries allowed
+ * @returns undefined when the server is ready, or throws an error
+ *          if it fails to launch
  */
-export async function getFlaskIsReady(port, i = 0, retries = 41) {
-  try {
-    await fetch(`${HOSTNAME}:${port}/api/ready`, {
-      method: 'get',
-    });
-  } catch (error) {
-    if (error.code === 'ECONNREFUSED') {
-      while (i < retries) {
-        i++;
-        // Try every X ms, usually takes a couple seconds to startup.
+async function getFlaskIsReady(url, signal, maxRetries = 500) {
+  let retries = 0;
+  while (!signal.aborted && retries < maxRetries) {
+    logger.debug(`retry # ${retries}`);
+    try {
+      await fetch(url, { method: 'get' });
+      logger.info('flask is ready');
+      return;
+    } catch (error) {
+      if (error.code === 'ECONNREFUSED') {
+        // wait 300ms before retrying
         await new Promise((resolve) => setTimeout(resolve, 300));
-        logger.debug(`retry # ${i}`);
-        return getFlaskIsReady(port, i, retries);
+        retries++;
+      } else {
+        logger.error(error);
+        throw error;
       }
-      logger.error(`Not able to connect to server after ${retries} tries.`);
     }
-    logger.error(error);
-    throw error;
   }
+  logger.error(`Not able to connect to server after ${retries} tries.`);
+  throw new Error('Could not connect');
 }
 
 /**
- * Set up handlers for server process events.
- * @param  {ChildProcess} pythonServerProcess - server process instance.
- * @returns {undefined}
+ * Wait for an invest server process to start up, handling any errors.
+ * @param {ChildProcess} pythonServerProcess - server process instance.
+ * @param {string} modelID - the plugin key used in the settings store,
+ *        or 'core' if the model is not a plugin.
+ * @param {string} url - URL to poll for server status
+ * @returns {number} PID of the started process, or undefined if it fails to launch
  */
-export function setupServerProcessHandlers(pythonServerProcess) {
+export async function handleServerStartup(pythonServerProcess, modelID, url) {
+  const controller = new AbortController();
+  const { signal } = controller;
+
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
   });
   pythonServerProcess.stderr.on('data', (data) => {
     logger.debug(`${data}`);
   });
+  // The 'error' event happens when the child process fails to spawn.
+  // This should be rare.
   pythonServerProcess.on('error', (err) => {
     logger.error(pythonServerProcess.spawnargs);
     logger.error(err.stack);
@@ -68,16 +80,37 @@ export function setupServerProcessHandlers(pythonServerProcess) {
     );
     throw err;
   });
-  pythonServerProcess.on('close', (code, signal) => {
-    logger.debug(`Flask process closed with code ${code} and signal ${signal}`);
-  });
+  // The 'exit' event is what happens on routine errors like a
+  // typo in the micromamba command or a plugin failing to import
   pythonServerProcess.on('exit', (code) => {
     logger.debug(`Flask process exited with code ${code}`);
+    if (code !== 0) {
+      controller.abort();
+    }
+    if (modelID !== 'core') {
+      // Clear these because the process is no longer running and these
+      // values signal to the renderer if it needs to launch the process
+      // or not when the model tab is opened.
+      // If it was the core model process, the user must close and re-open
+      // the Workbench anyway, which will clear these values.
+      settingsStore.set(`plugins.${modelID}.pid`, '');
+      settingsStore.set(`plugins.${modelID}.port`, '');
+    }
+  });
+  pythonServerProcess.on('close', (code, sig) => {
+    logger.debug(`Flask process closed with code ${code} and signal ${sig}`);
   });
   pythonServerProcess.on('disconnect', () => {
     logger.debug('Flask process disconnected');
   });
+
+  try {
+    await getFlaskIsReady(url, signal);
+  } catch (error) {
+    return undefined;
+  }
   pidToSubprocess[pythonServerProcess.pid] = pythonServerProcess;
+  return pythonServerProcess.pid;
 }
 
 /**
@@ -102,10 +135,9 @@ export async function createCoreServerProcess(_port = undefined) {
   settingsStore.set('core.pid', pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-
-  setupServerProcessHandlers(pythonServerProcess);
-  await getFlaskIsReady(port, 0, 500);
-  logger.info('flask is ready');
+  const pid = await handleServerStartup(
+    pythonServerProcess, 'core', `${HOSTNAME}:${port}/api/ready`);
+  return pid;
 }
 
 /**
@@ -120,12 +152,11 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   if (port === undefined) {
     port = await getFreePort();
   }
-
   logger.debug('creating invest plugin server process');
-  const micromamba = settingsStore.get('micromamba');
-  const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
+  const micromamba = settingsStore.get('userDefinedMicromamba') || settingsStore.get('micromamba');
+  const pluginSettings = settingsStore.get(`plugins.${modelID}`);
   const args = [
-    'run', '--prefix', `"${modelEnvPath}"`,
+    'run', '--prefix', `"${pluginSettings.userDefinedEnv || pluginSettings.env}"`,
     // calling invest with python avoids issues with unescaped
     // spaces in the python path in the conda bin/invest script
     'python -m natcap.invest', '--debug', 'serve', '--port', port];
@@ -136,12 +167,9 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   settingsStore.set(`plugins.${modelID}.pid`, pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-
-  setupServerProcessHandlers(pythonServerProcess);
-
-  await getFlaskIsReady(port, 0, 500);
-  logger.info('flask is ready');
-  return pythonServerProcess.pid;
+  const pid = await handleServerStartup(
+    pythonServerProcess, modelID, `${HOSTNAME}:${port}/api/ready`);
+  return pid;
 }
 
 /**

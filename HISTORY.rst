@@ -66,16 +66,77 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* Added support for labeled input groups. ``spec.InputGroup`` was added to
+  represent a group of input fields that may have a label.
+  ``spec.ModelSpec.input_field_order`` can now contain ``spec.InputGroup``s
+  as well as lists. The ``spec.InputGroup.label`` will be displayed on that
+  section of the model input form in the workbench.
+  (`#1602 <https://github.com/natcap/invest/issues/1602>`_)
+* The ``to_json`` method of ``spec.ModelSpec`` has been deprecated.
+  Serialization should now be done using the pydantic ``model_dump_json``
+  method.
+
+
+3.20.2 (2026-09-02)
+-------------------
+
+General
+=======
+* Fixed a bug that prevented non-spatial files referenced in CSVs from being
+  added to datastack archives. Refactored some datastack creation logic into
+  class methods on input and output specs.
+  (`#2589 <https://github.com/natcap/invest/issues/2589>`_)
+* Fixed a bug where an error state while reading a remote GDAL dataset
+  could result in a deadlock during invest validation.
+  (`#2724 <https://github.com/natcap/invest/issues/2724>`_)
+
+Wind Energy
+===========
+* Fixed a bug where the model would raise a ``RuntimeError`` if the input
+  land polygon and AOI had the same projection.
+  (`#2707 <https://github.com/natcap/invest/issues/2707>`_)
+
+3.20.1 (2026-08-13)
+-------------------
+
+General
+=======
+* Fixed an issue with cross-compiling ``natcap.invest`` for non-native
+  architectures, particularly on conda-forge.  This should also speed up
+  the operation of ``setup.py``.
+  (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
+
 Workbench
 =========
 * Added a file browse button to the input field for selecting a
   local plugin directory to install.
   (`#2641 <https://github.com/natcap/invest/issues/2641>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda executable is used to run plugins.
+  (`#2645 <https://github.com/natcap/invest/issues/2645>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda environment is used to run each plugin.
+  (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
+* Improved handling of errors on plugin server startup.
+  (`#2637 <https://github.com/natcap/invest/issues/2637>`_)
+* The "View Results" button now supports plugins.
+  (`#2638 <https://github.com/natcap/invest/issues/2638>`_)
+* The base report template now better supports plugins by including a link to
+  plugin-specific documentation instead of a link to the InVEST User Guide.
+  (`#2640 <https://github.com/natcap/invest/issues/2640>`_)
 * Bootstrap and React Bootstrap dependencies have been updated to their latest
   stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
   (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
 * React dependency has been updated to its latest stable version (19.2.7).
   (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
+* Fixed a bug in the Manage Plugins modal where dragging and dropping
+  a plugin directory into the local filepath would open a new window.
+  (`#2642 <https://github.com/natcap/invest/issues/2642>`_)
+* Some general performance enhancements related to React components
+  and the responsiveness of model input text fields.
+  (`#2699 <https://github.com/natcap/invest/issues/2699>`_)
 
 3.20.0 (2026-06-11)
 -------------------
