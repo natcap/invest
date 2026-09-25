@@ -72,6 +72,10 @@ General
 * Some models now allow users to select which raster or vector
   input defines the output pixel size and projection.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
+* Additional data attributes (projection requirements and whether an input
+  has the default target projection or pixel size) will now automatically
+  be added to spatial inputs listed in the Data Needs sections of the User's
+  Guide. (`#2749 <https://github.com/natcap/invest/issues/2749>`_)
 
 Annual Water Yield
 ==================
