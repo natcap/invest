@@ -463,7 +463,7 @@ class Input(IOModel):
         """
         return value
 
-    def describe_rst(self, additional_attributes=None):
+    def describe_rst(self):
         """Generate RST documentation for this input.
 
         Note that conditional requirements (where `required` is a string
@@ -884,6 +884,12 @@ class SingleBandRasterInput(SpatialFileInput):
     def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
 
+        Args:
+            additional_attributes (list[str]): optional list of additional
+                (RST-formatted) ModelSpec attributes to include in the
+                parenthetical in the RST line (e.g.,
+                ['**default projection input**']).
+
         Returns:
             list of strings, where each string is a line of RST-formatted text.
         """
@@ -1067,6 +1073,12 @@ class VectorInput(SpatialFileInput):
 
     def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
+
+        Args:
+            additional_attributes (list[str]): optional list of additional
+                (RST-formatted) ModelSpec attributes to include in the
+                parenthetical in the RST line (e.g.,
+                ['**default projection input**']).
 
         Returns:
             list of strings, where each string is a line of RST-formatted text.
@@ -1404,7 +1416,7 @@ class CSVInput(FileInput):
         """
         return value if value else None
 
-    def describe_rst(self, additional_attributes=None):
+    def describe_rst(self):
         """Generate RST documentation for this input.
 
         Returns:
@@ -1697,7 +1709,7 @@ class NumberInput(Input):
         """
         return None if value in {None, ''} else float(value)
 
-    def describe_rst(self, additional_attributes=None):
+    def describe_rst(self):
         """Generate RST documentation for this input.
 
         Note that the `expression` attribute is not documented here because
@@ -1917,7 +1929,7 @@ class BooleanInput(Input):
         """
         return None if value in {None, ''} else bool(value)
 
-    def describe_rst(self, additional_attributes=None):
+    def describe_rst(self):
         """Generate RST documentation for this input.
 
         Returns:
@@ -2141,7 +2153,7 @@ class OptionStringInput(Input):
         """
         return None if value in {None, ''} else str(value).lower()
 
-    def describe_rst(self, additional_attributes=None):
+    def describe_rst(self):
         """Generate RST documentation for this input.
 
         Returns:

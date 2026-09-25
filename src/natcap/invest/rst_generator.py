@@ -98,9 +98,11 @@ def describe_input(module_name, keys):
             additional_attributes.append(f"**{gettext('default projection input')}**")
         if _input.id == model_spec.default_pixelsize_id:
             additional_attributes.append(f"**{gettext('default pixel size input')}**")
+        if additional_attributes:
+            rst = '\n\n'.join(_input.describe_rst(additional_attributes=additional_attributes))
+            return f'.. _{anchor_name}:\n\n{rst}'
 
-    rst = '\n\n'.join(_input.describe_rst(additional_attributes=additional_attributes))
-
+    rst = '\n\n'.join(_input.describe_rst())
     return f'.. _{anchor_name}:\n\n{rst}'
 
 
