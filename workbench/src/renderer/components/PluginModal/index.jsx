@@ -31,8 +31,6 @@ export default function PluginModal(props) {
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
-  const [condaPath, setCondaPath] = useState('');
-  const [pluginEnvs, setPluginEnvs] = useState({});
   const [installErr, setInstallErr] = useState('');
   const [uninstallErr, setUninstallErr] = useState('');
   const [pluginToRemove, setPluginToRemove] = useState('');
@@ -227,18 +225,18 @@ export default function PluginModal(props) {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.classList.remove('input-dragging');
-  
+
     if (event.currentTarget.disabled) {
       return undefined;
     }
-  
+
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
       //return undefined;
       alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
       return undefined;
-    } 
-    
+    }
+
     event.currentTarget.focus();
     return getFilePath(fileList[0]);
   }
@@ -276,7 +274,7 @@ export default function PluginModal(props) {
     if (data.filePaths.length) {
       return data.filePaths[0];
     }
-  };
+  }
 
   useEffect(() => {
     ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
@@ -306,6 +304,7 @@ export default function PluginModal(props) {
   let pluginFields;
   if (installFrom === 'url') {
     pluginFields = (
+
       <Row>
         <Form.Group as={Col} xs={7}>
           <Form.Label htmlFor="url">{t('Git URL')}</Form.Label>

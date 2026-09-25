@@ -52,6 +52,9 @@
   "keywords": [],
   "author": "Natural Capital Alliance",
   "license": "Apache-2.0",
+  "build": {
+    "electronVersion": "40.8.5"
+  },
   "dependencies": {
     "@babel/runtime": "^7.13.10",
     "electron-context-menu": "^4.1.1",
@@ -85,6 +88,8 @@
     "bootstrap": "^5.0.0",
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
+    "electron-chromedriver": "^43.1.1",
+    "electron-to-chromium": "^1.5.392",
     "electron": "^43.3.0",
     "electron-builder": "^26.15.3",
     "electron-devtools-installer": "^4.0.0",
@@ -108,6 +113,7 @@
     "react-dom": "^19.0.0",
     "react-icons": "^4.9.0",
     "rimraf": "^6.1.2",
+    "selenium-webdriver": "^4.46.0",
     "vite": "^6.4.3",
     "yazl": "^3.3.1"
   }
