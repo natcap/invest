@@ -283,7 +283,6 @@ jobs:
 
       - name: Install workbench dependencies
         if: steps.nodemodules-cache.outputs.cache-hit != 'true'
-        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         working-directory: workbench
         run: |
           echo "Node version: $(node --version)"
@@ -293,7 +292,6 @@ jobs:
 
       - name: Run workbench tests
         working-directory: workbench
-        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         env:
           CI: true
         run: |
@@ -381,7 +379,6 @@ jobs:
 
       - name: Install Workbench Dependencies
         if: steps.nodemodules-cache.outputs.cache-hit != 'true'
-        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         working-directory: workbench
         run: |
           echo "Node version: $(node --version)"
@@ -425,7 +422,6 @@ jobs:
 
       - name: Build Workbench
         working-directory: workbench
-        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
@@ -486,7 +482,6 @@ jobs:
           gcloud storage rsync -r ${{ steps.invest-autotest-deploy.outputs.REPORTS_BASE_URL }} $DEST
 
       - name: Test electron app with puppeteer
-        shell: bash -e {0}  # Don't use a login shell - should use local node.js
         working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
