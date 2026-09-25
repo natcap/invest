@@ -1,7 +1,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { useContext } from 'react';
 
+import Accordion from 'react-bootstrap/Accordion'
+import AccordionContext from 'react-bootstrap/AccordionContext';
+import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
+import { useAccordionButton } from 'react-bootstrap/AccordionButton';
 
 import ArgInput from '../ArgInput';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
@@ -129,33 +134,96 @@ class ArgsForm extends React.Component {
       scrollEventCount,
     } = this.props;
     const formItems = [];
+    const defaultActiveKeys = [];
     let k = 0;
     argsOrder.forEach((inputGroup) => {
       const groupItems = [];
-      inputGroup.input_ids.forEach((argkey) => {
-        groupItems.push(
-          <ArgInput
-            argkey={argkey}
-            argSpec={argsSpec[argkey]}
-            userguide={userguide}
-            isCoreModel={isCoreModel}
-            dropdownOptions={argsDropdownOptions[argkey]}
-            enabled={argsEnabled[argkey]}
-            updateArgValues={this.props.updateArgValues}
-            handleFocus={this.handleFocus}
-            inputDropHandler={this.inputDropHandler}
-            isValid={argsValidation[argkey].valid}
-            key={argkey}
-            selectFile={this.selectFile}
-            touched={argsValues[argkey].touched}
-            validationMessage={argsValidation[argkey].validationMessage}
-            value={argsValues[argkey].value}
-            scrollEventCount={scrollEventCount}
-          />
-        );
+      inputGroup.input_ids.forEach((groupItem) => {
+        let tabularGroupItems;
+        if (typeof groupItem === 'string') {
+          const argkey = groupItem;
+          groupItems.push(
+            <ArgInput
+              argkey={argkey}
+              argSpec={argsSpec[argkey]}
+              userguide={userguide}
+              isCoreModel={isCoreModel}
+              dropdownOptions={argsDropdownOptions[argkey]}
+              enabled={argsEnabled[argkey]}
+              updateArgValues={this.props.updateArgValues}
+              handleFocus={this.handleFocus}
+              inputDropHandler={this.inputDropHandler}
+              isValid={argsValidation[argkey].valid}
+              key={argkey}
+              selectFile={this.selectFile}
+              touched={argsValues[argkey].touched}
+              validationMessage={argsValidation[argkey].validationMessage}
+              value={argsValues[argkey].value}
+              scrollEventCount={scrollEventCount}
+              tightSpacing={false}
+            />
+          );
+        } else {  // is an object representing a tabular group
+          tabularGroupItems = [];
+          let anyEnabled = false;
+          groupItem.input_ids.forEach((argkey) => {
+            tabularGroupItems.push(
+              <ArgInput
+                argkey={argkey}
+                argSpec={argsSpec[argkey]}
+                userguide={userguide}
+                isCoreModel={isCoreModel}
+                dropdownOptions={argsDropdownOptions[argkey]}
+                enabled={argsEnabled[argkey]}
+                updateArgValues={this.props.updateArgValues}
+                handleFocus={this.handleFocus}
+                inputDropHandler={this.inputDropHandler}
+                isValid={argsValidation[argkey].valid}
+                key={argkey}
+                selectFile={this.selectFile}
+                touched={argsValues[argkey].touched}
+                validationMessage={argsValidation[argkey].validationMessage}
+                value={argsValues[argkey].value}
+                scrollEventCount={scrollEventCount}
+                tightSpacing={true}
+              />
+            );
+            if (argsEnabled[argkey]) {
+              anyEnabled = true;
+            }
+          });
+          // Input groups that have all their inputs disabled will be rendered
+          // as a collapsed accordion section. If any input is enabled,
+          groupItems.push(
+            <Accordion activeKey={anyEnabled ? k : undefined}>
+            <Accordion.Item as={Card} className="arg-table"
+                eventKey={k} key={k}
+                >
+              {groupItem.group_label &&
+                <Accordion.Header as={Card.Header} className={anyEnabled ? 'table-enabled' : 'table-disabled'}>
+                  {groupItem.group_label}
+                </Accordion.Header>
+              }
+              <Accordion.Collapse eventKey={k}>
+                <Form.Group className='arg-group-tight'>
+                  {tabularGroupItems}
+                </Form.Group>
+              </Accordion.Collapse>
+            </Accordion.Item>
+            </Accordion>
+          );
+        }
       });
+      // Separate each group of input fields with a dotted line and label if
+      // applicable. Omit the dotted line above the first group if it has
+      // no label.
+      let fieldsetClassName = "arg-group-fieldset";
+      if (k === 0 && !inputGroup.label) {
+        fieldsetClassName = "mt-3"
+      }
+      let group = groupItems;
       formItems.push(
-        <fieldset className="arg-group-fieldset" key={k}>
+        <fieldset className={fieldsetClassName} key={k}>
           {inputGroup.group_label &&
             <legend>{inputGroup.group_label}</legend>
           }
@@ -179,7 +247,9 @@ class ArgsForm extends React.Component {
         onDragEnter={this.dragEnterHandler}
         onDragLeave={this.dragLeaveHandler}
       >
-        {formItems}
+        <Accordion flush alwaysOpen>
+          {formItems}
+        </Accordion>
       </Form>
     );
   }

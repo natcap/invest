@@ -95,11 +95,11 @@ class CarbonTests(unittest.TestCase):
         # this lets us delete the workspace after its done no matter the
         # the rest result
         # Emoji suffix helps ensure support for Unicode characters in paths.
-        self.workspace_dir = tempfile.mkdtemp(suffix='\U0001f60e')  # smiley
+        self.workspace_dir = '/Users/emily/invest/carbon_wksp'#tempfile.mkdtemp(suffix='\U0001f60e')  # smiley
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
+        # shutil.rmtree(self.workspace_dir)
 
     def test_carbon_full(self):
         """Carbon: full model run."""
