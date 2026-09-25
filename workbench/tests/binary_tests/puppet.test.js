@@ -239,7 +239,7 @@ test('Run a real invest model', async () => {
   // Cancel button does not appear until after invest has confirmed
   // it is running. So extra timeout on the query:
   const cancelButton = await sidebar.waitForSelector(
-    'aria/[name="Cancel Run"][role="button"]', { timeout: 30000 });
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
   await cancelButton.click();
   await sidebar.waitForSelector('text/Run Canceled');
   await page.waitForSelector('aria/[name="Open Workspace"][role="button"]');

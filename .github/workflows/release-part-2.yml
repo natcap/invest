@@ -61,6 +61,7 @@ jobs:
           # download the signed workbench files from GCS
           wget --directory-prefix=artifacts https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/${{ env.VERSION }}/workbench/invest_${{ env.VERSION }}_workbench_win32_x64.exe
           wget --directory-prefix=artifacts https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/${{ env.VERSION }}/workbench/invest_${{ env.VERSION }}_workbench_darwin_x64.dmg
+          wget --directory-prefix=artifacts https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/${{ env.VERSION }}/workbench/invest_${{ env.VERSION }}_workbench_darwin_arm64.dmg
 
       - name: Create release notes
         shell: python
