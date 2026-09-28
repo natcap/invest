@@ -112,11 +112,18 @@ MODEL_SPEC = spec.ModelSpec(
     aliases=(),
     module_name=__name__,
     input_field_order=[
-        ["workspace_dir", "results_suffix"],
+        spec.InputGroup(input_ids=["workspace_dir", "results_suffix"]),
         ["wave_base_data_table", "analysis_area", "aoi_path", "dem_path"],
         ["machine_perf_path", "machine_param_path"],
-        ["valuation_container", "land_gridPts_path",
-         "machine_econ_path", "number_of_machines"]
+        spec.InputGroup(input_ids=[
+            "valuation_container",
+            spec.InputTable(
+                label='Machine Economic Parameters',
+                input_ids=['capmax', 'cc', 'cml', 'cul', 'col', 'omc', 'p',
+                           'r', 'smlpm']),
+            "land_gridPts_path",
+            "number_of_machines"
+        ])
     ],
     inputs=[
         spec.WORKSPACE,
@@ -267,38 +274,67 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col=None
         ),
-        spec.CSVInput(
-            id="machine_econ_path",
-            name=gettext("machine economic table"),
-            about=gettext(
-                "Table of economic parameters for the wave energy machine. Required if"
-                " Run Valuation is selected."
-            ),
+        spec.NumberInput(
+            id='capmax',
+            name=gettext('maximum capacity for device'),
             required="valuation_container",
             allowed="valuation_container",
-            columns=[
-                spec.StringInput(
-                    id="name",
-                    about=(
-                        "Name of the machine parameter. Expected parameters are: 'capmax'"
-                        " (maximum capacity for device, in kilowatts), 'cc' (capital cost"
-                        " per device installed, $/kilowatt), 'cml' (cost of mooring"
-                        " lines, $/kilometer), 'cul' (cost of underwater cable,"
-                        " $/kilometer), 'col' (cost of overland transmission lines,"
-                        " $/kilometer), 'omc' (operating and maintenance cost, $/kilowatt"
-                        " hour), 'p' (price of electricity, $/kilowatt hour), 'r'"
-                        " (discount rate, between 0 and 1), 'smlpm' (number of slack"
-                        " lines required per machine)"
-                    ),
-                    regexp=None
-                ),
-                spec.NumberInput(
-                    id="value",
-                    about=gettext("Value of the machine parameter."),
-                    units=u.none
-                )
-            ],
-            index_col="name"
+            units=u.kilowatt
+        ),
+        spec.NumberInput(
+            id='cc',
+            name=gettext('capital cost per device'),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.currency / u.kilowatt
+        ),
+        spec.NumberInput(
+            id='cml',
+            name=gettext('cost of mooring lines'),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.currency / u.kilometer
+        ),
+        spec.NumberInput(
+            id='cul',
+            name=gettext('cost of underwater cable'),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.currency / u.kilometer
+        ),
+        spec.NumberInput(
+            id='col',
+            name=gettext('cost of overland transmission lines'),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.currency / u.kilometer
+        ),
+        spec.NumberInput(
+            id='omc',
+            name=gettext('operating and maintenance cost'),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.currency / u.kilowatt_hour
+        ),
+        spec.NumberInput(
+            id='p',
+            name=gettext('price of electricity'),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.currency / u.kilowatt_hour
+        ),
+        spec.RatioInput(
+            id='r',
+            name=gettext('discount rate'),
+            required="valuation_container",
+            allowed="valuation_container",
+        ),
+        spec.IntegerInput(
+            id='smlpm',
+            name=gettext('number of slack lines required per machine'),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=None
         ),
         spec.IntegerInput(
             id="number_of_machines",

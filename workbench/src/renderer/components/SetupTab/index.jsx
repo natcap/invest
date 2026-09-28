@@ -50,8 +50,16 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
   const argsDropdownOptions = {};
 
   inputFieldOrder.map(
-    (inputGroup) => inputGroup.input_ids
-  ).flat().forEach((argkey) => {
+    (inputGroup) => {
+      return inputGroup.input_ids.map((item) => {
+        if (typeof item === 'string') {
+          return [item]
+        } else {
+          return item.input_ids
+        }
+      }).flat()
+  }).flat().forEach((argkey) => {
+    console.log(argkey);
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.

@@ -221,8 +221,8 @@ def set_metadata_field_descriptions(field_specs, resource):
             LOGGER.debug(error)
 
 
-class InputGroup(BaseModel):
-    """Represent a group of input fields for display in the workbench."""
+class InputTable(BaseModel):
+    """Represent a group of input fields to format like a table."""
 
     label: str = ''
     """Optional label that will be displayed in the workbench above
@@ -236,7 +236,26 @@ class InputGroup(BaseModel):
     def serialize(self):
         return {
             'group_label': self.label,
-            'input_ids': self.input_ids
+            'input_ids': self.input_ids,
+        }
+
+
+class InputGroup(BaseModel):
+    """Represent a group of input fields for display in the workbench."""
+
+    label: str = ''
+    """Optional label that will be displayed in the workbench above
+       this group of inputs."""
+
+    input_ids: list[str | InputTable]
+    """List of model input ids that belong to this group. Each string must
+       match the id of an Input in the model."""
+
+    @model_serializer()
+    def serialize(self):
+        return {
+            'group_label': self.label,
+            'input_ids': self.input_ids,
         }
 
 
@@ -2408,11 +2427,18 @@ class ModelSpec(ImmutableBaseModel):
         for group in self.input_field_order:
             if isinstance(group, InputGroup):
                 group = group.input_ids
-            for key in group:
-                if key in found_keys:
-                    raise ValueError(
-                        f'Key {key} appears more than once in input_field_order')
-                found_keys.add(key)
+            for item in group:
+                if isinstance(item, InputTable):
+                    for key in item.input_ids:
+                        if key in found_keys:
+                            raise ValueError(
+                                f'Key {key} appears more than once in input_field_order')
+                        found_keys.add(key)
+                else:
+                    if item in found_keys:
+                        raise ValueError(
+                            f'Key {item} appears more than once in input_field_order')
+                    found_keys.add(item)
         for _input in self.inputs:
             if _input.hidden is True:
                 if _input.id in found_keys:
