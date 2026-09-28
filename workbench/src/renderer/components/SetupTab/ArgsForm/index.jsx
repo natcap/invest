@@ -195,7 +195,7 @@ class ArgsForm extends React.Component {
           // Input groups that have all their inputs disabled will be rendered
           // as a collapsed accordion section. If any input is enabled,
           groupItems.push(
-            <Accordion activeKey={anyEnabled ? k : undefined}>
+            <Accordion activeKey={anyEnabled ? k : undefined} key={groupItem.group_label}>
             <Accordion.Item as={Card} className="arg-table"
                 eventKey={k} key={k}
                 >
@@ -221,7 +221,6 @@ class ArgsForm extends React.Component {
       if (k === 0 && !inputGroup.label) {
         fieldsetClassName = "mt-3"
       }
-      let group = groupItems;
       formItems.push(
         <fieldset className={fieldsetClassName} key={k}>
           {inputGroup.group_label &&
