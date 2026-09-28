@@ -4,7 +4,6 @@ import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
-import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
 import { BsCheckCircle } from "react-icons/bs";
 import {
@@ -19,8 +18,7 @@ import {
   sourceTypeLocal,
   sourceTypeURL
 } from '../../PluginModal';
-
-const { ipcRenderer } = window.Workbench.electron;
+import { InstallButton, NeedsMSVC } from '../PluginModalUtils';
 
 export default function ManualInstallTab(props) {
   const {
@@ -39,6 +37,7 @@ export default function ManualInstallTab(props) {
     selectDirectory,
     getDroppedFilePath,
     rejectDropHandler,
+    addRemoveDisabled,
   } = props;
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
@@ -82,15 +81,17 @@ export default function ManualInstallTab(props) {
   }, [installSuccess]);
 
   const handleAddPluginClick = () => {
-    clearFormErrors();
-    if (validateAddPluginForm()) {
-      addPlugin(
-        manualInstallID,
-        installFrom === 'url' ? url : undefined,
-        installFrom === 'url' ? revision : undefined,
-        installFrom === 'path' ? path : undefined,
-        installFrom === 'path' ? sourceTypeLocal : sourceTypeURL
-      );
+    if (!addRemoveDisabled) {
+      clearFormErrors();
+      if (validateAddPluginForm()) {
+        addPlugin(
+          manualInstallID,
+          installFrom === 'url' ? url : undefined,
+          installFrom === 'url' ? revision : undefined,
+          installFrom === 'path' ? path : undefined,
+          installFrom === 'path' ? sourceTypeLocal : sourceTypeURL
+        );
+      }
     }
   };
 
@@ -287,45 +288,13 @@ export default function ManualInstallTab(props) {
             {t('Error: Before installing a plugin, you must agree to the terms by selecting the checkbox.')}
           </Form.Text>
         }
-        <Button
-          disabled={installLoading}
-          onClick={handleAddPluginClick}
-          aria-describedby="plugin-installation-duration-notice"
-        >
-          {(installLoading === manualInstallID)
-            ? (
-              <div className="adding-button">
-                <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                  <span className="visually-hidden">{t('Adding plugin')}</span>
-                </Spinner>
-                {t(statusMessage)}
-              </div>
-            )
-            : t('Install')
-          }
-        </Button>
-        {installLoading && installLoading !== manualInstallID
-          ? (
-            <Form.Text
-              as="span"
-              muted
-              id={`plugin-installation-disabled-notice`}
-              className="plugin-form-text"
-            >
-              {t('An installation is currently in progress. Please wait for it to complete '
-                + 'before installing another plugin.')}
-            </Form.Text>
-          )
-          : (
-            <Form.Text
-              as="span"
-              muted
-              id={`plugin-installation-duration-notice`}
-              className="plugin-form-text"
-            >
-              {t('This may take several minutes.')}
-            </Form.Text>
-        )}
+        <InstallButton
+          handleAddPluginClick={handleAddPluginClick}
+          pluginID={manualInstallID}
+          installLoading={installLoading === manualInstallID}
+          installDisabled={addRemoveDisabled}
+          statusMessage={statusMessage}
+        />
       </Form>
       {(installSuccess === manualInstallID) &&
         <>
@@ -358,24 +327,9 @@ export default function ManualInstallTab(props) {
   }
   if (needsMSVC) {
     manualInstallTab = (
-      <>
-        <h5>
-          {t('Microsoft Visual C++ Redistributable must be installed!')}
-        </h5>
-        <p>
-          {t('Plugin features require the ')}
-          <a href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist">
-            {t('Microsoft Visual C++ Redistributable')}
-          </a>
-          {t('. You must download and install the redistributable before continuing.')}
-        </p>
-        <Button
-          className="mt-3"
-          onClick={downloadMSVC}
-        >
-          {t('Continue to download and install')}
-        </Button>
-      </>
+      <NeedsMSVC
+        downloadMSVC={downloadMSVC}
+      />
     );
   }
 

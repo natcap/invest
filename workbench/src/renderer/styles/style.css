@@ -1073,3 +1073,10 @@ dl.plugin-dl {
     grid-column-start: 2;
   }
 }
+
+.plugin-submit-btn {
+  &[aria-disabled="true"] {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}

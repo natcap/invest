@@ -50,6 +50,8 @@ export default function PluginModal(props) {
   const [uninstallErrMsg, setUninstallErrMsg] = useState('');
   const [removalSuccess, setRemovalSuccess] = useState(false);
 
+  const [addRemoveDisabled, setAddRemoveDisabled] = useState(false);
+
   const [plugins, setPlugins] = useState({});
   const [registryData, setRegistryData] = useState([]);
   const [activePluginKey, setActivePluginKey] = useState('');
@@ -303,6 +305,10 @@ export default function PluginModal(props) {
     );
   }, [installLoading, uninstallLoading]);
 
+  useEffect(() => {
+    setAddRemoveDisabled(!!(installLoading || uninstallLoading));
+  }, [installLoading, uninstallLoading]);
+
   const { t } = useTranslation();
 
   const modalBody = (
@@ -361,6 +367,7 @@ export default function PluginModal(props) {
                     statusMessage={statusMessage}
                     needsMSVC={needsMSVC}
                     downloadMSVC={downloadMSVC}
+                    addRemoveDisabled={addRemoveDisabled}
                   />
                 ) : (
                   <p>{t('No plugins found.')}</p>
@@ -374,6 +381,7 @@ export default function PluginModal(props) {
                   uninstallErr={uninstallErr}
                   uninstallErrMsg={uninstallErrMsg}
                   removalSuccess={removalSuccess}
+                  addRemoveDisabled={addRemoveDisabled}
                 />
               </Tab.Pane>
               <Tab.Pane eventKey="manual">
@@ -393,6 +401,7 @@ export default function PluginModal(props) {
                   selectDirectory={selectDirectory}
                   getDroppedFilePath={getDroppedFilePath}
                   rejectDropHandler={rejectDropHandler}
+                  addRemoveDisabled={addRemoveDisabled}
                 />
               </Tab.Pane>
               <Tab.Pane eventKey="advanced">

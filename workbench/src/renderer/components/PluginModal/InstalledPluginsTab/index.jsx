@@ -2,15 +2,15 @@ import React from 'react';
 
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Row from 'react-bootstrap/Row';
 import Spinner from 'react-bootstrap/Spinner';
+import Tooltip from 'react-bootstrap/Tooltip';
 import { useTranslation } from 'react-i18next';
 import { BsCheckCircle } from "react-icons/bs";
 
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
-
-const { ipcRenderer } = window.Workbench.electron;
 
 export default function InstalledPluginsTab(props) {
   const {
@@ -20,6 +20,7 @@ export default function InstalledPluginsTab(props) {
     uninstallErr,       // (str) ID of plugin with an error
     uninstallErrMsg,    // (str) error message
     removalSuccess,     // (bool)
+    addRemoveDisabled,
   } = props;
 
   const { t } = useTranslation();
@@ -47,7 +48,7 @@ export default function InstalledPluginsTab(props) {
                 uninstallLoading={uninstallLoading === pluginID}
                 uninstallErr={uninstallErr === pluginID}
                 uninstallErrMsg={uninstallErrMsg}
-                uninstallDisabled={uninstallLoading && uninstallLoading !== pluginID}
+                uninstallDisabled={addRemoveDisabled}
               />
             ))
           )
@@ -74,7 +75,9 @@ function InstalledPluginDetailItem(props) {
   const { t } = useTranslation();
 
   const handleRemovePluginClick = () => {
-      removePlugin(pluginID);
+      if (!uninstallDisabled) {
+        removePlugin(pluginID);
+      }
   };
 
   return (
@@ -106,20 +109,32 @@ function InstalledPluginDetailItem(props) {
         }
       </Col>
       <Col sm={3}>
-        <Button
-          disabled={uninstallLoading || uninstallDisabled}
-          onClick={handleRemovePluginClick}
-        >
-          {uninstallLoading
-            ? (
-              <div className="adding-button">
-                <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
-                {t('Removing...')}
-              </div>
-            )
-            : t('Uninstall')
+        <OverlayTrigger
+          trigger={(uninstallDisabled) ? ['hover', 'focus'] : []}
+          rootClose
+          placement="top"
+          overlay={
+            <Tooltip>
+              {t("An installation or removal is in progress.")}
+            </Tooltip>
           }
-        </Button>
+        >
+          <Button
+            className="plugin-submit-btn"
+            aria-disabled={uninstallDisabled}
+            onClick={handleRemovePluginClick}
+          >
+            {uninstallLoading
+              ? (
+                <div className="adding-button">
+                  <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
+                  {t('Removing...')}
+                </div>
+              )
+              : t('Uninstall')
+            }
+          </Button>
+        </OverlayTrigger>
       </Col>
     </Row>
   );

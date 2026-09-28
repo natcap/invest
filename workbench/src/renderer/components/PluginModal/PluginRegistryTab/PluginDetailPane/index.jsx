@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Spinner from 'react-bootstrap/Spinner';
+import Tooltip from 'react-bootstrap/Tooltip';
 import { BsExclamationCircle } from "react-icons/bs";
 import { BsCheckCircle } from "react-icons/bs";
 import { MdOpenInNew } from "react-icons/md";
@@ -17,9 +19,8 @@ import {
   anotherVersionInstalled,
   notInstalled
 } from '../../PluginRegistryTab';
+import { InstallButton, NeedsMSVC } from '../../PluginModalUtils';
 import { sourceTypeRegistry } from '../../../PluginModal';
-
-const { ipcRenderer } = window.Workbench.electron;
 
 export default function PluginDetailPane(props) {
   const {
@@ -31,7 +32,7 @@ export default function PluginDetailPane(props) {
     installErr,         // true if parent installErr val === pluginID
     installErrMsg,
     installSuccess,     // true if parent installSuccess val === pluginID
-    installDisabled,    // true if parent installLoading val && val !== pluginID
+    installDisabled,    // true if bool(installLoading || uninstallLoading)
     statusMessage,
     needsMSVC,
     downloadMSVC,
@@ -63,15 +64,17 @@ export default function PluginDetailPane(props) {
   }, [userAcknowledgment]);
 
   const handleAddPluginClick = () => {
-    clearFormErrors();
-    if (validateAddPluginForm()) {
-      addPlugin(
-        pluginID,
-        plugin.repository_url, // url
-        plugin.version,        // revision
-        undefined,             // path, used for manual install
-        'registry'             // sourceType
-      );
+    if (!installDisabled) {
+      clearFormErrors();
+      if (validateAddPluginForm()) {
+        addPlugin(
+          pluginID,
+          plugin.repository_url, // url
+          plugin.version,        // revision
+          undefined,             // path, used for manual install
+          sourceTypeRegistry  // sourceType
+        );
+      }
     }
   };
 
@@ -135,45 +138,13 @@ export default function PluginDetailPane(props) {
               {t('Error: Before installing a plugin, you must agree to the terms by selecting the checkbox.')}
             </Form.Text>
           }
-          <Button
-            disabled={installLoading || installDisabled}
-            onClick={handleAddPluginClick}
-            aria-describedby={`${pluginID}-plugin-installation-disabled-notice ${pluginID}-plugin-installation-duration-notice`}
-          >
-            {installLoading
-              ? (
-                <div className="adding-button">
-                  <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                    <span className="visually-hidden">{t('Adding plugin')}</span>
-                  </Spinner>
-                  {t(statusMessage)}
-                </div>
-              )
-              : t('Install')
-            }
-          </Button>
-          {installDisabled
-            ? (
-              <Form.Text
-                as="span"
-                muted
-                id={`${pluginID}-plugin-installation-disabled-notice`}
-                className="plugin-form-text"
-              >
-                {t('An installation is currently in progress. Please wait for it to complete '
-                  + 'before installing another plugin.')}
-              </Form.Text>
-            )
-            : (
-              <Form.Text
-                as="span"
-                muted
-                id={`${pluginID}-plugin-installation-duration-notice`}
-                className="plugin-form-text"
-              >
-                {t('This may take several minutes.')}
-              </Form.Text>
-          )}
+          <InstallButton
+            handleAddPluginClick={handleAddPluginClick}
+            pluginID={pluginID}
+            installDisabled={installDisabled}
+            installLoading={installLoading}
+            statusMessage={statusMessage}
+          />
         </Form.Group>
       </Form>
     </>
@@ -181,24 +152,9 @@ export default function PluginDetailPane(props) {
 
   if (needsMSVC) {
     installPane = (
-      <>
-        <h5>
-          {t('Microsoft Visual C++ Redistributable must be installed!')}
-        </h5>
-        <p>
-          {t('Plugin features require the ')}
-          <a href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist">
-            {t('Microsoft Visual C++ Redistributable')}
-          </a>
-          {t('. You must download and install the redistributable before you can install a plugin.')}
-        </p>
-        <Button
-          className="mt-3"
-          onClick={handleDownloadMSVCClick}
-        >
-          {t('Continue to download and install')}
-        </Button>
-      </>
+      <NeedsMSVC
+        downloadMSVC={downloadMSVC}
+      />
     );
   } else if (installErr) {
     installPane = (
