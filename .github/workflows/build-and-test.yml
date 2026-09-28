@@ -313,6 +313,8 @@ jobs:
             workspace-path: InVEST-failed-windows-workspace.tar
             binary-extension: exe
             chromedriver-url-suffix: win64/chromedriver-win64.zip
+    env:
+      ELECTRON_VERSION: '40.8.5'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -467,9 +469,6 @@ jobs:
         env:
           CHROMEDRIVER_URL_PREFIX: http://storage.googleapis.com/chrome-for-testing-public
         run: |
-          ls
-          ls dist/
-          ELECTRON_VERSION=$(jq -r '.electronVersion' dist/builder-effective-config.yaml)
           CHROMIUM_VERSION=$(yarn --json node -p "require('electron-to-chromium').electronToChromium('$ELECTRON_VERSION')")
           echo "electron version: $ELECTRON_VERSION"
           echo "corresponding chromium version: $CHROMIUM_VERSION"
