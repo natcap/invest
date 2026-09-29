@@ -870,6 +870,19 @@ input[type=text]::placeholder {
   }
 }
 
+.plugin-modal-footer {
+  display: block;
+}
+
+.plugin-modal-footer-header {
+  display: block;
+  font-weight: 600;
+}
+
+.plugin-modal-status-message {
+  border-bottom: 1px solid var(--bs-modal-header-border-color);
+}
+
 .plugin-spinner {
   margin-right: 0.5rem;
   margin-bottom: 0.1rem;
@@ -907,7 +920,7 @@ input[type=text]::placeholder {
 
 .plugin-form-text {
   display: block;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .browse-button svg {
@@ -944,6 +957,9 @@ code {
   margin-right: 0.5em;
   &.plugin-modal-icons-white {
     color: white;
+  }
+  &.plugin-modal-icons-error {
+    color: var(--digital-red);
   }
 }
 

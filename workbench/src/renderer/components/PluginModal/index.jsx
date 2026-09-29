@@ -6,8 +6,10 @@ import Col from 'react-bootstrap/Col';
 import Modal from 'react-bootstrap/Modal';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
+import Spinner from 'react-bootstrap/Spinner';
 import Tab from 'react-bootstrap/Tab';
 import { useTranslation } from 'react-i18next';
+import { BsCheckCircle } from "react-icons/bs";
 import {
   MdClose,
   MdOutlineWarningAmber
@@ -314,11 +316,26 @@ export default function PluginModal(props) {
     setAddRemoveDisabled(!!(installLoading || uninstallLoading));
   }, [installLoading, uninstallLoading]);
 
+  function jumpToInstallMsg() {
+    if (installSuccess === manualInstallID || installErr === manualInstallID) {
+      setTabKey('manual');
+    } else {
+      // set ActivePluginKey so correct Registry plugin will display,
+      // then jump to Registry tab
+      setActivePluginKey(installSuccess || installErr);
+      setTabKey('registry');
+    }
+  }
+
   const { t } = useTranslation();
 
   const modalBody = (
     <Modal.Body>
-      <Tab.Container id="plugin-modal-tabs" defaultActiveKey="registry">
+      <Tab.Container
+        id="plugin-modal-tabs"
+        activeKey={tabKey}
+        onSelect={(k) => setTabKey(k)}
+      >
         <Row>
           <Col sm={2} className="plugin-modal-nav">
             <Nav variant="pills" className="flex-column">
@@ -430,6 +447,70 @@ export default function PluginModal(props) {
     </Modal.Body>
   );
 
+  let modalFooter;
+  if (installSuccess) {
+    modalFooter = (
+      <>
+        <BsCheckCircle className="plugin-modal-icons" />
+        <span>
+          {t("Installation Success! You can now close this modal and open the plugin from the list of models.")}
+        </span>
+        <Button
+          className="plugin-submit-btn"
+          onClick={jumpToInstallMsg}
+        >View Details</Button>
+      </>
+    );
+  } else if (removalSuccess) {
+    modalFooter = (
+      <>
+        <BsCheckCircle className="plugin-modal-icons" />
+        <span>{t("Plugin successfully uninstalled.")}</span>
+      </>
+    );
+  } else if (installErr) {
+    modalFooter = (
+      <>
+        <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
+        <span>{t("An error occurred during installation")}</span>
+        <Button
+          className="plugin-submit-btn"
+          onClick={jumpToInstallMsg}
+        >View Details</Button>
+      </>
+    );
+  } else if (uninstallErr) {
+    modalFooter = (
+      <>
+        <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
+        <span>{t("An error occurred during uninstallation:")}</span>
+        <div className="plugin-error plugin-install-remove-error">{uninstallErrMsg}</div>
+        <Button
+          className="plugin-submit-btn"
+          onClick={() => setTabKey("installed")}
+        >View Details</Button>
+      </>
+    );
+  } else if (installLoading) {
+    modalFooter = (
+      <>
+        <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
+        {t("Installation in progress: ")}{statusMessage}
+      </>
+    );
+  } else if (uninstallLoading) {
+    modalFooter = (
+      <>
+        <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
+        {t("Uninstallation in progress...")}
+      </>
+    );
+  } else {
+    modalFooter = (
+      <p>{t("No installation or uninstallation is currently in progress.")}</p>
+    )
+  }
+
   return (
     <Modal
       size="xl"
@@ -448,6 +529,10 @@ export default function PluginModal(props) {
         </Button>
       </Modal.Header>
       {modalBody}
+      <Modal.Footer className="plugin-modal-footer">
+        <p className="plugin-modal-footer-header">{t("Plugin Installation / Uninstallation Status:")}</p>
+        {modalFooter}
+      </Modal.Footer>
     </Modal>
   );
 }

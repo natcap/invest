@@ -60,7 +60,11 @@ export default function PluginRegistryTab(props) {
   }
 
   return (
-    <Tab.Container id="plugin-registry-tabs" activeKey={activePluginKey}>
+    <Tab.Container
+      id="plugin-registry-tabs"
+      activeKey={activePluginKey}
+      onSelect={(k) => handlePluginClick(k)}
+    >
       <Row>
         <Col sm={3} className="plugin-modal-nav">
           <Nav variant="pills" className="flex-column">
@@ -69,10 +73,7 @@ export default function PluginRegistryTab(props) {
                 className="plugin-modal-nav-item"
                 key={`${pluginObject.invest_package_name}-nav`}
               >
-                <Nav.Link
-                  eventKey={pluginObject.invest_package_name}
-                  onClick={(e) => handlePluginClick(pluginObject.invest_package_name)}
-                >
+                <Nav.Link eventKey={pluginObject.invest_package_name}>
                   {pluginObject.plugin_name}
                 </Nav.Link>
               </Nav.Item>
