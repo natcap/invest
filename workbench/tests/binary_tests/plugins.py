@@ -33,6 +33,10 @@ class PluginTests(unittest.TestCase):
         # connect to the chromedriver server
         options = Options()
         options.binary_location = str(binaries[0].resolve())
+        options.add_argument("--headless=new")      # Runs Chrome in headless mode
+        options.add_argument("--no-sandbox")         # Bypasses OS security model layer
+        options.add_argument("--disable-dev-shm-usage") # Overcomes limited resource problems in Docker
+        options.add_argument("--disable-gpu")        # Temporary fix for certain hardware environments
         self.driver = webdriver.Remote(
             command_executor=f'http://localhost:{CHROMEDRIVER_PORT}',
             options=options)
