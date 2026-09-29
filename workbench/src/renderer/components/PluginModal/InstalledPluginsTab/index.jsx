@@ -33,7 +33,7 @@ export default function InstalledPluginsTab(props) {
           <>
             <div aria-live="polite" className="pt-3 pb-3 plugin-success-message">
               <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" />
-              <span>{t('Plugin successfully removed!')}</span>
+              <span>{t('Plugin successfully uninstalled!')}</span>
             </div>
           </>
         )}
@@ -115,7 +115,7 @@ function InstalledPluginDetailItem(props) {
           placement="top"
           overlay={
             <Tooltip>
-              {t("An installation or removal is in progress.")}
+              {t("An installation or uninstallation is in progress.")}
             </Tooltip>
           }
         >

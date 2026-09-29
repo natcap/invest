@@ -7,6 +7,9 @@ import Form from 'react-bootstrap/Form';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Spinner from 'react-bootstrap/Spinner';
 import Tooltip from 'react-bootstrap/Tooltip';
+import { MdOpenInNew } from 'react-icons/md';
+
+import { openLinkInBrowser } from '../../../utils';
 
 export function InstallButton(props) {
   const {
@@ -27,7 +30,7 @@ export function InstallButton(props) {
         placement="top"
         overlay={
           <Tooltip>
-            {t("An installation or removal is in progress.")}
+            {t("An installation or uninstallation is in progress.")}
           </Tooltip>
         }
       >
@@ -91,8 +94,15 @@ export function NeedsMSVC(props) {
       </h5>
       <p>
         {t('Plugin features require the ')}
-        <a href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist">
+        <a
+          href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist"
+          title="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist"
+          onClick={openLinkInBrowser}
+        >
           {t('Microsoft Visual C++ Redistributable')}
+          <MdOpenInNew
+            aria-label={t("(opens in web browser)")}
+          />
         </a>
         {t('. You must download and install the redistributable before continuing.')}
       </p>

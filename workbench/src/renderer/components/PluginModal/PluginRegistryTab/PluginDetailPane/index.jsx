@@ -19,7 +19,10 @@ import {
   anotherVersionInstalled,
   notInstalled
 } from '../../PluginRegistryTab';
-import { InstallButton, NeedsMSVC } from '../../PluginModalUtils';
+import {
+  InstallButton,
+  NeedsMSVC,
+} from '../../PluginModalUtils';
 import { sourceTypeRegistry } from '../../../PluginModal';
 
 export default function PluginDetailPane(props) {
@@ -85,10 +88,6 @@ export default function PluginDetailPane(props) {
       setUserAcknowledgmentError(true);
     }
     return formValid;
-  };
-
-  const handleDownloadMSVCClick = () => {
-    downloadMSVC();
   };
 
   const pluginType = pluginTypes[plugin.plugin_type];

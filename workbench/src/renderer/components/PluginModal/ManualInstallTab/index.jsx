@@ -16,9 +16,13 @@ import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
 import {
   sourceTypeLocal,
-  sourceTypeURL
+  sourceTypeURL,
+  manualInstallID,
 } from '../../PluginModal';
-import { InstallButton, NeedsMSVC } from '../PluginModalUtils';
+import {
+  InstallButton,
+  NeedsMSVC,
+} from '../PluginModalUtils';
 
 export default function ManualInstallTab(props) {
   const {
@@ -48,7 +52,6 @@ export default function ManualInstallTab(props) {
   const [userAcknowledgmentError, setUserAcknowledgmentError] = useState(false);
   const [pluginSourceMissingError, setPluginSourceMissingError] = useState(false);
 
-  const manualInstallID = "manualInstall";
   const pluginDocsURL = "https://invest.readthedocs.io/en/latest/plugins.html";
 
   const clearFormErrors = () => {
@@ -158,6 +161,8 @@ export default function ManualInstallTab(props) {
             type="text"
             value={revision}
             onChange={(event) => setRevision(event.currentTarget.value)}
+            onDragOver={rejectDropHandler}
+            onDrop={rejectDropHandler}
             aria-describedby="about-branch-tag-commit"
           />
           <Form.Text
@@ -221,6 +226,9 @@ export default function ManualInstallTab(props) {
     <>
       <div>
         <h5 id="add-plugin-form-title" className="mb-3">{t('Manually Install a Plugin')}</h5>
+        <p>
+          {t("Install a plugin via git URL or local file path (for plugins not available on the Registry).")}
+        </p>
         <p>
           {t('More information about creating a plugin: ')}
           <a

@@ -27,6 +27,7 @@ const { logger } = window.Workbench;
 export const sourceTypeLocal = "local_path";
 export const sourceTypeURL = "git_url";
 export const sourceTypeRegistry = "registry";
+export const manualInstallID = "manualInstall";
 
 export default function PluginModal(props) {
   const {
@@ -57,18 +58,16 @@ export default function PluginModal(props) {
   const [activePluginKey, setActivePluginKey] = useState('');
   const [fetchError, setFetchError] = useState(false);
 
+  const [tabKey, setTabKey] = useState('registry');
+
   const registryMetadataURL = "https://natcap.github.io/invest-plugin-registry/workbench_metadata.json";
   const dataCacheKey = "registryData";
   const cacheTimeout = 1000 * 60 * 60 * 24; // 24 hours
 
   const handleModalClose = () => {
-    if (!installLoading) {
-      setInstallErr('');
-      setInstallErrMsg('');
-      setUninstallErr('');
-      setUninstallErrMsg('');
-      setInstallSuccess('');
-      setRemovalSuccess(false);
+    if (!installLoading && !uninstallLoading) {
+      resetInstallState();
+      resetUninstallState();
       closeModal();
     }
   };
@@ -78,10 +77,16 @@ export default function PluginModal(props) {
     setInstallLoading('');
   }
 
-  const clearUninstallErrors = () => {
-    setUninstallLoading('');
+  const resetInstallState = () => {
+    setInstallErr('');
+    setInstallErrMsg('');
+    setInstallSuccess('');
+  }
+
+  const resetUninstallState = () => {
     setUninstallErr('');
     setUninstallErrMsg('');
+    setRemovalSuccess(false);
   }
 
   function sortByName(a, b) {
@@ -157,8 +162,8 @@ export default function PluginModal(props) {
   }
 
   const addPlugin = (pluginID, url, revision, path, sourceType) => {
-    setInstallSuccess('');
-    setRemovalSuccess(false);
+    resetInstallState();
+    resetUninstallState();
     setInstallLoading(pluginID);
     ipcRenderer.invoke(
       ipcMainChannels.ADD_PLUGIN,
@@ -171,15 +176,15 @@ export default function PluginModal(props) {
       updateInvestList();
       setInstallSuccess(pluginID);
     }).catch((err) => {
-      setInstallErrMsg(err.toString());
-      setInstallErr(pluginID);
       setInstallLoading('');
+      setInstallErr(pluginID);
+      setInstallErrMsg(err.toString());
     });
   };
 
   const removePlugin = (pluginToRemove) => {
-    setRemovalSuccess(false);
-    setInstallSuccess('');
+    resetInstallState();
+    resetUninstallState();
     setUninstallLoading(pluginToRemove);
     openJobs.forEach((job, tabID) => {
       if (job.modelID === pluginToRemove) {
@@ -189,9 +194,9 @@ export default function PluginModal(props) {
     ipcRenderer.invoke(
       ipcMainChannels.REMOVE_PLUGIN, pluginToRemove
     ).then(() => {
-      setRemovalSuccess(true);
+      setUninstallLoading('');
       updateInvestList();
-      clearUninstallErrors();
+      setRemovalSuccess(true);
     }).catch((err) => {
       setUninstallLoading('');
       setUninstallErr(pluginToRemove);
