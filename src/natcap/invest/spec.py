@@ -881,15 +881,20 @@ class SingleBandRasterInput(SpatialFileInput):
             if projection_warning:
                 return projection_warning
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
+
+        Args:
+            additional_attributes (list[str]): optional list of additional
+                (RST-formatted) ModelSpec attributes to include in the
+                parenthetical in the RST line (e.g.,
+                ['**default projection input**']).
 
         Returns:
             list of strings, where each string is a line of RST-formatted text.
         """
         name = self.name or self.id
         type_string = format_type_string(self)
-
         in_parentheses = [type_string]
 
         if self.units:
@@ -898,6 +903,16 @@ class SingleBandRasterInput(SpatialFileInput):
                 # pybabel can't find the message if it's in the f-string
                 translated_units = gettext("units")
                 in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        if self.projected:
+            if self.projection_units:
+                in_parentheses.append(
+                    f'{gettext("projected")} [{gettext("projection units")}: **{format_unit(self.projection_units)}**]')
+            else:
+                in_parentheses.append(gettext("projected"))
+
+        if additional_attributes:
+            in_parentheses += additional_attributes
 
         required_string = self.format_required_string()
         in_parentheses.append(f'*{required_string}*')
@@ -1056,8 +1071,14 @@ class VectorInput(SpatialFileInput):
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
+
+        Args:
+            additional_attributes (list[str]): optional list of additional
+                (RST-formatted) ModelSpec attributes to include in the
+                parenthetical in the RST line (e.g.,
+                ['**default projection input**']).
 
         Returns:
             list of strings, where each string is a line of RST-formatted text.
@@ -1066,7 +1087,20 @@ class VectorInput(SpatialFileInput):
         type_string = format_type_string(self)
         required_string = self.format_required_string()
         geom_string = self.format_geometry_types_rst()
-        rst_line = f'**{name}** ({type_string}, {geom_string}, *{required_string}*)'
+        in_parentheses = [type_string, geom_string]
+
+        if self.projected:
+            if self.projection_units:
+                in_parentheses.append(
+                    f'{gettext("projected")} [{gettext("projection units")}: **{self.projection_units}**]')
+            else:
+                in_parentheses.append(f'{gettext("projected")}')
+
+        if additional_attributes:
+            in_parentheses += additional_attributes
+
+        in_parentheses.append(f'*{required_string}*')
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
 
         # Nested args may not have an about section
         if self.about:
