@@ -861,6 +861,15 @@ input[type=text]::placeholder {
 }
 
 /* Plugin Manager modal */
+.plugin-modal .modal-dialog {
+  overflow-y: initial;
+}
+
+.plugin-modal-pane-height {
+  height: 70vh;
+  overflow-y: auto;
+}
+
 .plugin-modal {
   form {
     & > div,

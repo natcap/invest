@@ -74,11 +74,6 @@ export default function PluginModal(props) {
     }
   };
 
-  const resetManualInstallFormStatus = () => {
-    setInstallErr('');
-    setInstallLoading('');
-  }
-
   const resetInstallState = () => {
     setInstallErr('');
     setInstallErrMsg('');
@@ -356,7 +351,7 @@ export default function PluginModal(props) {
               </Nav.Item>
             </Nav>
           </Col>
-          <Col sm={10}>
+          <Col sm={10} className="plugin-modal-pane-height">
             <Tab.Content>
               <Tab.Pane eventKey="registry">
                 {fetchError ? (
@@ -409,7 +404,6 @@ export default function PluginModal(props) {
               <Tab.Pane eventKey="manual">
                 <ManualInstallTab
                   addPlugin={addPlugin}
-                  resetManualInstallFormStatus={resetManualInstallFormStatus}
                   installLoading={installLoading}
                   installErr={installErr}
                   installErrMsg={installErrMsg}
@@ -458,7 +452,7 @@ export default function PluginModal(props) {
         <Button
           className="plugin-submit-btn"
           onClick={jumpToInstallMsg}
-        >View Details</Button>
+        >{t("View Details")}</Button>
       </>
     );
   } else if (removalSuccess) {
@@ -476,7 +470,7 @@ export default function PluginModal(props) {
         <Button
           className="plugin-submit-btn"
           onClick={jumpToInstallMsg}
-        >View Details</Button>
+        >{t("View Details")}</Button>
       </>
     );
   } else if (uninstallErr) {
@@ -488,7 +482,7 @@ export default function PluginModal(props) {
         <Button
           className="plugin-submit-btn"
           onClick={() => setTabKey("installed")}
-        >View Details</Button>
+        >{t("View Details")}</Button>
       </>
     );
   } else if (installLoading) {

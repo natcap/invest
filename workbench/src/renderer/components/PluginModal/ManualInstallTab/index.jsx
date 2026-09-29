@@ -27,7 +27,6 @@ import {
 export default function ManualInstallTab(props) {
   const {
     addPlugin,
-    resetManualInstallFormStatus,
     installLoading,
     installErr,
     installErrMsg,
@@ -112,11 +111,6 @@ export default function ManualInstallTab(props) {
     }
     return formValid;
   };
-
-  const handleResetForm = () => {
-    resetManualInstallFormStatus();
-    setUserAcknowledgment(false);
-  }
 
   const { t } = useTranslation();
 
@@ -312,27 +306,19 @@ export default function ManualInstallTab(props) {
           </div>
         </>
       }
+      {(installErr === manualInstallID) &&
+        <>
+          <h5 className="mt-2">{t('Error installing plugin:')}</h5>
+          <div className="plugin-error plugin-install-remove-error">{installErrMsg}</div>
+          <Button
+            onClick={handleClickFindLogfiles}
+          >
+            {t('Find workbench logs')}
+          </Button>
+        </>
+      }
     </>
   );
-  if (installErr === manualInstallID) {
-    manualInstallTab = (
-      <>
-        <h5>{t('Error installing plugin:')}</h5>
-        <div className="plugin-error plugin-install-remove-error">{installErrMsg}</div>
-        <Button
-          className="me-2"
-          onClick={handleResetForm}
-        >
-          {t('Return to form')}
-        </Button>
-        <Button
-          onClick={handleClickFindLogfiles}
-        >
-          {t('Find workbench logs')}
-        </Button>
-      </>
-    );
-  }
   if (needsMSVC) {
     manualInstallTab = (
       <NeedsMSVC
