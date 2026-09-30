@@ -480,8 +480,8 @@ jobs:
         working-directory: workbench
         continue-on-error: true
         run: |
-          ./chromedriver/chromedriver*/chromedriver* --port=9515
-          sleep 5
+          ./chromedriver/chromedriver*/chromedriver* --port=9515 &
+          sleep 2
           pytest tests/binary_tests/plugins.py
 
       - name: Test electron app with puppeteer
