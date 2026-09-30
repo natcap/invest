@@ -29,7 +29,6 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     default_projection_id="dem_path",
-    default_pixelsize_id="dem_path",
     aliases=(),
     module_name=__name__,
     input_field_order=[
