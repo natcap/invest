@@ -478,6 +478,7 @@ jobs:
           unzip chromedriver.zip -d ./chromedriver
 
       - name: Test electron app with selenium
+        id: selenium-tests
         working-directory: workbench
         continue-on-error: true
         run: |
@@ -486,8 +487,17 @@ jobs:
           pytest tests/binary_tests/plugins.py
 
       - name: Test electron app with puppeteer
+        id: puppeteer-tests
         working-directory: workbench
+        continue-on-error: true
         run: npx cross-env CI=true yarn run test-electron-app
+
+      - name: Binary test(s) failed
+        if: steps.selenium-tests.outcome == 'failure' | steps.puppeteer-tests-outcome == 'failure'
+        run: |
+          ${{ steps.selenium-tests.outcome == 'failure' }} && echo "Selenium test failed"
+          ${{ steps.puppeteer-tests.outcome == 'failure' }} && echo "Puppeteer test failed"
+          exit 1
 
       - name: Upload workbench logging from puppeteer
         uses: actions/upload-artifact@v7
