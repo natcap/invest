@@ -117,8 +117,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.TARGET_PROJECTION.model_copy(update=dict(
             about=spec.TARGET_PROJECTION.about + gettext(
                 "We do not recommend deviating from the projection of the "
-                "DEM, as this may cause unexpected results."),
-            projected=True
+                "DEM, as this may cause unexpected results.")
         ))
     ],
     outputs=[

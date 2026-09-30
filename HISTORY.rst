@@ -80,6 +80,20 @@ Annual Water Yield
   model will use the projection and pixel size of the LULC raster.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
 
+DelineateIt
+===========
+* A user may now select which model input defines the target projection
+  for the model outputs. If not specified, the model will use the
+  projection of the DEM raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+
+Urban Flood Risk
+================
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the LULC raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+
 Urban Mental Health
 ===================
 * A user may now select which model inputs define the target projection and

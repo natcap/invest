@@ -156,9 +156,7 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col="type"
         ),
-        spec.TARGET_PROJECTION.model_copy(update=dict(
-            projected=True)
-        ),
+        spec.TARGET_PROJECTION,
         spec.TARGET_PIXELSIZE.model_copy(update=dict(
             about=spec.TARGET_PIXELSIZE.about + gettext(
                 " This raster will also be used to set the alignment during "
