@@ -26,7 +26,7 @@ const ARTIFACT_NAME = `invest_${investVersion}_workbench_${OS}_${ARCH}.${EXT}`;
 const installerVersion = investVersion.match(/[0-9]+\.[0-9]+\.[0-9]+/)[0];
 
 const config = {
-  electronVersion: '40.8.5',
+  electronVersion: process.env.ELECTRON_VERSION || undefined,
   extraMetadata: {
     main: 'build/main/main.js',
     version: installerVersion,

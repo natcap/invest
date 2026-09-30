@@ -21,7 +21,7 @@
     "build-renderer": "vite --config vite.config.mjs build",
     "build": "yarn build-renderer && yarn build-main && yarn build:preload && yarn build-license",
     "token": "cd .. && make jprint-DATA_BASE_URL > workbench/resources/storage_token.txt",
-    "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js -c.electronVersion=$ELECTRON_VERSION",
+    "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js",
     "i18n-extract": "i18next-cli --config i18next-main.config.mjs extract && i18next-cli --config i18next-renderer.config.mjs extract"
   },
   "jest": {
@@ -52,9 +52,6 @@
   "keywords": [],
   "author": "Natural Capital Alliance",
   "license": "Apache-2.0",
-  "build": {
-    "electronVersion": "40.8.5"
-  },
   "dependencies": {
     "@babel/runtime": "^7.13.10",
     "electron-context-menu": "^4.1.1",
