@@ -20,14 +20,10 @@ export default function PluginRegistryTab(props) {
     fetchError,
     installedPlugins,
     addPlugin,
-    installLoading,
-    installErr,
-    installErrMsg,
-    installSuccess,
+    addRemoveState,
     statusMessage,
     needsMSVC,
     downloadMSVC,
-    addRemoveDisabled,
   } = props;
   const [installedPluginNames, setInstalledPluginNames] = useState([]);
   const [installedPluginNamesVersions, setInstalledPluginNamesVersions] = useState([]);
@@ -90,13 +86,9 @@ export default function PluginRegistryTab(props) {
                 <PluginDetailPane
                   pluginID={pluginObject.invest_package_name}
                   plugin={pluginObject}
-                  installStatus={getInstallStatus(pluginObject)}
+                  priorInstallationStatus={getInstallStatus(pluginObject)}
                   addPlugin={addPlugin}
-                  installLoading={installLoading === pluginObject.invest_package_name}
-                  installErr={installErr === pluginObject.invest_package_name}
-                  installErrMsg={installErrMsg}
-                  installSuccess={installSuccess === pluginObject.invest_package_name}
-                  installDisabled={addRemoveDisabled}
+                  addRemoveState={addRemoveState}
                   statusMessage={statusMessage}
                   needsMSVC={needsMSVC}
                   downloadMSVC={downloadMSVC}

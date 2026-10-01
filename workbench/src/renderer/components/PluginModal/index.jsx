@@ -26,10 +26,20 @@ import PluginRegistryTab from './PluginRegistryTab';
 const { getFilePath, ipcRenderer } = window.Workbench.electron;
 const { logger } = window.Workbench;
 
+// values for sourceType, stored in settingsStore and
+// used to determine whether to log a Registry install
 export const sourceTypeLocal = "local_path";
 export const sourceTypeURL = "git_url";
 export const sourceTypeRegistry = "registry";
+// id for elements related to manual install form
 export const manualInstallID = "manualInstall";
+// addRemoveOpType options:
+export const pluginInstall = "install";
+export const pluginUninstall = "uninstall";
+// addRemoveStatus options:
+export const addRemoveLoading = "loading";
+export const addRemoveSuccess = "success";
+export const addRemoveError = "error";
 
 export default function PluginModal(props) {
   const {
@@ -43,17 +53,13 @@ export default function PluginModal(props) {
   const [statusMessage, setStatusMessage] = useState('Installing...');
   const [needsMSVC, setNeedsMSVC] = useState(false);
 
-  const [installLoading, setInstallLoading] = useState('');
-  const [installErr, setInstallErr] = useState('');
-  const [installErrMsg, setInstallErrMsg] = useState('');
-  const [installSuccess, setInstallSuccess] = useState('');
-
-  const [uninstallLoading, setUninstallLoading] = useState('');
-  const [uninstallErr, setUninstallErr] = useState('');
-  const [uninstallErrMsg, setUninstallErrMsg] = useState('');
-  const [removalSuccess, setRemovalSuccess] = useState(false);
-
-  const [addRemoveDisabled, setAddRemoveDisabled] = useState(false);
+  const defaultAddRemoveState = {
+    opType: null,      // install or uninstall
+    opStatus: null,    // loading, success, or error
+    opErrorMsg: null,  // error message
+    opPluginID: null,  // pluginID associated with the op
+  }
+  const [addRemoveState, setAddRemoveState] = useState(defaultAddRemoveState);
 
   const [plugins, setPlugins] = useState({});
   const [registryData, setRegistryData] = useState([]);
@@ -67,24 +73,10 @@ export default function PluginModal(props) {
   const cacheTimeout = 1000 * 60 * 60 * 24; // 24 hours
 
   const handleModalClose = () => {
-    if (!installLoading && !uninstallLoading) {
-      resetInstallState();
-      resetUninstallState();
+    if (addRemoveState.opStatus !== addRemoveLoading) {
       closeModal();
     }
   };
-
-  const resetInstallState = () => {
-    setInstallErr('');
-    setInstallErrMsg('');
-    setInstallSuccess('');
-  }
-
-  const resetUninstallState = () => {
-    setUninstallErr('');
-    setUninstallErrMsg('');
-    setRemovalSuccess(false);
-  }
 
   function sortByName(a, b) {
     if (a.plugin_name > b.plugin_name) {
@@ -159,9 +151,12 @@ export default function PluginModal(props) {
   }
 
   const addPlugin = (pluginID, url, revision, path, sourceType) => {
-    resetInstallState();
-    resetUninstallState();
-    setInstallLoading(pluginID);
+    setAddRemoveState({
+      opType: pluginInstall,
+      opStatus: addRemoveLoading,
+      opErrorMsg: "",
+      opPluginID: pluginID
+    })
     ipcRenderer.invoke(
       ipcMainChannels.ADD_PLUGIN,
       url,       // git url (via manual install or registry)
@@ -169,20 +164,30 @@ export default function PluginModal(props) {
       path,      // local path (manual local install)
       sourceType // 'local_path', 'git_url', or 'registry'
     ).then(() => {
-      setInstallLoading('');
+      setAddRemoveState({
+        opType: pluginInstall,
+        opStatus: addRemoveSuccess,
+        opErrorMsg: "",
+        opPluginID: pluginID
+      })
       updateInvestList();
-      setInstallSuccess(pluginID);
     }).catch((err) => {
-      setInstallLoading('');
-      setInstallErr(pluginID);
-      setInstallErrMsg(err.toString());
+      setAddRemoveState({
+        opType: pluginInstall,
+        opStatus: addRemoveError,
+        opErrorMsg: err.toString(),
+        opPluginID: pluginID
+      })
     });
   };
 
   const removePlugin = (pluginToRemove) => {
-    resetInstallState();
-    resetUninstallState();
-    setUninstallLoading(pluginToRemove);
+    setAddRemoveState({
+      opType: pluginUninstall,
+      opStatus: addRemoveLoading,
+      opErrorMsg: "",
+      opPluginID: pluginToRemove
+    })
     openJobs.forEach((job, tabID) => {
       if (job.modelID === pluginToRemove) {
         closeInvestModel(tabID);
@@ -191,13 +196,19 @@ export default function PluginModal(props) {
     ipcRenderer.invoke(
       ipcMainChannels.REMOVE_PLUGIN, pluginToRemove
     ).then(() => {
-      setUninstallLoading('');
-      updateInvestList();
-      setRemovalSuccess(true);
+      setAddRemoveState({
+        opType: pluginUninstall,
+        opStatus: addRemoveSuccess,
+        opErrorMsg: "",
+        opPluginID: pluginToRemove
+      })
     }).catch((err) => {
-      setUninstallLoading('');
-      setUninstallErr(pluginToRemove);
-      setUninstallErrMsg(err.toString());
+      setAddRemoveState({
+        opType: pluginUninstall,
+        opStatus: addRemoveError,
+        opErrorMsg: err.toString(),
+        opPluginID: pluginToRemove
+      })
     });
   };
 
@@ -305,19 +316,15 @@ export default function PluginModal(props) {
         }
       }
     );
-  }, [installLoading, uninstallLoading]);
-
-  useEffect(() => {
-    setAddRemoveDisabled(!!(installLoading || uninstallLoading));
-  }, [installLoading, uninstallLoading]);
+  }, [addRemoveState]);
 
   function jumpToInstallMsg() {
-    if (installSuccess === manualInstallID || installErr === manualInstallID) {
+    if (addRemoveState.opPluginID === manualInstallID) {
       setTabKey('manual');
     } else {
       // set ActivePluginKey so correct Registry plugin will display,
       // then jump to Registry tab
-      setActivePluginKey(installSuccess || installErr);
+      setActivePluginKey(addRemoveState.opPluginID);
       setTabKey('registry');
     }
   }
@@ -377,14 +384,10 @@ export default function PluginModal(props) {
                     fetchError={fetchError}
                     installedPlugins={plugins}
                     addPlugin={addPlugin}
-                    installLoading={installLoading}
-                    installErr={installErr}
-                    installErrMsg={installErrMsg}
-                    installSuccess={installSuccess}
+                    addRemoveState={addRemoveState}
                     statusMessage={statusMessage}
                     needsMSVC={needsMSVC}
                     downloadMSVC={downloadMSVC}
-                    addRemoveDisabled={addRemoveDisabled}
                   />
                 ) : (
                   <p>{t('No plugins found.')}</p>
@@ -394,20 +397,13 @@ export default function PluginModal(props) {
                 <InstalledPluginsTab
                   plugins={plugins}
                   removePlugin={removePlugin}
-                  uninstallLoading={uninstallLoading}
-                  uninstallErr={uninstallErr}
-                  uninstallErrMsg={uninstallErrMsg}
-                  removalSuccess={removalSuccess}
-                  addRemoveDisabled={addRemoveDisabled}
+                  addRemoveState={addRemoveState}
                 />
               </Tab.Pane>
               <Tab.Pane eventKey="manual">
                 <ManualInstallTab
                   addPlugin={addPlugin}
-                  installLoading={installLoading}
-                  installErr={installErr}
-                  installErrMsg={installErrMsg}
-                  installSuccess={installSuccess}
+                  addRemoveState={addRemoveState}
                   statusMessage={statusMessage}
                   needsMSVC={needsMSVC}
                   downloadMSVC={downloadMSVC}
@@ -417,7 +413,6 @@ export default function PluginModal(props) {
                   selectDirectory={selectDirectory}
                   getDroppedFilePath={getDroppedFilePath}
                   rejectDropHandler={rejectDropHandler}
-                  addRemoveDisabled={addRemoveDisabled}
                 />
               </Tab.Pane>
               <Tab.Pane eventKey="advanced">
@@ -442,63 +437,75 @@ export default function PluginModal(props) {
   );
 
   let modalFooter;
-  if (installSuccess) {
-    modalFooter = (
-      <>
-        <BsCheckCircle className="plugin-modal-icons" />
-        <span>
-          {t("Installation Success! You can now close this modal and open the plugin from the list of models.")}
-        </span>
-        <Button
-          className="plugin-submit-btn"
-          onClick={jumpToInstallMsg}
-        >{t("View Details")}</Button>
-      </>
-    );
-  } else if (removalSuccess) {
-    modalFooter = (
-      <>
-        <BsCheckCircle className="plugin-modal-icons" />
-        <span>{t("Plugin successfully uninstalled.")}</span>
-      </>
-    );
-  } else if (installErr) {
-    modalFooter = (
-      <>
-        <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
-        <span>{t("An error occurred during installation")}</span>
-        <Button
-          className="plugin-submit-btn"
-          onClick={jumpToInstallMsg}
-        >{t("View Details")}</Button>
-      </>
-    );
-  } else if (uninstallErr) {
-    modalFooter = (
-      <>
-        <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
-        <span>{t("An error occurred during uninstallation:")}</span>
-        <div className="plugin-error plugin-install-remove-error">{uninstallErrMsg}</div>
-        <Button
-          className="plugin-submit-btn"
-          onClick={() => setTabKey("installed")}
-        >{t("View Details")}</Button>
-      </>
-    );
-  } else if (installLoading) {
-    modalFooter = (
-      <>
-        <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
-        {t("Installation in progress: ")}{statusMessage}
-      </>
-    );
-  } else if (uninstallLoading) {
-    modalFooter = (
-      <>
-        <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
-        {t("Uninstallation in progress...")}
-      </>
-    );
+  if (addRemoveState.opStatus === addRemoveSuccess) {
+    if (addRemoveState.opType === pluginInstall) {
+      modalFooter = (
+        <>
+          <BsCheckCircle className="plugin-modal-icons" />
+          <span>
+            {t("Installation Success! You can now close this modal and open the plugin from the list of models.")}
+          </span>
+          <Button
+            className="plugin-submit-btn"
+            onClick={jumpToInstallMsg}
+          >{t("View Details")}</Button>
+        </>
+      );
+    } else if (addRemoveState.opType === pluginUninstall) {
+      modalFooter = (
+        <>
+          <BsCheckCircle className="plugin-modal-icons" />
+          <span>{t("Plugin successfully uninstalled.")}</span>
+        </>
+      );
+    }
+  } else if (addRemoveState.opStatus === addRemoveError) {
+    if (addRemoveState.opType === pluginInstall) {
+      modalFooter = (
+        <>
+          <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
+          <span>{t("An error occurred during installation")}</span>
+          <Button
+            className="plugin-submit-btn"
+            onClick={jumpToInstallMsg}
+          >{t("View Details")}</Button>
+        </>
+      );
+    } else if (addRemoveState.opType === pluginUninstall) {
+      modalFooter = (
+        <>
+          <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
+          <span>{t("An error occurred during uninstallation:")}</span>
+          <div className="plugin-error plugin-install-remove-error">
+            {addRemoveState.opErrorMsg}
+          </div>
+          <Button
+            className="plugin-submit-btn"
+            onClick={() => setTabKey("installed")}
+          >{t("View Details")}</Button>
+        </>
+      );
+    }
+  } else if (addRemoveState.opStatus === addRemoveLoading) {
+    if (addRemoveState.opType === pluginInstall) {
+      modalFooter = (
+        <>
+          <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
+          {t("Installation in progress...")}{statusMessage}
+          <Button
+            className="plugin-submit-btn"
+            onClick={jumpToInstallMsg}
+          >{t("View Installing Plugin")}</Button>
+        </>
+      );
+    } else if (addRemoveState.opType === pluginUninstall) {
+      modalFooter = (
+        <>
+          <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
+          {t("Uninstallation in progress...")}
+        </>
+      );
+    }
   } else {
     modalFooter = (
       <p>{t("No installation or uninstallation is currently in progress.")}</p>
@@ -541,4 +548,3 @@ PluginModal.propTypes = {
     modelID: PropTypes.string,
   }).isRequired,
 };
-

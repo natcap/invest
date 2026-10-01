@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
@@ -12,15 +12,18 @@ import { BsCheckCircle } from "react-icons/bs";
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
 
+import {
+  pluginUninstall,
+  addRemoveLoading,
+  addRemoveSuccess,
+  addRemoveError,
+} from '../../PluginModal';
+
 export default function InstalledPluginsTab(props) {
   const {
     plugins,
     removePlugin,
-    uninstallLoading,   // (str) ID of plugin being uninstalled
-    uninstallErr,       // (str) ID of plugin with an error
-    uninstallErrMsg,    // (str) error message
-    removalSuccess,     // (bool)
-    addRemoveDisabled,
+    addRemoveState,
   } = props;
 
   const { t } = useTranslation();
@@ -29,7 +32,10 @@ export default function InstalledPluginsTab(props) {
     <>
       <div>
         <h5 id="installed-plugin-list-title" className="mb-3">{t('Installed Plugins')}</h5>
-        {removalSuccess && (
+        {(
+          addRemoveState.opType === pluginUninstall &&
+          addRemoveState.opStatus === addRemoveSuccess
+        ) && (
           <>
             <div aria-live="polite" className="pt-3 pb-3 plugin-success-message">
               <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" />
@@ -45,10 +51,7 @@ export default function InstalledPluginsTab(props) {
                 pluginID={pluginID}
                 pluginDetails={plugins[pluginID]}
                 removePlugin={removePlugin}
-                uninstallLoading={uninstallLoading === pluginID}
-                uninstallErr={uninstallErr === pluginID}
-                uninstallErrMsg={uninstallErrMsg}
-                uninstallDisabled={addRemoveDisabled}
+                addRemoveState={addRemoveState}
               />
             ))
           )
@@ -66,16 +69,25 @@ function InstalledPluginDetailItem(props) {
     pluginID,
     pluginDetails,
     removePlugin,
-    uninstallLoading,
-    uninstallErr,
-    uninstallErrMsg,
-    uninstallDisabled,
+    addRemoveState,
   } = props;
+  const [uninstallStatus, setUninstallStatus] = useState('None');
 
   const { t } = useTranslation();
 
+  useEffect(() => {
+    if (
+      addRemoveState.opPluginID === pluginID &&
+      addRemoveState.opType === pluginUninstall
+    ) {
+      setUninstallStatus(addRemoveState.opStatus);
+    } else {
+      setUninstallStatus('None');
+    }
+  }, [addRemoveState]);
+
   const handleRemovePluginClick = () => {
-      if (!uninstallDisabled) {
+      if (addRemoveState.opStatus !== addRemoveLoading) {
         removePlugin(pluginID);
       }
   };
@@ -94,11 +106,11 @@ function InstalledPluginDetailItem(props) {
           <dt className="bold-text">{t('Source: ')}</dt>
           <dd>{pluginDetails.source}</dd>
         </dl>
-        {uninstallErr &&
+        {uninstallStatus === addRemoveError &&
           (
             <>
               <h5>{t('Error removing plugin:')}</h5>
-              <div className="plugin-error plugin-install-remove-error">{uninstallErrMsg}</div>
+              <div className="plugin-error plugin-install-remove-error">{addRemoveState.opErrorMsg}</div>
               <Button
                 onClick={handleClickFindLogfiles}
               >
@@ -110,7 +122,7 @@ function InstalledPluginDetailItem(props) {
       </Col>
       <Col sm={3}>
         <OverlayTrigger
-          trigger={(uninstallDisabled) ? ['hover', 'focus'] : []}
+          trigger={(addRemoveState.opStatus === addRemoveLoading) ? ['hover', 'focus'] : []}
           rootClose
           placement="top"
           overlay={
@@ -121,10 +133,10 @@ function InstalledPluginDetailItem(props) {
         >
           <Button
             className="plugin-submit-btn"
-            aria-disabled={uninstallDisabled}
+            aria-disabled={addRemoveState.opStatus === addRemoveLoading}
             onClick={handleRemovePluginClick}
           >
-            {uninstallLoading
+            {uninstallStatus === addRemoveLoading
               ? (
                 <div className="adding-button">
                   <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />

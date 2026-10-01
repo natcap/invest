@@ -15,6 +15,10 @@ import { openLinkInBrowser } from '../../../utils';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
 import {
+  pluginInstall,
+  addRemoveLoading,
+  addRemoveSuccess,
+  addRemoveError,
   sourceTypeLocal,
   sourceTypeURL,
   manualInstallID,
@@ -27,10 +31,7 @@ import {
 export default function ManualInstallTab(props) {
   const {
     addPlugin,
-    installLoading,
-    installErr,
-    installErrMsg,
-    installSuccess,
+    addRemoveState,
     statusMessage,
     needsMSVC,
     downloadMSVC,
@@ -40,7 +41,6 @@ export default function ManualInstallTab(props) {
     selectDirectory,
     getDroppedFilePath,
     rejectDropHandler,
-    addRemoveDisabled,
   } = props;
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
@@ -51,7 +51,20 @@ export default function ManualInstallTab(props) {
   const [userAcknowledgmentError, setUserAcknowledgmentError] = useState(false);
   const [pluginSourceMissingError, setPluginSourceMissingError] = useState(false);
 
+  const [installStatus, setInstallStatus] = useState('None');
+
   const pluginDocsURL = "https://invest.readthedocs.io/en/latest/plugins.html";
+
+  useEffect(() => {
+    if (
+      addRemoveState.opPluginID === manualInstallID &&
+      addRemoveState.opType === pluginInstall
+    ) {
+      setInstallStatus(addRemoveState.opStatus);
+    } else {
+      setInstallStatus('None');
+    }
+  }, [addRemoveState]);
 
   const clearFormErrors = () => {
     setUserAcknowledgmentError(false);
@@ -75,15 +88,15 @@ export default function ManualInstallTab(props) {
   }, [userAcknowledgment]);
 
   useEffect(() => {
-    if (installSuccess === manualInstallID) {
+    if (installStatus === addRemoveSuccess) {
       setURL('');
       setRevision('');
       setPath('');
     }
-  }, [installSuccess]);
+  }, [installStatus]);
 
   const handleAddPluginClick = () => {
-    if (!addRemoveDisabled) {
+    if (addRemoveState.opStatus !== addRemoveLoading) {
       clearFormErrors();
       if (validateAddPluginForm()) {
         addPlugin(
@@ -293,12 +306,12 @@ export default function ManualInstallTab(props) {
         <InstallButton
           handleAddPluginClick={handleAddPluginClick}
           pluginID={manualInstallID}
-          installLoading={installLoading === manualInstallID}
-          installDisabled={addRemoveDisabled}
+          installLoading={installStatus === addRemoveLoading}
+          installDisabled={addRemoveState.opStatus === addRemoveLoading}
           statusMessage={statusMessage}
         />
       </Form>
-      {(installSuccess === manualInstallID) &&
+      {installStatus === addRemoveSuccess &&
         <>
           <div aria-live="polite" className="mt-3 pt-3 pb-3 plugin-success-message">
             <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" />
@@ -306,10 +319,10 @@ export default function ManualInstallTab(props) {
           </div>
         </>
       }
-      {(installErr === manualInstallID) &&
+      {installStatus === addRemoveError &&
         <>
           <h5 className="mt-2">{t('Error installing plugin:')}</h5>
-          <div className="plugin-error plugin-install-remove-error">{installErrMsg}</div>
+          <div className="plugin-error plugin-install-remove-error">{addRemoveState.opErrorMsg}</div>
           <Button
             onClick={handleClickFindLogfiles}
           >
