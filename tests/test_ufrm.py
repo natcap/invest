@@ -348,13 +348,17 @@ class UFRMTests(unittest.TestCase):
         args['lulc_path'] = 'fake/path/notfound.tif'
         result = urban_flood_risk_mitigation.validate(args)
         self.assertEqual(
-            result, [(['lulc_path'], validation_messages.FILE_NOT_FOUND)])
+            result, [(['lulc_path'], validation_messages.FILE_NOT_FOUND),
+                     (['target_pixelsize_id'], validation_messages.FILE_NOT_FOUND),
+                     (['target_projection_id'], validation_messages.FILE_NOT_FOUND)])
 
         args = self._make_args()
         args['lulc_path'] = args['aoi_watersheds_path']
         result = urban_flood_risk_mitigation.validate(args)
         self.assertEqual(
-            result, [(['lulc_path'], validation_messages.NOT_GDAL_RASTER)])
+            result, [(['lulc_path'], validation_messages.NOT_GDAL_RASTER),
+                     (['target_pixelsize_id'], validation_messages.NOT_GDAL_RASTER),
+                     (['target_projection_id'], validation_messages.NOT_GDAL_RASTER)])
 
         args = self._make_args()
         args['aoi_watersheds_path'] = args['lulc_path']
@@ -397,3 +401,29 @@ class UFRMTests(unittest.TestCase):
             result,
             [(['curve_number_table_path'],
               'Null value(s) found in column "cn_a"')])
+
+    def test_soil_raster_target_projection_pixelsize(self):
+        """UFRM: test model if soil raster is target projection and pixelsize"""
+        from natcap.invest import urban_flood_risk_mitigation
+
+        args = self._make_args()
+        args['target_projection_id'] = "soils_hydrological_group_raster_path"
+
+        for target in ["lulc_path", "soils_hydrological_group_raster_path"]:
+            args['target_pixelsize_id'] = target
+            args['target_projection_id'] = target
+
+            file_reg = urban_flood_risk_mitigation.execute(args)
+
+            runoff_retention_index_info = pygeoprocessing.get_raster_info(
+                file_reg['runoff_retention_index'])
+            expected_projection_info = pygeoprocessing.get_raster_info(
+                args[args['target_projection_id']])
+            expected_pixelsize_info = pygeoprocessing.get_raster_info(
+                args[args['target_pixelsize_id']])
+
+            # Note: test data LULC raster has different projection than soils
+            self.assertEqual(runoff_retention_index_info['projection_wkt'],
+                             expected_projection_info['projection_wkt'])
+            self.assertEqual(runoff_retention_index_info['pixel_size'],
+                             expected_pixelsize_info['pixel_size'])

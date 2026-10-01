@@ -12,6 +12,7 @@ import numpy
 import pygeoprocessing
 import shapely.wkb
 import shapely.wkt
+from shapely import Polygon
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -163,9 +164,10 @@ class DelineateItTests(unittest.TestCase):
         from natcap.invest.delineateit import delineateit
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
-        self.assertEqual(len(validation_warnings), 1)
+        self.assertEqual(len(validation_warnings), 2)
         self.assertEqual(['dem_path', 'outlet_vector_path', 'workspace_dir'],
                          validation_warnings[0][0])
+        self.assertEqual(['target_projection_id'], validation_warnings[1][0])
 
         missing_values_args = {
             'workspace_dir': '',
@@ -175,7 +177,7 @@ class DelineateItTests(unittest.TestCase):
             'detect_pour_points': True
         }
         validation_warnings = delineateit.validate(missing_values_args)
-        self.assertEqual(len(validation_warnings), 1)
+        self.assertEqual(len(validation_warnings), 2)
         self.assertEqual(validation_warnings[0][1],
                          validation_messages.MISSING_VALUE)
 
@@ -190,7 +192,8 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(
             validation_warnings,
             [(['dem_path'], validation_messages.FILE_NOT_FOUND),
-             (['outlet_vector_path'], validation_messages.FILE_NOT_FOUND)])
+             (['outlet_vector_path'], validation_messages.FILE_NOT_FOUND),
+             (['target_projection_id'], validation_messages.FILE_NOT_FOUND)])
 
         bad_spatial_files_args = {
             'workspace_dir': self.workspace_dir,
@@ -215,7 +218,8 @@ class DelineateItTests(unittest.TestCase):
              (['outlet_vector_path'], validation_messages.NOT_GDAL_VECTOR),
              (['snap_distance'], (
                 validation_messages.NOT_A_NUMBER.format(
-                    value=bad_spatial_files_args['snap_distance'])))])
+                    value=bad_spatial_files_args['snap_distance']))),
+             (['target_projection_id'], validation_messages.NOT_GDAL_RASTER)])
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""
@@ -743,3 +747,48 @@ class DelineateItTests(unittest.TestCase):
             pour_points = delineateit._find_raster_pour_points(
                 (raster_path, 1))
             self.assertEqual(pour_points, expected_pour_points)
+
+    def test_aoi_default_projection(self):
+        """DelineateIt: test DEM reprojection if AOI is target projection."""
+        from natcap.invest.delineateit import delineateit
+
+        dem_matrix = numpy.ones((10, 10), dtype=numpy.float32)
+        dem_matrix[0, 0] = 7
+        dem_raster_path = os.path.join(self.workspace_dir, 'dem.tif')
+        dem_srs = osr.SpatialReference()
+        dem_srs.ImportFromEPSG(4326)
+        dem_wkt = dem_srs.ExportToWkt()
+        pygeoprocessing.numpy_array_to_raster(
+            dem_matrix, 0, (0.0001, -0.0001), (-127.488, -0.001), dem_wkt,
+            dem_raster_path)
+
+        outlet_vector_path = os.path.join(self.workspace_dir,
+                                          'outlet_vector_path.gpkg')
+        vector_geom = [Polygon([(0, -200), (200, -200), (200, 0),
+                                (0, 0), (0, -200)])]
+        vector_srs = osr.SpatialReference()
+        vector_srs.ImportFromEPSG(26910)
+        vector_wkt = vector_srs.ExportToWkt()
+        pygeoprocessing.shapely_geometry_to_vector(
+            vector_geom, outlet_vector_path, vector_wkt, 'GPKG',
+            ogr_geom_type=ogr.wkbPolygon)
+
+        args = {'dem_path': dem_raster_path,
+                'outlet_vector_path': outlet_vector_path,
+                'workspace_dir': self.workspace_dir,
+                'snap_points': True,
+                'snap_distance': '20',
+                'flow_threshold': '500',
+                'results_suffix': 'w'}
+
+        error_list = delineateit.validate(args)
+        self.assertEqual('Dataset must be projected in linear units.',
+                         error_list[0][1])
+
+        args['target_projection_id'] = 'outlet_vector_path'
+        file_registry = delineateit.execute(args)
+
+        # assert output flow direction raster is in the same projection as AOI
+        flow_dir_path = file_registry['flow_direction']
+        flow_dir_info = pygeoprocessing.get_raster_info(flow_dir_path)
+        self.assertEqual(flow_dir_info['projection_wkt'], vector_wkt)

@@ -15,6 +15,7 @@ from osgeo import osr
 
 from natcap.invest import gettext
 from natcap.invest import spec
+from natcap.invest import utils
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
 from . import delineateit_core
@@ -27,18 +28,20 @@ MODEL_SPEC = spec.ModelSpec(
     userguide="delineateit.html",
     validate_spatial_overlap=True,
     different_projections_ok=True,
+    default_projection_id="dem_path",
     aliases=(),
     module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["dem_path", "detect_pour_points", "outlet_vector_path", "skip_invalid_geometry"],
-        ["snap_points", "flow_threshold", "snap_distance"]
+        ["snap_points", "flow_threshold", "snap_distance"],
+        ["target_projection_id"]
     ],
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.PROJECTED_DEM,
+        spec.DEM,
         spec.BooleanInput(
             id="detect_pour_points",
             name=gettext("detect pour points"),
@@ -110,9 +113,22 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required=False,
             allowed="not detect_pour_points"
-        )
+        ),
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            about=spec.TARGET_PROJECTION.about + gettext(
+                "We do not recommend deviating from the projection of the "
+                "DEM, as this may cause unexpected results.")
+        ))
     ],
     outputs=[
+        spec.SingleBandRasterOutput(
+            id="reprojected_dem",
+            path="reprojected_dem.tif",
+            about=gettext(
+                "DEM reprojected and resampled to match Target Projection."),
+            data_type=float,
+            units=u.meter
+        ),
         spec.FILLED_DEM,
         spec.SingleBandRasterOutput(
             id="flow_direction",
@@ -234,6 +250,9 @@ def execute(args):
         args['detect_pour_points'] (bool): Whether to run the pour point
             detection algorithm. If True, detected pour points are used instead
             of outlet_vector_path geometries. Default: False
+        args['target_projection_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SEPC.inputs`` that defines the target
+            projection.
         args['n_workers'] (int): The number of worker processes to use with
             taskgraph. Defaults to -1 (no parallelism).
 
@@ -242,13 +261,36 @@ def execute(args):
 
     """
     args, file_registry, graph = MODEL_SPEC.setup(args)
+    args = MODEL_SPEC.preprocess_spatial_reference_args(args)
+    target_projection_path = args[args['target_projection_id']]
+
+    fill_pits_dependent_task_list = []
+    if args['target_projection_id'] != 'dem_path':
+        target_projection_wkt = utils.get_raster_or_vector_projection(
+            target_projection_path)
+        target_pixelsize_value = utils.get_raster_pixel_size_in_target_proj_units(
+            args['dem_path'], target_projection_wkt)
+        dem_reproject_task = graph.add_task(
+            pygeoprocessing.warp_raster,
+            args=(args['dem_path'],
+                  target_pixelsize_value,
+                  file_registry['reprojected_dem'],
+                  'cubic'),
+            kwargs={'target_projection_wkt': target_projection_wkt},
+            target_path_list=[file_registry['reprojected_dem']],
+            task_name='reproject_dem')
+        fill_pits_dependent_task_list.append(dem_reproject_task)
+        dem = file_registry['reprojected_dem']
+    else:
+        dem = args['dem_path']
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,
-        args=((args['dem_path'], 1),
+        args=((dem, 1),
               file_registry['filled_dem']),
         kwargs={'working_dir': args['workspace_dir']},
         target_path_list=[file_registry['filled_dem']],
+        dependent_task_list=fill_pits_dependent_task_list,
         task_name='fill_pits')
 
     flow_dir_task = graph.add_task(

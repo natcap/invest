@@ -2718,7 +2718,9 @@ class ModelSpec(ImmutableBaseModel):
         """
         args_copy = args.copy()
         if not args.get('target_projection_id'):
-            args_copy['target_projection_id'] = self.get_default_projection_input().id
+            default_projection_input = self.get_default_projection_input()
+            if default_projection_input:
+                args_copy['target_projection_id'] = default_projection_input.id
 
         if not args.get('target_pixelsize_id'):
             default_pixelsize_input = self.get_default_pixelsize_input()

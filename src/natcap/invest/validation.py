@@ -179,6 +179,8 @@ def validate(args, model_spec):
             args, model_spec)
         if options:
             args['target_pixelsize_id'] = options[0].key
+    # Need to set default spatial dropdown args here or they dont get validated
+    args = model_spec.preprocess_spatial_reference_args(args)
 
     # Phase 1: Check whether an input is required and has a value
     missing_keys = set()
