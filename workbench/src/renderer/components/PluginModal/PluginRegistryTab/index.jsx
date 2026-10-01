@@ -25,30 +25,32 @@ export default function PluginRegistryTab(props) {
     needsMSVC,
     downloadMSVC,
   } = props;
-  const [installedPluginNames, setInstalledPluginNames] = useState([]);
-  const [installedPluginNamesVersions, setInstalledPluginNamesVersions] = useState([]);
+  const [installedPluginSources, setInstalledPluginSources] = useState([]);
+  const [installedPluginSourcesVersions, setInstalledPluginSourcesVersions] = useState([]);
   const [plugins, setPlugins] = useState({});
 
   const { t } = useTranslation();
 
   useEffect(() => {
-    let installedPluginNameList = [];
-    let installedPluginNameVersionList = [];
+    let installedPluginSourceList = [];
+    let installedPluginSourceVersionList = [];
     for (const pluginID in installedPlugins) {
       let p = installedPlugins[pluginID];
-      if (p.hasOwnProperty('packageName')) {
-        installedPluginNameVersionList.push(p.packageName + "@" + p.version);
-        installedPluginNameList.push(p.packageName);
+      if (p.hasOwnProperty('source') && p.source !== undefined) {
+        if (p.source.startsWith("git")) {
+          installedPluginSourceVersionList.push(p.source);
+          installedPluginSourceList.push(p.source.split("@")[0]);
+        }
       }
     };
-    setInstalledPluginNames(installedPluginNameList);
-    setInstalledPluginNamesVersions(installedPluginNameVersionList);
+    setInstalledPluginSources(installedPluginSourceList);
+    setInstalledPluginSourcesVersions(installedPluginSourceVersionList);
   }, [installedPlugins]);
 
   function getInstallStatus(plugin) {
-    if (installedPluginNamesVersions.includes(plugin.invest_package_name + '@' + plugin.version)) {
+    if (installedPluginSourcesVersions.includes("git+" + plugin.repository_url + '@' + plugin.version)) {
       return thisVersionInstalled;
-    } else if (installedPluginNames.includes(plugin.invest_package_name)) {
+    } else if (installedPluginSources.includes("git+" + plugin.repository_url)) {
       return anotherVersionInstalled;
     } else {
       return notInstalled;
