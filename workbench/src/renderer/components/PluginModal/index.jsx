@@ -202,6 +202,7 @@ export default function PluginModal(props) {
         opErrorMsg: "",
         opPluginID: pluginToRemove
       })
+      updateInvestList();
     }).catch((err) => {
       setAddRemoveState({
         opType: pluginUninstall,
@@ -491,7 +492,7 @@ export default function PluginModal(props) {
       modalFooter = (
         <>
           <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
-          {t("Installation in progress...")}{statusMessage}
+          {t("Installation in progress: ")}{statusMessage}
           <Button
             className="plugin-submit-btn"
             onClick={jumpToInstallMsg}
