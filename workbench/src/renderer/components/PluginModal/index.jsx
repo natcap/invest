@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
+import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Modal from 'react-bootstrap/Modal';
 import Nav from 'react-bootstrap/Nav';
@@ -339,100 +340,102 @@ export default function PluginModal(props) {
         activeKey={tabKey}
         onSelect={(k) => setTabKey(k)}
       >
-        <Row>
-          <Col sm={2} className="plugin-modal-nav">
-            <Nav variant="pills" className="flex-column">
-              <Nav.Item className="plugin-modal-nav-item">
-                <Nav.Link eventKey="registry">{t('Plugin Registry')}</Nav.Link>
-              </Nav.Item>
-              <Nav.Item className="plugin-modal-nav-item">
-                <Nav.Link eventKey="installed">{t('Installed Plugins')}</Nav.Link>
-              </Nav.Item>
-              <Nav.Item className="plugin-modal-nav-item">
-                <Nav.Link eventKey="manual">{t('Manual Install')}</Nav.Link>
-              </Nav.Item>
-              <Nav.Item className="plugin-modal-nav-item">
-                <Nav.Link eventKey="advanced">{t('Advanced Settings')}</Nav.Link>
-              </Nav.Item>
-              <Nav.Item className="plugin-modal-nav-item">
-                <Nav.Link eventKey="about">{t('About Plugins')}</Nav.Link>
-              </Nav.Item>
-            </Nav>
-          </Col>
-          <Col sm={10} className="plugin-modal-pane-height">
-            <Tab.Content>
-              <Tab.Pane eventKey="registry">
-                {fetchError ? (
-                  <div className="registry-fetch-error">
-                    <MdOutlineWarningAmber className="registry-warning-icon" />
-                    <p>
-                      {t(`An error occurred when loading the Plugin Registry data.
-                        Please check your internet connection, then try again.
-                        If the problem persists, consider reporting it on the NatCap Community Forum.`)}
-                    </p>
-                    <Button
-                      className="me-2"
-                      onClick={handleRetryFetchRegistryData}
-                    >
-                      {t('Retry')}
-                    </Button>
-                  </div>
-                ) : registryData.length ? (
-                  <PluginRegistryTab
-                    registryData={registryData}
-                    activePluginKey={activePluginKey}
-                    handlePluginClick={handlePluginClick}
-                    fetchError={fetchError}
-                    installedPlugins={plugins}
+        <Container>
+          <Row>
+            <Col sm={2} className="plugin-modal-nav">
+              <Nav variant="pills">
+                <Nav.Item className="plugin-modal-nav-item">
+                  <Nav.Link eventKey="registry">{t('Plugin Registry')}</Nav.Link>
+                </Nav.Item>
+                <Nav.Item className="plugin-modal-nav-item">
+                  <Nav.Link eventKey="installed">{t('Installed Plugins')}</Nav.Link>
+                </Nav.Item>
+                <Nav.Item className="plugin-modal-nav-item">
+                  <Nav.Link eventKey="manual">{t('Manual Install')}</Nav.Link>
+                </Nav.Item>
+                <Nav.Item className="plugin-modal-nav-item">
+                  <Nav.Link eventKey="advanced">{t('Advanced Settings')}</Nav.Link>
+                </Nav.Item>
+                <Nav.Item className="plugin-modal-nav-item">
+                  <Nav.Link eventKey="about">{t('About Plugins')}</Nav.Link>
+                </Nav.Item>
+              </Nav>
+            </Col>
+            <Col sm={10} className="plugin-modal-pane">
+              <Tab.Content>
+                <Tab.Pane eventKey="registry" className="registry-pane-with-tabs">
+                  {fetchError ? (
+                    <div className="registry-fetch-error">
+                      <MdOutlineWarningAmber className="registry-warning-icon" />
+                      <p>
+                        {t(`An error occurred when loading the Plugin Registry data.
+                          Please check your internet connection, then try again.
+                          If the problem persists, consider reporting it on the NatCap Community Forum.`)}
+                      </p>
+                      <Button
+                        className="me-2"
+                        onClick={handleRetryFetchRegistryData}
+                      >
+                        {t('Retry')}
+                      </Button>
+                    </div>
+                  ) : registryData.length ? (
+                    <PluginRegistryTab
+                      registryData={registryData}
+                      activePluginKey={activePluginKey}
+                      handlePluginClick={handlePluginClick}
+                      fetchError={fetchError}
+                      installedPlugins={plugins}
+                      addPlugin={addPlugin}
+                      addRemoveState={addRemoveState}
+                      statusMessage={statusMessage}
+                      needsMSVC={needsMSVC}
+                      downloadMSVC={downloadMSVC}
+                    />
+                  ) : (
+                    <p>{t('No plugins found.')}</p>
+                  )}
+                </Tab.Pane>
+                <Tab.Pane eventKey="installed">
+                  <InstalledPluginsTab
+                    plugins={plugins}
+                    removePlugin={removePlugin}
+                    addRemoveState={addRemoveState}
+                  />
+                </Tab.Pane>
+                <Tab.Pane eventKey="manual">
+                  <ManualInstallTab
                     addPlugin={addPlugin}
                     addRemoveState={addRemoveState}
                     statusMessage={statusMessage}
                     needsMSVC={needsMSVC}
                     downloadMSVC={downloadMSVC}
+                    dragOverHandler={dragOverHandler}
+                    dragEnterHandler={dragEnterHandler}
+                    dragLeavingHandler={dragLeavingHandler}
+                    selectDirectory={selectDirectory}
+                    getDroppedFilePath={getDroppedFilePath}
+                    rejectDropHandler={rejectDropHandler}
                   />
-                ) : (
-                  <p>{t('No plugins found.')}</p>
-                )}
-              </Tab.Pane>
-              <Tab.Pane eventKey="installed">
-                <InstalledPluginsTab
-                  plugins={plugins}
-                  removePlugin={removePlugin}
-                  addRemoveState={addRemoveState}
-                />
-              </Tab.Pane>
-              <Tab.Pane eventKey="manual">
-                <ManualInstallTab
-                  addPlugin={addPlugin}
-                  addRemoveState={addRemoveState}
-                  statusMessage={statusMessage}
-                  needsMSVC={needsMSVC}
-                  downloadMSVC={downloadMSVC}
-                  dragOverHandler={dragOverHandler}
-                  dragEnterHandler={dragEnterHandler}
-                  dragLeavingHandler={dragLeavingHandler}
-                  selectDirectory={selectDirectory}
-                  getDroppedFilePath={getDroppedFilePath}
-                  rejectDropHandler={rejectDropHandler}
-                />
-              </Tab.Pane>
-              <Tab.Pane eventKey="advanced">
-                <AdvancedSettingsTab
-                  plugins={plugins}
-                  dragOverHandler={dragOverHandler}
-                  dragEnterHandler={dragEnterHandler}
-                  dragLeavingHandler={dragLeavingHandler}
-                  selectFile={selectFile}
-                  selectDirectory={selectDirectory}
-                  getDroppedFilePath={getDroppedFilePath}
-                />
-              </Tab.Pane>
-              <Tab.Pane eventKey="about">
-                <AboutTab />
-              </Tab.Pane>
-            </Tab.Content>
-          </Col>
-        </Row>
+                </Tab.Pane>
+                <Tab.Pane eventKey="advanced">
+                  <AdvancedSettingsTab
+                    plugins={plugins}
+                    dragOverHandler={dragOverHandler}
+                    dragEnterHandler={dragEnterHandler}
+                    dragLeavingHandler={dragLeavingHandler}
+                    selectFile={selectFile}
+                    selectDirectory={selectDirectory}
+                    getDroppedFilePath={getDroppedFilePath}
+                  />
+                </Tab.Pane>
+                <Tab.Pane eventKey="about">
+                  <AboutTab />
+                </Tab.Pane>
+              </Tab.Content>
+            </Col>
+          </Row>
+        </Container>
       </Tab.Container>
     </Modal.Body>
   );

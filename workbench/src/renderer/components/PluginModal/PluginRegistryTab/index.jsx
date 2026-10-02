@@ -63,9 +63,9 @@ export default function PluginRegistryTab(props) {
       activeKey={activePluginKey}
       onSelect={(k) => handlePluginClick(k)}
     >
-      <Row className="plugin-modal-pane-height">
+      <Row>
         <Col sm={3} className="plugin-modal-nav">
-          <Nav variant="pills" className="flex-column">
+          <Nav variant="pills">
             {registryData.map((pluginObject, index) =>
               <Nav.Item
                 className="plugin-modal-nav-item"
@@ -78,7 +78,7 @@ export default function PluginRegistryTab(props) {
             )}
           </Nav>
         </Col>
-        <Col sm={9} className="registry-pane">
+        <Col sm={9} className="plugin-modal-pane registry-pane">
           <Tab.Content>
             {registryData.map((pluginObject, index) =>
               <Tab.Pane
