@@ -2,7 +2,7 @@ import React from 'react';
 import { ipcRenderer } from 'electron';
 import '@testing-library/jest-dom';
 import {
-  within, render, waitFor, fireEvent, createEvent,
+  act, within, render, waitFor, fireEvent, createEvent,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -19,14 +19,58 @@ jest.mock('../../src/renderer/server_requests');
 
 const PLUGIN_SETTING_ITEM = {
   foo: {
+    modelID: 'foo',
     modelTitle: 'Foo',
     type: 'plugin',
-    version: '1.0',
+    source: 'git+example_url.git@1.0',
+    sourceType: 'git_url',
     env: 'foo/bar/baz/',
+    projectName: 'invest_foo_plugin',
+    version: '1.0',
   },
 };
 
-describe('Manage Plugins modal', () => {
+const PLUGIN_REGISTRY_DATA = {
+  'data': [
+    {
+      'pyproject_toml_project_name': 'invest_routedem_tfa_range',
+      'invest_package_name': 'invest_routedem_tfa_range',
+      'plugin_name': 'RouteDEM with TFA Range',
+      'version': '1.0.0',
+      'description': 'InVEST RouteDEM variant that computes outputs for a range of Threshold Flow Accumulation (TFA) values in a single run.',
+      'authors': [],
+      'maintainers': ['Natural Capital Alliance Software Team'],
+      'registry_url': 'https://natcap.github.io/invest-plugin-registry/plugins/invest_routedem_tfa_range.html',
+      'repository_url': 'https://github.com/natcap/invest-routedem-tfa-range.git',
+      'documentation_url': 'https://github.com/natcap/invest-routedem-tfa-range/blob/main/README.md',
+      'issues_url': 'https://github.com/natcap/invest-routedem-tfa-range/issues',
+      'license': 'Apache-2.0',
+      'plugin_type': 'invest_model_variant',
+      'keywords': ['RouteDEM', 'hydrology', 'streams', 'routing'],
+      'date_last_updated': '2026-06-11T14:22:10Z'
+    }, {
+      'pyproject_toml_project_name': 'invest_gcm_downscaling',
+      'invest_package_name': 'invest_gcm_downscaling',
+      'plugin_name': 'GCM Downscaling',
+      'version': '1.0.1',
+      'description': 'An InVEST plugin for the GCM Downscaling model, which downscales gridded precipitation data from CMIP6 General Circulation Models.',
+      'authors': [],
+      'maintainers': ['Natural Capital Alliance Software Team'],
+      'registry_url': 'https://natcap.github.io/invest-plugin-registry/plugins/invest_gcm_downscaling.html',
+      'repository_url': 'https://github.com/natcap/invest-gcm-downscaling.git',
+      'documentation_url': 'https://github.com/natcap/invest-gcm-downscaling/blob/main/README.md',
+      'issues_url': 'https://github.com/natcap/invest-gcm-downscaling/issues',
+      'license': 'Apache-2.0',
+      'plugin_type': 'new_model',
+      'keywords': ['general circulation model', 'climate', 'precipitation', 'cmip6'],
+      'date_last_updated': '2026-06-16T23:27:41Z'
+    }
+  ]
+};
+
+describe('Plugin Manager modal', () => {
+  let fetchMock;
+
   beforeEach(() => {
     getSpec.mockResolvedValue({
       model_id: 'foo',
@@ -53,6 +97,8 @@ describe('Manage Plugins modal', () => {
     });
     fetchValidation.mockResolvedValue([]);
     getInvestModelIDs.mockResolvedValue({});
+
+    fetchMock = jest.spyOn(global, "fetch").mockImplementation(PLUGIN_REGISTRY_DATA);
   });
 
   describe('"Add a plugin" form validation', () => {
@@ -73,20 +119,26 @@ describe('Manage Plugins modal', () => {
 
     test('Should render an error on submit if git URL is empty', async () => {
       const {
-        findByText, findByLabelText, findByRole,
+        findByText, findByLabelText, findByRole, findAllByRole,
       } = render(<App />);
 
-      await userEvent.click(await findByRole('button', { name: 'menu' }));
-      const managePluginsButton = await findByText(/Manage plugins/i);
-      await userEvent.click(managePluginsButton);
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+      await userEvent.click(manualInstallNav);
 
-      const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[2];
+
+      const userAcknowledgmentCheckbox = await within(manualInstallTab).findByLabelText(
+        /I acknowledge and accept/i);
       await userEvent.click(userAcknowledgmentCheckbox);
 
-      const submitButton = await findByText('Add');
+      const submitButton = await within(manualInstallTab).findByText('Install');
       await userEvent.click(submitButton);
 
-      const missingUrlError = await findByText('Error: URL is required.');
+      const missingUrlError = await within(manualInstallTab).findByText(
+        'Error: URL is required.');
       expect(missingUrlError).toBeInTheDocument();
 
       expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
@@ -94,23 +146,29 @@ describe('Manage Plugins modal', () => {
 
     test('Should render an error on submit if local path is empty', async () => {
       const {
-        findByText, findByLabelText, findByRole,
+        findByText, findByLabelText, findByRole, findAllByRole,
       } = render(<App />);
 
-      await userEvent.click(await findByRole('button', { name: 'menu' }));
-      const managePluginsButton = await findByText(/Manage plugins/i);
-      await userEvent.click(managePluginsButton);
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+      await userEvent.click(manualInstallNav);
 
-      const sourceType = await findByLabelText('Install from');
-      await userEvent.selectOptions(sourceType, 'local path');
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[2];
 
-      const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
+      await userEvent.click(await within(manualInstallTab).findByRole(
+        'radio', { name: 'local path' }));
+
+      const userAcknowledgmentCheckbox = await within(manualInstallTab).findByLabelText(
+        /I acknowledge and accept/i);
       await userEvent.click(userAcknowledgmentCheckbox);
 
-      const submitButton = await findByText('Add');
+      const submitButton = await within(manualInstallTab).findByText('Install');
       await userEvent.click(submitButton);
 
-      const missingPathError = await findByText('Error: Path is required.');
+      const missingPathError = await within(manualInstallTab).findByText(
+        'Error: Path is required.');
       expect(missingPathError).toBeInTheDocument();
 
       expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
@@ -118,20 +176,25 @@ describe('Manage Plugins modal', () => {
 
     test('Should render an error on submit if user acknowledgment is unchecked', async () => {
       const {
-        findByText, findByLabelText, findByRole,
+        findByText, findByLabelText, findByRole, findAllByRole,
       } = render(<App />);
 
-      await userEvent.click(await findByRole('button', { name: 'menu' }));
-      const managePluginsButton = await findByText(/Manage plugins/i);
-      await userEvent.click(managePluginsButton);
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+      await userEvent.click(manualInstallNav);
 
-      const urlField = await findByLabelText('Git URL');
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[2];
+
+      const urlField = await within(manualInstallTab).findByLabelText('Git URL');
       await userEvent.type(urlField, 'fake url', { delay: 0 });
 
-      const submitButton = await findByText('Add');
+      const submitButton = await within(manualInstallTab).findByText('Install');
       await userEvent.click(submitButton);
 
-      const userAcknowledgmentError = await findByText(/Error: Before installing a plugin/i);
+      const userAcknowledgmentError = await within(manualInstallTab).findByText(
+        /Error: Before installing a plugin/i);
       expect(userAcknowledgmentError).toBeInTheDocument();
 
       expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
@@ -152,25 +215,31 @@ describe('Manage Plugins modal', () => {
       return Promise.resolve();
     });
     const {
-      findByText, findByLabelText, findByRole,
+      findByText, findByLabelText, findByRole, findAllByRole,
     } = render(<App />);
 
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    const managePluginsButton = await findByText(/Manage plugins/i);
-    await userEvent.click(managePluginsButton);
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+    await userEvent.click(manualInstallNav);
 
-    const urlField = await findByLabelText('Git URL');
+    const modal = await findByRole('dialog');
+    const tabpanels = await within(modal).findAllByRole('tabpanel');
+    const manualInstallTab = tabpanels[2];
+
+    const urlField = await within(manualInstallTab).findByLabelText('Git URL');
     await userEvent.type(urlField, 'fake url', { delay: 0 });
-    const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
+    const userAcknowledgmentCheckbox = await within(manualInstallTab).findByLabelText(/I acknowledge and accept/i);
     await userEvent.click(userAcknowledgmentCheckbox);
 
-    const submitButton = await findByText('Add');
+    const submitButton = await within(manualInstallTab).findByText('Install');
     // The following click event is not awaited because we want to expect the
     // 'loading' status, which  is only present before the click handler
     // fully resolves.
-    userEvent.click(submitButton);
-    await findByText('Adding plugin');
+    act(() => {
+      userEvent.click(submitButton);
+    });
 
+    await within(manualInstallTab).findByText('Installing...');
     await waitFor(() => {
       const calledChannels = spy.mock.calls.map((call) => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
@@ -202,26 +271,34 @@ describe('Manage Plugins modal', () => {
       return Promise.resolve();
     });
     const {
-      findByText, findByLabelText, findByRole,
+      findByText, findByLabelText, findByRole, findAllByRole,
     } = render(<App />);
 
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    const managePluginsButton = await findByText(/Manage plugins/i);
-    await userEvent.click(managePluginsButton);
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+    await userEvent.click(manualInstallNav);
 
-    const urlField = await findByLabelText('Git URL');
+    const modal = await findByRole('dialog');
+    const tabpanels = await within(modal).findAllByRole('tabpanel');
+    const manualInstallTab = tabpanels[2];
+
+    const urlField = await within(manualInstallTab).findByLabelText('Git URL');
     await userEvent.type(urlField, 'fake url', { delay: 0 });
-    const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
+    const userAcknowledgmentCheckbox = await within(manualInstallTab).findByLabelText(
+      /I acknowledge and accept/i);
     await userEvent.click(userAcknowledgmentCheckbox);
 
-    const submitButton = await findByText('Add');
+    const submitButton = await within(manualInstallTab).findByText('Install');
     await userEvent.click(submitButton);
+    // act(() => {
+    //   userEvent.click(submitButton);
+    // });
 
     await waitFor(() => {
       const calledChannels = spy.mock.calls.map((call) => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
     });
-    await findByText(new RegExp(errorString));
+    await within(manualInstallTab).findByText(new RegExp(errorString));
   });
 
   test('Open and run a plugin', async () => {
@@ -274,28 +351,30 @@ describe('Manage Plugins modal', () => {
       return Promise.resolve();
     });
     const {
-      findByText, findByRole, getByRole, findByLabelText, queryByRole,
+      findByText, findByRole, getByRole, findByLabelText, queryByRole, findAllByRole,
     } = render(<App />);
 
     // open the plugin first, to make sure it doesn't cause a crash when removing
     const pluginButton = await findByRole('button', { name: /Foo/ });
     await userEvent.click(pluginButton);
 
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    const managePluginsButton = await findByText(/Manage plugins/i);
-    await userEvent.click(managePluginsButton);
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const installedPluginsNav = await findByRole('tab', { name: /installed plugins/i });
+    await userEvent.click(installedPluginsNav);
 
-    const pluginDropdown = await findByLabelText('Plugin name');
-    await userEvent.selectOptions(pluginDropdown, [getByRole('option', { name: 'Foo (1.0)' })]);
+    const modal = await findByRole('dialog');
+    const tabpanels = await within(modal).findAllByRole('tabpanel');
+    const manualInstallTab = tabpanels[1];
 
-    const submitButton = await findByText('Remove');
+    const submitButton = await within(manualInstallTab).findByText('Uninstall');
     await userEvent.click(submitButton);
     await waitFor(() => {
       expect(spy.mock.calls.map((call) => call[0])).toContain(ipcMainChannels.REMOVE_PLUGIN);
     });
     // expect the plugin to have disappeared from the model list and the dropdown
     await waitFor(() => expect(queryByRole('button', { name: /Foo/ })).toBeNull());
-    await waitFor(() => expect(queryByRole('option', { name: /Foo/ })).toBeNull());
+    await waitFor(() => expect(within(manualInstallTab).queryByRole(
+      'heading', { name: /Foo/ })).toBeNull());
   });
 
   test('Change the conda executable', async () => {
@@ -314,13 +393,13 @@ describe('Manage Plugins modal', () => {
       return Promise.resolve();
     });
     const {
-      findByText, findByRole, findByLabelText,
+      findByText, findByRole, findByLabelText, findAllByRole,
     } = render(<App />);
 
     const spy = jest.spyOn(ipcRenderer, 'send');
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    const managePluginsButton = await findByText(/Manage plugins/i);
-    await userEvent.click(managePluginsButton);
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
+    await userEvent.click(advancedSettingsNav);
 
     const input = await findByLabelText('Conda or mamba executable');
     await userEvent.clear(input);
@@ -335,14 +414,15 @@ describe('Manage Plugins modal', () => {
     fireEvent.dragEnter(input, {dataTransfer: {files: [file]}});
     expect(input).toHaveClass('input-dragging');
     fireEvent.drop(input, {dataTransfer: {files: [file]}});
-  
+
     await waitFor(() => {
       expect(input).not.toHaveClass('input-dragging');
       expect(input).toHaveValue('my-conda');
       expect(input).toHaveFocus();
     });
 
-    const div = await findByLabelText('Configure conda executable (Advanced)')
+    const div = await findByLabelText(
+      'Configure conda executable')
     const saveButton = await within(div).findByRole('button', { name: /Save/ });
     await userEvent.click(saveButton);
     await waitFor(() => {
@@ -374,15 +454,15 @@ describe('Manage Plugins modal', () => {
       return Promise.resolve();
     });
     const {
-      findByText, findByRole, findByLabelText
+      findByText, findByRole, findByLabelText,
     } = render(<App />);
 
     const spy = jest.spyOn(ipcRenderer, 'send');
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    const managePluginsButton = await findByText(/Manage plugins/i);
-    await userEvent.click(managePluginsButton);
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
+    await userEvent.click(advancedSettingsNav);
 
-    const div = await findByLabelText('Configure plugin environments (Advanced)')
+    const div = await findByLabelText('Configure plugin environments')
     const input = await within(div).findByLabelText('foo');
     expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env);
     await userEvent.clear(input);
@@ -417,35 +497,38 @@ describe('Manage Plugins modal', () => {
       } else if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
       }
-  
+
       return Promise.resolve();
     });
-  
+
     const {
-      findByText, findByRole, findByLabelText,
+      findByText, findByRole, findByLabelText, findAllByRole,
     } = render(<App />);
-  
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    await userEvent.click(await findByText(/Manage plugins/i));
-  
-    await userEvent.selectOptions(
-      await findByLabelText('Install from'),
-      'local path'
-    );
-  
-    const input = await findByLabelText('Local absolute path');
+
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+    await userEvent.click(manualInstallNav);
+
+    const modal = await findByRole('dialog');
+    const tabpanels = await within(modal).findAllByRole('tabpanel');
+    const manualInstallTab = tabpanels[2];
+
+    await userEvent.click(await within(manualInstallTab).findByRole(
+      'radio', { name: 'local path' }));
+
+    const input = await within(manualInstallTab).findByLabelText('Local absolute path');
     const file = new File([], 'plugin-dir');
-  
+
     fireEvent.dragEnter(input, {
       dataTransfer: { files: [file] },
     });
-  
+
     expect(input).toHaveClass('input-dragging');
-  
+
     fireEvent.drop(input, {
       dataTransfer: { files: [file] },
     });
-  
+
     await waitFor(() => {
       expect(input).not.toHaveClass('input-dragging');
       expect(input).toHaveValue('plugin-dir');
@@ -465,38 +548,39 @@ describe('Manage Plugins modal', () => {
       } else if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
       }
-  
+
       return Promise.resolve();
     });
-  
+
     const {
       findByText, findByRole, findByLabelText,
     } = render(<App />);
-  
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    await userEvent.click(await findByText(/Manage plugins/i));
-  
+
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
+    await userEvent.click(advancedSettingsNav);
+
     const div = await findByLabelText(
-      'Configure plugin environments (Advanced)'
+      'Configure plugin environments'
     );
     const input = await within(div).findByLabelText('foo');
-  
+
     const file = new File([], 'plugin-environment');
-  
+
     fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       },
     });
-  
+
     expect(input).toHaveClass('input-dragging');
-  
+
     fireEvent.drop(input, {
       dataTransfer: {
         files: [file],
       },
     });
-  
+
     await waitFor(() => {
       expect(input).not.toHaveClass('input-dragging');
       expect(input).toHaveValue('plugin-environment');
@@ -513,39 +597,42 @@ describe('Manage Plugins modal', () => {
       } else if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
       }
-  
+
       return Promise.resolve();
     });
-  
+
     const {
       findByText, findByRole, findByLabelText,
     } = render(<App />);
-  
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    await userEvent.click(await findByText(/Manage plugins/i));
-  
-    await userEvent.selectOptions(
-      await findByLabelText('Install from'),
-      'path'
-    );
-  
-    const input = await findByLabelText('Local absolute path');
+
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+    await userEvent.click(manualInstallNav);
+
+    const modal = await findByRole('dialog');
+    const tabpanels = await within(modal).findAllByRole('tabpanel');
+    const manualInstallTab = tabpanels[2];
+
+    await userEvent.click(await within(manualInstallTab).findByRole(
+      'radio', { name: 'local path' }));
+
+    const input = await within(manualInstallTab).findByLabelText('Local absolute path');
     const file = new File([], 'plugin-directory');
-  
+
     fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       },
     });
-  
+
     expect(input).toHaveClass('input-dragging');
-  
+
     fireEvent.dragLeave(input, {
       dataTransfer: {
         files: [file],
       },
     });
-  
+
     expect(input).not.toHaveClass('input-dragging');
   });
 
@@ -558,30 +645,35 @@ describe('Manage Plugins modal', () => {
       } else if (channel === ipcMainChannels.HAS_MSVC) {
         return Promise.resolve(true);
       }
-  
+
       return Promise.resolve();
     });
-  
+
     const {
       findByText, findByRole, findByLabelText,
     } = render(<App />);
-  
-    await userEvent.click(await findByRole('button', { name: 'menu' }));
-    await userEvent.click(await findByText(/Manage plugins/i));
-  
-    const input = await findByLabelText('Git URL');
-  
+
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+    await userEvent.click(manualInstallNav);
+
+    const modal = await findByRole('dialog');
+    const tabpanels = await within(modal).findAllByRole('tabpanel');
+    const manualInstallTab = tabpanels[2];
+
+    const input = await within(manualInstallTab).findByLabelText('Git URL');
+
     const file = new File([], 'plugin-directory');
     const dropEvent = createEvent.drop(input, {
       dataTransfer: {
         files: [file],
       },
     });
-    
+
     const preventDefaultSpy = jest.spyOn(dropEvent, 'preventDefault');
-    
+
     fireEvent(input, dropEvent);
-    
+
     expect(preventDefaultSpy).toHaveBeenCalled();
     expect(input).toHaveValue('');
   });
