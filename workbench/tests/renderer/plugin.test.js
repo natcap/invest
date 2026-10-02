@@ -14,6 +14,7 @@ import {
   fetchValidation
 } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
+import * as modalUtils from '../../src/renderer/components/PluginModal/PluginModalUtils';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -27,50 +28,75 @@ const PLUGIN_SETTING_ITEM = {
     env: 'foo/bar/baz/',
     projectName: 'invest_foo_plugin',
     version: '1.0',
+  }
+}
+const MULTIPLE_PLUGINS_SETTING_ITEM = {
+  ...PLUGIN_SETTING_ITEM,
+  bar: {
+    modelID: 'bar',
+    modelTitle: 'Bar',
+    type: 'plugin',
+    source: 'git+bar_example_url.git@1.0',
+    sourceType: 'git_url',
+    env: 'bar/baz/',
+    projectName: 'invest_bar_plugin',
+    version: '1.0',
   },
 };
 
-const PLUGIN_REGISTRY_DATA = {
-  'data': [
-    {
-      'pyproject_toml_project_name': 'invest_routedem_tfa_range',
-      'invest_package_name': 'invest_routedem_tfa_range',
-      'plugin_name': 'RouteDEM with TFA Range',
-      'version': '1.0.0',
-      'description': 'InVEST RouteDEM variant that computes outputs for a range of Threshold Flow Accumulation (TFA) values in a single run.',
-      'authors': [],
-      'maintainers': ['Natural Capital Alliance Software Team'],
-      'registry_url': 'https://natcap.github.io/invest-plugin-registry/plugins/invest_routedem_tfa_range.html',
-      'repository_url': 'https://github.com/natcap/invest-routedem-tfa-range.git',
-      'documentation_url': 'https://github.com/natcap/invest-routedem-tfa-range/blob/main/README.md',
-      'issues_url': 'https://github.com/natcap/invest-routedem-tfa-range/issues',
-      'license': 'Apache-2.0',
-      'plugin_type': 'invest_model_variant',
-      'keywords': ['RouteDEM', 'hydrology', 'streams', 'routing'],
-      'date_last_updated': '2026-06-11T14:22:10Z'
-    }, {
-      'pyproject_toml_project_name': 'invest_gcm_downscaling',
-      'invest_package_name': 'invest_gcm_downscaling',
-      'plugin_name': 'GCM Downscaling',
-      'version': '1.0.1',
-      'description': 'An InVEST plugin for the GCM Downscaling model, which downscales gridded precipitation data from CMIP6 General Circulation Models.',
-      'authors': [],
-      'maintainers': ['Natural Capital Alliance Software Team'],
-      'registry_url': 'https://natcap.github.io/invest-plugin-registry/plugins/invest_gcm_downscaling.html',
-      'repository_url': 'https://github.com/natcap/invest-gcm-downscaling.git',
-      'documentation_url': 'https://github.com/natcap/invest-gcm-downscaling/blob/main/README.md',
-      'issues_url': 'https://github.com/natcap/invest-gcm-downscaling/issues',
-      'license': 'Apache-2.0',
-      'plugin_type': 'new_model',
-      'keywords': ['general circulation model', 'climate', 'precipitation', 'cmip6'],
-      'date_last_updated': '2026-06-16T23:27:41Z'
-    }
-  ]
-};
+const PLUGIN_REGISTRY_DATA = [
+  {
+    'pyproject_toml_project_name': 'invest_bar_plugin',
+    'invest_package_name': 'invest_bar_plugin',
+    'plugin_name': 'Bar',
+    'version': '1.0.1',
+    'description': 'Bar baz (no foo).',
+    'authors': [],
+    'maintainers': ['Natural Capital Alliance Software Team'],
+    'registry_url': 'invest-plugin-registry/plugins/invest_bar_plugin.html',
+    'repository_url': 'bar_example_url.git',
+    'documentation_url': 'bar_example_url/README.md',
+    'issues_url': 'bar_example_url/issues',
+    'license': 'Apache-2.0',
+    'plugin_type': 'model_variant',
+    'keywords': ['bar', 'foo'],
+    'date_last_updated': '2026-06-16T23:27:41Z'
+  }, {
+    'pyproject_toml_project_name': 'invest_baz_plugin',
+    'invest_package_name': 'invest_baz_plugin',
+    'plugin_name': 'Baz',
+    'version': '2.0.2',
+    'description': 'Just baz.',
+    'authors': [],
+    'maintainers': ['Natural Capital Alliance Software Team'],
+    'registry_url': 'invest-plugin-registry/plugins/invest_baz_plugin.html',
+    'repository_url': 'baz_example_url.git',
+    'documentation_url': 'baz_example_url/README.md',
+    'issues_url': 'baz_example_url/issues',
+    'license': 'Apache-2.0',
+    'plugin_type': 'new_model',
+    'keywords': ['baz'],
+    'date_last_updated': '2026-06-16T23:27:41Z'
+  }, {
+    'pyproject_toml_project_name': 'invest_foo_plugin',
+    'invest_package_name': 'invest_foo_plugin',
+    'plugin_name': 'Foo',
+    'version': '1.0',
+    'description': 'Foo bar baz.',
+    'authors': [],
+    'maintainers': ['Natural Capital Alliance Software Team'],
+    'registry_url': 'invest-plugin-registry/plugins/invest_foo_plugin.html',
+    'repository_url': 'example_url.git',
+    'documentation_url': 'example_url/README.md',
+    'issues_url': 'example_url/issues',
+    'license': 'Apache-2.0',
+    'plugin_type': 'workflow',
+    'keywords': ['foo'],
+    'date_last_updated': '2026-06-16T23:27:41Z'
+  }
+];
 
 describe('Plugin Manager modal', () => {
-  let fetchMock;
-
   beforeEach(() => {
     getSpec.mockResolvedValue({
       model_id: 'foo',
@@ -98,10 +124,138 @@ describe('Plugin Manager modal', () => {
     fetchValidation.mockResolvedValue([]);
     getInvestModelIDs.mockResolvedValue({});
 
-    fetchMock = jest.spyOn(global, "fetch").mockImplementation(PLUGIN_REGISTRY_DATA);
+    modalUtils.fetchRegistryData = jest.fn().mockResolvedValue([]);
   });
 
-  describe('"Add a plugin" form validation', () => {
+  describe('PluginRegistryTab', () => {
+    let spy;
+
+    beforeEach(async () => {
+      modalUtils.fetchRegistryData = jest.fn()
+        .mockResolvedValue(PLUGIN_REGISTRY_DATA);
+
+      spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve(MULTIPLE_PLUGINS_SETTING_ITEM);
+          }
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+        return Promise.resolve();
+      });
+    });
+
+    test('Other version installed plugin shows message', async () => {
+      const {
+        findByText, findByRole, findAllByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const pluginRegistryTab = tabpanels[0];
+
+      const pluginDetailsPanes = await within(pluginRegistryTab)
+        .findAllByRole('tabpanel');
+      const barDetailsPane = pluginDetailsPanes[0];
+
+      const otherVersionInstalledMsg = await within(barDetailsPane)
+        .findByText('A different version of this plugin is already installed',
+           { exact: false });
+      expect(otherVersionInstalledMsg).toBeInTheDocument();
+      const installBtn = await within(barDetailsPane)
+        .queryByRole('button', { name: 'Install' });
+      expect(installBtn).toBeInTheDocument();
+    });
+
+    test('Uninstalled plugin shows install button', async () => {
+      const {
+        findByRole, findAllByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const pluginRegistryTab = tabpanels[0];
+
+      const pluginDetailsPanes = await within(pluginRegistryTab)
+        .findAllByRole('tabpanel');
+      const bazDetailsPane = pluginDetailsPanes[1];
+
+      const installBtn = await within(bazDetailsPane)
+        .queryByRole('button', { name: 'Install' });
+      expect(installBtn).toBeInTheDocument();
+    });
+
+    test('Installed plugin shows already installed message', async () => {
+      const {
+        findByText, findByRole, findAllByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const pluginRegistryTab = tabpanels[0];
+
+      const pluginDetailsPanes = await within(pluginRegistryTab)
+        .findAllByRole('tabpanel')
+      const fooDetailsPane = pluginDetailsPanes[2];
+
+      const alreadyInstalledMsg = await within(fooDetailsPane)
+        .findByText('This plugin is installed!');
+      expect(alreadyInstalledMsg).toBeInTheDocument();
+      await waitFor(() => expect(within(fooDetailsPane)
+        .queryByRole('button', { name: 'Install' })).toBeNull());
+    });
+  });
+
+  test('InstalledPluginsTab: Remove a plugin', async () => {
+    let plugins = PLUGIN_SETTING_ITEM;
+    const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'plugins') {
+          return Promise.resolve(plugins);
+        }
+      } else if (channel === ipcMainChannels.REMOVE_PLUGIN) {
+        // after REMOVE_PLUGIN there will be a subsequent call to GET_SETTING,
+        // so this effectively replaces the mocked settings data
+        plugins = {};
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
+        return 1111; // a fake PID
+      }
+      return Promise.resolve();
+    });
+    const {
+      findByText, findByRole, findAllByRole, queryByRole,
+    } = render(<App />);
+
+    // open the plugin first, to make sure it doesn't cause a crash when removing
+    const pluginButton = await findByRole('button', { name: /Foo/ });
+    await userEvent.click(pluginButton);
+
+    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+    const installedPluginsNav = await findByRole('tab', { name: /installed plugins/i });
+    await userEvent.click(installedPluginsNav);
+
+    const modal = await findByRole('dialog');
+    const tabpanels = await within(modal).findAllByRole('tabpanel');
+    const manualInstallTab = tabpanels[1];
+
+    const submitButton = await within(manualInstallTab).findByText('Uninstall');
+    await userEvent.click(submitButton);
+    await waitFor(() => {
+      expect(spy.mock.calls.map((call) => call[0])).toContain(ipcMainChannels.REMOVE_PLUGIN);
+    });
+    // expect the plugin to have disappeared from the model list and the dropdown
+    await waitFor(() => expect(queryByRole('button', { name: /Foo/ })).toBeNull());
+    await waitFor(() => expect(within(manualInstallTab)
+      .queryByRole('heading', { name: /Foo/ })).toBeNull());
+  });
+
+  describe('ManualInstallTab: form validation', () => {
     let spy;
 
     beforeEach(async () => {
@@ -130,15 +284,15 @@ describe('Plugin Manager modal', () => {
       const tabpanels = await within(modal).findAllByRole('tabpanel');
       const manualInstallTab = tabpanels[2];
 
-      const userAcknowledgmentCheckbox = await within(manualInstallTab).findByLabelText(
-        /I acknowledge and accept/i);
+      const userAcknowledgmentCheckbox = await within(manualInstallTab)
+        .findByLabelText(/I acknowledge and accept/i);
       await userEvent.click(userAcknowledgmentCheckbox);
 
       const submitButton = await within(manualInstallTab).findByText('Install');
       await userEvent.click(submitButton);
 
-      const missingUrlError = await within(manualInstallTab).findByText(
-        'Error: URL is required.');
+      const missingUrlError = await within(manualInstallTab)
+        .findByText('Error: URL is required.');
       expect(missingUrlError).toBeInTheDocument();
 
       expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
@@ -157,18 +311,18 @@ describe('Plugin Manager modal', () => {
       const tabpanels = await within(modal).findAllByRole('tabpanel');
       const manualInstallTab = tabpanels[2];
 
-      await userEvent.click(await within(manualInstallTab).findByRole(
-        'radio', { name: 'local path' }));
+      await userEvent.click(await within(manualInstallTab)
+        .findByRole('radio', { name: 'local path' }));
 
-      const userAcknowledgmentCheckbox = await within(manualInstallTab).findByLabelText(
-        /I acknowledge and accept/i);
+      const userAcknowledgmentCheckbox = await within(manualInstallTab)
+        .findByLabelText(/I acknowledge and accept/i);
       await userEvent.click(userAcknowledgmentCheckbox);
 
       const submitButton = await within(manualInstallTab).findByText('Install');
       await userEvent.click(submitButton);
 
-      const missingPathError = await within(manualInstallTab).findByText(
-        'Error: Path is required.');
+      const missingPathError = await within(manualInstallTab)
+        .findByText('Error: Path is required.');
       expect(missingPathError).toBeInTheDocument();
 
       expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
@@ -193,112 +347,417 @@ describe('Plugin Manager modal', () => {
       const submitButton = await within(manualInstallTab).findByText('Install');
       await userEvent.click(submitButton);
 
-      const userAcknowledgmentError = await within(manualInstallTab).findByText(
-        /Error: Before installing a plugin/i);
+      const userAcknowledgmentError = await within(manualInstallTab)
+        .findByText(/Error: Before installing a plugin/i);
       expect(userAcknowledgmentError).toBeInTheDocument();
 
       expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
     });
   });
 
-  test('Add a plugin: success', async () => {
-    // mocking the plugins data in the settings store is how
-    // we mock a successfull plugin installation
-    const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve(PLUGIN_SETTING_ITEM);
+  describe('ManualInstallTab: install behavior', () => {
+    test('Add a plugin: success', async () => {
+      // mocking the plugins data in the settings store is how
+      // we mock a successfull plugin installation
+      const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve(PLUGIN_SETTING_ITEM);
+          }
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
         }
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      }
-      return Promise.resolve();
+        return Promise.resolve();
+      });
+      const {
+        findByText, findByLabelText, findByRole, findAllByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+      await userEvent.click(manualInstallNav);
+
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[2];
+
+      const urlField = await within(manualInstallTab).findByLabelText('Git URL');
+      await userEvent.type(urlField, 'fake url', { delay: 0 });
+      const userAcknowledgmentCheckbox = await within(manualInstallTab)
+        .findByLabelText(/I acknowledge and accept/i);
+      await userEvent.click(userAcknowledgmentCheckbox);
+
+      const submitButton = await within(manualInstallTab).findByText('Install');
+      // The following click event is not awaited because we want to expect the
+      // 'loading' status, which  is only present before the click handler
+      // fully resolves.
+      act(() => {
+        userEvent.click(submitButton);
+      });
+
+      await within(manualInstallTab).findByText('Installing...');
+      await waitFor(() => {
+        const calledChannels = spy.mock.calls.map((call) => call[0]);
+        expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
+      });
+      // close the modal
+      const overlay = await findByRole('dialog');
+      await userEvent.click(overlay);
+      const pluginButton = await findByRole('button', { name: /Foo/ });
+      // assert that the 'plugin' badge is displayed
+      await waitFor(() => expect(within(pluginButton).getByText('Plugin'))
+        .toBeInTheDocument());
     });
-    const {
-      findByText, findByLabelText, findByRole, findAllByRole,
-    } = render(<App />);
 
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
-    await userEvent.click(manualInstallNav);
+    test('Add a plugin: failure with error displayed', async () => {
+      const errorString = 'Failed to clone repository.';
+      const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+        if (channel === ipcMainChannels.ADD_PLUGIN) {
+          return Promise.reject(
+            new Error(errorString)
+          );
+        }
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve({});
+          }
+        }
+        return Promise.resolve();
+      });
+      const {
+        findByText, findByLabelText, findByRole, findAllByRole,
+      } = render(<App />);
 
-    const modal = await findByRole('dialog');
-    const tabpanels = await within(modal).findAllByRole('tabpanel');
-    const manualInstallTab = tabpanels[2];
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+      await userEvent.click(manualInstallNav);
 
-    const urlField = await within(manualInstallTab).findByLabelText('Git URL');
-    await userEvent.type(urlField, 'fake url', { delay: 0 });
-    const userAcknowledgmentCheckbox = await within(manualInstallTab).findByLabelText(/I acknowledge and accept/i);
-    await userEvent.click(userAcknowledgmentCheckbox);
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[2];
 
-    const submitButton = await within(manualInstallTab).findByText('Install');
-    // The following click event is not awaited because we want to expect the
-    // 'loading' status, which  is only present before the click handler
-    // fully resolves.
-    act(() => {
-      userEvent.click(submitButton);
+      const urlField = await within(manualInstallTab).findByLabelText('Git URL');
+      await userEvent.type(urlField, 'fake url', { delay: 0 });
+      const userAcknowledgmentCheckbox = await within(manualInstallTab)
+        .findByLabelText(/I acknowledge and accept/i);
+      await userEvent.click(userAcknowledgmentCheckbox);
+
+      const submitButton = await within(manualInstallTab).findByText('Install');
+      await userEvent.click(submitButton);
+      // act(() => {
+      //   userEvent.click(submitButton);
+      // });
+
+      await waitFor(() => {
+        const calledChannels = spy.mock.calls.map((call) => call[0]);
+        expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
+      });
+      await within(manualInstallTab).findByText(new RegExp(errorString));
     });
 
-    await within(manualInstallTab).findByText('Installing...');
-    await waitFor(() => {
-      const calledChannels = spy.mock.calls.map((call) => call[0]);
-      expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
+    test('Drag-and-drop populates the local plugin path', async () => {
+      ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve({});
+          }
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+
+        return Promise.resolve();
+      });
+
+      const {
+        findByText, findByRole, findByLabelText, findAllByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+      await userEvent.click(manualInstallNav);
+
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[2];
+
+      await userEvent.click(await within(manualInstallTab)
+        .findByRole('radio', { name: 'local path' }));
+
+      const input = await within(manualInstallTab).findByLabelText('Local absolute path');
+      const file = new File([], 'plugin-dir');
+
+      fireEvent.dragEnter(input, {
+        dataTransfer: { files: [file] },
+      });
+
+      expect(input).toHaveClass('input-dragging');
+
+      fireEvent.drop(input, {
+        dataTransfer: { files: [file] },
+      });
+
+      await waitFor(() => {
+        expect(input).not.toHaveClass('input-dragging');
+        expect(input).toHaveValue('plugin-dir');
+        expect(input).toHaveFocus();
+      });
     });
-    // close the modal
-    const overlay = await findByRole('dialog');
-    await userEvent.click(overlay);
-    const pluginButton = await findByRole('button', { name: /Foo/ });
-    // assert that the 'plugin' badge is displayed
-    await waitFor(() => expect(within(pluginButton).getByText('Plugin')).toBeInTheDocument());
+
+    test('Drag-leave removes input-dragging from a filepath input', async () => {
+      ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve(PLUGIN_SETTING_ITEM);
+          }
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+
+        return Promise.resolve();
+      });
+
+      const {
+        findByText, findByRole, findByLabelText,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+      await userEvent.click(manualInstallNav);
+
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[2];
+
+      await userEvent.click(await within(manualInstallTab)
+        .findByRole('radio', { name: 'local path' }));
+
+      const input = await within(manualInstallTab).findByLabelText('Local absolute path');
+      const file = new File([], 'plugin-directory');
+
+      fireEvent.dragEnter(input, {
+        dataTransfer: {
+          files: [file],
+        },
+      });
+
+      expect(input).toHaveClass('input-dragging');
+
+      fireEvent.dragLeave(input, {
+        dataTransfer: {
+          files: [file],
+        },
+      });
+
+      expect(input).not.toHaveClass('input-dragging');
+    });
+
+    test('Drag-and-drop on the git URL input does nothing', async () => {
+      ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve({});
+          }
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+
+        return Promise.resolve();
+      });
+
+      const {
+        findByText, findByRole, findByLabelText,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const manualInstallNav = await findByRole('tab', { name: /manual install/i });
+      await userEvent.click(manualInstallNav);
+
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[2];
+
+      const input = await within(manualInstallTab).findByLabelText('Git URL');
+
+      const file = new File([], 'plugin-directory');
+      const dropEvent = createEvent.drop(input, {
+        dataTransfer: {
+          files: [file],
+        },
+      });
+
+      const preventDefaultSpy = jest.spyOn(dropEvent, 'preventDefault');
+
+      fireEvent(input, dropEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+      expect(input).toHaveValue('');
+    });
   });
 
-  test('Add a plugin: failure with error displayed', async () => {
-    const errorString = 'Failed to clone repository.';
-    const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      }
-      if (channel === ipcMainChannels.ADD_PLUGIN) {
-        return Promise.reject(
-          new Error(errorString)
-        );
-      }
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve({});
+  describe('AdvancedSettingsTab', () => {
+    test('Change the conda executable', async () => {
+      ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve({});
+          } else if (setting === 'micromamba') {
+            return Promise.resolve('micromamba')
+          }
+        } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+          return Promise.resolve({ filePaths: ['foo'] })
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
         }
-      }
-      return Promise.resolve();
+        return Promise.resolve();
+      });
+      const {
+        findByText, findByRole, findByLabelText, findAllByRole,
+      } = render(<App />);
+
+      const spy = jest.spyOn(ipcRenderer, 'send');
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
+      await userEvent.click(advancedSettingsNav);
+
+      const input = await findByLabelText('Conda or mamba executable');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'conda');
+      await waitFor(() => expect(input).toHaveValue('conda'));
+
+      await userEvent.click(await findByRole('button', { name: /browse for conda executable/ }));
+      await waitFor(() => { expect(input).toHaveValue('foo'); });
+
+      const file = new File([], 'my-conda');
+      fireEvent.dragEnter(input, {dataTransfer: {files: [file]}});
+      expect(input).toHaveClass('input-dragging');
+      fireEvent.drop(input, {dataTransfer: {files: [file]}});
+
+      await waitFor(() => {
+        expect(input).not.toHaveClass('input-dragging');
+        expect(input).toHaveValue('my-conda');
+        expect(input).toHaveFocus();
+      });
+
+      const div = await findByLabelText(
+        'Configure conda executable')
+      const saveButton = await within(div).findByRole('button', { name: /Save/ });
+      await userEvent.click(saveButton);
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          ipcMainChannels.SET_SETTING,
+          'userDefinedMicromamba',
+          'my-conda'
+        );
+      });
+
+      const resetButton = await within(div).findByRole('button', { name: /Reset/ });
+      await userEvent.click(resetButton);
+      await waitFor(() => { expect(input).toHaveValue('micromamba'); });
     });
-    const {
-      findByText, findByLabelText, findByRole, findAllByRole,
-    } = render(<App />);
 
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
-    await userEvent.click(manualInstallNav);
+    test('Change a plugin env', async () => {
+      ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve(PLUGIN_SETTING_ITEM);
+          } else if (setting === 'plugins.foo.env') {
+            return Promise.resolve(PLUGIN_SETTING_ITEM.foo.env);
+          }
+        } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+          return Promise.resolve({ filePaths: ['/path/to/my_env'] });
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+        return Promise.resolve();
+      });
+      const {
+        findByText, findByRole, findByLabelText,
+      } = render(<App />);
 
-    const modal = await findByRole('dialog');
-    const tabpanels = await within(modal).findAllByRole('tabpanel');
-    const manualInstallTab = tabpanels[2];
+      const spy = jest.spyOn(ipcRenderer, 'send');
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
+      await userEvent.click(advancedSettingsNav);
 
-    const urlField = await within(manualInstallTab).findByLabelText('Git URL');
-    await userEvent.type(urlField, 'fake url', { delay: 0 });
-    const userAcknowledgmentCheckbox = await within(manualInstallTab).findByLabelText(
-      /I acknowledge and accept/i);
-    await userEvent.click(userAcknowledgmentCheckbox);
+      const div = await findByLabelText('Configure plugin environments')
+      const input = await within(div).findByLabelText('foo');
+      expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env);
+      await userEvent.clear(input);
+      await userEvent.type(input, 'my_env');
+      await waitFor(() => expect(input).toHaveValue('my_env'));
 
-    const submitButton = await within(manualInstallTab).findByText('Install');
-    await userEvent.click(submitButton);
-    // act(() => {
-    //   userEvent.click(submitButton);
-    // });
+      await userEvent.click(await findByRole('button', { name: /browse for env/ }));
+      await waitFor(() => { expect(input).toHaveValue('/path/to/my_env'); });
 
-    await waitFor(() => {
-      const calledChannels = spy.mock.calls.map((call) => call[0]);
-      expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
+      const saveButton = await within(div).findByRole('button', { name: /Save/ });
+      await userEvent.click(saveButton);
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          ipcMainChannels.SET_SETTING,
+          'plugins.foo.userDefinedEnv',
+          '/path/to/my_env'
+        );
+      });
+
+      const resetButton = await within(div).findByRole('button', { name: /Reset/ });
+      await userEvent.click(resetButton);
+      await waitFor(() => { expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env); });
     });
-    await within(manualInstallTab).findByText(new RegExp(errorString));
+
+    test('Drag-and-drop populates a plugin environment input', async () => {
+      ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve(PLUGIN_SETTING_ITEM);
+          }
+          if (setting === 'micromamba') {
+            return Promise.resolve('micromamba');
+          }
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+
+        return Promise.resolve();
+      });
+
+      const {
+        findByText, findByRole, findByLabelText,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
+      await userEvent.click(advancedSettingsNav);
+
+      const div = await findByLabelText(
+        'Configure plugin environments'
+      );
+      const input = await within(div).findByLabelText('foo');
+
+      const file = new File([], 'plugin-environment');
+
+      fireEvent.dragEnter(input, {
+        dataTransfer: {
+          files: [file],
+        },
+      });
+
+      expect(input).toHaveClass('input-dragging');
+
+      fireEvent.drop(input, {
+        dataTransfer: {
+          files: [file],
+        },
+      });
+
+      await waitFor(() => {
+        expect(input).not.toHaveClass('input-dragging');
+        expect(input).toHaveValue('plugin-environment');
+        expect(input).toHaveFocus();
+      });
+    });
   });
 
   test('Open and run a plugin', async () => {
@@ -330,351 +789,5 @@ describe('Plugin Manager modal', () => {
         expect.anything()
       );
     });
-  });
-
-  test('Remove a plugin', async () => {
-    let plugins = PLUGIN_SETTING_ITEM;
-    const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve(plugins);
-        }
-      } else if (channel === ipcMainChannels.REMOVE_PLUGIN) {
-        // after REMOVE_PLUGIN there will be a subsequent call to GET_SETTING,
-        // so this effectively replaces the mocked settings data
-        plugins = {};
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
-        return 1111; // a fake PID
-      }
-      return Promise.resolve();
-    });
-    const {
-      findByText, findByRole, getByRole, findByLabelText, queryByRole, findAllByRole,
-    } = render(<App />);
-
-    // open the plugin first, to make sure it doesn't cause a crash when removing
-    const pluginButton = await findByRole('button', { name: /Foo/ });
-    await userEvent.click(pluginButton);
-
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const installedPluginsNav = await findByRole('tab', { name: /installed plugins/i });
-    await userEvent.click(installedPluginsNav);
-
-    const modal = await findByRole('dialog');
-    const tabpanels = await within(modal).findAllByRole('tabpanel');
-    const manualInstallTab = tabpanels[1];
-
-    const submitButton = await within(manualInstallTab).findByText('Uninstall');
-    await userEvent.click(submitButton);
-    await waitFor(() => {
-      expect(spy.mock.calls.map((call) => call[0])).toContain(ipcMainChannels.REMOVE_PLUGIN);
-    });
-    // expect the plugin to have disappeared from the model list and the dropdown
-    await waitFor(() => expect(queryByRole('button', { name: /Foo/ })).toBeNull());
-    await waitFor(() => expect(within(manualInstallTab).queryByRole(
-      'heading', { name: /Foo/ })).toBeNull());
-  });
-
-  test('Change the conda executable', async () => {
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve({});
-        } else if (setting === 'micromamba') {
-          return Promise.resolve('micromamba')
-        }
-      } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
-        return Promise.resolve({ filePaths: ['foo'] })
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      }
-      return Promise.resolve();
-    });
-    const {
-      findByText, findByRole, findByLabelText, findAllByRole,
-    } = render(<App />);
-
-    const spy = jest.spyOn(ipcRenderer, 'send');
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
-    await userEvent.click(advancedSettingsNav);
-
-    const input = await findByLabelText('Conda or mamba executable');
-    await userEvent.clear(input);
-    await userEvent.type(input, 'conda');
-    await waitFor(() => expect(input).toHaveValue('conda'));
-
-    await userEvent.click(await findByRole(
-      'button', { name: /browse for conda executable/ }));
-    await waitFor(() => { expect(input).toHaveValue('foo'); });
-
-    const file = new File([], 'my-conda');
-    fireEvent.dragEnter(input, {dataTransfer: {files: [file]}});
-    expect(input).toHaveClass('input-dragging');
-    fireEvent.drop(input, {dataTransfer: {files: [file]}});
-
-    await waitFor(() => {
-      expect(input).not.toHaveClass('input-dragging');
-      expect(input).toHaveValue('my-conda');
-      expect(input).toHaveFocus();
-    });
-
-    const div = await findByLabelText(
-      'Configure conda executable')
-    const saveButton = await within(div).findByRole('button', { name: /Save/ });
-    await userEvent.click(saveButton);
-    await waitFor(() => {
-      expect(spy).toHaveBeenCalledWith(
-        ipcMainChannels.SET_SETTING,
-        'userDefinedMicromamba',
-        'my-conda'
-      );
-    });
-
-    const resetButton = await within(div).findByRole('button', { name: /Reset/ });
-    await userEvent.click(resetButton);
-    await waitFor(() => { expect(input).toHaveValue('micromamba'); });
-  });
-
-  test('Change a plugin env', async () => {
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve(PLUGIN_SETTING_ITEM);
-        } else if (setting === 'plugins.foo.env') {
-          return Promise.resolve(PLUGIN_SETTING_ITEM.foo.env);
-        }
-      } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
-        return Promise.resolve({ filePaths: ['/path/to/my_env'] });
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      }
-      return Promise.resolve();
-    });
-    const {
-      findByText, findByRole, findByLabelText,
-    } = render(<App />);
-
-    const spy = jest.spyOn(ipcRenderer, 'send');
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
-    await userEvent.click(advancedSettingsNav);
-
-    const div = await findByLabelText('Configure plugin environments')
-    const input = await within(div).findByLabelText('foo');
-    expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env);
-    await userEvent.clear(input);
-    await userEvent.type(input, 'my_env');
-    await waitFor(() => expect(input).toHaveValue('my_env'));
-
-    await userEvent.click(await findByRole(
-      'button', { name: /browse for env/ }));
-    await waitFor(() => { expect(input).toHaveValue('/path/to/my_env'); });
-
-    const saveButton = await within(div).findByRole('button', { name: /Save/ });
-    await userEvent.click(saveButton);
-    await waitFor(() => {
-      expect(spy).toHaveBeenCalledWith(
-        ipcMainChannels.SET_SETTING,
-        'plugins.foo.userDefinedEnv',
-        '/path/to/my_env'
-      );
-    });
-
-    const resetButton = await within(div).findByRole('button', { name: /Reset/ });
-    await userEvent.click(resetButton);
-    await waitFor(() => { expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env); });
-  });
-
-  test('Drag-and-drop populates the local plugin path', async () => {
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve({});
-        }
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      }
-
-      return Promise.resolve();
-    });
-
-    const {
-      findByText, findByRole, findByLabelText, findAllByRole,
-    } = render(<App />);
-
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
-    await userEvent.click(manualInstallNav);
-
-    const modal = await findByRole('dialog');
-    const tabpanels = await within(modal).findAllByRole('tabpanel');
-    const manualInstallTab = tabpanels[2];
-
-    await userEvent.click(await within(manualInstallTab).findByRole(
-      'radio', { name: 'local path' }));
-
-    const input = await within(manualInstallTab).findByLabelText('Local absolute path');
-    const file = new File([], 'plugin-dir');
-
-    fireEvent.dragEnter(input, {
-      dataTransfer: { files: [file] },
-    });
-
-    expect(input).toHaveClass('input-dragging');
-
-    fireEvent.drop(input, {
-      dataTransfer: { files: [file] },
-    });
-
-    await waitFor(() => {
-      expect(input).not.toHaveClass('input-dragging');
-      expect(input).toHaveValue('plugin-dir');
-      expect(input).toHaveFocus();
-    });
-  });
-
-  test('Drag-and-drop populates a plugin environment input', async () => {
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve(PLUGIN_SETTING_ITEM);
-        }
-        if (setting === 'micromamba') {
-          return Promise.resolve('micromamba');
-        }
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      }
-
-      return Promise.resolve();
-    });
-
-    const {
-      findByText, findByRole, findByLabelText,
-    } = render(<App />);
-
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const advancedSettingsNav = await findByRole('tab', { name: /advanced settings/i });
-    await userEvent.click(advancedSettingsNav);
-
-    const div = await findByLabelText(
-      'Configure plugin environments'
-    );
-    const input = await within(div).findByLabelText('foo');
-
-    const file = new File([], 'plugin-environment');
-
-    fireEvent.dragEnter(input, {
-      dataTransfer: {
-        files: [file],
-      },
-    });
-
-    expect(input).toHaveClass('input-dragging');
-
-    fireEvent.drop(input, {
-      dataTransfer: {
-        files: [file],
-      },
-    });
-
-    await waitFor(() => {
-      expect(input).not.toHaveClass('input-dragging');
-      expect(input).toHaveValue('plugin-environment');
-      expect(input).toHaveFocus();
-    });
-  });
-
-  test('Drag-leave removes input-dragging from a filepath input', async () => {
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve(PLUGIN_SETTING_ITEM);
-        }
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      }
-
-      return Promise.resolve();
-    });
-
-    const {
-      findByText, findByRole, findByLabelText,
-    } = render(<App />);
-
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
-    await userEvent.click(manualInstallNav);
-
-    const modal = await findByRole('dialog');
-    const tabpanels = await within(modal).findAllByRole('tabpanel');
-    const manualInstallTab = tabpanels[2];
-
-    await userEvent.click(await within(manualInstallTab).findByRole(
-      'radio', { name: 'local path' }));
-
-    const input = await within(manualInstallTab).findByLabelText('Local absolute path');
-    const file = new File([], 'plugin-directory');
-
-    fireEvent.dragEnter(input, {
-      dataTransfer: {
-        files: [file],
-      },
-    });
-
-    expect(input).toHaveClass('input-dragging');
-
-    fireEvent.dragLeave(input, {
-      dataTransfer: {
-        files: [file],
-      },
-    });
-
-    expect(input).not.toHaveClass('input-dragging');
-  });
-
-  test('Drag-and-drop on the git URL input does nothing', async () => {
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve({});
-        }
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      }
-
-      return Promise.resolve();
-    });
-
-    const {
-      findByText, findByRole, findByLabelText,
-    } = render(<App />);
-
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const manualInstallNav = await findByRole('tab', { name: /manual install/i });
-    await userEvent.click(manualInstallNav);
-
-    const modal = await findByRole('dialog');
-    const tabpanels = await within(modal).findAllByRole('tabpanel');
-    const manualInstallTab = tabpanels[2];
-
-    const input = await within(manualInstallTab).findByLabelText('Git URL');
-
-    const file = new File([], 'plugin-directory');
-    const dropEvent = createEvent.drop(input, {
-      dataTransfer: {
-        files: [file],
-      },
-    });
-
-    const preventDefaultSpy = jest.spyOn(dropEvent, 'preventDefault');
-
-    fireEvent(input, dropEvent);
-
-    expect(preventDefaultSpy).toHaveBeenCalled();
-    expect(input).toHaveValue('');
   });
 });

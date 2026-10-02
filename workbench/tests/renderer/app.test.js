@@ -16,10 +16,14 @@ import {
   getDynamicDropdowns,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
+import {
+  fetchRegistryData
+} from '../../src/renderer/components/PluginModal/PluginModalUtils';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import pkg from '../../package.json';
 
 jest.mock('../../src/renderer/server_requests');
+jest.mock('../../src/renderer/components/PluginModal/PluginModalUtils');
 
 const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_ID = 'carbon';
@@ -584,7 +588,7 @@ describe('Main menu interactions', () => {
       }
       return Promise.resolve();
     });
-    jest.spyOn(global, "fetch").mockImplementation({'data': []});
+    fetchRegistryData.mockResolvedValue([]);
 
     const {
       findByText, findByRole,
