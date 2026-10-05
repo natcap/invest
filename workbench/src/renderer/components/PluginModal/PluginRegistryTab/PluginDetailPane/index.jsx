@@ -14,22 +14,19 @@ import { MdOpenInNew } from "react-icons/md";
 import { openLinkInBrowser } from '../../../../utils';
 import { ipcMainChannels } from '../../../../../main/ipcMainChannels';
 import { handleClickFindLogfiles } from '../../../../menubar/handlers';
+
+import InstallButton from '../../InstallButton';
+import NeedsMSVC from '../../NeedsMSVC';
 import {
   thisVersionInstalled,
   anotherVersionInstalled,
-  notInstalled
-} from '../../PluginRegistryTab';
-import {
-  InstallButton,
-  NeedsMSVC,
-} from '../../PluginModalUtils';
-import {
-  pluginInstall,
-  addRemoveLoading,
-  addRemoveSuccess,
-  addRemoveError,
+  notInstalled,
+  opTypeInstall,
+  opStatusLoading,
+  opStatusSuccess,
+  opStatusFailure,
   sourceTypeRegistry,
-} from '../../../PluginModal';
+} from '../../constants';
 
 export default function PluginDetailPane(props) {
   const {
@@ -49,7 +46,7 @@ export default function PluginDetailPane(props) {
   useEffect(() => {
     if (
       addRemoveState.opPluginID === pluginID &&
-      addRemoveState.opType === pluginInstall
+      addRemoveState.opType === opTypeInstall
     ) {
       setInstallStatus(addRemoveState.opStatus);
     } else {
@@ -81,7 +78,7 @@ export default function PluginDetailPane(props) {
   }, [userAcknowledgment]);
 
   const handleAddPluginClick = () => {
-    if (addRemoveState.opStatus !== addRemoveLoading) {
+    if (addRemoveState.opStatus !== opStatusLoading) {
       clearFormErrors();
       if (validateAddPluginForm()) {
         addPlugin(
@@ -154,8 +151,8 @@ export default function PluginDetailPane(props) {
           <InstallButton
             handleAddPluginClick={handleAddPluginClick}
             pluginID={pluginID}
-            installLoading={installStatus === addRemoveLoading}
-            installDisabled={addRemoveState.opStatus === addRemoveLoading}
+            installLoading={installStatus === opStatusLoading}
+            installDisabled={addRemoveState.opStatus === opStatusLoading}
             statusMessage={statusMessage}
           />
         </Form.Group>
@@ -169,7 +166,7 @@ export default function PluginDetailPane(props) {
         downloadMSVC={downloadMSVC}
       />
     );
-  } else if (installStatus === addRemoveError) {
+  } else if (installStatus === opStatusFailure) {
     installPane = (
       <>
         <h5>{t('Error installing plugin:')}</h5>

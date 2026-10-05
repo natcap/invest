@@ -13,11 +13,11 @@ import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
 
 import {
-  pluginUninstall,
-  addRemoveLoading,
-  addRemoveSuccess,
-  addRemoveError,
-} from '../../PluginModal';
+  opTypeUninstall,
+  opStatusLoading,
+  opStatusSuccess,
+  opStatusFailure,
+} from '../constants';
 
 export default function InstalledPluginsTab(props) {
   const {
@@ -33,8 +33,8 @@ export default function InstalledPluginsTab(props) {
       <div>
         <h5 id="installed-plugin-list-title" className="mb-3">{t('Installed Plugins')}</h5>
         {(
-          addRemoveState.opType === pluginUninstall &&
-          addRemoveState.opStatus === addRemoveSuccess
+          addRemoveState.opType === opTypeUninstall &&
+          addRemoveState.opStatus === opStatusSuccess
         ) && (
           <>
             <div aria-live="polite" className="pt-3 pb-3 plugin-success-message">
@@ -78,7 +78,7 @@ function InstalledPluginDetailItem(props) {
   useEffect(() => {
     if (
       addRemoveState.opPluginID === pluginID &&
-      addRemoveState.opType === pluginUninstall
+      addRemoveState.opType === opTypeUninstall
     ) {
       setUninstallStatus(addRemoveState.opStatus);
     } else {
@@ -87,7 +87,7 @@ function InstalledPluginDetailItem(props) {
   }, [addRemoveState]);
 
   const handleRemovePluginClick = () => {
-      if (addRemoveState.opStatus !== addRemoveLoading) {
+      if (addRemoveState.opStatus !== opStatusLoading) {
         removePlugin(pluginID);
       }
   };
@@ -106,7 +106,7 @@ function InstalledPluginDetailItem(props) {
           <dt className="bold-text">{t('Source: ')}</dt>
           <dd>{pluginDetails.source}</dd>
         </dl>
-        {uninstallStatus === addRemoveError &&
+        {uninstallStatus === opStatusFailure &&
           (
             <>
               <h5>{t('Error removing plugin:')}</h5>
@@ -122,7 +122,7 @@ function InstalledPluginDetailItem(props) {
       </Col>
       <Col sm={3}>
         <OverlayTrigger
-          trigger={(addRemoveState.opStatus === addRemoveLoading) ? ['hover', 'focus'] : []}
+          trigger={(addRemoveState.opStatus === opStatusLoading) ? ['hover', 'focus'] : []}
           rootClose
           placement="top"
           overlay={
@@ -133,10 +133,10 @@ function InstalledPluginDetailItem(props) {
         >
           <Button
             className="plugin-submit-btn"
-            aria-disabled={addRemoveState.opStatus === addRemoveLoading}
+            aria-disabled={addRemoveState.opStatus === opStatusLoading}
             onClick={handleRemovePluginClick}
           >
-            {uninstallStatus === addRemoveLoading
+            {uninstallStatus === opStatusLoading
               ? (
                 <div className="adding-button">
                   <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />

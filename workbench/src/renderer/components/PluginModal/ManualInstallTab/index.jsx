@@ -14,19 +14,18 @@ import {
 import { openLinkInBrowser } from '../../../utils';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
+
+import InstallButton from '../InstallButton';
+import NeedsMSVC from '../NeedsMSVC';
 import {
-  pluginInstall,
-  addRemoveLoading,
-  addRemoveSuccess,
-  addRemoveError,
+  opTypeInstall,
+  opStatusLoading,
+  opStatusSuccess,
+  opStatusFailure,
   sourceTypeLocal,
   sourceTypeURL,
   manualInstallID,
-} from '../../PluginModal';
-import {
-  InstallButton,
-  NeedsMSVC,
-} from '../PluginModalUtils';
+} from '../constants';
 
 export default function ManualInstallTab(props) {
   const {
@@ -58,7 +57,7 @@ export default function ManualInstallTab(props) {
   useEffect(() => {
     if (
       addRemoveState.opPluginID === manualInstallID &&
-      addRemoveState.opType === pluginInstall
+      addRemoveState.opType === opTypeInstall
     ) {
       setInstallStatus(addRemoveState.opStatus);
     } else {
@@ -88,7 +87,7 @@ export default function ManualInstallTab(props) {
   }, [userAcknowledgment]);
 
   useEffect(() => {
-    if (installStatus === addRemoveSuccess) {
+    if (installStatus === opStatusSuccess) {
       setURL('');
       setRevision('');
       setPath('');
@@ -96,7 +95,7 @@ export default function ManualInstallTab(props) {
   }, [installStatus]);
 
   const handleAddPluginClick = () => {
-    if (addRemoveState.opStatus !== addRemoveLoading) {
+    if (addRemoveState.opStatus !== opStatusLoading) {
       clearFormErrors();
       if (validateAddPluginForm()) {
         addPlugin(
@@ -306,12 +305,12 @@ export default function ManualInstallTab(props) {
         <InstallButton
           handleAddPluginClick={handleAddPluginClick}
           pluginID={manualInstallID}
-          installLoading={installStatus === addRemoveLoading}
-          installDisabled={addRemoveState.opStatus === addRemoveLoading}
+          installLoading={installStatus === opStatusLoading}
+          installDisabled={addRemoveState.opStatus === opStatusLoading}
           statusMessage={statusMessage}
         />
       </Form>
-      {installStatus === addRemoveSuccess &&
+      {installStatus === opStatusSuccess &&
         <>
           <div aria-live="polite" className="mt-3 pt-3 pb-3 plugin-success-message">
             <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" />
@@ -319,7 +318,7 @@ export default function ManualInstallTab(props) {
           </div>
         </>
       }
-      {installStatus === addRemoveError &&
+      {installStatus === opStatusFailure &&
         <>
           <h5 className="mt-2">{t('Error installing plugin:')}</h5>
           <div className="plugin-error plugin-install-remove-error">{addRemoveState.opErrorMsg}</div>

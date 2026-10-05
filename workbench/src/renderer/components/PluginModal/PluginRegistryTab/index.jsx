@@ -7,10 +7,11 @@ import Tab from 'react-bootstrap/Tab';
 import { useTranslation } from 'react-i18next';
 
 import PluginDetailPane from './PluginDetailPane';
-
-export const thisVersionInstalled = "thisVersionInstalled";
-export const anotherVersionInstalled = "anotherVersionInstalled";
-export const notInstalled = "notInstalled";
+import {
+  thisVersionInstalled,
+  anotherVersionInstalled,
+  notInstalled,
+} from '../constants';
 
 export default function PluginRegistryTab(props) {
   const {

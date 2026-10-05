@@ -13,10 +13,13 @@ import {
   fetchArgsEnabled,
   fetchValidation
 } from '../../src/renderer/server_requests';
+import {
+  fetchRegistryData
+} from '../../src/renderer/components/PluginModal/services';
 import App from '../../src/renderer/app';
-import * as modalUtils from '../../src/renderer/components/PluginModal/PluginModalUtils';
 
 jest.mock('../../src/renderer/server_requests');
+jest.mock('../../src/renderer/components/PluginModal/services');
 
 const PLUGIN_SETTING_ITEM = {
   foo: {
@@ -124,15 +127,14 @@ describe('Plugin Manager modal', () => {
     fetchValidation.mockResolvedValue([]);
     getInvestModelIDs.mockResolvedValue({});
 
-    modalUtils.fetchRegistryData = jest.fn().mockResolvedValue([]);
+    fetchRegistryData.mockResolvedValue([]);
   });
 
   describe('PluginRegistryTab', () => {
     let spy;
 
     beforeEach(async () => {
-      modalUtils.fetchRegistryData = jest.fn()
-        .mockResolvedValue(PLUGIN_REGISTRY_DATA);
+      fetchRegistryData.mockResolvedValue(PLUGIN_REGISTRY_DATA);
 
       spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
         if (channel === ipcMainChannels.GET_SETTING) {

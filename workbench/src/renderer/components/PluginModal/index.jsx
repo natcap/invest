@@ -17,31 +17,24 @@ import {
 } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+import { fetchRegistryData } from './services';
 
 import AboutTab from './AboutTab';
 import AdvancedSettingsTab from './AdvancedSettingsTab';
 import InstalledPluginsTab from './InstalledPluginsTab';
 import ManualInstallTab from './ManualInstallTab';
 import PluginRegistryTab from './PluginRegistryTab';
-import { fetchRegistryData } from './PluginModalUtils';
+import {
+  opTypeInstall,
+  opTypeUninstall,
+  opStatusLoading,
+  opStatusSuccess,
+  opStatusFailure,
+  manualInstallID,
+} from './constants';
 
 const { getFilePath, ipcRenderer } = window.Workbench.electron;
 const { logger } = window.Workbench;
-
-// values for sourceType, stored in settingsStore and
-// used to determine whether to log a Registry install
-export const sourceTypeLocal = "local_path";
-export const sourceTypeURL = "git_url";
-export const sourceTypeRegistry = "registry";
-// id for elements related to manual install form
-export const manualInstallID = "manualInstall";
-// addRemoveOpType options:
-export const pluginInstall = "install";
-export const pluginUninstall = "uninstall";
-// addRemoveStatus options:
-export const addRemoveLoading = "loading";
-export const addRemoveSuccess = "success";
-export const addRemoveError = "error";
 
 export default function PluginModal(props) {
   const {
@@ -56,10 +49,13 @@ export default function PluginModal(props) {
   const [needsMSVC, setNeedsMSVC] = useState(false);
 
   const defaultAddRemoveState = {
-    opType: null,      // install or uninstall
-    opStatus: null,    // loading, success, or error
+    // opType: null,      // install or uninstall
+    opType: opTypeInstall,
+    // opStatus: null,    // loading, success, or error
+    opStatus: opStatusSuccess,
     opErrorMsg: null,  // error message
-    opPluginID: null,  // pluginID associated with the op
+    // opPluginID: null,  // pluginID associated with the op
+    opPluginID: manualInstallID
   }
   const [addRemoveState, setAddRemoveState] = useState(defaultAddRemoveState);
 
@@ -71,7 +67,7 @@ export default function PluginModal(props) {
   const [tabKey, setTabKey] = useState('registry');
 
   const handleModalClose = () => {
-    if (addRemoveState.opStatus !== addRemoveLoading) {
+    if (addRemoveState.opStatus !== opStatusLoading) {
       closeModal();
     }
   };
@@ -107,8 +103,8 @@ export default function PluginModal(props) {
 
   const addPlugin = (pluginID, url, revision, path, sourceType) => {
     setAddRemoveState({
-      opType: pluginInstall,
-      opStatus: addRemoveLoading,
+      opType: opTypeInstall,
+      opStatus: opStatusLoading,
       opErrorMsg: "",
       opPluginID: pluginID
     })
@@ -120,16 +116,16 @@ export default function PluginModal(props) {
       sourceType // 'local_path', 'git_url', or 'registry'
     ).then(() => {
       setAddRemoveState({
-        opType: pluginInstall,
-        opStatus: addRemoveSuccess,
+        opType: opTypeInstall,
+        opStatus: opStatusSuccess,
         opErrorMsg: "",
         opPluginID: pluginID
       })
       updateInvestList();
     }).catch((err) => {
       setAddRemoveState({
-        opType: pluginInstall,
-        opStatus: addRemoveError,
+        opType: opTypeInstall,
+        opStatus: opStatusFailure,
         opErrorMsg: err.toString(),
         opPluginID: pluginID
       })
@@ -138,8 +134,8 @@ export default function PluginModal(props) {
 
   const removePlugin = (pluginToRemove) => {
     setAddRemoveState({
-      opType: pluginUninstall,
-      opStatus: addRemoveLoading,
+      opType: opTypeUninstall,
+      opStatus: opStatusLoading,
       opErrorMsg: "",
       opPluginID: pluginToRemove
     })
@@ -152,16 +148,16 @@ export default function PluginModal(props) {
       ipcMainChannels.REMOVE_PLUGIN, pluginToRemove
     ).then(() => {
       setAddRemoveState({
-        opType: pluginUninstall,
-        opStatus: addRemoveSuccess,
+        opType: opTypeUninstall,
+        opStatus: opStatusSuccess,
         opErrorMsg: "",
         opPluginID: pluginToRemove
       })
       updateInvestList();
     }).catch((err) => {
       setAddRemoveState({
-        opType: pluginUninstall,
-        opStatus: addRemoveError,
+        opType: opTypeUninstall,
+        opStatus: opStatusFailure,
         opErrorMsg: err.toString(),
         opPluginID: pluginToRemove
       })
@@ -395,8 +391,8 @@ export default function PluginModal(props) {
   );
 
   let modalFooter;
-  if (addRemoveState.opStatus === addRemoveSuccess) {
-    if (addRemoveState.opType === pluginInstall) {
+  if (addRemoveState.opStatus === opStatusSuccess) {
+    if (addRemoveState.opType === opTypeInstall) {
       modalFooter = (
         <>
           <BsCheckCircle className="plugin-modal-icons" />
@@ -409,7 +405,7 @@ export default function PluginModal(props) {
           >{t("View Details")}</Button>
         </>
       );
-    } else if (addRemoveState.opType === pluginUninstall) {
+    } else if (addRemoveState.opType === opTypeUninstall) {
       modalFooter = (
         <>
           <BsCheckCircle className="plugin-modal-icons" />
@@ -417,19 +413,19 @@ export default function PluginModal(props) {
         </>
       );
     }
-  } else if (addRemoveState.opStatus === addRemoveError) {
-    if (addRemoveState.opType === pluginInstall) {
+  } else if (addRemoveState.opStatus === opStatusFailure) {
+    if (addRemoveState.opType === opTypeInstall) {
       modalFooter = (
         <>
           <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
-          <span>{t("An error occurred during installation")}</span>
+          <span>{t("An error occurred during installation.")}</span>
           <Button
             className="plugin-submit-btn"
             onClick={jumpToInstallMsg}
           >{t("View Details")}</Button>
         </>
       );
-    } else if (addRemoveState.opType === pluginUninstall) {
+    } else if (addRemoveState.opType === opTypeUninstall) {
       modalFooter = (
         <>
           <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
@@ -444,8 +440,8 @@ export default function PluginModal(props) {
         </>
       );
     }
-  } else if (addRemoveState.opStatus === addRemoveLoading) {
-    if (addRemoveState.opType === pluginInstall) {
+  } else if (addRemoveState.opStatus === opStatusLoading) {
+    if (addRemoveState.opType === opTypeInstall) {
       modalFooter = (
         <>
           <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
@@ -456,7 +452,7 @@ export default function PluginModal(props) {
           >{t("View Installing Plugin")}</Button>
         </>
       );
-    } else if (addRemoveState.opType === pluginUninstall) {
+    } else if (addRemoveState.opType === opTypeUninstall) {
       modalFooter = (
         <>
           <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
