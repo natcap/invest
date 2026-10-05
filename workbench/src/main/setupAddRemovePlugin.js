@@ -178,7 +178,7 @@ async function installPlugin(
  * and store that metadata in the Workbench's settingsStore.
  * @param  {string} micromamba       path to the micromamba executable
  * @param  {string} pluginEnvPrefix  location of the plugin's micromamba env
- * @param  {string} packageName      the plugin's python package name
+ * @param  {string} packageName      the plugin's importable python package name
  * @param  {string} installString    pip install argument for the plugin
  * @param  {string} pluginSourceType source (local vs registry vs non-registry)
  */
