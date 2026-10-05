@@ -1096,7 +1096,7 @@ code {
   }
 }
 
-.registry-fetch-error {
+.registry-fetch-status {
   display: flex;
   padding: 3rem;
   flex-direction: column;

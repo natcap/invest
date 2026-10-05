@@ -49,21 +49,17 @@ export default function PluginModal(props) {
   const [needsMSVC, setNeedsMSVC] = useState(false);
 
   const defaultAddRemoveState = {
-    // opType: null,      // install or uninstall
-    opType: opTypeInstall,
-    // opStatus: null,    // loading, success, or error
-    opStatus: opStatusSuccess,
+    opType: null,      // install or uninstall
+    opStatus: null,    // loading, success, or error
     opErrorMsg: null,  // error message
-    // opPluginID: null,  // pluginID associated with the op
-    opPluginID: manualInstallID
+    opPluginID: null,  // pluginID associated with the op
   }
   const [addRemoveState, setAddRemoveState] = useState(defaultAddRemoveState);
-
   const [plugins, setPlugins] = useState({});
   const [registryData, setRegistryData] = useState([]);
-  const [activePluginKey, setActivePluginKey] = useState('');
   const [fetchError, setFetchError] = useState(false);
-
+  const [registryDataLoading, setRegistryDataLoading] = useState(true);
+  const [activePluginKey, setActivePluginKey] = useState('');
   const [tabKey, setTabKey] = useState('registry');
 
   const handleModalClose = () => {
@@ -73,11 +69,18 @@ export default function PluginModal(props) {
   };
 
   async function handleFetchRegistryData() {
-    let data = await fetchRegistryData();
-    if (data !== null) {
-      setRegistryData(data);
-      setFetchError(false);
-    } else {
+    try {
+      setRegistryDataLoading(true);
+      let data = await fetchRegistryData();
+      setRegistryDataLoading(false);
+      if (data !== null) {
+        setRegistryData(data);
+        setFetchError(false);
+      } else {
+        setFetchError(true);
+      }
+    } catch(error) {
+      setRegistryDataLoading(false);
       setFetchError(true);
     }
   }
@@ -314,8 +317,13 @@ export default function PluginModal(props) {
             <Col sm={10} className="plugin-modal-pane">
               <Tab.Content>
                 <Tab.Pane eventKey="registry" className="registry-pane-with-tabs">
-                  {fetchError ? (
-                    <div className="registry-fetch-error">
+                  {registryDataLoading ? (
+                    <div className="registry-fetch-status">
+                      <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
+                      <span>{t("Loading data from the Plugin Registry...")}</span>
+                    </div>
+                  ) : fetchError ? (
+                    <div className="registry-fetch-status">
                       <MdOutlineWarningAmber className="registry-warning-icon" />
                       <p>
                         {t(`An error occurred when loading the Plugin Registry data.
