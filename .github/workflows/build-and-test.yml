@@ -495,7 +495,7 @@ jobs:
           echo $?
 
       - name: Binary test(s) failed
-        # if: steps.selenium-tests.outcome == 'failure' || steps.puppeteer-tests-outcome == 'failure'
+        if: ${{ (steps.selenium-tests.outcome == 'failure') || (steps.puppeteer-tests-outcome == 'failure') }}
         run: |
           echo ${{ steps.selenium-tests.outcome }}
           echo ${{ steps.puppeteer-tests.outcome }}
