@@ -1,6 +1,9 @@
+import json
+import os
 from pathlib import Path
 import platform
 import shutil
+import subprocess
 import tempfile
 import time
 import unittest
@@ -9,11 +12,12 @@ import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 CHROMEDRIVER_PORT = 9515
-TEST_PLUGIN_GIT_URL = "https://github.com/natcap/invest-demo-plugin.git"
+TEST_PLUGIN_LOCAL_PATH = str(Path(__file__).parent / "test_plugin")
 
 
 class PluginTests(unittest.TestCase):
@@ -24,8 +28,13 @@ class PluginTests(unittest.TestCase):
 
         if platform.system() == 'Darwin':
             binary_glob = 'dist/mac*/*.app/Contents/MacOS/InVEST*'
+            self.config_path = Path(
+                '~/Library/Application Support/invest-workbench/config.json'
+            ).expanduser()
         else:
             binary_glob = 'dist/win-unpacked/InVEST*.exe'
+            self.config_path = os.path.expandvars(
+                '%APPDATA%/invest-workbench/config.json')
         binaries = list(Path(__file__).parent.parent.parent.glob(binary_glob))
         if len(binaries) > 1:
             raise ValueError('More than one binary found')
@@ -33,10 +42,10 @@ class PluginTests(unittest.TestCase):
         # connect to the chromedriver server
         options = Options()
         options.binary_location = str(binaries[0].resolve())
-        options.add_argument("--headless=new")      # Runs Chrome in headless mode
-        options.add_argument("--no-sandbox")         # Bypasses OS security model layer
-        options.add_argument("--disable-dev-shm-usage") # Overcomes limited resource problems in Docker
-        options.add_argument("--disable-gpu")        # Temporary fix for certain hardware environments
+        # options.add_argument("--headless=new")      # Runs Chrome in headless mode
+        # options.add_argument("--no-sandbox")         # Bypasses OS security model layer
+        # options.add_argument("--disable-dev-shm-usage")  # Overcomes limited resource problems in Docker
+        # options.add_argument("--disable-gpu")        # Temporary fix for certain hardware environments
         self.driver = webdriver.Remote(
             command_executor=f'http://localhost:{CHROMEDRIVER_PORT}',
             options=options)
@@ -90,11 +99,13 @@ class PluginTests(unittest.TestCase):
         self.click(By.XPATH, "//button[text()='Manage Plugins']")
 
         # enter the plugin URL
+        Select(
+            self.driver.find_element(By.ID, "installFrom")
+        ).select_by_visible_text("local path")
         self.type(
             By.XPATH,
-            "//input[@placeholder='https://github.com/owner/repo.git']",
-            TEST_PLUGIN_GIT_URL)
-        self.type(By.ID, "branch", 'update-invest')
+            "//input[@placeholder='/Users/username/path/to/plugin/']",
+            TEST_PLUGIN_LOCAL_PATH)
 
         # check the acknowledgement and click the "Add" button
         self.click(By.ID, "user-acknowledgment-checkbox")
@@ -109,8 +120,19 @@ class PluginTests(unittest.TestCase):
         )
         self.click(By.XPATH, "//button[@aria-label='Close modal']")
 
+        # install the current dev branch into the plugin environment
+        self.click(By.XPATH, "//button[@aria-label='menu']")
+        self.click(By.XPATH, "//button[text()='Manage Plugins']")
+        env_path = self.driver.find_element(
+            By.ID, "test@0_0_0").get_attribute("value")
+        subprocess.run([
+            'micromamba', 'run', '--prefix', env_path,
+            'pip', 'install', '--no-build-isolation', '.'],
+            cwd=Path(__file__).parent.parent.parent.parent)
+        self.click(By.XPATH, "//button[@aria-label='Close modal']")
+
         # launch the plugin
-        self.click(By.NAME, "Demo Plugin")
+        self.click(By.NAME, "Test Plugin")
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((
                 By.XPATH,
