@@ -1,6 +1,3 @@
-# coding=UTF-8
-# -*- mode: python -*-
-import sys
 import os
 import itertools
 import glob
@@ -8,7 +5,6 @@ from PyInstaller.compat import is_win, is_darwin
 
 # Global Variables
 current_dir = os.getcwd()  # assume we're building from the project root
-block_cipher = None
 exename = 'invest'
 conda_env = os.environ['CONDA_PREFIX']
 
@@ -20,7 +16,6 @@ else:
 kwargs = {
     'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
     'excludes': None,
-    'pathex': sys.path,
     'runtime_hooks': [os.path.join(current_dir, 'exe', 'hooks', 'rthook.py')],
     'hiddenimports': [
         'natcap',
@@ -36,14 +31,13 @@ kwargs = {
         'scipy._cyutility'
     ],
     'datas': [proj_datas],
-    'cipher': block_cipher,
 }
 
 cli_file = os.path.join(current_dir, 'src', 'natcap', 'invest', 'cli.py')
 a = Analysis([cli_file], **kwargs)
 
 # Compress pyc and pyo Files into ZlibArchive Objects
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data)
 
 # Create the executable file.
 if is_darwin:
