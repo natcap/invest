@@ -123,8 +123,9 @@ class PluginTests(unittest.TestCase):
         # install the current dev branch into the plugin environment
         self.click(By.XPATH, "//button[@aria-label='menu']")
         self.click(By.XPATH, "//button[text()='Manage Plugins']")
-        env_path = self.driver.find_element(
-            By.ID, "test@0_0_0").get_attribute("value")
+        env_path = WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.ID, "test@0_0_0"))
+        ).get_attribute("value")
         subprocess.run([
             'micromamba', 'run', '--prefix', env_path,
             'pip', 'install', '--no-build-isolation', '.'],
