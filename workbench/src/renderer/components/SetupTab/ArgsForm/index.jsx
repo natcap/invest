@@ -137,7 +137,7 @@ class ArgsForm extends React.Component {
       // object with an input_ids attribute.
       const inputIDs = Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
       const groupItems = [];
-      inputID.forEach((argkey) => {
+      inputIDs.forEach((argkey) => {
         groupItems.push(
           <ArgInput
             argkey={argkey}
