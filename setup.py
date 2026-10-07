@@ -1,13 +1,21 @@
 import importlib.util
+import logging
 import os
 import platform
+import re
 import subprocess
+import sys
+import sysconfig
 
 import numpy
 from Cython.Build import cythonize
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
+LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
 include_dirs = [numpy.get_include()]
 
@@ -44,6 +52,36 @@ else:
     library_dirs = [subprocess.run(
         ['gdal-config', '--libs'], capture_output=True, text=True
     ).stdout.split()[0][2:]] # get the first argument which is the library path
+
+
+# The default compiler flags used to compile the C++ extensions include
+# unquoted paths. If the CONDA_PREFIX contains a space, the compiler command
+# will raise an error. Attempt to get around this by modifying sysconfig vars
+# (setting environment variables does not work to override these defaults).
+if ' ' in os.environ['CONDA_PREFIX']:
+    LOGGER.info(
+        'The CONDA_PREFIX path contains a space, which is not fully supported '
+        'by conda/mamba/micromamba.')
+    if os.environ.get('NATCAP_INVEST_FIX_SYSCONFIG_PATHS') == 'false':
+        LOGGER.warning(
+            'Not attempting to fix paths in sysconfig vars because '
+            'NATCAP_INVEST_FIX_SYSCONFIG_PATHS=false. It is expected '
+            'that the C++ extensions will fail to compile.')
+    else:
+        LOGGER.info(
+            'Modifying sysconfig vars in an attempt to quote paths beginning '
+            'with the CONDA_PREFIX. This behavior can be disabled with '
+            'NATCAP_INVEST_FIX_SYSCONFIG_PATHS=false.')
+        config_vars = sysconfig.get_config_vars()
+        # Match paths that start with CONDA_PREFIX and don't have a quote before them
+        pattern = re.compile(rf'(?<![\'"])({os.environ['CONDA_PREFIX']}[a-zA-Z0-9\./_-]*)')
+        for key, val in config_vars.items():
+            if isinstance(val, str) and os.environ['CONDA_PREFIX'] in val:
+                config_vars[key] = pattern.sub(r'"\1"', val)
+                LOGGER.debug(
+                    f'Overwriting {key}\n'
+                    f'\tOriginal value: {val}\n'
+                    f'\tNew value: {config_vars[key]}')
 
 
 class build_py(_build_py):
