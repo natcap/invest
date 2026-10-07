@@ -74,7 +74,7 @@ if ' ' in os.environ['CONDA_PREFIX']:
             'NATCAP_INVEST_FIX_SYSCONFIG_PATHS=false.')
         config_vars = sysconfig.get_config_vars()
         # Match paths that start with CONDA_PREFIX and don't have a quote before them
-        pattern = re.compile(rf'(?<![\'"])({os.environ['CONDA_PREFIX']}[a-zA-Z0-9\./_-]*)')
+        pattern = re.compile(rf'(?<![\'"])({os.environ["CONDA_PREFIX"]}[a-zA-Z0-9\./_-]*)')
         for key, val in config_vars.items():
             if isinstance(val, str) and os.environ['CONDA_PREFIX'] in val:
                 config_vars[key] = pattern.sub(r'"\1"', val)
