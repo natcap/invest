@@ -13,6 +13,7 @@ from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
 
+# log messages can be seen by passing the -v flag to pip install
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -58,7 +59,7 @@ else:
 # unquoted paths. If the CONDA_PREFIX contains a space, the compiler command
 # will raise an error. Attempt to get around this by modifying sysconfig vars
 # (setting environment variables does not work to override these defaults).
-if ' ' in os.environ['CONDA_PREFIX']:
+if ' ' in os.environ.get('CONDA_PREFIX', ''):
     LOGGER.info(
         'The CONDA_PREFIX path contains a space, which is not fully supported '
         'by conda/mamba/micromamba.')
