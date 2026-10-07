@@ -366,7 +366,7 @@ test('Install and run a plugin', async () => {
   console.log('clicked submit');
   await page.waitForSelector('text/Successfully installed plugin', { timeout: 300000 });
   console.log('succeeded');
-  const modalClose = await page.waitForSelector(
+  let modalClose = await page.waitForSelector(
     'aria/[name="Close modal"][role="button"]'
   );
   await modalClose.click();
@@ -386,7 +386,10 @@ test('Install and run a plugin', async () => {
     `micromamba run --prefix "${envPath}" pip install --no-build-isolation .`,
     { cwd: path.resolve(__dirname, '..', '..', '..') }
   );
-
+  console.log('click modal close');
+  modalClose = await page.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
+  );
   await modalClose.click();
   console.log('closed modal');
 
