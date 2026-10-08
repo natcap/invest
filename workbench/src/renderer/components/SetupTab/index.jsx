@@ -50,7 +50,12 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
   const argsDropdownOptions = {};
 
   inputFieldOrder.map(
-    (inputGroup) => inputGroup.input_ids
+    (inputGroup) =>
+      // support both new and old input group formats because the plugin
+      // environment could have an older version of invest installed.
+      // the old format is an array of input ids. the new format is an
+      // object with an input_ids attribute.
+      Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
   ).flat().forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
