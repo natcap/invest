@@ -68,7 +68,7 @@ def get_invest_getspec():
     importlib.reload(natcap.invest.validation_messages)
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
-    return model_module.MODEL_SPEC.to_json()
+    return model_module.MODEL_SPEC.model_dump_json()
 
 
 @app.route(f'/{PREFIX}/dynamic_dropdowns', methods=['POST'])

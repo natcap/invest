@@ -130,10 +130,14 @@ class ArgsForm extends React.Component {
     } = this.props;
     const formItems = [];
     let k = 0;
-    argsOrder.forEach((groupArray) => {
-      k += 1;
+    argsOrder.forEach((inputGroup) => {
+      // support both new and old input group formats because the plugin
+      // environment could have an older version of invest installed.
+      // the old format is an array of input ids. the new format is an
+      // object with an input_ids attribute.
+      const inputIDs = Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
       const groupItems = [];
-      groupArray.forEach((argkey) => {
+      inputIDs.forEach((argkey) => {
         groupItems.push(
           <ArgInput
             argkey={argkey}
@@ -156,10 +160,17 @@ class ArgsForm extends React.Component {
         );
       });
       formItems.push(
-        <div className="arg-group" key={k}>
-          {groupItems}
-        </div>
+        <fieldset className="arg-group-fieldset" key={k}>
+          {inputGroup.group_label &&
+            <legend>{inputGroup.group_label}</legend>
+          }
+          <Form.Group className="arg-group">
+            {groupItems}
+          </Form.Group>
+        </fieldset>
+
       );
+      k += 1;
     });
 
     return (

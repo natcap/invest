@@ -48,7 +48,15 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
   const argsDropdownOptions = {};
-  inputFieldOrder.flat().forEach((argkey) => {
+
+  inputFieldOrder.map(
+    (inputGroup) =>
+      // support both new and old input group formats because the plugin
+      // environment could have an older version of invest installed.
+      // the old format is an array of input ids. the new format is an
+      // object with an input_ids attribute.
+      Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
+  ).flat().forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.
@@ -145,7 +153,9 @@ class SetupTab extends React.Component {
     // here we only use the keys in inputFieldOrder because args that
     // aren't displayed in the form don't need an enabled/disabled state.
     // all args default to being enabled
-    const argsEnabled = inputFieldOrder.flat().reduce((acc, argkey) => {
+    const argsEnabled = inputFieldOrder.map(
+      (inputGroup) => inputGroup.input_ids
+    ).flat().reduce((acc, argkey) => {
       acc[argkey] = true;
       return acc;
     }, {});

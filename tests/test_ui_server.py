@@ -159,7 +159,7 @@ class EndpointFunctionTests(unittest.TestCase):
         target_filepath = os.path.join(self.workspace_dir, 'data.tgz')
         data_path = os.path.join(self.workspace_dir, 'data.csv')
         with open(data_path, 'w') as file:
-            file.write('hello')
+            file.write('lucode,c_above,c_below,c_soil,c_dead')
 
         payload = {
             'filepath': target_filepath,
@@ -311,4 +311,4 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_model_specs_serialize(self):
         """MODEL_SPEC: test each arg spec can serialize to JSON."""
         for module in models.pyname_to_module.values():
-            module.MODEL_SPEC.to_json()
+            module.MODEL_SPEC.model_dump_json()

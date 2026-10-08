@@ -142,7 +142,7 @@ jobs:
       - name: Instructions
         if: env.RUN == 'true'
         run: |
-          cat << 'EOF'
+          cat << EOF
 
           Next steps:
 
