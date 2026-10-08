@@ -126,11 +126,13 @@ class PluginTests(unittest.TestCase):
             EC.element_to_be_clickable((By.ID, "test@0_0_0"))
         ).get_attribute("value")
         subprocess.run([
-            # env var only needed on windows, ignored on macos
-            'NATCAP_INVEST_GDAL_LIB_PATH=%CONDA_PREFIX%/Library',
             'micromamba', 'run', '--prefix', env_path,
             'pip', 'install', '--no-build-isolation', '.'],
-            cwd=Path(__file__).parent.parent.parent.parent)
+            cwd=Path(__file__).parent.parent.parent.parent,
+            env={  # env var only needed on windows, ignored on macos
+                **os.environ,
+                'NATCAP_INVEST_GDAL_LIB_PATH': '%CONDA_PREFIX%/Library'
+            })
         self.click(By.XPATH, "//button[@aria-label='Close modal']")
 
         # launch the plugin
