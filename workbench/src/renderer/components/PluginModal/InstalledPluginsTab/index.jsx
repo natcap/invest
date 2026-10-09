@@ -95,7 +95,9 @@ function InstalledPluginDetailItem(props) {
   return (
     <Row className="pt-2 pb-2 installed-plugin-row">
       <Col sm={9}>
-        <h6>{pluginDetails.modelTitle} ({pluginDetails.version})</h6>
+        <h6 id={`plugin-${pluginID}`}>
+          {pluginDetails.modelTitle} ({pluginDetails.version})
+        </h6>
         <dl className="plugin-dl">
           {pluginDetails.sourceType && (
             <>
@@ -135,6 +137,7 @@ function InstalledPluginDetailItem(props) {
             className="plugin-submit-btn"
             aria-disabled={addRemoveState.opStatus === opStatusLoading}
             onClick={handleRemovePluginClick}
+            aria-describedby={`plugin-${pluginID}`}
           >
             {uninstallStatus === opStatusLoading
               ? (

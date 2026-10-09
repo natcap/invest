@@ -115,7 +115,7 @@ export default function PluginDetailPane(props) {
             {t('A different version of this plugin is already installed.')}
         </div>
       }
-      <Form aria-labelledby="add-plugin-form-title">
+      <Form aria-label={`${t('Install plugin')} ${plugin.plugin_name}`}>
         <Form.Group>
           <Form.Group>
             <Form.Text

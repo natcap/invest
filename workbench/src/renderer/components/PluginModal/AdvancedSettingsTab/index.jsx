@@ -119,13 +119,18 @@ export default function AdvancedSettingsTab(props) {
               <MdFolderOpen />
             </Button>
             <Button
+              aria-label="reset conda executable"
               className="text-nowrap ms-1"
               onClick={resetCondaPath}
             >
               {t('Reset')}
             </Button>
           </div>
-          <Button onClick={saveCondaPath} className="text-nowrap mt-3">
+          <Button
+            aria-describedby='configure-conda-form-title'
+            onClick={saveCondaPath}
+            className="text-nowrap mt-3"
+          >
             {t('Save')}
           </Button>
         </Form.Group>
@@ -174,7 +179,7 @@ export default function AdvancedSettingsTab(props) {
                 className="me-1"
               />
               <Button
-                aria-label="browse for env"
+                aria-label={`browse for env for plugin ${pluginID}`}
                 className="browse-button ms-1 me-2"
                 variant="outline-dark"
                 onClick={async (event) => setPluginEnvs({
@@ -185,6 +190,7 @@ export default function AdvancedSettingsTab(props) {
                 <MdFolderOpen />
               </Button>
               <Button
+                aria-label={`reset env path for plugin ${pluginID}`}
                 onClick={() => resetPluginEnv(pluginID)}
                 className="text-nowrap"
               >
@@ -195,6 +201,7 @@ export default function AdvancedSettingsTab(props) {
         ))}
         {Object.keys(pluginEnvs).length
           ? <Button
+              aria-describedby='configure-plugin-envs-form-title'
               onClick={savePluginEnvs}
               className="text-nowrap mt-3">
                 {t('Save')}

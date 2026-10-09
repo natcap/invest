@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
@@ -61,10 +61,13 @@ export default function PluginModal(props) {
   const [registryDataLoading, setRegistryDataLoading] = useState(true);
   const [activePluginKey, setActivePluginKey] = useState('');
   const [tabKey, setTabKey] = useState('registry');
+  const modalCloseAlertRef = useRef();
 
   const handleModalClose = () => {
     if (addRemoveState.opStatus !== opStatusLoading) {
       closeModal();
+    } else {
+      modalCloseAlertRef.current?.focus();
     }
   };
 
@@ -110,7 +113,7 @@ export default function PluginModal(props) {
       opStatus: opStatusLoading,
       opErrorMsg: "",
       opPluginID: pluginID
-    })
+    });
     ipcRenderer.invoke(
       ipcMainChannels.ADD_PLUGIN,
       url,       // git url (via manual install or registry)
@@ -123,7 +126,7 @@ export default function PluginModal(props) {
         opStatus: opStatusSuccess,
         opErrorMsg: "",
         opPluginID: pluginID
-      })
+      });
       updateInvestList();
     }).catch((err) => {
       setAddRemoveState({
@@ -131,7 +134,7 @@ export default function PluginModal(props) {
         opStatus: opStatusFailure,
         opErrorMsg: err.toString(),
         opPluginID: pluginID
-      })
+      });
     });
   };
 
@@ -141,7 +144,7 @@ export default function PluginModal(props) {
       opStatus: opStatusLoading,
       opErrorMsg: "",
       opPluginID: pluginToRemove
-    })
+    });
     openJobs.forEach((job, tabID) => {
       if (job.modelID === pluginToRemove) {
         closeInvestModel(tabID);
@@ -155,7 +158,7 @@ export default function PluginModal(props) {
         opStatus: opStatusSuccess,
         opErrorMsg: "",
         opPluginID: pluginToRemove
-      })
+      });
       updateInvestList();
     }).catch((err) => {
       setAddRemoveState({
@@ -163,7 +166,7 @@ export default function PluginModal(props) {
         opStatus: opStatusFailure,
         opErrorMsg: err.toString(),
         opPluginID: pluginToRemove
-      })
+      });
     });
   };
 
@@ -398,35 +401,39 @@ export default function PluginModal(props) {
     </Modal.Body>
   );
 
-  let modalFooter;
+  let footerStatusMessage;
   if (addRemoveState.opStatus === opStatusSuccess) {
     if (addRemoveState.opType === opTypeInstall) {
-      modalFooter = (
+      footerStatusMessage = (
         <>
-          <BsCheckCircle className="plugin-modal-icons" />
-          <span>
+          <div className="footer-status-msg">
+            <BsCheckCircle className="plugin-modal-icons" />
             {t("Installation Success! You can now close this modal and open the plugin from the list of models.")}
-          </span>
+          </div>
           <Button
-            className="plugin-submit-btn"
+            className="plugin-submit-btn ms-3"
             onClick={jumpToInstallMsg}
-          >{t("View Details")}</Button>
+            >{t("View Details")}</Button>
         </>
       );
     } else if (addRemoveState.opType === opTypeUninstall) {
-      modalFooter = (
+      footerStatusMessage = (
         <>
-          <BsCheckCircle className="plugin-modal-icons" />
-          <span>{t("Plugin successfully uninstalled.")}</span>
+          <div className="footer-status-msg">
+            <BsCheckCircle className="plugin-modal-icons" />
+            <span>{t("Plugin successfully uninstalled.")}</span>
+          </div>
         </>
       );
     }
   } else if (addRemoveState.opStatus === opStatusFailure) {
     if (addRemoveState.opType === opTypeInstall) {
-      modalFooter = (
+      footerStatusMessage = (
         <>
-          <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
-          <span>{t("An error occurred during installation.")}</span>
+          <div className="footer-status-msg">
+            <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
+            <span>{t("An error occurred during installation.")}</span>
+          </div>
           <Button
             className="plugin-submit-btn"
             onClick={jumpToInstallMsg}
@@ -434,12 +441,14 @@ export default function PluginModal(props) {
         </>
       );
     } else if (addRemoveState.opType === opTypeUninstall) {
-      modalFooter = (
+      footerStatusMessage = (
         <>
-          <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
-          <span>{t("An error occurred during uninstallation:")}</span>
-          <div className="plugin-error plugin-install-remove-error">
-            {addRemoveState.opErrorMsg}
+          <div className="footer-status-msg">
+            <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
+            <span>{t("An error occurred during uninstallation:")}</span>
+            <div className="plugin-error plugin-install-remove-error">
+              {addRemoveState.opErrorMsg}
+            </div>
           </div>
           <Button
             className="plugin-submit-btn"
@@ -450,26 +459,36 @@ export default function PluginModal(props) {
     }
   } else if (addRemoveState.opStatus === opStatusLoading) {
     if (addRemoveState.opType === opTypeInstall) {
-      modalFooter = (
+      footerStatusMessage = (
         <>
-          <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
-          {t("Installation in progress: ")}{statusMessage}
-          <Button
-            className="plugin-submit-btn"
-            onClick={jumpToInstallMsg}
-          >{t("View Installing Plugin")}</Button>
+          <div className="footer-status-msg">
+            <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
+            {t("Installation in progress: ")}{statusMessage}
+            <Button
+              className="plugin-submit-btn ms-3"
+              onClick={jumpToInstallMsg}
+            >{t("View Installing Plugin")}</Button>
+          </div>
+          <div tabIndex="-1" ref={modalCloseAlertRef} className="modal-close-alert">
+            {t('Please wait for installation to complete before closing the modal.')}
+          </div>
         </>
       );
     } else if (addRemoveState.opType === opTypeUninstall) {
-      modalFooter = (
+      footerStatusMessage = (
         <>
-          <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
-          {t("Uninstallation in progress...")}
+          <div className="footer-status-msg">
+            <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
+            {t("Uninstallation in progress...")}
+          </div>
+          <div tabIndex="-1" ref={modalCloseAlertRef} className="modal-close-alert">
+            {t('Please wait for uninstallation to complete before closing the modal.')}
+          </div>
         </>
       );
     }
   } else {
-    modalFooter = (
+    footerStatusMessage = (
       <p>{t("No installation or uninstallation is currently in progress.")}</p>
     )
   }
@@ -494,7 +513,9 @@ export default function PluginModal(props) {
       {modalBody}
       <Modal.Footer className="plugin-modal-footer">
         <p className="plugin-modal-footer-header">{t("Plugin Installation / Uninstallation Status:")}</p>
-        {modalFooter}
+        <div role="region" aria-live="polite">
+          {footerStatusMessage}
+        </div>
       </Modal.Footer>
     </Modal>
   );

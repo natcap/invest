@@ -5,6 +5,7 @@
   --invest-green-opacity-25: #c4e3d9; /* Equivalent to InVEST Green with 25% opacity */
   --digital-green: #008566; /* From Stanford brand guidelines. Better contrast for text than invest-green. */
   --digital-red: #B1040E; /* From Stanford brand guidelines. */
+  --digital-red-opacity-25: #ECC0C3; /* Equivalent to Digital Red with 25% opacity */
   --secondary-gray: #585858;
   --bootstrap-secondary-gray:#6c757d;
   --bootstrap-gray-100: #f8f9fa;
@@ -1159,4 +1160,19 @@ dl.plugin-dl {
     opacity: 0.7;
     cursor: not-allowed;
   }
+}
+
+.modal-close-alert {
+  padding: 0.25rem;
+  &:focus, &:focus-visible {
+    border-radius: 5px;
+    box-shadow: 0 0 0 .25rem var(--digital-red-opacity-25);
+    outline: var(--digital-red);
+    color: var(--digital-red);
+  }
+}
+
+.footer-status-msg {
+  padding-left: 0.25rem;
+  margin-bottom: 0.5rem;
 }
