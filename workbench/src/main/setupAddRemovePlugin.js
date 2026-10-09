@@ -179,9 +179,10 @@ async function installPlugin(
  * @param  {string} pluginEnvPrefix location of the plugin's micromamba env
  * @param  {string} packageName     the plugin's python package name
  * @param  {string} installString   pip install argument for the plugin
+ * @param  {string} key             key to store the metadata under
  */
 function storePluginMetadataSync(
-  micromamba, pluginEnvPrefix, packageName, installString
+  micromamba, pluginEnvPrefix, packageName, installString, key
 ) {
   const modelID = execSync(
     `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
@@ -199,12 +200,8 @@ function storePluginMetadataSync(
 
   // Write plugin metadata to the workbench's config.json
   logger.info('writing plugin info to settings store');
-  // Uniquely identify plugin by its ID and version
-  // Replace dots with underscores in the version, because dots are a
-  // special character in keys for electron-store's set and get methods
-  const pluginID = `${modelID}@${version}`;
   settingsStore.set(
-    `plugins.${pluginID.replaceAll('.', '_')}`,
+    `plugins.${key}`,
     {
       modelID: modelID,
       modelTitle: modelTitle,
@@ -287,14 +284,15 @@ export function setupAddPlugin(i18n) {
         // know the model_id until after creating the environment to be able to
         // import metadata from the MODEL_SPEC. And mamba does not support
         // renaming or moving environments after they're created.
-        const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${Date.now()}`);
+        const timestamp = Date.now()
+        const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${timestamp}`);
         try {
           await installPlugin(
             micromamba, pluginEnvPrefix, condaDeps, installString, i18n, event
           );
           event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
           storePluginMetadataSync(
-            micromamba, pluginEnvPrefix, packageName, installString
+            micromamba, pluginEnvPrefix, packageName, installString, timestamp
           );
           logger.info('successfully added plugin');
         } catch (error) {
@@ -315,20 +313,20 @@ export function setupAddPlugin(i18n) {
 export function setupRemovePlugin() {
   ipcMain.handle(
     ipcMainChannels.REMOVE_PLUGIN,
-    async (e, pluginID) => {
-      logger.info('removing plugin', pluginID);
+    async (e, key) => {
+      logger.info('removing plugin', key);
       try {
         // Shut down the plugin server process
-        const pluginPID = settingsStore.get(`plugins.${pluginID}.pid`);
+        const pluginPID = settingsStore.get(`plugins.${key}.pid`);
         await shutdownPythonProcess(pluginPID);
         // Delete the plugin's conda env
-        const env = settingsStore.get(`plugins.${pluginID}.env`);
+        const env = settingsStore.get(`plugins.${key}.env`);
         const micromamba = settingsStore.get('micromamba');
         await spawnWithLogging(
           micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]
         );
         // Delete the plugin's data from storage
-        settingsStore.delete(`plugins.${pluginID}`);
+        settingsStore.delete(`plugins.${key}`);
         logger.info('successfully removed plugin');
       } catch (error) {
         logger.info('Error removing plugin:');
