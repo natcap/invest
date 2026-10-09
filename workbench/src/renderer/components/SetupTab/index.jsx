@@ -51,7 +51,12 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
   console.log(argsSpec);
   console.log(inputFieldOrder);
   inputFieldOrder.map(
-    (inputGroup) => inputGroup.input_ids
+    (inputGroup) =>
+      // support both new and old input group formats because the plugin
+      // environment could have an older version of invest installed.
+      // the old format is an array of input ids. the new format is an
+      // object with an input_ids attribute.
+      Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
   ).flat().forEach((argkey) => {
     console.log(argkey);
     // When initializing with undefined values, assign defaults so that,
