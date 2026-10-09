@@ -84,6 +84,9 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+      - name: Install uv
+        uses: astral-sh/setup-uv
+
       # NOTE: It takes twice as long to save the sample data cache
       # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
       # Test data is way, way faster by contrast (on the order of a few
@@ -95,15 +98,6 @@ jobs:
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
       - uses: ./.github/actions/create_build_requirements_file
-
-      - name: Set up build environment
-        uses: ./.github/actions/setup_env
-        with:
-          requirements-files: requirements-build.txt
-          requirements: |
-            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            python=${{ matrix.python-version }}
-          env-name: build_env
 
       - name: Set up test environment
         uses: ./.github/actions/setup_env
@@ -142,8 +136,7 @@ jobs:
       # so the following tests cover both distributions
       - name: Build sdist and wheel
         run: |
-          micromamba activate build_env
-          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --no-isolation
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" uv build
           ls -la dist
 
       # Modify the wheel metadata to require the same minor version of gdal that we built against.
@@ -165,8 +158,8 @@ jobs:
         run: |
           micromamba activate test_env
           # uninstall InVEST if it was already in the restored cache
-          python -m pip uninstall -y natcap.invest
-          pip install $(find dist -name "natcap[._-]invest*.whl")
+          uv pip uninstall -y natcap.invest
+          uv pip install $(find dist -name "natcap[._-]invest*.whl")
           make test
 
       - name: Check long description with twine

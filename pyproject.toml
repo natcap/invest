@@ -50,7 +50,7 @@ invest = "natcap.invest.cli:main"
 # the C++ extensions.
 requires = [
     'setuptools>=64', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
-    'numpy>=2', 'pygeoprocessing'
+    'numpy>=2', 'pygeoprocessing>=2.4.10'
 ]
 build-backend = "setuptools.build_meta"
 
@@ -90,3 +90,12 @@ filterwarnings = [
     # issue on M1: https://github.com/natcap/invest/issues/1562
     "default:invalid value encountered in intersection:RuntimeWarning",
 ]
+
+[tool.uv]
+no-binary-package = ["pygeoprocessing"]
+# exclude-dependencies = [{ package = { name = "pygeoprocessing" }, dependencies = ["gdal"] }]
+no-build-isolation-package = ["pygeoprocessing"]
+no-cache = true
+
+[tool.uv.sources]
+pygeoprocessing = { path = "/Users/emily/pygeoprocessing" }
