@@ -384,6 +384,7 @@ export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}
                   recentJobs={recentJobs}
                   deleteJob={deleteJob}
                   clearRecentJobs={clearRecentJobs}
+                  showPluginModal={() => setShowPluginModal(true)}
                 />
               )
             }

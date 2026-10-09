@@ -16,10 +16,14 @@ import {
   getDynamicDropdowns,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
+import {
+  fetchRegistryData
+} from '../../src/renderer/components/PluginModal/services';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import pkg from '../../package.json';
 
 jest.mock('../../src/renderer/server_requests');
+jest.mock('../../src/renderer/components/PluginModal/services');
 
 const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_ID = 'carbon';
@@ -584,6 +588,7 @@ describe('Main menu interactions', () => {
       }
       return Promise.resolve();
     });
+    fetchRegistryData.mockResolvedValue([]);
 
     const {
       findByText, findByRole,
@@ -594,10 +599,10 @@ describe('Main menu interactions', () => {
     const dropdownBtn = await findByRole('button', { name: 'menu' });
     await userEvent.click(dropdownBtn);
     await userEvent.click(
-      await findByRole('button', { name: /Manage Plugins/i })
+      await findByRole('button', { name: /Plugin Manager/i })
     );
 
-    expect(await findByText(/add a plugin/i))
+    expect(await findByRole('tab', { name: /plugin registry/i }))
       .toBeInTheDocument();
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
@@ -658,6 +663,37 @@ describe('Main menu interactions', () => {
     );
 
     expect(await findByText(/invest settings/i))
+      .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
+  });
+
+  test('Open Plugins Modal from InvestTab button', async () => {
+    ipcRenderer.invoke.mockImplementation((channel, arg) => {
+      if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      } else if (channel === ipcMainChannels.GET_SETTING) {
+        if (arg === 'micromamba') {
+          return Promise.resolve('micromamba');
+        } else if (arg === 'plugins') {
+          return Promise.resolve({});
+        }
+      }
+      return Promise.resolve();
+    });
+    jest.spyOn(global, "fetch").mockImplementation({'data': []});
+
+    const {
+      findByText, findByRole,
+    } = render(
+      <App />
+    );
+
+    const pluginManagerBtn = await findByRole('button', { name: /add a plugin/i });
+    await userEvent.click(pluginManagerBtn);
+
+    expect(await findByRole('tab', { name: /plugin registry/i }))
       .toBeInTheDocument();
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
