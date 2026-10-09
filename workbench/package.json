@@ -21,7 +21,8 @@
     "build-renderer": "vite --config vite.config.mjs build",
     "build": "yarn build-renderer && yarn build-main && yarn build:preload && yarn build-license",
     "token": "cd .. && make jprint-DATA_BASE_URL > workbench/resources/storage_token.txt",
-    "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
+    "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js",
+    "i18n-extract": "i18next-cli --config i18next-main.config.mjs extract && i18next-cli --config i18next-renderer.config.mjs extract"
   },
   "jest": {
     "reporters": [
@@ -97,8 +98,8 @@
     "eslint-plugin-react-hooks": "^4.2.0",
     "fs-extra": "^9.1.0",
     "glob": "^13.0.6",
+    "i18next-cli": "^1.74.1",
     "i18next-conv": "^15.1.1",
-    "i18next-parser": "^9.4.0",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "puppeteer-core": "^24.38.0",

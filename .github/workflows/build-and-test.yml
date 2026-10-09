@@ -272,7 +272,7 @@ jobs:
       - name: Set up node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Restore node_modules cache
         id: nodemodules-cache
@@ -356,7 +356,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Restore node_modules cache
         id: nodemodules-cache
