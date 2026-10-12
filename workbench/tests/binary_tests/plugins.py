@@ -45,6 +45,7 @@ class PluginTests(unittest.TestCase):
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-gpu")
+        options.add_argument("--disable-dev-shm-usage")
         self.driver = webdriver.Remote(
             command_executor=f'http://localhost:{CHROMEDRIVER_PORT}',
             options=options)
