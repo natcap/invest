@@ -383,10 +383,12 @@ test('Install and run a plugin', async () => {
   console.log(envPath);
 
   execSync(
-    // env var only needed on windows, ignored on macos
-    'NATCAP_INVEST_GDAL_LIB_PATH=%CONDA_PREFIX%/Library micromamba ' +
-    `run --prefix "${envPath}" pip install --no-build-isolation .`,
-    { cwd: path.resolve(__dirname, '..', '..', '..') }
+    `micromamba run --prefix "${envPath}" pip install --no-build-isolation .`,
+    {
+      cwd: path.resolve(__dirname, '..', '..', '..'),
+      // env var only needed on windows, ignored on macos
+      env: {...process.env, NATCAP_INVEST_GDAL_LIB_PATH: '%CONDA_PREFIX%/Library'}
+    }
   );
   console.log('click modal close');
   modalClose = await page.waitForSelector(
