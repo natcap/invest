@@ -99,13 +99,10 @@ class PluginTests(unittest.TestCase):
         self.click(By.XPATH, "//button[text()='Manage Plugins']")
 
         # enter the plugin URL
-        Select(
-            self.driver.find_element(By.ID, "installFrom")
-        ).select_by_visible_text("local path")
-        self.type(
-            By.XPATH,
-            "//input[@placeholder='/Users/username/path/to/plugin/']",
-            TEST_PLUGIN_LOCAL_PATH)
+        dropdown = WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "installFrom")))
+        Select(dropdown).select_by_visible_text("local path")
+        self.type(By.ID, "path", TEST_PLUGIN_LOCAL_PATH)
 
         # check the acknowledgement and click the "Add" button
         self.click(By.ID, "user-acknowledgment-checkbox")
