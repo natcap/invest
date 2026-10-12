@@ -59,9 +59,10 @@ class PluginTests(unittest.TestCase):
             EC.element_to_be_clickable((strategy, locator)))
         element.click()
 
-    def type(self, strategy, locator, text, typing_delay=0.01):
+    def type(self, strategy, locator, text, typing_delay=0.01, timeout=5):
         """Enter text into an input field, with delay to simulate typing."""
-        element = self.driver.find_element(strategy, locator)
+        element = WebDriverWait(self.driver, timeout).until(
+            EC.presence_of_element_located((strategy, locator)))
         for char in text:
             element.send_keys(char)
             time.sleep(typing_delay)
