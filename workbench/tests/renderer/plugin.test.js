@@ -655,7 +655,8 @@ describe('Plugin Manager modal', () => {
         );
       });
 
-      const resetButton = await within(div).findByRole('button', { name: /Reset/ });
+      const resetButton = await within(div)
+        .findByRole('button', { name: /reset conda executable/i });
       await userEvent.click(resetButton);
       await waitFor(() => { expect(input).toHaveValue('micromamba'); });
     });
@@ -704,7 +705,8 @@ describe('Plugin Manager modal', () => {
         );
       });
 
-      const resetButton = await within(div).findByRole('button', { name: /Reset/ });
+      const resetButton = await within(div)
+        .findByRole('button', { name: /reset env path for plugin foo/i });
       await userEvent.click(resetButton);
       await waitFor(() => { expect(input).toHaveValue(PLUGIN_SETTING_ITEM.foo.env); });
     });
