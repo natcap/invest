@@ -375,7 +375,7 @@ jobs:
         working-directory: workbench
         run: |
           yarn config set network-timeout 600000 -g
-          yarn install --verbose
+          yarn install
 
       - name: Download micromamba for distribution (MacOS)
         if: matrix.os == 'macos-15-intel'
@@ -410,7 +410,6 @@ jobs:
           DEBUG: electron-builder
           CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
         run: |
-          echo $ELECTRON_VERSION
           yarn run build
           ELECTRON_VERSION=40.8.5 yarn run dist
 
@@ -483,7 +482,7 @@ jobs:
         continue-on-error: true
         run: |
           ./chromedriver/chromedriver*/chromedriver* --port=9515 &
-          sleep 2
+          sleep 1
           pytest tests/binary_tests/plugins.py
 
       - name: Test electron app with puppeteer
@@ -496,8 +495,6 @@ jobs:
       - name: Binary test(s) failed
         if: ${{ (steps.selenium-tests.outcome == 'failure') || (steps.puppeteer-tests.outcome == 'failure') }}
         run: |
-          echo ${{ steps.selenium-tests.outcome }}
-          echo ${{ steps.puppeteer-tests.outcome }}
           ${{ steps.selenium-tests.outcome == 'failure' }} && echo "Selenium test failed"
           ${{ steps.puppeteer-tests.outcome == 'failure' }} && echo "Puppeteer test failed"
           exit 1
