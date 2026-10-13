@@ -1,0 +1,148 @@
+- name: Setup InVEST Rec Server VM
+  hosts: recserver
+  vars:
+    invest_version: main
+    invest_fork: natcap
+    server_workspace: /home/rec/server
+
+  tasks:
+    - name: Setup rec user and install system dependencies
+      become: true  # become root, by default
+      block:
+        - name: Create staff group
+          ansible.builtin.group:
+            name: staff
+            state: present
+
+        - name: Add me to staff group
+          ansible.builtin.user:
+            name: '{{ ansible_facts["user_id"] }}'
+            groups: staff
+            append: yes
+            state: present
+
+        - name: Create rec user in staff group
+          ansible.builtin.user:
+            name: rec
+            groups: staff
+            state: present
+
+        - name: Add repo for gcsfuse
+          ansible.builtin.deb822_repository:
+            name: gcsfuse  # careful not to overwrite the debian.sources file.
+            types: deb
+            uris: http://packages.cloud.google.com/apt
+            suites: 'gcsfuse-{{ ansible_facts["distribution_release"] }}'
+            components:
+              - main
+            signed_by: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+            state: present
+
+        - name: Install system dependencies
+          ansible.builtin.apt:
+            pkg:
+              - acl
+              - build-essential
+              - gcsfuse
+              - git
+            state: present
+            update_cache: yes
+
+    - name: Setup and run the invest python process
+      become: true
+      become_user: rec
+      block:
+        - name: Kill any existing invest python processes
+          tags: restart-process
+          ansible.builtin.shell:
+            executable: /bin/bash
+            cmd: killall -u rec python || true
+
+        - name: Download Miniforge and install it
+          ansible.builtin.shell:
+            executable: /bin/bash
+            chdir: /home/rec
+            cmd: |
+              curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh"
+              rm -rf "${HOME}/conda"
+              bash Miniforge3-Linux-x86_64.sh -b -p "${HOME}/conda"
+            creates: /home/rec/conda/etc/profile.d/mamba.sh
+
+        - name: Clone invest
+          ansible.builtin.git:
+            repo: https://github.com/{{ invest_fork }}/invest
+            dest: /home/rec/invest
+            version: '{{ invest_version }}'
+            depth: 1
+          register: clone_invest
+
+        - name: Convert Python requirements to yml
+          when: clone_invest.changed
+          ansible.builtin.shell:
+            executable: /bin/bash
+            chdir: /home/rec/invest
+            cmd: |
+              cp environment.yml previous_environment.yml > /dev/null 2>&1 || touch previous_environment.yml
+              python3 ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt > environment.yml
+              diff previous_environment.yml environment.yml
+          register: env_yml_diff
+
+        - name: Create invest environment and install dependencies
+          when: clone_invest.changed and env_yml_diff.stdout != ""
+          ansible.builtin.shell:
+            executable: /bin/bash
+            chdir: /home/rec/invest
+            cmd: |
+              rm -rf ./env
+              source "${HOME}/conda/etc/profile.d/mamba.sh"
+              export MAMBA_ROOT_PREFIX="${HOME}/conda"
+              mamba create -y -p ./env -f environment.yml
+              mamba install -p ./env -y pip
+
+        - name: Install natcap.invest
+          when: clone_invest.changed
+          ansible.builtin.shell:
+            executable: /bin/bash
+            chdir: /home/rec/invest
+            cmd: |
+              source "${HOME}/conda/etc/profile.d/mamba.sh"
+              export MAMBA_ROOT_PREFIX="${HOME}/conda"
+              mamba run -p ./env pip uninstall natcap.invest -y
+              mamba run -p ./env pip install . --no-build-isolation
+
+        - name: Mount bucket with GCS Fuse
+          ansible.builtin.shell:
+            executable: /bin/bash
+            chdir: /home/rec
+            # Listing all contents should build some indices and improve performance later
+            cmd: |
+              mkdir {{ server_workspace }} && mkdir {{ server_workspace }}/volume
+              gcsfuse --implicit-dirs -o ro natcap-recreation {{ server_workspace }}/volume
+              ls -R {{ server_workspace }}/volume
+            # This is one of many files that will exist in the mounted volume
+            creates: '{{ server_workspace }}/volume/flickr/photos_2005-2017_odlla.csv'
+
+        - name: Start the Rec Model server process
+          tags: restart-process
+          ansible.builtin.shell:
+            executable: /bin/bash
+            chdir: /home/rec
+            cmd: |
+              source "${HOME}/conda/etc/profile.d/mamba.sh"
+              export MAMBA_ROOT_PREFIX="${HOME}/conda"
+              export PYRO_LOGFILE=./server/pyro.log
+              export PYRO_LOGLEVEL=DEBUG
+              export PYRO_THREADPOOL_SIZE_MIN=8
+              export PYRO_DETAILED_TRACEBACK=true
+              mamba run -p ./invest/env \
+                nohup python -u ./invest/infrastructure/recreation_server/scripts/execute_recmodel_server.py \
+                -w {{ server_workspace }} \
+                --flickr_csv {{ server_workspace }}/volume/flickr/photos_2005-2017_odlla.csv \
+                --twitter_qt_pickle {{ server_workspace }}/volume/twitter_quadtree/global_twitter_qt.pickle \
+                > {{ server_workspace }}/pyro.log 2>&1 &
+
+        - name: Create cron job to clear cached workspaces
+          ansible.builtin.cron:
+            name: Clear cached workspaces
+            special_time: "daily"
+            job: /home/rec/invest/infrastructure/recreation_server/scripts/cron_find_rm_cached_workspaces.sh {{ server_workspace }}
