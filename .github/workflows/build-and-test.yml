@@ -492,10 +492,9 @@ jobs:
         continue-on-error: true
         run: |
           npx cross-env CI=true yarn run test-electron-app
-          echo $?
 
       - name: Binary test(s) failed
-        if: ${{ (steps.selenium-tests.outcome == 'failure') || (steps.puppeteer-tests-outcome == 'failure') }}
+        if: ${{ (steps.selenium-tests.outcome == 'failure') || (steps.puppeteer-tests.outcome == 'failure') }}
         run: |
           echo ${{ steps.selenium-tests.outcome }}
           echo ${{ steps.puppeteer-tests.outcome }}
