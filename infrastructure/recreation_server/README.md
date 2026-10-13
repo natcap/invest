@@ -11,7 +11,7 @@ After creating a debian/ubuntu VM, the playbook will,
 Run the playbook from a control node, a system where `ansible` is installed.
 Windows control nodes should use a WSL environment.  
 Specify a user that has ssh access from the control node to the VM.
-`uv run ansible-playbook -u dfisher5 -i inventory.ini playbook.yml`
+`ansible-playbook -u dfisher5 -i inventory.ini playbook.yml`
 
 By default, the playbook clones the latest `main` from the `natcap` fork of invest.
 To install a particular version of invest override these variables by adding
@@ -23,4 +23,4 @@ To install a particular version of invest override these variables by adding
 If all you want to do is restart the invest server process, it won't hurt to run
 the whole playbook, but you may also use this tag to run only the "stop" and "start"
 tasks:
-`uv run ansible-playbook -u dfisher5 -i inventory.ini playbook.yml --tags restart-process`
+`ansible-playbook -u dfisher5 -i inventory.ini playbook.yml --tags restart-process`
