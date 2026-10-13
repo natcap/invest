@@ -258,7 +258,7 @@ class ArgsForm extends React.Component {
   };
 
   getSiblingType = (argkey) => {
-    // These hard-coded values support AWY, NDR, and SDR.
+    // These hard-coded values support AWY, NDR, SDR, and UFRM.
     // @TODO: add support for all search-enabled models (via model spec, probably).
     if (argkey === 'lulc_path') {
       return DataHubSearchSiblingType.LULC;
