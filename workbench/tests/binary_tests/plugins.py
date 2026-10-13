@@ -130,7 +130,7 @@ class PluginTests(unittest.TestCase):
             cwd=Path(__file__).parent.parent.parent.parent,
             env={  # env var only needed on windows, ignored on macos
                 **os.environ,
-                'NATCAP_INVEST_GDAL_LIB_PATH': '%CONDA_PREFIX%/Library'
+                'NATCAP_INVEST_GDAL_LIB_PATH': f'{os.environ["CONDA_PREFIX"]}/Library'
             })
         self.click(By.XPATH, "//button[@aria-label='Close modal']")
 
