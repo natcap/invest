@@ -169,154 +169,154 @@ afterEach(async () => {
   }
 });
 
-// test('Run a real invest model', async () => {
-//   // On GHA MacOS, we seem to have to wait a long time for the browser
-//   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
-//   let i = 0;
-//   while (!BROWSER || !BROWSER.isConnected()) {
-//     i++;
-//     await new Promise(r => setTimeout(r, 1000));
-//   }
-//   console.log(`waited ${i} seconds for pptr to connect`);
-//   // find the mainWindow's index.html, not the splashScreen's splash.html
-//   const target = await BROWSER.waitForTarget(
-//     (target) => target.url().endsWith('index.html')
-//   );
-//   const page = await target.page();
-//   page.on('error', (err) => {
-//     console.log(err);
-//   });
-//   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
+test('Run a real invest model', async () => {
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
+  let i = 0;
+  while (!BROWSER || !BROWSER.isConnected()) {
+    i++;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`waited ${i} seconds for pptr to connect`);
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  const target = await BROWSER.waitForTarget(
+    (target) => target.url().endsWith('index.html')
+  );
+  const page = await target.page();
+  page.on('error', (err) => {
+    console.log(err);
+  });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
-//   const downloadModal = await page.waitForSelector(
-//     'aria/[name="Download InVEST sample data"][role="dialog"]'
-//   );
-//   const downloadModalCancel = await downloadModal.waitForSelector(
-//     'aria/[name="Close modal"][role="button"]');
-//   await downloadModalCancel.click();
+  const downloadModal = await page.waitForSelector(
+    'aria/[name="Download InVEST sample data"][role="dialog"]'
+  );
+  const downloadModalCancel = await downloadModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]');
+  await downloadModalCancel.click();
 
-//   const changelogModal = await page.waitForSelector(
-//     'aria/[name="New in this version"][role="dialog"]'
-//   );
-//   const changelogModalClose = await changelogModal.waitForSelector(
-//     'aria/[name="Close modal"][role="button"]');
-//   await changelogModalClose.click();
+  const changelogModal = await page.waitForSelector(
+    'aria/[name="New in this version"][role="dialog"]'
+  );
+  const changelogModalClose = await changelogModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]');
+  await changelogModalClose.click();
 
-//   // We need to get the modelButton from w/in this list-group because there
-//   // are buttons with the same name in the Recent Jobs container.
-//   const investModels = await page.waitForSelector('.invest-list-group');
-//   await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-models-list.png` });
+  // We need to get the modelButton from w/in this list-group because there
+  // are buttons with the same name in the Recent Jobs container.
+  const investModels = await page.waitForSelector('.invest-list-group');
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-models-list.png` });
 
-//   // Setting up Recreation model because it has very few data requirements
-//   const modelButton = await investModels.waitForSelector(
-//     'aria/[name="Visitation: Recreation and Tourism"][role="button"]');
-//   await modelButton.click();
-//   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
+  // Setting up Recreation model because it has very few data requirements
+  const modelButton = await investModels.waitForSelector(
+    'aria/[name="Visitation: Recreation and Tourism"][role="button"]');
+  await modelButton.click();
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
-//   const argsForm = await page.waitForSelector('.args-form');
+  const argsForm = await page.waitForSelector('.args-form');
 
-//   const workspace = await argsForm.waitForSelector(
-//     'aria/[name="Workspace Directory"][role="textbox"]');
-//   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
-//   const aoi = await argsForm.waitForSelector(
-//     'aria/[name="Area Of Interest (vector)"][role="textbox"]');
-//   await aoi.type(TMP_AOI_PATH, { delay: TYPE_DELAY });
-//   const startYear = await argsForm.waitForSelector(
-//     'aria/[name="Start Year (integer)"][role="textbox"]');
-//   await startYear.type('2012', { delay: TYPE_DELAY });
-//   const endYear = await argsForm.waitForSelector(
-//     'aria/[name="End Year (integer)"][role="textbox"]');
-//   await endYear.type('2017', { delay: TYPE_DELAY });
-//   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
+  const workspace = await argsForm.waitForSelector(
+    'aria/[name="Workspace Directory"][role="textbox"]');
+  await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
+  const aoi = await argsForm.waitForSelector(
+    'aria/[name="Area Of Interest (vector)"][role="textbox"]');
+  await aoi.type(TMP_AOI_PATH, { delay: TYPE_DELAY });
+  const startYear = await argsForm.waitForSelector(
+    'aria/[name="Start Year (integer)"][role="textbox"]');
+  await startYear.type('2012', { delay: TYPE_DELAY });
+  const endYear = await argsForm.waitForSelector(
+    'aria/[name="End Year (integer)"][role="textbox"]');
+  await endYear.type('2017', { delay: TYPE_DELAY });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
-//   const sidebar = await page.waitForSelector('.invest-sidebar-col');
+  const sidebar = await page.waitForSelector('.invest-sidebar-col');
 
-//   // Button is disabled until validation completes
-//   const runButton = await sidebar.waitForSelector(
-//     '.btn-primary:not([disabled])');
-//   await runButton.click();
+  // Button is disabled until validation completes
+  const runButton = await sidebar.waitForSelector(
+    '.btn-primary:not([disabled])');
+  await runButton.click();
 
-//   await page.waitForSelector('#invest-tab-tab-log.active');
-//   await page.screenshot({ path: `${SCREENSHOT_PREFIX}5-active-log-tab.png` });
+  await page.waitForSelector('#invest-tab-tab-log.active');
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}5-active-log-tab.png` });
 
-//   // Cancel button does not appear until after invest has confirmed
-//   // it is running. So extra timeout on the query:
-//   const cancelButton = await sidebar.waitForSelector(
-//     'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
-//   await cancelButton.click();
-//   await sidebar.waitForSelector('text/Run Canceled');
-//   await page.waitForSelector('aria/[name="Open Workspace"][role="button"]');
-//   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
-// }, 360000); // >2x the sum of all the max timeouts within this test
+  // Cancel button does not appear until after invest has confirmed
+  // it is running. So extra timeout on the query:
+  const cancelButton = await sidebar.waitForSelector(
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
+  await cancelButton.click();
+  await sidebar.waitForSelector('text/Run Canceled');
+  await page.waitForSelector('aria/[name="Open Workspace"][role="button"]');
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
+}, 360000); // >2x the sum of all the max timeouts within this test
 
-// test('Open each model and each local userguide', async () => {
-//   // On GHA MacOS, we seem to have to wait a long time for the browser
-//   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
-//   let i = 0;
-//   while (!BROWSER || !BROWSER.isConnected()) {
-//     i++;
-//     await new Promise(r => setTimeout(r, 1000));
-//   }
-//   console.log(`waited ${i} seconds for pptr to connect`);
-//   // find the mainWindow's index.html, not the splashScreen's splash.html
-//   const target = await BROWSER.waitForTarget(
-//     (target) => target.url().endsWith('index.html')
-//   );
-//   const page = await target.page();
-//   page.on('error', (err) => {
-//     console.log(err);
-//   });
+test('Open each model and each local userguide', async () => {
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
+  let i = 0;
+  while (!BROWSER || !BROWSER.isConnected()) {
+    i++;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`waited ${i} seconds for pptr to connect`);
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  const target = await BROWSER.waitForTarget(
+    (target) => target.url().endsWith('index.html')
+  );
+  const page = await target.page();
+  page.on('error', (err) => {
+    console.log(err);
+  });
 
-//   console.log('starting test');
-//   const downloadModal = await page.waitForSelector(
-//     'aria/[name="Download InVEST sample data"][role="dialog"]'
-//   );
-//   const downloadModalCancel = await downloadModal.waitForSelector(
-//     'aria/[name="Close modal"][role="button"]');
-//   await downloadModalCancel.click();
+  console.log('starting test');
+  const downloadModal = await page.waitForSelector(
+    'aria/[name="Download InVEST sample data"][role="dialog"]'
+  );
+  const downloadModalCancel = await downloadModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]');
+  await downloadModalCancel.click();
 
-//   const changelogModal = await page.waitForSelector(
-//     'aria/[name="New in this version"][role="dialog"]'
-//   );
-//   const changelogModalClose = await changelogModal.waitForSelector(
-//     'aria/[name="Close modal"][role="button"]');
-//   await changelogModalClose.click();
+  const changelogModal = await page.waitForSelector(
+    'aria/[name="New in this version"][role="dialog"]'
+  );
+  const changelogModalClose = await changelogModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]');
+  await changelogModalClose.click();
 
-//   const investList = await page.waitForSelector('.invest-list-group');
-//   // wait for a specific model button to make sure they are all loaded
-//   // before iterating through them
-//   await investList.waitForSelector(
-//     'aria/[name="Annual Water Yield"][role="button"]');
-//   const modelButtons = await investList.$$('button.invest-button');
-//   // eslint-disable-next-line
-//   for (const btn of modelButtons) {
-//     const isPlugin = await btn.$('::-p-text(Plugin)');
-//     if (isPlugin) { continue; } // plugins do not have local UG
-//     await btn.click();
-//     const link = await page.waitForSelector('text/User\'s Guide');
-//     const hrefHandle = await link.getProperty('href');
-//     const hrefValue = await hrefHandle.jsonValue();
-//     // Sometimes clicking the link does not seem to open the target URL
-//     // maybe pausing first will help.
-//     await new Promise(r => setTimeout(r, 500));
-//     await link.click();
-//     const ugTarget = await BROWSER.waitForTarget(
-//       (target) => target.url() === hrefValue
-//     );
-//     const ugPage = await ugTarget.page();
-//     try {
-//       await ugPage.waitForSelector('text/Table of Contents');
-//     } catch {
-//       throw new Error(`${hrefValue} not found`);
-//     }
+  const investList = await page.waitForSelector('.invest-list-group');
+  // wait for a specific model button to make sure they are all loaded
+  // before iterating through them
+  await investList.waitForSelector(
+    'aria/[name="Annual Water Yield"][role="button"]');
+  const modelButtons = await investList.$$('button.invest-button');
+  // eslint-disable-next-line
+  for (const btn of modelButtons) {
+    const isPlugin = await btn.$('::-p-text(Plugin)');
+    if (isPlugin) { continue; } // plugins do not have local UG
+    await btn.click();
+    const link = await page.waitForSelector('text/User\'s Guide');
+    const hrefHandle = await link.getProperty('href');
+    const hrefValue = await hrefHandle.jsonValue();
+    // Sometimes clicking the link does not seem to open the target URL
+    // maybe pausing first will help.
+    await new Promise(r => setTimeout(r, 500));
+    await link.click();
+    const ugTarget = await BROWSER.waitForTarget(
+      (target) => target.url() === hrefValue
+    );
+    const ugPage = await ugTarget.page();
+    try {
+      await ugPage.waitForSelector('text/Table of Contents');
+    } catch {
+      throw new Error(`${hrefValue} not found`);
+    }
 
-//     await ugPage.close();
-//     const tab = await page.waitForSelector('.model-run-tab');
-//     const closeTabBtn = await tab.waitForSelector('aria/[role="button"]');
-//     await closeTabBtn.click();
-//     await new Promise(r => setTimeout(r, 100)); // allow for Home Tab to be visible again
-//   }
-// });
+    await ugPage.close();
+    const tab = await page.waitForSelector('.model-run-tab');
+    const closeTabBtn = await tab.waitForSelector('aria/[role="button"]');
+    await closeTabBtn.click();
+    await new Promise(r => setTimeout(r, 100)); // allow for Home Tab to be visible again
+  }
+});
 
 test('Install and run a plugin', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
