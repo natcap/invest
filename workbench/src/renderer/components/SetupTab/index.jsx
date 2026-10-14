@@ -600,6 +600,7 @@ class SetupTab extends React.Component {
         // be avoided entirely.
         if (argsValid !== newArgsValid && this._isMounted) {
           this.setState({
+            argsValidationComplete: true,
             argsValidation: argsValidation,
             argsValid: newArgsValid,
           });
