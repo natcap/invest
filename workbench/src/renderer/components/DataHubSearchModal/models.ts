@@ -54,7 +54,7 @@ export function transformDHALSearchResult(
     id: d.source_catalog_url,
     title: d.name,
     description: d.description,
-    pixelSize: d.pixel_size,
+    pixelSize: d.pixel_size || [],
     crsUnits: d.crs_units,
     tags: d.tags,
     places: d.places,

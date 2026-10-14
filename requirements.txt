@@ -10,7 +10,9 @@
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
 
-gdal>=3.4.2
+gdal>=3.4.2,<=3.10.3
+ligbdal-core<=3.10.3
+libcurl<=8.18.0
 pyro5
 pandas>=1.2.1
 numpy>=1.11.0,!=1.16.0

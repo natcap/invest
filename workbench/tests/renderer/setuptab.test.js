@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron';
 import React from 'react';
 import {
-  createEvent, fireEvent, render, waitFor, within
+  act, fireEvent, render, waitFor, within
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -11,7 +11,8 @@ import {
   fetchDatastackFromFile,
   fetchValidation,
   fetchArgsEnabled,
-  getDynamicDropdowns
+  getDynamicDropdowns,
+  getVectorBoundingBox
 } from '../../src/renderer/server_requests';
 import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
 import { removeIpcMainListeners } from '../../src/main/main';
@@ -75,6 +76,9 @@ function renderSetupFromSpec(baseSpec, inputFieldOrder, initValues = undefined, 
       modelID={spec.model_id}
       argsSpec={spec.args}
       inputFieldOrder={inputFieldOrder}
+      aoiInputId={spec.aoiInputId || ''}
+      defaultProjectionId={spec.default_projection_id || ''}
+      defaultPixelsizeId={spec.default_pixelsize_id || ''}
       argsInitValues={initValues}
       investExecute={() => {}}
       nWorkers="-1"
@@ -1119,5 +1123,202 @@ describe('loadParametersFromFile', () => {
       expect(window.alert).toHaveBeenCalledWith(
         'Model ID in datastack/logfile (coastal_purple_carbon) does not match this model (coastal_blue_carbon).');
     });
+  });
+});
+
+describe('Effects of async validation & bounding box calculation on search modal', () => {
+  // Helper function for mocking fetchValidation and getVectorBoundingBox.
+  // Returns a function that resolves with the specified response
+  // after the specified delay (in ms).
+  const mockAsyncCall = (response, delay) => (() => {
+    return new Promise((resolve, _reject) => {
+      setTimeout(() => {
+        resolve(response);
+      }, delay);
+    });
+  });
+
+  let user = null;
+  const inputFieldOrder = [['aoi', 'dem']];
+  const spec = {
+    aoiInputId: 'aoi',
+    args: {
+      aoi: {
+        name: 'Area of Interest',
+        type: 'vector',
+        required: true,
+        about: (
+          'The bounding box of the AOI will be used to filter results '
+          + 'when searching the Data Hub for raster datasets.'
+        ),
+      },
+      dem: {
+        name: 'Digital Elevation Model',
+        type: 'raster',
+        required: true,
+        about: 'Map of elevation above sea level.',
+        // At least one keyword is required in order to enable search.
+        keywords: ['DIGITAL ELEVATION/TERRAIN MODEL (DEM)']
+      },
+    },
+    input_field_order: inputFieldOrder,
+  };
+  const argsValidResponse = [];
+  const argsInvalidResponse = [[['aoi'], 'AOI is invalid']];
+  const mockBboxResponse1 = {vector_bbox: [-42, 0, 0, 42]};
+  const mockBboxResponse2 = {vector_bbox: [-99, -88, 77, 66]};
+
+  beforeEach(() => {
+    jest.useFakeTimers({
+      // Mock current system time returned by Date.now(), for easier debugging.
+      now: 0,
+    });
+    user = userEvent.setup({advanceTimers: jest.advanceTimersByTime});
+    fetchArgsEnabled.mockResolvedValue({'aoi': true, 'dem': true});
+  });
+
+  afterEach(async () => {
+    await jest.runOnlyPendingTimersAsync();
+    jest.useRealTimers();
+    user = null;
+  });
+
+  test('Search modal should render loading spinner while awaiting AOI validation or bbox calculation', async () => {
+    console.log(`Test start: ${jest.now()}`);
+
+    // When called on the initially empty form,
+    // fetchValidation needs to return an invalid response
+    // to prevent an immediate call to getVectorBoundingBox.
+    fetchValidation.mockImplementationOnce(mockAsyncCall(argsInvalidResponse, 3000));
+
+    // When called after user input, fetchValidation needs to return a valid response
+    // to trigger a call to getVectorBoundingBox.
+    fetchValidation.mockImplementation(mockAsyncCall(argsValidResponse, 3000));
+
+    getVectorBoundingBox.mockImplementation(mockAsyncCall(mockBboxResponse1, 2000));
+
+    const {
+      findByLabelText,
+      findByText,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+    console.log(`After render: ${jest.now()}`);
+
+    // 0. SetupTab has loaded but there have been no user interactions.
+    // Validation runs once on form load, before any user interaction.
+    expect(fetchValidation).toHaveBeenCalledTimes(1);
+    expect(fetchValidation).toHaveBeenCalledWith({
+      model_id: 'eco_model',
+      args: '{"aoi":"","dem":""}'
+    });
+    // getVectorBoundingBox should not be called when AOI is invalid.
+    expect(getVectorBoundingBox).toHaveBeenCalledTimes(0);
+
+    // 1. Enter path in AOI input field.
+    const aoiInputField = await findByLabelText(
+      (content) => content.startsWith(spec.args.aoi.name)
+    );
+    await user.type(aoiInputField, 'path/to/aoi');
+    console.log(`After updating input field: ${jest.now()}`);
+
+    // 2. The app delays calling fetchValidation by setting a timeout.
+    //    Advance to next timer (i.e., to the point when that timeout ends)
+    //    and check that fetchValidation has been called.
+    await act(async ()=> {
+      await jest.advanceTimersToNextTimerAsync();
+      console.log(`After advancing to next timer: ${jest.now()}`); // 200
+    });
+
+    // fetchValidation should have been called for a second time.
+    expect(fetchValidation).toHaveBeenCalledTimes(2);
+    expect(fetchValidation).toHaveBeenCalledWith({
+      model_id: 'eco_model',
+      args: '{"aoi":"path/to/aoi","dem":""}'
+    });
+    // getVectorBoundingBox should not have been called yet.
+    expect(getVectorBoundingBox).toHaveBeenCalledTimes(0);
+
+    // 3. Open search modal and check for loading spinner.
+    const openModalBtn = await findByLabelText('search for Digital Elevation Model');
+    await user.click(openModalBtn);
+    console.log(`After clicking open modal button: ${jest.now()}`);
+
+    const spinner = await findByText('Please wait');
+    expect(spinner).toBeInTheDocument();
+    console.log(`After finding spinner: ${jest.now()}`);
+
+    // 4. Advance timers 3000ms (mock fetchValidation delay)
+    //    and check that getVectorBoundingBox has been called.
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(3000);
+      console.log(`After advancing timers by 3000 ms: ${jest.now()}`); // 3200
+    });
+
+    expect(getVectorBoundingBox).toHaveBeenCalledTimes(1);
+    expect(getVectorBoundingBox).toHaveBeenCalledWith({vector_path: 'path/to/aoi'});
+
+    // 5. Check for loading spinner again.
+    expect(spinner).toBeInTheDocument();
+
+    // 6. Advance timers 2000ms (mock getVectorBoundingBox delay)
+    //    and check that spinner is gone.
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(2000);
+      console.log(`After advancing timers by 2000 ms: ${jest.now()}`); // 5200
+    });
+    expect(spinner).not.toBeInTheDocument();
+  });
+
+  test('Spinner should resolve to "Invalid AOI" error when AOI is invalid', async () => {
+    // 1. Enter path in AOI input field.
+    // 2. Advance timers 200ms (validation debounce time)
+    //    and check that fetchValidation has been called.
+    // 3. Open search modal and check for loading spinner.
+    // 4. Advance timers 3000ms (mock fetchValidation delay)
+    //    and check that getVectorBoundingBox has NOT been called.
+    // 5. Check for "Invalid AOI" error.
+  });
+
+  test('Spinner should resolve to search intro view when AOI is valid', async () => {
+    // 1. Enter path in AOI input field.
+    // 2. Advance timers 200ms (validation debounce time)
+    //    and check that fetchValidation has been called.
+    // 3. Open search modal and check for loading spinner.
+    // 4. Advance timers 3000ms (mock fetchValidation delay)
+    //    and check that getVectorBoundingBox has been called.
+    // 5. Advance timers 2000ms (mock getVectorBoundingBox delay)
+    //    and check for search intro view (i.e., presence of Search button).
+  });
+
+  describe('Spinner should resolve to search intro view with bbox of latest AOI without rendering bbox of previous AOIs', () => {
+    test('Two valid AOIs, responses received in same order requests were made', async () => {
+      // Order of AOI paths entered in the form field: [A, B]
+      // Order of responses: [validate 1, validate 2, bbox 1, bbox 2]
+    });
+
+    test('Two valid AOIs, response to first validation call arrives after the second', async () => {
+      // Order of AOI paths entered in the form field: [A, B]
+      // Order of responses: [validate 2, validate 1, bbox 1, bbox 2]
+    });
+
+    test('Two valid AOIs, response to first bbox calculation call arrives after the second', async () => {
+      // Order of AOI paths entered in the form field: [A, B]
+      // Order of responses: [validate 1, validate 2, bbox 2, bbox 1]
+    });
+
+    test('Two valid AOIs, responses to first validation call and first bbox calculation call arrive after res', async () => {
+      // Order of AOI paths entered in the form field: [A, B]
+      // Order of responses: [validate 2, bbox 2, validate 1, bbox 2]
+    });
+
+    test('Two valid AOIs across three AOI path updates (A, B, A), responses received in same order requests were made', async () => {
+      // Order of AOI paths entered in the form field: [A, B, A]
+      // Order of responses: [validate 1, validate 2, bbox 1, bbox 2]
+    });
+  });
+
+  test('When modal is re-opened after closing, spinner should resolve to previous state (valid AOI)', async () => {
+  });
+
+  test('When modal is re-opened after closing, spinner should resolve to previous state (invalid AOI)', async () => {
   });
 });

@@ -10,11 +10,29 @@ import type { DataHubSearchResult } from '../models';
 import DataHubSearchResultCard from '../DataHubSearchResultCard';
 import {
   searchModalAutoFocusId,
-  searchModalContentHeadingCssClass,
+  searchModalContentSummaryCssClass,
 } from '../../DataHubSearchModal';
 
 import { openLinkInBrowser } from '../../../utils';
 import { handleClickFindLogfiles } from '../../../menubar/handlers';
+
+export function DataHubSearchLoadingContent() {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <Spinner animation="border" role="status" className="search-spinner">
+        <span
+          className="visually-hidden"
+          id={searchModalAutoFocusId}
+          tabIndex={-1}
+        >
+          {t('Please wait')}
+        </span>
+      </Spinner>
+    </>
+  );
+}
 
 export function DataHubSearchIntroContent(
   props: {
@@ -27,15 +45,22 @@ export function DataHubSearchIntroContent(
 
   return (
       <>
-      {/* @TODO: add loading spinner if/when awaiting AOI validation status and/or AOI extent. */}
       {
         searchAllowed
-        ? <p>
+        ? <p
+            id={searchModalAutoFocusId}
+            className={searchModalContentSummaryCssClass}
+            tabIndex={-1}
+          >
             {t(`Search the Natural Capital Alliance Data Hub for datasets you can
               use in InVEST without having to download them first.`)}
           </p>
         : <>
-            <div className="search-error">
+            <div
+              className={`search-error ${searchModalContentSummaryCssClass}`}
+              id={searchModalAutoFocusId}
+              tabIndex={-1}
+            >
               <TbZoomCancel aria-label={t('Error')} className="error-icon" />
               <p>
                 {t(`Before searching, you must specify a valid path for the following input:`)}
@@ -57,14 +82,15 @@ export function DataHubSearchSearchingContent() {
 
   return (
     <>
-      <h2
-        className="visually-hidden"
-        id={searchModalAutoFocusId}
-        tabIndex={0}
-      >
-        {t('Searching')}
-      </h2>
-      <Spinner animation="border" role="status" className="search-spinner"></Spinner>
+      <Spinner animation="border" role="status" className="search-spinner">
+        <span
+          className="visually-hidden"
+          id={searchModalAutoFocusId}
+          tabIndex={-1}
+        >
+          {t('Searching')}
+        </span>
+      </Spinner>
     </>
   );
 }
@@ -91,9 +117,9 @@ export function DataHubSearchResultsContent(
         searchError
         ? <>
             <h2
-              className={`h5 m-0 ${searchModalContentHeadingCssClass}`}
+              className={`h5 m-0 ${searchModalContentSummaryCssClass}`}
               id={searchModalAutoFocusId}
-              tabIndex={0}
+              tabIndex={-1}
             >
               {t('An error occurred.')}
             </h2>
@@ -117,9 +143,9 @@ export function DataHubSearchResultsContent(
             ? <>
                 <div className="search-results-header">
                   <h2
-                    className={`h5 m-0 ${searchModalContentHeadingCssClass}`}
+                    className={`h5 m-0 ${searchModalContentSummaryCssClass}`}
                     id={searchModalAutoFocusId}
-                    tabIndex={0}
+                    tabIndex={-1}
                   >
                     {numSearchResults == 1 ? t('1 result found.') : t(`${numSearchResults} results found.`)}
                   </h2>
@@ -145,9 +171,9 @@ export function DataHubSearchResultsContent(
               </>
             : <>
                 <h2
-                  className={`h5 m-0 ${searchModalContentHeadingCssClass}`}
+                  className={`h5 m-0 ${searchModalContentSummaryCssClass}`}
                   id={searchModalAutoFocusId}
-                  tabIndex={0}
+                  tabIndex={-1}
                 >
                   {t('No results found.')}
                 </h2>
