@@ -78,6 +78,11 @@ General
   Serialization should now be done using the pydantic ``model_dump_json``
   method.
 
+Workbench
+=========
+* The InVEST workbench is now built for both Intel and Apple Silicon
+  architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+
 
 3.20.2 (2026-09-02)
 -------------------
