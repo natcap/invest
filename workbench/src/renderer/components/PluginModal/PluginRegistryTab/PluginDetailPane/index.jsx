@@ -232,8 +232,8 @@ export default function PluginDetailPane(props) {
               href={plugin.repository_url}
               title={plugin.repository_url}
               onClick={openLinkInBrowser}
-            >{
-              t("Source Code ")}
+            >
+              {t("Source Code ")}
               <MdOpenInNew
                 aria-label={t("(opens in web browser)")}
               />

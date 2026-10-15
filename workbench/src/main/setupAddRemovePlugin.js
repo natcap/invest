@@ -214,7 +214,6 @@ function storePluginMetadataSync(
       source: installString,
       sourceType: pluginSourceType,
       env: pluginEnvPrefix,
-      packageName: packageName,
       version: version,
     }
   );
@@ -222,11 +221,10 @@ function storePluginMetadataSync(
 
 /**
  * Log installation of plugin from the Plugin Registry.
- * @param  {string} projectName project.name in pyproject.toml (used as ID by Registry)
- * @param  {string} packageName tool.natcap.invest.package_name (used by InVEST)
- * @param  {string} version     the version of the plugin
+ * @param  {string} distPackageName project.name in pyproject.toml (used as ID by Registry)
+ * @param  {string} version         the version of the plugin
  */
-async function logRegistryPluginInstall(projectName, packageName, version) {
+async function logRegistryPluginInstall(distPackageName, version) {
   try {
     const response = await fetch(
       "https://invest-plugin-download-stats-1098785064656.us-central1.run.app",
@@ -236,8 +234,7 @@ async function logRegistryPluginInstall(projectName, packageName, version) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          project_name: projectName,
-          invest_package_name: packageName,
+          project_name: distPackageName,
           version: version
         })
       }
@@ -313,8 +310,8 @@ export function setupAddPlugin(i18n) {
         }
         // Access plugin metadata from the pyproject.toml
         const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
-        const packageName = pyprojectTOML.tool.natcap.invest.package_name;
-        const projectName = pyprojectTOML.project.name;
+        const importPackageName = pyprojectTOML.tool.natcap.invest.package_name;
+        const distPackageName = pyprojectTOML.project.name;
 
         // Create a conda env containing the plugin and its dependencies
         // use timestamp to ensure a unique path
@@ -329,7 +326,8 @@ export function setupAddPlugin(i18n) {
           );
           event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
           storePluginMetadataSync(
-            micromamba, pluginEnvPrefix, packageName, installString, pluginSourceType
+            micromamba, pluginEnvPrefix, importPackageName, installString,
+            pluginSourceType
           );
           logger.info('successfully added plugin');
 
@@ -338,7 +336,7 @@ export function setupAddPlugin(i18n) {
               && pluginSourceType === 'registry') {
             // revision will always equate to version for registry plugins
             logger.info('logging Plugin Registry plugin installation');
-            logRegistryPluginInstall(projectName, packageName, revision);
+            logRegistryPluginInstall(distPackageName, revision);
           } else {
             logger.info('skipping installation logging in dev / testing');
           }
