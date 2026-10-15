@@ -483,7 +483,7 @@ jobs:
         run: |
           ./chromedriver/chromedriver*/chromedriver* --port=9515 &
           sleep 1
-          pytest tests/binary_tests/plugins.py
+          pytest -s tests/binary_tests/plugins.py
 
       - name: Test electron app with puppeteer
         id: puppeteer-tests
