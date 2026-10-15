@@ -163,8 +163,7 @@ describe('Plugin Manager modal', () => {
       const barDetailsPane = pluginDetailsPanes[0];
 
       const otherVersionInstalledMsg = await within(barDetailsPane)
-        .findByText('A different version of this plugin is already installed',
-           { exact: false });
+        .findByText(/a different version of this plugin is already installed/i);
       expect(otherVersionInstalledMsg).toBeInTheDocument();
       const installBtn = await within(barDetailsPane)
         .queryByRole('button', { name: 'Install' });
@@ -210,51 +209,96 @@ describe('Plugin Manager modal', () => {
       await waitFor(() => expect(within(fooDetailsPane)
         .queryByRole('button', { name: 'Install' })).toBeNull());
     });
+
+    test('Message shows if Registry data fetch fails', async () => {
+      fetchRegistryData.mockResolvedValue(null);
+      const {
+        findByText, findByRole, findAllByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const pluginRegistryTab = tabpanels[0];
+
+      const errorMsg = await within(pluginRegistryTab)
+        .findByText(/an error occurred/i);
+      expect(errorMsg).toBeInTheDocument();
+    });
   });
 
-  test('InstalledPluginsTab: Remove a plugin', async () => {
-    let plugins = PLUGIN_SETTING_ITEM;
-    const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return Promise.resolve(plugins);
+  describe('InstalledPluginsTab', () => {
+    test('Remove a plugin', async () => {
+      let plugins = PLUGIN_SETTING_ITEM;
+      const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve(plugins);
+          }
+        } else if (channel === ipcMainChannels.REMOVE_PLUGIN) {
+          // after REMOVE_PLUGIN there will be a subsequent call to GET_SETTING,
+          // so this effectively replaces the mocked settings data
+          plugins = {};
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
+          return 1111; // a fake PID
         }
-      } else if (channel === ipcMainChannels.REMOVE_PLUGIN) {
-        // after REMOVE_PLUGIN there will be a subsequent call to GET_SETTING,
-        // so this effectively replaces the mocked settings data
-        plugins = {};
-      } else if (channel === ipcMainChannels.HAS_MSVC) {
-        return Promise.resolve(true);
-      } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
-        return 1111; // a fake PID
-      }
-      return Promise.resolve();
+        return Promise.resolve();
+      });
+      const {
+        findByText, findByRole, findAllByRole, queryByRole,
+      } = render(<App />);
+
+      // open the plugin first, to make sure it doesn't cause a crash when removing
+      const pluginButton = await findByRole('button', { name: /Foo/ });
+      await userEvent.click(pluginButton);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const installedPluginsNav = await findByRole('tab', { name: /installed plugins/i });
+      await userEvent.click(installedPluginsNav);
+
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const manualInstallTab = tabpanels[1];
+
+      const submitButton = await within(manualInstallTab).findByText('Uninstall');
+      await userEvent.click(submitButton);
+      await waitFor(() => {
+        expect(spy.mock.calls.map((call) => call[0])).toContain(ipcMainChannels.REMOVE_PLUGIN);
+      });
+      // expect the plugin to have disappeared from the model list and the dropdown
+      await waitFor(() => expect(queryByRole('button', { name: /Foo/ })).toBeNull());
+      await waitFor(() => expect(within(manualInstallTab)
+        .queryByRole('heading', { name: /Foo/ })).toBeNull());
     });
-    const {
-      findByText, findByRole, findAllByRole, queryByRole,
-    } = render(<App />);
 
-    // open the plugin first, to make sure it doesn't cause a crash when removing
-    const pluginButton = await findByRole('button', { name: /Foo/ });
-    await userEvent.click(pluginButton);
+    test('No plugins installed', async () => {
+      const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve({});
+          }
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+        return Promise.resolve();
+      });
+      const {
+        findByRole, findAllByRole,
+      } = render(<App />);
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const installedPluginsNav = await findByRole('tab', { name: /installed plugins/i });
+      await userEvent.click(installedPluginsNav);
 
-    await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
-    const installedPluginsNav = await findByRole('tab', { name: /installed plugins/i });
-    await userEvent.click(installedPluginsNav);
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const installedPluginsTab = tabpanels[1];
 
-    const modal = await findByRole('dialog');
-    const tabpanels = await within(modal).findAllByRole('tabpanel');
-    const manualInstallTab = tabpanels[1];
-
-    const submitButton = await within(manualInstallTab).findByText('Uninstall');
-    await userEvent.click(submitButton);
-    await waitFor(() => {
-      expect(spy.mock.calls.map((call) => call[0])).toContain(ipcMainChannels.REMOVE_PLUGIN);
+      const noPluginsInstalled = await within(installedPluginsTab)
+        .findByText('No plugins are currently installed.');
+      expect(noPluginsInstalled).toBeInTheDocument();
     });
-    // expect the plugin to have disappeared from the model list and the dropdown
-    await waitFor(() => expect(queryByRole('button', { name: /Foo/ })).toBeNull());
-    await waitFor(() => expect(within(manualInstallTab)
-      .queryByRole('heading', { name: /Foo/ })).toBeNull());
   });
 
   describe('ManualInstallTab: form validation', () => {
