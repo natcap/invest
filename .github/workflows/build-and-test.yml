@@ -314,7 +314,7 @@ jobs:
             binary-extension: exe
             chromedriver-url-suffix: win64/chromedriver-win64.zip
     env:
-      ELECTRON_VERSION: '40.8.5'
+      ELECTRON_VERSION: '43.5.0'
     steps:
       - uses: actions/checkout@v7
         with:
