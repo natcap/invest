@@ -87,7 +87,14 @@ class PluginTests(unittest.TestCase):
     def test_install_and_run_plugin(self):
         """Install and run the demo plugin."""
 
-        self.driver.save_screenshot('screenshot1-page-load.png')
+        for i in range(100):
+            try:
+                print(i)
+                self.driver.save_screenshot('screenshot1-page-load.png')
+                break
+            except Exception:
+                continue
+
         self.wait_for_main_window()
 
         print('starting test')
