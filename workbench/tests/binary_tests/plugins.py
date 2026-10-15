@@ -43,6 +43,9 @@ class PluginTests(unittest.TestCase):
         options = Options()
         options.binary_location = str(binaries[0].resolve())
         options.add_argument("--headless=new")
+        # set a window size so it doesn't become 0x0,
+        # which could cause the screenshot step to fail
+        options.add_argument("--window-size=1920,1080")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-dev-shm-usage")
