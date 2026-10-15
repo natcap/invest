@@ -623,3 +623,36 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             ndr.execute(args)
         self.assertIn('Error in column "load_type_n", value "cheese"', str(cm.exception))
+
+    def test_target_projection_pixelsize(self):
+        """Test ``_target_projection`` with different pixel sizes and projections."""
+        from natcap.invest.ndr import ndr
+
+        args = NDRTests.generate_base_args(self.workspace_dir)
+
+        # make simple raster
+        source_raster_path = os.path.join(self.workspace_dir, "source.tif")
+        source_array = numpy.random.randint(0, 1000, (200, 200)).astype(numpy.int32)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(2230)
+        projection_wkt = srs.ExportToWkt()
+        origin = (4634858, 6241247)
+        pixel_size = (100, -100)
+        no_data = 1000
+        pygeoprocessing.numpy_array_to_raster(
+            source_array, no_data, pixel_size, origin, projection_wkt,
+            source_raster_path)
+
+        args["runoff_proxy_path"] = source_raster_path
+        args["target_projection_id"] = "runoff_proxy_path"
+        args["target_pixelsize_id"] = "runoff_proxy_path"
+
+        file_reg = ndr.execute(args)
+
+        raster_info = pygeoprocessing.get_raster_info(file_reg['n_surface_export'])
+        actual_projection_wkt = raster_info['projection_wkt']
+        actual_pixel_size = raster_info['pixel_size']
+
+        # assert output has correct projection
+        self.assertEqual(actual_projection_wkt, projection_wkt)
+        self.assertEqual(actual_pixel_size, pixel_size)
