@@ -827,7 +827,7 @@ def execute(args):
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
             base_raster_list, aligned_raster_list,
-            ['near']*len(base_raster_list), target_pixel_size,
+            ['bilinear', 'near', 'bilinear'], target_pixel_size,
             'intersection'),
         kwargs={
             'target_projection_wkt': target_projection_wkt,
