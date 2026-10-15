@@ -1,3 +1,5 @@
+## Recreation model server infrastructure
+
 Use `playbook.yml` to setup a VM to run an InVEST Recreation Model server process
 on the hosts defined in `inventory.ini`.
 
@@ -8,6 +10,7 @@ After creating a debian/ubuntu VM, the playbook will,
 * Mount a bucket with necessary recreation model data using `gcsfuse`
 * Stop and start the invest server python process
 
+### Running the ansible playbook
 Run the playbook from a control node, a system where `ansible` is installed.
 Windows control nodes should use a WSL environment.  
 Specify a user that has ssh access from the control node to the VM.
