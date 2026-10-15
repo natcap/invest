@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -39,6 +39,9 @@ const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 const TEST_PLUGIN_GIT_URL = 'https://github.com/natcap/invest-demo-plugin.git';
 const testRaster = path.join(__dirname, 'dem.tif');
 const TYPE_DELAY = 10;
+
+const TEST_PLUGIN_LOCAL_PATH = `${__dirname}/test_plugin`;
+console.log(TEST_PLUGIN_LOCAL_PATH)
 
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
@@ -239,7 +242,7 @@ test('Run a real invest model', async () => {
   // Cancel button does not appear until after invest has confirmed
   // it is running. So extra timeout on the query:
   const cancelButton = await sidebar.waitForSelector(
-    'aria/[name="Cancel Run"][role="button"]', { timeout: 30000 });
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
   await cancelButton.click();
   await sidebar.waitForSelector('text/Run Canceled');
   await page.waitForSelector('aria/[name="Open Workspace"][role="button"]');
@@ -264,6 +267,7 @@ test('Open each model and each local userguide', async () => {
     console.log(err);
   });
 
+  console.log('starting test');
   const downloadModal = await page.waitForSelector(
     'aria/[name="Download InVEST sample data"][role="dialog"]'
   );
@@ -314,7 +318,7 @@ test('Open each model and each local userguide', async () => {
   }
 });
 
-test.skip('Install and run a plugin', async () => {
+test('Install and run a plugin', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -343,14 +347,15 @@ test.skip('Install and run a plugin', async () => {
   );
   await changelogModalClose.click();
 
-  const dropdownButton = await page.waitForSelector('aria/[name="menu"][role="button"]');
+  let dropdownButton = await page.waitForSelector('aria/[name="menu"][role="button"]');
   await dropdownButton.click();
-  const pluginsModalButton = await page.waitForSelector('aria/[name="Manage Plugins"][role="button"]');
+  let pluginsModalButton = await page.waitForSelector('aria/[name="Manage Plugins"][role="button"]');
   await pluginsModalButton.click();
   console.log('opened plugin modal');
-  const urlInputField = await page.waitForSelector('aria/[name="Git URL"][role="textbox"]');
-  console.log('found url field');
-  await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
+  await page.select('select#installFrom', 'path');
+  const urlInputField = await page.waitForSelector('aria/[name="Local absolute path"][role="textbox"]');
+  console.log('found path field');
+  await urlInputField.type(TEST_PLUGIN_LOCAL_PATH, { delay: TYPE_DELAY });
   console.log('typed into input field');
   const userAcknowledgmentCheckbox = await page.waitForSelector('#user-acknowledgment-checkbox');
   await userAcknowledgmentCheckbox.click();
@@ -359,8 +364,40 @@ test.skip('Install and run a plugin', async () => {
   console.log(submitButton);
   await submitButton.click();
   console.log('clicked submit');
-  const pluginButton = await page.waitForSelector(
-    'aria/[name="Foo Model"][role="button"]', { timeout: 300000 });
+  await page.waitForSelector('text/Successfully installed plugin', { timeout: 300000 });
+  console.log('succeeded');
+  let modalClose = await page.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
+  );
+  await modalClose.click();
+  console.log('closed modal');
+
+  dropdownButton = await page.waitForSelector('aria/[name="menu"][role="button"]');
+  await dropdownButton.click();
+  pluginsModalButton = await page.waitForSelector('aria/[name="Manage Plugins"][role="button"]');
+  await pluginsModalButton.click();
+  console.log('opened plugin modal');
+
+  const envPathInput = await page.waitForSelector('[id="test@0_0_0"]');
+  const envPath = await page.evaluate(el => el.value, envPathInput);
+  console.log(envPath);
+
+  execSync(
+    `micromamba run --prefix "${envPath}" pip install --no-build-isolation .`,
+    {
+      cwd: path.resolve(__dirname, '..', '..', '..'),
+      // env var only needed on windows, ignored on macos
+      env: {...process.env, NATCAP_INVEST_GDAL_LIB_PATH: '%CONDA_PREFIX%/Library'}
+    }
+  );
+  console.log('click modal close');
+  modalClose = await page.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
+  );
+  await modalClose.click();
+  console.log('closed modal');
+
+  const pluginButton = await page.waitForSelector('[name="Test Plugin"]');
   await pluginButton.evaluate((b) => b.click());
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
@@ -368,16 +405,16 @@ test.skip('Install and run a plugin', async () => {
   const argsForm = await page.waitForSelector('.args-form');
   console.log('found args form');
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace"][role="textbox"]'
+    'aria/[name="Workspace Directory"][role="textbox"]'
   );
   console.log('found workspace');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const rasterInput = await argsForm.waitForSelector(
-    'aria/[name="Input Raster"][role="textbox"]'
+    'aria/[name="Input Raster (raster)"][role="textbox"]'
   );
   await rasterInput.type(testRaster, { delay: TYPE_DELAY });
   const numberInput = await argsForm.waitForSelector(
-    'aria/[name="Multiplication Factor"][role="textbox"]'
+    'aria/[name="Multiplication Factor (integer)"][role="textbox"]'
   );
   await numberInput.type('2', { delay: TYPE_DELAY });
 
@@ -385,6 +422,11 @@ test.skip('Install and run a plugin', async () => {
   const runButton = await sidebar.waitForSelector('.btn-primary:not([disabled])');
   await runButton.click();
   await page.waitForSelector('#invest-tab-tab-log.active');
+
+  // Cancel button does not appear until after invest has confirmed
+  // it is running. So extra timeout on the query:
+  const cancelButton = await sidebar.waitForSelector(
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
   await page.waitForSelector('div ::-p-text(Model Complete)');
 }, 500000);
 

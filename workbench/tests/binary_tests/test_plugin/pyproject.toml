@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invest-test-plugin"
+version = '0.0.0'
+
+# All direct python dependencies should be listed here.
+#
+# If you would like a dependency to be installed from conda-forge instead of
+# PyPI when the plugin environment is created, you can include it in
+# tool.natcap.invest.conda_dependencies. However, direct dependencies must
+# still be listed here because this is the standard package metadata, whereas
+# the conda_dependencies section is specific to invest. If a dependency is
+# included in both sections, make sure the versions are consistent.
+dependencies = [
+  "pygeoprocessing",
+  "taskgraph",
+  "natcap.invest>=3.19.0"
+]
+
+[tool.natcap.invest]
+api_version = "v1"
+package_name = "invest_test_plugin"
+
+# List of conda dependencies to install into the plugin's conda environment. 
+# Usually this includes python itself and any non-python dependencies
+# like the GDAL binaries. Packages listed here will be installed into the
+# plugin environment prior to the other dependencies, so you may wish to list
+# packages here that are difficult to install with pip.
+#
+# Only the conda-forge channel is supported. These dependencies MUST be available on 
+# conda-forge. We have disabled the default channel due to Anaconda's licensing.
+#
+# Python is installed into the plugin environment by default, but you may 
+# include it here if you wish to specify a particular version.
+conda_dependencies = [
+  "python==3.13",  
+  "gdal<3.11",  # missing libgdal.so issue happened with gdal 3.11
+  "geotiff>=1.7.3",  # earlier versions don't support space in CONDA_PREFIX
+  "pygeoprocessing",  # install from conda-forge rather than building wheel with pip
+  "natcap.invest>=3.19.0"  # install from conda-forge rather than building wheel with pip
+]
