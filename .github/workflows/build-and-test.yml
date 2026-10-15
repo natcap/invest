@@ -411,7 +411,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
         run: |
           yarn run build
-          ELECTRON_VERSION=40.8.5 yarn run dist
+          yarn run dist
 
       - name: Deploy binaries and user guide to GCS
         if: github.event_name != 'pull_request'
