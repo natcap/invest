@@ -280,13 +280,13 @@ def execute(args):
             target_path_list=[file_registry['reprojected_dem']],
             task_name='reproject_dem')
         fill_pits_dependent_task_list.append(dem_reproject_task)
-        dem = file_registry['reprojected_dem']
+        dem_path = file_registry['reprojected_dem']
     else:
-        dem = args['dem_path']
+        dem_path = args['dem_path']
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,
-        args=((dem, 1),
+        args=((dem_path, 1),
               file_registry['filled_dem']),
         kwargs={'working_dir': args['workspace_dir']},
         target_path_list=[file_registry['filled_dem']],
