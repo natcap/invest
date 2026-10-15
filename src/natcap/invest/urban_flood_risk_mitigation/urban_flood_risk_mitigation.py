@@ -329,11 +329,13 @@ def execute(args):
     target_projection_path = args[args['target_projection_id']]
     target_pixelsize_path = args[args['target_pixelsize_id']]
 
-    # Align rasters with the target projection and pixel size (alignment based on LULC)
+    # Align rasters with the target projection and pixel size (alignment based on target pixelsize raster)
     target_pixel_size = pygeoprocessing.get_raster_info(target_pixelsize_path)['pixel_size']
     pixel_area = abs(target_pixel_size[0] * target_pixel_size[1])
     target_sr_wkt = utils.get_raster_or_vector_projection(target_projection_path)
-    raster_align_index = 0 if args['target_pixelsize_id'] == 'lulc_path' else 1
+
+    align_raster_list = [args['lulc_path'], args['soils_hydrological_group_raster_path']]
+    raster_align_index = align_raster_list.index(args['target_pixelsize_id'])
 
     soil_raster_info = pygeoprocessing.get_raster_info(
         args['soils_hydrological_group_raster_path'])
@@ -341,7 +343,7 @@ def execute(args):
     align_raster_stack_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
-            [args['lulc_path'], args['soils_hydrological_group_raster_path']],
+            align_raster_list,
             [file_registry['aligned_lulc'],
              file_registry['aligned_soils_hydrological_group']],
             ['mode', 'mode'],
