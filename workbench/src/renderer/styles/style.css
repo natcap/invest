@@ -956,18 +956,6 @@ input[type=text]::placeholder {
   margin: 0.5rem 0 0;
 }
 
-.plugin-success {
-  color: var(--digital-green);
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.plugin-success > svg {
-  height: 1.5rem;
-  width: 1.5rem;
-}
-
 .plugin-form-text {
   display: block;
   font-size: 1rem;
@@ -1074,42 +1062,8 @@ code {
   background-color: var(--invest-green);
 }
 
-.plugin-table > tbody > tr > td {
-    padding-top: 0rem;
-    padding-bottom: 0rem;
-}
-
 .bold-text {
     font-weight: 700;
-}
-
-.registry-list {
-    padding: 0;
-}
-
-.registry-list-group .registry-list-group-item {
-  text-align: start;
-  border-top: none;
-  border-right: none;
-  border-left: none;
-  border-bottom: 1px solid rgba(0,0,0,.125);
-  border-radius: 0;
-  margin-bottom: 0;
-  padding: 0.5rem;
-  &.plugin-registry-button {
-    display: flex;
-    align-items: center;
-    color: var(--invest-green);
-    background-color: white;
-    &:hover {
-      color: white;
-      background-color: var(--invest-green);
-    }
-    &.active {
-      color: white;
-      background-color: var(--invest-green);
-    }
-  }
 }
 
 .registry-install-form {
