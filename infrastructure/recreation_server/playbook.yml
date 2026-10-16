@@ -3,10 +3,13 @@
   vars:
     invest_version: main
     invest_fork: natcap
-    server_workspace: /home/rec/server
+    server_workspace: /mnt/recreation
+    storage_disk: /dev/sdb
+    storage_fstype: ext4
 
   tasks:
     - name: Setup rec user and install system dependencies
+      tags: setup-vm
       become: true  # become root, by default
       block:
         - name: Create staff group
@@ -47,6 +50,20 @@
               - git
             state: present
             update_cache: yes
+
+        - name: Mount a non-boot disk
+          ansible.posix.mount:
+            path: '{{ server_workspace }}'
+            src: '{{ storage_disk }}'
+            fstype: '{{ storage_fstype }}'
+            state: present
+
+        - name: Change ownership of the workspace
+          ansible.builtin.file:
+            path: '{{ server_workspace }}'
+            state: directory
+            owner: rec
+            group: staff
 
     - name: Setup and run the invest python process
       become: true
