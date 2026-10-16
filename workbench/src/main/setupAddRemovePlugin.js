@@ -9,6 +9,7 @@ import { Downloader } from 'nodejs-file-downloader';
 
 import { logger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
+import ELECTRON_DEV_MODE from './isDevMode';
 import { settingsStore } from './settingsStore';
 import { shutdownPythonProcess } from './createPythonFlaskProcess';
 
@@ -175,26 +176,27 @@ async function installPlugin(
 /**
  * Get plugin metadata from the installed Python package,
  * and store that metadata in the Workbench's settingsStore.
- * @param  {string} micromamba      path to the micromamba executable
- * @param  {string} pluginEnvPrefix location of the plugin's micromamba env
- * @param  {string} packageName     the plugin's python package name
- * @param  {string} installString   pip install argument for the plugin
+ * @param  {string} micromamba        path to the micromamba executable
+ * @param  {string} pluginEnvPrefix   location of the plugin's micromamba env
+ * @param  {string} importPackageName the plugin's importable python package name
+ * @param  {string} installString     pip install argument for the plugin
+ * @param  {string} pluginSourceType  source (local vs registry vs non-registry)
  */
 function storePluginMetadataSync(
-  micromamba, pluginEnvPrefix, packageName, installString
+  micromamba, pluginEnvPrefix, importPackageName, installString, pluginSourceType
 ) {
   const modelID = execSync(
     `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-    `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
+    `python -c "import ${importPackageName}; print(${importPackageName}.MODEL_SPEC.model_id)"`
   ).toString().trim();
   const modelTitle = execSync(
     `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-    `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
+    `python -c "import ${importPackageName}; print(${importPackageName}.MODEL_SPEC.model_title)"`
   ).toString().trim();
   const version = execSync(
     `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
     `python -c "from importlib.metadata import version; ` +
-    `print(version('${packageName}'))"`
+    `print(version('${importPackageName}'))"`
   ).toString().trim();
 
   // Write plugin metadata to the workbench's config.json
@@ -210,16 +212,45 @@ function storePluginMetadataSync(
       modelTitle: modelTitle,
       type: 'plugin',
       source: installString,
+      sourceType: pluginSourceType,
       env: pluginEnvPrefix,
       version: version,
     }
   );
 }
 
+/**
+ * Log installation of plugin from the Plugin Registry.
+ * @param  {string} distPackageName project.name in pyproject.toml (used as ID by Registry)
+ * @param  {string} version         the version of the plugin
+ */
+async function logRegistryPluginInstall(distPackageName, version) {
+  try {
+    const response = await fetch(
+      "https://invest-plugin-download-stats-1098785064656.us-central1.run.app",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_name: distPackageName,
+          version: version
+        })
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Logging failed with non-OK status: ${response.status}`);
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+}
+
 export function setupAddPlugin(i18n) {
   ipcMain.handle(
     ipcMainChannels.ADD_PLUGIN,
-    async (event, url, revision, localPath) => {
+    async (event, url, revision, localPath, pluginSourceType) => {
       try {
         let pyprojectTOML;
         let installString;
@@ -279,7 +310,8 @@ export function setupAddPlugin(i18n) {
         }
         // Access plugin metadata from the pyproject.toml
         const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
-        const packageName = pyprojectTOML.tool.natcap.invest.package_name;
+        const importPackageName = pyprojectTOML.tool.natcap.invest.package_name;
+        const distPackageName = pyprojectTOML.project.name;
 
         // Create a conda env containing the plugin and its dependencies
         // use timestamp to ensure a unique path
@@ -294,9 +326,20 @@ export function setupAddPlugin(i18n) {
           );
           event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
           storePluginMetadataSync(
-            micromamba, pluginEnvPrefix, packageName, installString
+            micromamba, pluginEnvPrefix, importPackageName, installString,
+            pluginSourceType
           );
           logger.info('successfully added plugin');
+
+          // Log installation of plugins from the Registry
+          if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER
+              && pluginSourceType === 'registry') {
+            // revision will always equate to version for registry plugins
+            logger.info('logging Plugin Registry plugin installation');
+            logRegistryPluginInstall(distPackageName, revision);
+          } else {
+            logger.info('skipping installation logging in dev / testing');
+          }
         } catch (error) {
           logger.info('Cleaning up failed installation environment.');
           await spawnWithLogging(
