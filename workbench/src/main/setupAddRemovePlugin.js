@@ -176,27 +176,27 @@ async function installPlugin(
 /**
  * Get plugin metadata from the installed Python package,
  * and store that metadata in the Workbench's settingsStore.
- * @param  {string} micromamba       path to the micromamba executable
- * @param  {string} pluginEnvPrefix  location of the plugin's micromamba env
- * @param  {string} packageName      the plugin's importable python package name
- * @param  {string} installString    pip install argument for the plugin
- * @param  {string} pluginSourceType source (local vs registry vs non-registry)
+ * @param  {string} micromamba        path to the micromamba executable
+ * @param  {string} pluginEnvPrefix   location of the plugin's micromamba env
+ * @param  {string} importPackageName the plugin's importable python package name
+ * @param  {string} installString     pip install argument for the plugin
+ * @param  {string} pluginSourceType  source (local vs registry vs non-registry)
  */
 function storePluginMetadataSync(
-  micromamba, pluginEnvPrefix, packageName, installString, pluginSourceType
+  micromamba, pluginEnvPrefix, importPackageName, installString, pluginSourceType
 ) {
   const modelID = execSync(
     `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-    `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
+    `python -c "import ${importPackageName}; print(${importPackageName}.MODEL_SPEC.model_id)"`
   ).toString().trim();
   const modelTitle = execSync(
     `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-    `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
+    `python -c "import ${importPackageName}; print(${importPackageName}.MODEL_SPEC.model_title)"`
   ).toString().trim();
   const version = execSync(
     `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
     `python -c "from importlib.metadata import version; ` +
-    `print(version('${packageName}'))"`
+    `print(version('${importPackageName}'))"`
   ).toString().trim();
 
   // Write plugin metadata to the workbench's config.json
