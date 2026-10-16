@@ -1,7 +1,6 @@
 import argparse
 import logging
 import multiprocessing
-import os
 
 import natcap.invest.recreation.recmodel_server
 
@@ -15,12 +14,12 @@ args_dict = {
     'max_allowable_query': 40_000_000,
     'datasets': {
         'flickr': {
-            'raw_csv_point_data_path': '/usr/local/recreation-server/invest_3_15_0/server/volume/flickr/photos_2005-2017_odlla.csv',
+            'raw_csv_point_data_path': '',
             'min_year': 2005,
             'max_year': 2017
         },
         'twitter': {
-            'quadtree_pickle_filename': '/usr/local/recreation-server/invest_3_15_0/server/volume/twitter_quadtree/global_twitter_qt.pickle',
+            'quadtree_pickle_filename': '',
             'min_year': 2012,
             'max_year': 2022
         }
@@ -33,13 +32,22 @@ if __name__ == '__main__':
     parser.add_argument(
         '-w', dest='cache_workspace',
         help='Path to a local, writeable, directory. Avoid mounted volumes.')
+    parser.add_argument(
+        '--flickr_csv', dest='flickr_csv',
+        help='Path to the flickr database in the form of a CSV')
+    parser.add_argument(
+        '--twitter_qt_pickle', dest='twitter_qt_pickle',
+        help='Path to the pre-built twitter quadtree pickle file')
     args = parser.parse_args()
+
     # It's crucial to specify `spawn` here as some OS use 'fork' as the default
     # for new child processes. And a 'fork' will immediately duplicate all
     # the resources (memory) of the parent. We noticed that causing
     # Cannot Allocate Memory errors, as the recmodel_server can start child
     # processes at a point when it's already using a lot of memory.
     multiprocessing.set_start_method('spawn')
+
     args_dict['cache_workspace'] = args.cache_workspace
-    mounted_volume = os.path.join(args.cache_workspace, 'cache')
+    args_dict['datasets']['flickr']['raw_csv_point_data_path'] = args.flickr_csv
+    args_dict['datasets']['twitter']['quadtree_pickle_filename'] = args.twitter_qt_pickle
     natcap.invest.recreation.recmodel_server.execute(args_dict)
