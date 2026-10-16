@@ -171,14 +171,6 @@ def validate(args, model_spec):
 
     """
     validation_warnings = []
-    # if no static default pixel size, set value dynamically via dropdown func
-    if ('target_pixelsize_id' in args and not args['target_pixelsize_id']
-            and not model_spec.default_pixelsize_id):
-        pixelsize_spec = model_spec.get_input('target_pixelsize_id')
-        options = pixelsize_spec.dropdown_function(
-            args, model_spec)
-        if options:
-            args['target_pixelsize_id'] = options[0].key
     # Need to set default spatial dropdown args here or they dont get validated
     args = model_spec.preprocess_spatial_reference_args(args)
 

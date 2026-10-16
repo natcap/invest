@@ -2690,10 +2690,17 @@ class ModelSpec(ImmutableBaseModel):
 
         if not args.get('target_pixelsize_id'):
             default_pixelsize_input = self.get_default_pixelsize_input()
-            # NOTE: UMH does not have a default_pixelsize_id, it sets default
-            # dynamically in the dropdown function.
             if default_pixelsize_input:
                 args_copy['target_pixelsize_id'] = default_pixelsize_input.id
+            # NOTE: UMH does not have a default_pixelsize_id, it sets default
+            # dynamically in the dropdown function.
+            elif 'target_pixelsize_id' in args:
+                pixelsize_spec = self.get_input('target_pixelsize_id')
+                options = pixelsize_spec.dropdown_function(
+                    args_copy, self)
+                if options:
+                    args_copy['target_pixelsize_id'] = options[0].key
+
         return args_copy
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):
