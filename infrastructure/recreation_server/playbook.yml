@@ -88,7 +88,7 @@
         - name: Clone invest
           ansible.builtin.git:
             repo: https://github.com/{{ invest_fork }}/invest
-            dest: /home/rec/invest
+            dest: '{{ server_workspace }}/invest'
             version: '{{ invest_version }}'
             depth: 1
           register: clone_invest
@@ -97,18 +97,20 @@
           when: clone_invest.changed
           ansible.builtin.shell:
             executable: /bin/bash
-            chdir: /home/rec/invest
+            chdir: '{{ server_workspace }}/invest'
             cmd: |
               cp environment.yml previous_environment.yml > /dev/null 2>&1 || touch previous_environment.yml
               python3 ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt > environment.yml
               diff previous_environment.yml environment.yml
           register: env_yml_diff
+          failed_when: env_yml_diff.rc > 1  # diff returns 1 for a difference, 2 for an error
+          changed_when: env_yml_diff.rc == 1
 
         - name: Create invest environment and install dependencies
-          when: clone_invest.changed and env_yml_diff.stdout != ""
+          when: clone_invest.changed and env_yml_diff.changed
           ansible.builtin.shell:
             executable: /bin/bash
-            chdir: /home/rec/invest
+            chdir: '{{ server_workspace }}/invest'
             cmd: |
               rm -rf ./env
               source "${HOME}/conda/etc/profile.d/mamba.sh"
@@ -120,7 +122,7 @@
           when: clone_invest.changed
           ansible.builtin.shell:
             executable: /bin/bash
-            chdir: /home/rec/invest
+            chdir: '{{ server_workspace }}/invest'
             cmd: |
               source "${HOME}/conda/etc/profile.d/mamba.sh"
               export MAMBA_ROOT_PREFIX="${HOME}/conda"
@@ -130,20 +132,20 @@
         - name: Mount bucket with GCS Fuse
           ansible.builtin.shell:
             executable: /bin/bash
-            chdir: /home/rec
+            chdir: '{{ server_workspace }}'
             # Listing all contents should build some indices and improve performance later
             cmd: |
-              mkdir {{ server_workspace }} && mkdir {{ server_workspace }}/volume
-              gcsfuse --implicit-dirs -o ro natcap-recreation {{ server_workspace }}/volume
-              ls -R {{ server_workspace }}/volume
+              mkdir server && mkdir server/volume
+              gcsfuse --implicit-dirs -o ro natcap-recreation server/volume
+              ls -R server/volume
             # This is one of many files that will exist in the mounted volume
-            creates: '{{ server_workspace }}/volume/flickr/photos_2005-2017_odlla.csv'
+            creates: server/volume/flickr/photos_2005-2017_odlla.csv
 
         - name: Start the Rec Model server process
           tags: restart-process
           ansible.builtin.shell:
             executable: /bin/bash
-            chdir: /home/rec
+            chdir: '{{ server_workspace }}'
             cmd: |
               source "${HOME}/conda/etc/profile.d/mamba.sh"
               export MAMBA_ROOT_PREFIX="${HOME}/conda"
@@ -153,13 +155,13 @@
               export PYRO_DETAILED_TRACEBACK=true
               mamba run -p ./invest/env \
                 nohup python -u ./invest/infrastructure/recreation_server/scripts/execute_recmodel_server.py \
-                -w {{ server_workspace }} \
-                --flickr_csv {{ server_workspace }}/volume/flickr/photos_2005-2017_odlla.csv \
-                --twitter_qt_pickle {{ server_workspace }}/volume/twitter_quadtree/global_twitter_qt.pickle \
-                > {{ server_workspace }}/pyro.log 2>&1 &
+                -w server \
+                --flickr_csv server/volume/flickr/photos_2005-2017_odlla.csv \
+                --twitter_qt_pickle server/volume/twitter_quadtree/global_twitter_qt.pickle \
+                > server/pyro.log 2>&1 &
 
         - name: Create cron job to clear cached workspaces
           ansible.builtin.cron:
             name: Clear cached workspaces
             special_time: "daily"
-            job: /home/rec/invest/infrastructure/recreation_server/scripts/cron_find_rm_cached_workspaces.sh {{ server_workspace }}
+            job: /home/rec/invest/infrastructure/recreation_server/scripts/cron_find_rm_cached_workspaces.sh {{ server_workspace }}/server
