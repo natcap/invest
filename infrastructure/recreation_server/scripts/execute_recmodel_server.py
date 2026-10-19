@@ -14,7 +14,7 @@ args_dict = {
     'max_allowable_query': 40_000_000,
     'datasets': {
         'flickr': {
-            'raw_csv_point_data_path': '',
+            'quadtree_pickle_filename': '',
             'min_year': 2005,
             'max_year': 2017
         },
@@ -33,8 +33,8 @@ if __name__ == '__main__':
         '-w', dest='cache_workspace',
         help='Path to a local, writeable, directory. Avoid mounted volumes.')
     parser.add_argument(
-        '--flickr_csv', dest='flickr_csv',
-        help='Path to the flickr database in the form of a CSV')
+        '--flickr_qt_pickle', dest='flickr_qt_pickle',
+        help='Path to the pre-built flickr quadtree pickle file')
     parser.add_argument(
         '--twitter_qt_pickle', dest='twitter_qt_pickle',
         help='Path to the pre-built twitter quadtree pickle file')
@@ -48,6 +48,6 @@ if __name__ == '__main__':
     multiprocessing.set_start_method('spawn')
 
     args_dict['cache_workspace'] = args.cache_workspace
-    args_dict['datasets']['flickr']['raw_csv_point_data_path'] = args.flickr_csv
+    args_dict['datasets']['flickr']['quadtree_pickle_filename'] = args.flickr_qt_pickle
     args_dict['datasets']['twitter']['quadtree_pickle_filename'] = args.twitter_qt_pickle
     natcap.invest.recreation.recmodel_server.execute(args_dict)

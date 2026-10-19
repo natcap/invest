@@ -139,7 +139,7 @@
               gcsfuse --implicit-dirs -o ro natcap-recreation server/volume
               ls -R server/volume
             # This is one of many files that will exist in the mounted volume
-            creates: server/volume/flickr/photos_2005-2017_odlla.csv
+            creates: server/volume/twitter_quadtree/global_twitter_qt.pickle
 
         - name: Start the Rec Model server process
           tags: restart-process
@@ -156,7 +156,7 @@
               mamba run -p ./invest/env \
                 nohup python -u ./invest/infrastructure/recreation_server/scripts/execute_recmodel_server.py \
                 -w server \
-                --flickr_csv server/volume/flickr/photos_2005-2017_odlla.csv \
+                --flickr_qt_pickle server/volume/flickr/d2162b90872e7a28_fast_hash.pickle \
                 --twitter_qt_pickle server/volume/twitter_quadtree/global_twitter_qt.pickle \
                 > server/pyro.log 2>&1 &
 
