@@ -4,7 +4,7 @@
     invest_version: main
     invest_fork: natcap
     server_workspace: /mnt/recreation
-    storage_disk: /dev/sdb
+    storage_disk: /dev/disk/by-id/google-recreation-server-disk-4
     storage_fstype: ext4
 
   tasks:
@@ -51,16 +51,29 @@
             state: present
             update_cache: yes
 
+        - name: Format a non-boot disk if not already formatted
+          community.general.filesystem:
+            fstype: '{{ storage_fstype }}'
+            dev: '{{ storage_disk }}'
+            opts: -m 0 -E lazy_itable_init=0,lazy_journal_init=0,discard
+
         - name: Mount a non-boot disk
           ansible.posix.mount:
             path: '{{ server_workspace }}'
             src: '{{ storage_disk }}'
             fstype: '{{ storage_fstype }}'
-            state: present
+            state: mounted
 
-        - name: Change ownership of the workspace
+        - name: Create directory for workspace
           ansible.builtin.file:
             path: '{{ server_workspace }}'
+            state: directory
+            owner: rec
+            group: staff
+
+        - name: Create 'server' directory
+          ansible.builtin.file:
+            path: '{{ server_workspace }}/server'
             state: directory
             owner: rec
             group: staff
@@ -141,7 +154,7 @@
             chdir: '{{ server_workspace }}'
             # Listing all contents should build some indices and improve performance later
             cmd: |
-              mkdir server && mkdir server/volume
+              mkdir server/volume
               gcsfuse --implicit-dirs -o ro natcap-recreation server/volume
               ls -R server/volume
             # This is one of many files that will exist in the mounted volume
