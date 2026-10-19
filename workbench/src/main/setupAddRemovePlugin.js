@@ -223,8 +223,11 @@ function storePluginMetadataSync(
  * Log installation of plugin from the Plugin Registry.
  * @param  {string} distPackageName project.name in pyproject.toml (used as ID by Registry)
  * @param  {string} version         the version of the plugin
+ * @param  {string} gitSource       git source string; for cross-reference with usage stats
  */
-async function logRegistryPluginInstall(distPackageName, version) {
+async function logRegistryPluginInstall(
+  distPackageName, version, gitSource
+) {
   try {
     const response = await fetch(
       "https://invest-plugin-download-stats-1098785064656.us-central1.run.app",
@@ -234,8 +237,9 @@ async function logRegistryPluginInstall(distPackageName, version) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          project_name: distPackageName,
-          version: version
+          dist_package_name: distPackageName,
+          version: version,
+          source: gitSource
         })
       }
     );
@@ -336,7 +340,7 @@ export function setupAddPlugin(i18n) {
               && pluginSourceType === 'registry') {
             // revision will always equate to version for registry plugins
             logger.info('logging Plugin Registry plugin installation');
-            logRegistryPluginInstall(distPackageName, revision);
+            logRegistryPluginInstall(distPackageName, revision, installString);
           } else {
             logger.info('skipping installation logging in dev / testing');
           }

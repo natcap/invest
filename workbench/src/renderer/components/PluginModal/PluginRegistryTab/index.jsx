@@ -70,9 +70,9 @@ export default function PluginRegistryTab(props) {
             {registryData.map((pluginObject, index) =>
               <Nav.Item
                 className="plugin-modal-nav-item"
-                key={`${pluginObject.invest_package_name}-nav`}
+                key={`${pluginObject.dist_package_name}-nav`}
               >
-                <Nav.Link eventKey={pluginObject.invest_package_name}>
+                <Nav.Link eventKey={pluginObject.dist_package_name}>
                   {pluginObject.plugin_name}
                 </Nav.Link>
               </Nav.Item>
@@ -83,11 +83,11 @@ export default function PluginRegistryTab(props) {
           <Tab.Content>
             {registryData.map((pluginObject, index) =>
               <Tab.Pane
-                eventKey={pluginObject.invest_package_name}
-                key={`${pluginObject.invest_package_name}-tab`}
+                eventKey={pluginObject.dist_package_name}
+                key={`${pluginObject.dist_package_name}-tab`}
               >
                 <PluginDetailPane
-                  pluginID={pluginObject.invest_package_name}
+                  pluginID={pluginObject.dist_package_name}
                   plugin={pluginObject}
                   priorInstallationStatus={getInstallStatus(pluginObject)}
                   addPlugin={addPlugin}

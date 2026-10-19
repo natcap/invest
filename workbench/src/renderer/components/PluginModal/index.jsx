@@ -99,7 +99,7 @@ export default function PluginModal(props) {
 
   useEffect(() => {
     if (Object.keys(registryData).length) {
-      setActivePluginKey(registryData[0]['invest_package_name']);
+      setActivePluginKey(registryData[0]['dist_package_name']);
     }
   }, [registryData]);
 
