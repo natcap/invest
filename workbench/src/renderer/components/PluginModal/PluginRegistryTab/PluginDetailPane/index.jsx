@@ -38,6 +38,7 @@ export default function PluginDetailPane(props) {
     statusMessage,
     needsMSVC,
     downloadMSVC,
+    downloadStats,
   } = props;
   const [userAcknowledgment, setUserAcknowledgment] = useState(false);
   const [userAcknowledgmentError, setUserAcknowledgmentError] = useState(false);
@@ -200,7 +201,14 @@ export default function PluginDetailPane(props) {
         </p>
         <dl className="plugin-dl">
           <dt>{t("Downloads:")}</dt>
-          <dd>{plugin.download_count}</dd>
+          <dd>
+            {downloadStats === null
+              ? ""
+              : downloadStats.hasOwnProperty(plugin.dist_package_name)
+              ? downloadStats[plugin.dist_package_name]
+              : 0
+            }
+          </dd>
           {(plugin.authors.length > 0) &&
           <>
             <dt>{t("Authors:")}</dt>

@@ -14,6 +14,7 @@ import {
   fetchValidation
 } from '../../src/renderer/server_requests';
 import {
+  fetchDownloadStats,
   fetchRegistryData
 } from '../../src/renderer/components/PluginModal/services';
 import App from '../../src/renderer/app';
@@ -99,6 +100,10 @@ const PLUGIN_REGISTRY_DATA = [
   }
 ];
 
+const PLUGIN_DOWNLOAD_STATS = {
+  invest_foo_plugin: 33
+}
+
 describe('Plugin Manager modal', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue({
@@ -135,6 +140,7 @@ describe('Plugin Manager modal', () => {
 
     beforeEach(async () => {
       fetchRegistryData.mockResolvedValue(PLUGIN_REGISTRY_DATA);
+      fetchDownloadStats.mockResolvedValue(PLUGIN_DOWNLOAD_STATS);
 
       spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
         if (channel === ipcMainChannels.GET_SETTING) {
@@ -224,6 +230,30 @@ describe('Plugin Manager modal', () => {
       const errorMsg = await within(pluginRegistryTab)
         .findByText(/an error occurred/i);
       expect(errorMsg).toBeInTheDocument();
+    });
+
+    test('Download stats display', async () => {
+      const {
+        findByText, findByRole, findAllByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: /add a plugin/i }));
+      const modal = await findByRole('dialog');
+      const tabpanels = await within(modal).findAllByRole('tabpanel');
+      const pluginRegistryTab = tabpanels[0];
+
+      const pluginDetailsPanes = await within(pluginRegistryTab)
+        .findAllByRole('tabpanel')
+      const paneNoStats = pluginDetailsPanes[1]; // No stats in the return payload
+      const paneWithStats = pluginDetailsPanes[2];
+
+      const downloadStatsDefault = await within(paneNoStats)
+        .findByText('0');
+      expect(downloadStatsDefault).toBeInTheDocument();
+
+      const downloadStatsAvailable = await within(paneWithStats)
+        .findByText('33');
+      expect(downloadStatsAvailable).toBeInTheDocument();
     });
   });
 

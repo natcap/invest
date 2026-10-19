@@ -12,6 +12,9 @@ import {
   anotherVersionInstalled,
   notInstalled,
 } from '../constants';
+import {
+  fetchDownloadStats,
+} from '../services';
 
 export default function PluginRegistryTab(props) {
   const {
@@ -29,6 +32,7 @@ export default function PluginRegistryTab(props) {
   const [installedPluginSources, setInstalledPluginSources] = useState([]);
   const [installedPluginSourcesVersions, setInstalledPluginSourcesVersions] = useState([]);
   const [plugins, setPlugins] = useState({});
+  const [downloadStats, setDownloadStats] = useState(null);
 
   const { t } = useTranslation();
 
@@ -47,6 +51,15 @@ export default function PluginRegistryTab(props) {
     setInstalledPluginSources(installedPluginSourceList);
     setInstalledPluginSourcesVersions(installedPluginSourceVersionList);
   }, [installedPlugins]);
+
+  async function fetchStats() {
+    const stats = await fetchDownloadStats();
+    setDownloadStats(stats);
+  }
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   function getInstallStatus(plugin) {
     if (installedPluginSourcesVersions.includes("git+" + plugin.repository_url + '@' + plugin.version)) {
@@ -95,6 +108,7 @@ export default function PluginRegistryTab(props) {
                   statusMessage={statusMessage}
                   needsMSVC={needsMSVC}
                   downloadMSVC={downloadMSVC}
+                  downloadStats={downloadStats}
                 />
               </Tab.Pane>
             )}
