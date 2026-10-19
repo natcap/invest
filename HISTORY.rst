@@ -91,6 +91,22 @@ DelineateIt
   projection of the DEM raster.
   (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
 
+NDR
+===
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the DEM raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+* The DEM and Nutrient Runoff Proxy are resampled using the bilinear method,
+  instead of nearest neighbor.
+
+SDR
+===
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the DEM raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+
 Urban Flood Risk
 ================
 * A user may now select which model inputs define the target projection and
