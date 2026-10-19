@@ -748,8 +748,8 @@ class DelineateItTests(unittest.TestCase):
                 (raster_path, 1))
             self.assertEqual(pour_points, expected_pour_points)
 
-    def test_aoi_default_projection(self):
-        """DelineateIt: test DEM reprojection if AOI is target projection."""
+    def test_outlet_vector_is_target_projection(self):
+        """DelineateIt: test reprojection if outlet vector is target projection."""
         from natcap.invest.delineateit import delineateit
 
         dem_matrix = numpy.ones((10, 10), dtype=numpy.float32)
@@ -788,7 +788,6 @@ class DelineateItTests(unittest.TestCase):
         args['target_projection_id'] = 'outlet_vector_path'
         file_registry = delineateit.execute(args)
 
-        # assert output flow direction raster is in the same projection as AOI
         flow_dir_path = file_registry['flow_direction']
         flow_dir_info = pygeoprocessing.get_raster_info(flow_dir_path)
         self.assertEqual(flow_dir_info['projection_wkt'], vector_wkt)

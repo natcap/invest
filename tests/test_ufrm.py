@@ -14,6 +14,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from .utils import assert_complete_execute
+from natcap.invest import utils
 
 gdal.UseExceptions()
 
@@ -403,27 +404,38 @@ class UFRMTests(unittest.TestCase):
               'Null value(s) found in column "cn_a"')])
 
     def test_soil_raster_target_projection_pixelsize(self):
-        """UFRM: test model if soil raster is target projection and pixelsize"""
+        """UFRM: test model if soil raster is target projection and/or pixel size"""
         from natcap.invest import urban_flood_risk_mitigation
 
         args = self._make_args()
+        args['target_pixelsize_id'] = "soils_hydrological_group_raster_path"
+
+        file_reg = urban_flood_risk_mitigation.execute(args)
+
+        expected_projection_wkt = pygeoprocessing.get_raster_info(
+            args["lulc_path"])['projection_wkt']
+        expected_pixelsize_info = utils.get_raster_pixel_size_in_target_proj_units(
+            args["soils_hydrological_group_raster_path"],
+            expected_projection_wkt)
+        output_file_info = pygeoprocessing.get_raster_info(
+            file_reg['runoff_retention_index'])
+
+        # Note: test data LULC raster has different projection than soils
+        self.assertEqual(output_file_info['projection_wkt'],
+                         expected_projection_wkt)
+        self.assertEqual(output_file_info['pixel_size'], expected_pixelsize_info)
+
+        # Now test if soils raster is target projection too
         args['target_projection_id'] = "soils_hydrological_group_raster_path"
+        file_reg = urban_flood_risk_mitigation.execute(args)
 
-        for target in ["lulc_path", "soils_hydrological_group_raster_path"]:
-            args['target_pixelsize_id'] = target
-            args['target_projection_id'] = target
+        output_file_info = pygeoprocessing.get_raster_info(
+            file_reg['runoff_retention_index'])
+        expected_info = pygeoprocessing.get_raster_info(
+            args["soils_hydrological_group_raster_path"])
 
-            file_reg = urban_flood_risk_mitigation.execute(args)
-
-            runoff_retention_index_info = pygeoprocessing.get_raster_info(
-                file_reg['runoff_retention_index'])
-            expected_projection_info = pygeoprocessing.get_raster_info(
-                args[args['target_projection_id']])
-            expected_pixelsize_info = pygeoprocessing.get_raster_info(
-                args[args['target_pixelsize_id']])
-
-            # Note: test data LULC raster has different projection than soils
-            self.assertEqual(runoff_retention_index_info['projection_wkt'],
-                             expected_projection_info['projection_wkt'])
-            self.assertEqual(runoff_retention_index_info['pixel_size'],
-                             expected_pixelsize_info['pixel_size'])
+        # Note: test data LULC raster has different projection than soils
+        self.assertEqual(output_file_info['projection_wkt'],
+                         expected_info['projection_wkt'])
+        self.assertEqual(output_file_info['pixel_size'],
+                         expected_info['pixel_size'])

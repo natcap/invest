@@ -329,13 +329,17 @@ def execute(args):
     target_projection_path = args[args['target_projection_id']]
     target_pixelsize_path = args[args['target_pixelsize_id']]
 
-    # Align rasters with the target projection and pixel size (alignment based on target pixelsize raster)
-    target_pixel_size = pygeoprocessing.get_raster_info(target_pixelsize_path)['pixel_size']
+    # Align rasters with the target projection and pixel size
+    # (alignment based on target pixelsize raster)
+    target_sr_wkt = utils.get_raster_or_vector_projection(
+        target_projection_path)
+    target_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_sr_wkt)
     pixel_area = abs(target_pixel_size[0] * target_pixel_size[1])
-    target_sr_wkt = utils.get_raster_or_vector_projection(target_projection_path)
 
-    align_raster_list = [args['lulc_path'], args['soils_hydrological_group_raster_path']]
-    raster_align_index = align_raster_list.index(args['target_pixelsize_id'])
+    align_raster_list = [args['lulc_path'],
+                         args['soils_hydrological_group_raster_path']]
+    raster_align_index = align_raster_list.index(target_pixelsize_path)
 
     soil_raster_info = pygeoprocessing.get_raster_info(
         args['soils_hydrological_group_raster_path'])
