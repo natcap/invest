@@ -72,6 +72,10 @@ General
 * Some models now allow users to select which raster or vector
   input defines the output pixel size and projection.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
+* Additional data attributes (projection requirements and whether an input
+  has the default target projection or pixel size) will now automatically
+  be added to spatial inputs listed in the Data Needs sections of the User's
+  Guide. (`#2749 <https://github.com/natcap/invest/issues/2749>`_)
 
 Annual Water Yield
 ==================
@@ -79,6 +83,20 @@ Annual Water Yield
   pixel size, respectively, for the model outputs. If not specified, the
   model will use the projection and pixel size of the LULC raster.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
+
+DelineateIt
+===========
+* A user may now select which model input defines the target projection
+  for the model outputs. If not specified, the model will use the
+  projection of the DEM raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+
+Urban Flood Risk
+================
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the LULC raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
 
 Urban Mental Health
 ===================
