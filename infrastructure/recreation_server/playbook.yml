@@ -101,7 +101,13 @@
             cmd: |
               cp environment.yml previous_environment.yml > /dev/null 2>&1 || touch previous_environment.yml
               python3 ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt > environment.yml
-              diff previous_environment.yml environment.yml
+
+        - name: Check if python requirements have changed
+          when: clone_invest.changed
+          ansible.builtin.shell:
+            executable: /bin/bash
+            chdir: '{{ server_workspace }}/invest'
+            cmd: diff previous_environment.yml environment.yml
           register: env_yml_diff
           failed_when: env_yml_diff.rc > 1  # diff returns 1 for a difference, 2 for an error
           changed_when: env_yml_diff.rc == 1
