@@ -10,6 +10,7 @@ from osgeo import gdal
 from osgeo import osr
 
 from .utils import assert_complete_execute
+from natcap.invest import utils
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
@@ -129,16 +130,33 @@ class SDRTests(unittest.TestCase):
     def test_base_regression(self):
         """SDR base regression test on test data.
 
-        Executes SDR with test data. Checks for accuracy of aggregate
-        values in summary vector, presence of drainage raster in
-        intermediate outputs, absence of negative (non-nodata) values
-        in sed_deposition raster, and accuracy of raster outputs (as
-        measured by the sum of their non-nodata pixel values).
+        Executes SDR with test data with different target projection
+        and target pixel size inputs. Checks for accuracy of output
+        projection and pixel size, aggregate values in summary vector,
+        presence of drainage raster in intermediate outputs, absence of
+        negative (non-nodata) values in sed_deposition raster, and accuracy
+        of raster outputs (as measured by the sum of their non-nodata
+        pixel values).
         """
         from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26911)
+        target_projection_wkt = srs.ExportToWkt()
+        target_raster_path = os.path.join("/Users/simpson2/Downloads", 'reproj.tif')
+        pygeoprocessing.warp_raster(
+            args['erodibility_path'], (30, -30), target_raster_path,
+            "near", base_projection_wkt=pygeoprocessing.get_raster_info(
+                args['erodibility_path'])['projection_wkt'],
+            target_projection_wkt=target_projection_wkt)
+
+        # test not using default DEM as targets
+        args['erodibility_path'] = target_raster_path
+        args['target_projection_id'] = 'erodibility_path'
+        args['target_pixelsize_id'] = 'erosivity_path'
 
         execute_kwargs = {
             'generate_report': bool(sdr.MODEL_SPEC.reporter),
@@ -147,12 +165,30 @@ class SDRTests(unittest.TestCase):
         sdr.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(args, sdr.MODEL_SPEC, **execute_kwargs)
 
+        output_usle_path = os.path.join(args['workspace_dir'], "usle.tif")
+        actual_pixel_size = pygeoprocessing.get_raster_info(
+            output_usle_path)['pixel_size']
+        target_projection_wkt = pygeoprocessing.get_raster_info(
+            args[args['target_projection_id']])['projection_wkt'] ## may remove
+        expected_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+            args[args['target_pixelsize_id']], target_projection_wkt)
+        self.assertEqual(actual_pixel_size, expected_pixel_size)
+
+        self.assertEqual(pygeoprocessing.get_raster_info(
+            output_usle_path)['projection_wkt'], target_projection_wkt)
+        self.assertEqual(pygeoprocessing.get_vector_info(
+            os.path.join(args['workspace_dir'], "watershed_results_sdr.shp"))
+            ['projection_wkt'], target_projection_wkt)
+
+        # slightly different values using erosivity (30m resolution)
+        # as target_pixelsize_id and different target projection
+        # than with default DEM (which has 50m pixels and EPSG 26910
         expected_watershed_totals = {
-            'usle_tot': 2.62457418442,
-            'sed_export': 0.09748090804,
-            'sed_dep': 1.71813157,
-            'avoid_exp': 10199.466725,
-            'avoid_eros': 274444.75,
+            'usle_tot': 2.03106796348,
+            'sed_export': 0.08630880259,
+            'sed_dep': 1.72719257629,
+            'avoid_exp': 8953.35022568049,
+            'avoid_eros': 211355.9430149,
         }
 
         vector_path = os.path.join(
@@ -181,10 +217,9 @@ class SDRTests(unittest.TestCase):
             (sed_dep_array < 0))
         self.assertEqual(
             numpy.count_nonzero(sed_dep_array[negative_non_nodata_mask]), 0)
-        
+
         # Check raster outputs to make sure values are in Mg/ha/yr.
-        raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
-        pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+        pixel_area = abs(numpy.prod(expected_pixel_size))
         pixels_per_hectare = 10000 / pixel_area
         for (raster_name,
              attr_name) in [('usle.tif', 'usle_tot'),
@@ -533,55 +568,3 @@ class SDRTests(unittest.TestCase):
         self.assertEqual(
             'Dataset must be projected in linear units.',
             errors[0][1])
-
-    def test_non_default_target_pixel_size(self):
-        """SDR test with non default pixel size."""
-        from natcap.invest.sdr import sdr
-
-        args = SDRTests.generate_base_args(self.workspace_dir)
-        args['target_projection_id'] = 'watersheds_path'
-        args['target_pixelsize_id'] = 'erosivity_path'
-
-        file_registry = sdr.execute(args)
-
-        # slightly different values using erosivity (30m resolution) as
-        # target_pixelsize_id than with basic regression test with default
-        # DEM, which has 50m pixels
-        expected_results = {
-            'usle_tot': 2.02366790771,
-            'sed_export': 0.08861307263,
-            'sed_dep': 1.71813157,
-            'avoid_exp': 9198.4303125,
-            'avoid_eros': 210584.43,
-        }
-
-        assert_expected_results_in_vector(expected_results, file_registry["watershed_results_sdr"])
-
-        actual_pixel_size = pygeoprocessing.get_raster_info(
-            file_registry["usle"])['pixel_size']
-        self.assertEqual(actual_pixel_size, (30, -30))
-
-    def test_non_default_target_projection(self):
-        """SDR test with non default pixel size and projection."""
-        from natcap.invest.sdr import sdr
-
-        args = SDRTests.generate_base_args(self.workspace_dir)
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(2230)
-        projection_wkt = srs.ExportToWkt()
-        target_raster_path = os.path.join(self.workspace_dir, 'reproj.tif')
-        pygeoprocessing.warp_raster(
-            args['erosivity_path'], (30, -30), target_raster_path,
-            "bilinear", base_projection_wkt=pygeoprocessing.get_raster_info(
-                args['erosivity_path'])['projection_wkt'],
-            target_projection_wkt=projection_wkt)
-
-        args['erosivity_path'] = target_raster_path
-        args['target_projection_id'] = 'erosivity_path'
-        file_registry = sdr.execute(args)
-
-        self.assertEqual(pygeoprocessing.get_raster_info(
-            file_registry["usle"])['projection_wkt'], projection_wkt)
-        self.assertEqual(pygeoprocessing.get_vector_info(
-            file_registry["watershed_results_sdr"])['projection_wkt'], projection_wkt)
