@@ -147,14 +147,14 @@ export async function createCoreServerProcess(_port = undefined) {
  *                         an available port is chosen.
  * @returns { integer } - PID of the process that was launched
  */
-export async function createPluginServerProcess(modelID, _port = undefined) {
+export async function createPluginServerProcess(pluginKey, _port = undefined) {
   let port = _port;
   if (port === undefined) {
     port = await getFreePort();
   }
   logger.debug('creating invest plugin server process');
   const micromamba = settingsStore.get('userDefinedMicromamba') || settingsStore.get('micromamba');
-  const pluginSettings = settingsStore.get(`plugins.${modelID}`);
+  const pluginSettings = settingsStore.get(`plugins.${pluginKey}`);
   const args = [
     'run', '--prefix', `"${pluginSettings.userDefinedEnv || pluginSettings.env}"`,
     // calling invest with python avoids issues with unescaped
@@ -163,12 +163,12 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
   logger.debug('spawning command:', micromamba, args);
   // shell mode is necessary in dev mode & relying on a conda env
   const pythonServerProcess = spawn(micromamba, args, { shell: true });
-  settingsStore.set(`plugins.${modelID}.port`, port);
-  settingsStore.set(`plugins.${modelID}.pid`, pythonServerProcess.pid);
+  settingsStore.set(`plugins.${pluginKey}.port`, port);
+  settingsStore.set(`plugins.${pluginKey}.pid`, pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   const pid = await handleServerStartup(
-    pythonServerProcess, modelID, `${HOSTNAME}:${port}/api/ready`);
+    pythonServerProcess, pluginKey, `${HOSTNAME}:${port}/api/ready`);
   return pid;
 }
 
