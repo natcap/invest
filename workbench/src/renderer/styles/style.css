@@ -1002,8 +1002,8 @@ code {
 }
 
 .plugin-modal [role="tablist"] {
-  padding: 4px;
-  gap: 4px;
+  padding: 0.25rem;
+  gap: 0.25rem;
 }
 
 .plugin-modal-nav {
@@ -1121,7 +1121,7 @@ dl.plugin-dl {
   &:focus, &:focus-visible {
     border-radius: 5px;
     box-shadow: 0 0 0 .25rem var(--digital-red-opacity-25);
-    outline: var(--digital-red);
+    outline: none;
     color: var(--digital-red);
   }
 }
