@@ -926,6 +926,7 @@ input[type=text]::placeholder {
 
 .plugin-modal-footer-header {
   display: block;
+  font-size: 16px;
   font-weight: 600;
 }
 

@@ -16,7 +16,8 @@ export default function AboutTab() {
 
   return (
     <>
-      <h5>{t(`About Plugins`)}</h5>
+      <h2 className="h4">{t(`About Plugins`)}</h2>
+      <h3 className="h5 mt-3">{t(`What Is a Plugin?`)}</h3>
       <p>
         {t(`Conceptually, an InVEST plugin is an ecosystem services model or performs `
           + `functions related to ecosystem services modeling. Unlike the core models, `
@@ -24,7 +25,7 @@ export default function AboutTab() {
           + `Plugins may be developed, used, and distributed independently of the `
           + `natcap/invest repo and the Natural Capital Alliance.`)}
       </p>
-      <p className="mb-0">{t(`External Links:`)}</p>
+      <h4 className="h6 bold-text">{t(`External Links:`)}</h4>
       <p>
         <a
             href={pluginDocsURL}
@@ -56,7 +57,7 @@ export default function AboutTab() {
           </a>
       </p>
       <hr />
-      <p className="bold-text mt-3">{t(`Installing a Plugin`)}</p>
+      <h3 className="h5">{t(`Installing a Plugin`)}</h3>
       <p>
         {t(`You can use the Plugin Registry tab to browse for plugins included on the InVEST `
           + `Plugin Registry, a listing of community-contributed plugins. If you find one you `
@@ -74,15 +75,15 @@ export default function AboutTab() {
           + `install it using the Manual Install tab.`)}
       </p>
       <hr />
-      <p className="bold-text">{t(`Reporting Issues`)}</p>
-      <p>{t(`General Plugin Bugs:`)}</p>
+      <h3 className="h5">{t(`Reporting Issues`)}</h3>
+      <h4 className="h6 bold-text">{t(`General Plugin Bugs:`)}</h4>
       <p>
         {t(`If you encounter an issue while running a plugin, please report it to the maintainers `
           + `of the plugin. If you have installed a plugin from the Registry, its Registry listing `
           + `should include a link to the plugin's Issue Tracker. This is the recommended avenue `
           + `for reporting bugs.`)}
       </p>
-      <p>{t(`Security Vulnerabilities:`)}</p>
+      <h4 className="h6 bold-text">{t(`Security Vulnerabilities:`)}</h4>
       <p>
         {t(`The inclusion of a plugin in the InVEST Plugin Registry does not imply or guarantee `
           + `anything about the plugin's quality, suitability, or security, and the Natural `
@@ -102,7 +103,7 @@ export default function AboutTab() {
         </a>
       </p>
       <hr />
-      <p className="bold-text">{t(`Developing a Plugin`)}</p>
+      <h3 className="h5">{t(`Developing a Plugin`)}</h3>
       <p>
       {t(`Have an idea for a plugin or an existing script that you'd like to turn into `
         + `one? Take a look at the plugin developer docs to learn more: `)}

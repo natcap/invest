@@ -510,7 +510,7 @@ export default function PluginModal(props) {
       contentClassName="plugin-modal"
     >
       <Modal.Header>
-        <Modal.Title>{t('Plugin Manager')}</Modal.Title>
+        <Modal.Title as="h1" className="h4">{t('Plugin Manager')}</Modal.Title>
         <Button
           variant="secondary-outline"
           onClick={handleModalClose}
@@ -521,7 +521,7 @@ export default function PluginModal(props) {
       </Modal.Header>
       {modalBody}
       <Modal.Footer className="plugin-modal-footer">
-        <p className="plugin-modal-footer-header">{t("Plugin Installation / Uninstallation Status:")}</p>
+        <h2 className="plugin-modal-footer-header">{t("Plugin Installation / Uninstallation Status:")}</h2>
         <div role="region" aria-live="polite">
           {footerStatusMessage}
         </div>

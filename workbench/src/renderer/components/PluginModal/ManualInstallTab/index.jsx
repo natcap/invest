@@ -231,7 +231,7 @@ export default function ManualInstallTab(props) {
   let manualInstallTab = (
     <>
       <div>
-        <h5 id="add-plugin-form-title" className="mb-3">{t('Manually Install a Plugin')}</h5>
+        <h2 id="add-plugin-form-title" className="h4 mb-3">{t('Manually Install a Plugin')}</h2>
         <p>
           {t("Install a plugin via git URL or local file path (for plugins not available on the Registry).")}
         </p>
@@ -322,7 +322,7 @@ export default function ManualInstallTab(props) {
       }
       {installStatus === opStatusFailure &&
         <>
-          <h5 className="mt-2">{t('Error installing plugin:')}</h5>
+          <h3 className="h5 mt-2">{t('Error installing plugin:')}</h3>
           <div className="plugin-error plugin-install-remove-error">{addRemoveState.opErrorMsg}</div>
           <Button
             onClick={handleClickFindLogfiles}

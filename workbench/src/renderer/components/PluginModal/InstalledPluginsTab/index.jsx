@@ -31,7 +31,7 @@ export default function InstalledPluginsTab(props) {
   return (
     <>
       <div>
-        <h5 id="installed-plugin-list-title" className="mb-3">{t('Installed Plugins')}</h5>
+        <h2 id="installed-plugin-list-title" className="h4 mb-3">{t('Installed Plugins')}</h2>
         {(
           addRemoveState.opType === opTypeUninstall &&
           addRemoveState.opStatus === opStatusSuccess
@@ -59,7 +59,7 @@ export default function InstalledPluginsTab(props) {
             ))
           )
           : (
-            <h6>{t('No plugins are currently installed.')}</h6>
+            <p>{t('No plugins are currently installed.')}</p>
           )
         }
       </div>
@@ -98,9 +98,9 @@ function InstalledPluginDetailItem(props) {
   return (
     <Row className="pt-2 pb-2 installed-plugin-row">
       <Col sm={9}>
-        <h6 id={`plugin-${pluginID}`}>
+        <h3 className="h6" id={`plugin-${pluginID}`}>
           {pluginDetails.modelTitle} ({pluginDetails.version})
-        </h6>
+        </h3>
         <dl className="plugin-dl">
           {pluginDetails.sourceType && (
             <>
@@ -114,7 +114,7 @@ function InstalledPluginDetailItem(props) {
         {uninstallStatus === opStatusFailure &&
           (
             <>
-              <h5>{t('Error removing plugin:')}</h5>
+              <h4 className="h6">{t('Error removing plugin:')}</h4>
               <div className="plugin-error plugin-install-remove-error">{addRemoveState.opErrorMsg}</div>
               <Button
                 onClick={handleClickFindLogfiles}

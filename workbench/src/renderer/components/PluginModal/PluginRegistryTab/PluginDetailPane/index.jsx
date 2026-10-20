@@ -170,7 +170,7 @@ export default function PluginDetailPane(props) {
   } else if (installStatus === opStatusFailure) {
     installPane = (
       <>
-        <h5>{t('Error installing plugin:')}</h5>
+        <h3 className="h5">{t('Error installing plugin:')}</h3>
         <div className="plugin-error plugin-install-remove-error">
           {addRemoveState.opErrorMsg}
         </div>
@@ -195,7 +195,7 @@ export default function PluginDetailPane(props) {
   return (
     <>
       <div className="plugin-pane">
-        <h5>{plugin.plugin_name}</h5>
+        <h2 className="h4">{plugin.plugin_name}</h2>
         <p>
           {plugin.description}
         </p>
