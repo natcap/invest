@@ -537,7 +537,7 @@ describe('Main menu interactions', () => {
 
   test('Open sampledata download Modal from menu', async () => {
     const {
-      findByText, findByRole,
+      findByText, findByRole, queryByText,
     } = render(
       <App />
     );
@@ -553,11 +553,12 @@ describe('Main menu interactions', () => {
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
     );
+    expect(await queryByText(/Download InVEST sample data/i)).toBeNull();
   });
 
   test('Open Metadata Modal from menu', async () => {
     const {
-      findByText, findByRole,
+      findByText, findByRole, queryByText,
     } = render(
       <App />
     );
@@ -573,6 +574,7 @@ describe('Main menu interactions', () => {
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
     );
+    expect(await queryByText(/contact information/i)).toBeNull();
   });
 
   test('Open Plugins Modal from menu', async () => {
@@ -591,7 +593,7 @@ describe('Main menu interactions', () => {
     fetchRegistryData.mockResolvedValue([]);
 
     const {
-      findByText, findByRole,
+      findByText, findByRole, queryByText,
     } = render(
       <App />
     );
@@ -607,6 +609,7 @@ describe('Main menu interactions', () => {
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
     );
+    expect(await queryByText(/plugin registry/i)).toBeNull();
   });
 
   test('Open Changelog Modal from menu', async () => {
@@ -631,7 +634,7 @@ describe('Main menu interactions', () => {
       });
 
     const {
-      findByText, findByRole,
+      findByText, findByRole, queryByText,
     } = render(
       <App />
     );
@@ -647,11 +650,12 @@ describe('Main menu interactions', () => {
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
     );
+    expect(await queryByText(/new in this version/i)).toBeNull();
   });
 
   test('Open Settings Modal from menu', async () => {
     const {
-      findByText, findByRole,
+      findByText, findByRole, queryByText,
     } = render(
       <App />
     );
@@ -667,6 +671,7 @@ describe('Main menu interactions', () => {
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
     );
+    expect(await queryByText(/invest settings/i)).toBeNull();
   });
 
   test('Open Plugins Modal from InvestTab button', async () => {
@@ -685,7 +690,7 @@ describe('Main menu interactions', () => {
     jest.spyOn(global, "fetch").mockImplementation({'data': []});
 
     const {
-      findByText, findByRole,
+      findByText, findByRole, queryByText,
     } = render(
       <App />
     );
@@ -698,5 +703,6 @@ describe('Main menu interactions', () => {
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
     );
+    expect(await queryByText(/plugin registry/i)).toBeNull();
   });
 });
