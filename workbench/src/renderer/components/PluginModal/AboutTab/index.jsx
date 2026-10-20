@@ -20,7 +20,7 @@ export default function AboutTab() {
       <p>
         {t(`Conceptually, an InVEST plugin is an ecosystem services model or performs `
           + `functions related to ecosystem services modeling. Unlike the core models, `
-          + `a plugin is not 'official', i.e., not reviewed or maintained by NatCap. `
+          + `most plugins are not 'official', i.e., not reviewed or maintained by NatCap. `
           + `Plugins may be developed, used, and distributed independently of the `
           + `natcap/invest repo and the Natural Capital Alliance.`)}
       </p>
@@ -29,7 +29,6 @@ export default function AboutTab() {
         <a
             href={pluginDocsURL}
             title={pluginDocsURL}
-            aria-label={t(`(opens in web browser)`)}
             onClick={openLinkInBrowser}
           >
             {t(`Plugin Developer's Guide`)}
@@ -39,7 +38,6 @@ export default function AboutTab() {
           </a> | <a
             href={pluginRegistryURL}
             title={pluginRegistryURL}
-            aria-label={t(`(opens in web browser)`)}
             onClick={openLinkInBrowser}
           >
             {t(`Plugin Registry site`)}
@@ -49,7 +47,6 @@ export default function AboutTab() {
           </a> | <a
             href={registryGitHubURL}
             title={registryGitHubURL}
-            aria-label={t(`(opens in web browser)`)}
             onClick={openLinkInBrowser}
           >
             {t(`Plugin Registry GitHub Repo`)}
@@ -96,7 +93,6 @@ export default function AboutTab() {
         <a
           href={securityReportURL}
           title={securityReportURL}
-          aria-label={t(`(opens in web browser)`)}
           onClick={openLinkInBrowser}
         >
           {t(`Security and Quality tab`)}
@@ -113,7 +109,6 @@ export default function AboutTab() {
         <a
           href={pluginDocsURL}
           title={pluginDocsURL}
-          aria-label={t(`(opens in web browser)`)}
           onClick={openLinkInBrowser}
         >
           {t(`Developer's Guide`)}
@@ -129,7 +124,6 @@ export default function AboutTab() {
         <a
           href={pluginSubmissionURL}
           title={pluginSubmissionURL}
-          aria-label={t(`(opens in web browser)`)}
           onClick={openLinkInBrowser}
         >
           {t(`Submission Guide`)}

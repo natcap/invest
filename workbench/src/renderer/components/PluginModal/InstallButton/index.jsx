@@ -40,9 +40,7 @@ export default function InstallButton(props) {
           {installLoading
             ? (
               <div className="adding-button">
-                <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                  <span className="visually-hidden">{t('Adding plugin')}</span>
-                </Spinner>
+                <Spinner animation="border" role="status" size="sm" className="plugin-spinner" />
                 {t(statusMessage)}
               </div>
             )

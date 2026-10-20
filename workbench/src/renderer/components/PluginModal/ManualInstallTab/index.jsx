@@ -252,23 +252,25 @@ export default function ManualInstallTab(props) {
       <hr />
       <Form aria-labelledby="add-plugin-form-title">
         <Form.Group>
-          <Form.Label htmlFor="installFrom">{t('Install from')}</Form.Label>
-          <Form.Check
-            type="radio"
-            id="installFromURL"
-            name="installFrom"
-            label={t('git URL')}
-            checked={installFrom === "url"}
-            onChange={(event) => setInstallFrom("url")}
-          />
-          <Form.Check
-            type="radio"
-            id="installFromLocal"
-            name="installFrom"
-            label={t('local path')}
-            checked={installFrom === "path"}
-            onChange={(event) => setInstallFrom("path")}
-          />
+          <fieldset>
+            <legend className="plugin-form-text">{t('Install from')}</legend>
+            <Form.Check
+              type="radio"
+              id="installFromURL"
+              name="installFrom"
+              label={t('git URL')}
+              checked={installFrom === "url"}
+              onChange={(event) => setInstallFrom("url")}
+            />
+            <Form.Check
+              type="radio"
+              id="installFromLocal"
+              name="installFrom"
+              label={t('local path')}
+              checked={installFrom === "path"}
+              onChange={(event) => setInstallFrom("path")}
+            />
+          </fieldset>
         </Form.Group>
         {pluginFields}
         <Form.Group>
