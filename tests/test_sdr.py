@@ -104,8 +104,13 @@ class SDRTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")
+
+        # pointing DEM (default target pixel size id) to a vector also causes
+        # errors with target pixel size and projection because those now point
+        # to an invalid input file
         for (validation_keys, error_msg), phrase in zip(
-                validate_result, ['GDAL raster', 'GDAL vector']):
+                validate_result,
+                ['GDAL raster', 'GDAL raster', 'GDAL raster', 'GDAL vector']):
             self.assertTrue(phrase in error_msg)
 
     def test_sdr_validation_key_no_value(self):
