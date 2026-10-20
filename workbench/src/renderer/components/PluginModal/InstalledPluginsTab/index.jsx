@@ -38,7 +38,10 @@ export default function InstalledPluginsTab(props) {
         ) && (
           <>
             <div aria-live="polite" className="pt-3 pb-3 plugin-success-message">
-              <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" />
+              <BsCheckCircle
+                className="plugin-modal-icons plugin-modal-icons-white"
+                aria-hidden="true"
+              />
               <span>{t('Plugin successfully uninstalled!')}</span>
             </div>
           </>

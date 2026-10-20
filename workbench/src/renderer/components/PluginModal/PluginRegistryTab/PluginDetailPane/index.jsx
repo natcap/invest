@@ -111,7 +111,7 @@ export default function PluginDetailPane(props) {
     <>
       {(priorInstallationStatus === anotherVersionInstalled) &&
         <div>
-          <BsExclamationCircle className="plugin-modal-icons" />
+          <BsExclamationCircle className="plugin-modal-icons" aria-hidden="true" />
             <span className="bold-text">{t('Note: ')}</span>
             {t('A different version of this plugin is already installed.')}
         </div>
@@ -186,7 +186,7 @@ export default function PluginDetailPane(props) {
   let alreadyInstalledPane = (
     <>
       <div className="pt-3 pb-3 plugin-version-note">
-        <BsCheckCircle className="plugin-modal-icons" />
+        <BsCheckCircle className="plugin-modal-icons" aria-hidden="true" />
         <span>{t('This plugin is installed!')}</span>
       </div>
     </>

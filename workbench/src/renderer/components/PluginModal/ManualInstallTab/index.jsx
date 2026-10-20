@@ -313,7 +313,7 @@ export default function ManualInstallTab(props) {
       {installStatus === opStatusSuccess &&
         <>
           <div aria-live="polite" className="mt-3 pt-3 pb-3 plugin-success-message">
-            <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" />
+            <BsCheckCircle className="plugin-modal-icons plugin-modal-icons-white" aria-hidden="true" />
             <span>{t('Successfully installed plugin!')}</span>
           </div>
         </>

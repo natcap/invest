@@ -327,7 +327,10 @@ export default function PluginModal(props) {
                     </div>
                   ) : fetchError ? (
                     <div className="registry-fetch-status">
-                      <MdOutlineWarningAmber className="registry-warning-icon" />
+                      <MdOutlineWarningAmber
+                        className="registry-warning-icon"
+                        aria-hidden="true"
+                      />
                       <p>
                         {t(`An error occurred when loading the Plugin Registry data.
                           Please check your internet connection, then try again.
@@ -407,7 +410,7 @@ export default function PluginModal(props) {
       footerStatusMessage = (
         <>
           <div className="footer-status-msg">
-            <BsCheckCircle className="plugin-modal-icons" />
+            <BsCheckCircle className="plugin-modal-icons" aria-hidden="true" />
             {t("Installation Success! You can now close this modal and open the plugin from the list of models.")}
           </div>
           <Button
@@ -420,7 +423,7 @@ export default function PluginModal(props) {
       footerStatusMessage = (
         <>
           <div className="footer-status-msg">
-            <BsCheckCircle className="plugin-modal-icons" />
+            <BsCheckCircle className="plugin-modal-icons" aria-hidden="true" />
             <span>{t("Plugin successfully uninstalled.")}</span>
           </div>
         </>
@@ -431,7 +434,10 @@ export default function PluginModal(props) {
       footerStatusMessage = (
         <>
           <div className="footer-status-msg">
-            <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
+            <MdOutlineWarningAmber
+              className="plugin-modal-icons plugin-modal-icons-error"
+              aria-hidden="true"
+            />
             <span>{t("An error occurred during installation.")}</span>
           </div>
           <Button
@@ -444,7 +450,10 @@ export default function PluginModal(props) {
       footerStatusMessage = (
         <>
           <div className="footer-status-msg">
-            <MdOutlineWarningAmber className="plugin-modal-icons plugin-modal-icons-error" />
+            <MdOutlineWarningAmber
+              className="plugin-modal-icons plugin-modal-icons-error"
+              aria-hidden="true"
+            />
             <span>{t("An error occurred during uninstallation:")}</span>
             <div className="plugin-error plugin-install-remove-error">
               {addRemoveState.opErrorMsg}
