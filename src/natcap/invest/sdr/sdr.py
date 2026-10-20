@@ -685,12 +685,12 @@ def execute(args):
         masked_list.append(f_reg['masked_drainage'])
         interpolation_list.append('near')
 
-    target_pixelsize_info = pygeoprocessing.get_raster_info(
-        target_pixelsize_path)
-    min_pixel_size = numpy.min(numpy.abs(target_pixelsize_info['pixel_size']))
-    target_pixel_size = (min_pixel_size, -min_pixel_size)
     target_projection_wkt = utils.get_raster_or_vector_projection(
         target_projection_path)
+    target_pixelsize_info = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_projection_wkt)
+    min_pixel_size = numpy.min(numpy.abs(target_pixelsize_info))
+    target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     watersheds_projection_wkt = utils.get_raster_or_vector_projection(
         args['watersheds_path'])
