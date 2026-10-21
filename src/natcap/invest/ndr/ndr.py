@@ -276,14 +276,14 @@ MODEL_SPEC = spec.ModelSpec(
         spec.TARGET_PROJECTION.model_copy(update=dict(
             about=spec.TARGET_PROJECTION.about + gettext(
                 "We do not recommend deviating from the projection of the "
-                "DEM, as this may cause unexpected results.")
+                "DEM, as this may cause unexpected results."),
+            projection_units=u.meter
         )),
         spec.TARGET_PIXELSIZE.model_copy(update=dict(
             about=spec.TARGET_PIXELSIZE.about + gettext(
                 "This raster will also be used to set the alignment during "
                 "resampling. We do not recommend deviating from the pixel "
-                "size of the DEM, as this may cause unexpected results. "
-            )
+                "size of the DEM, as this may cause unexpected results. ")
         ))
     ],
     outputs=[
