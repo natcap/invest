@@ -127,7 +127,7 @@ class SDRTests(unittest.TestCase):
             validate_result,
             'expected a validation error but didn\'t get one')
 
-    def test_base_regression(self):
+    def test_base_regression_with_target_projection_and_pixelsize(self):
         """SDR base regression test on test data.
 
         Executes SDR with test data with different target projection
@@ -146,7 +146,7 @@ class SDRTests(unittest.TestCase):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26911)
         target_projection_wkt = srs.ExportToWkt()
-        target_raster_path = os.path.join("/Users/simpson2/Downloads", 'reproj.tif')
+        target_raster_path = os.path.join(self.workspace_dir, 'reproj.tif')
         pygeoprocessing.warp_raster(
             args['erodibility_path'], (30, -30), target_raster_path,
             "near", base_projection_wkt=pygeoprocessing.get_raster_info(
@@ -168,8 +168,6 @@ class SDRTests(unittest.TestCase):
         output_usle_path = os.path.join(args['workspace_dir'], "usle.tif")
         actual_pixel_size = pygeoprocessing.get_raster_info(
             output_usle_path)['pixel_size']
-        target_projection_wkt = pygeoprocessing.get_raster_info(
-            args[args['target_projection_id']])['projection_wkt'] ## may remove
         expected_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
             args[args['target_pixelsize_id']], target_projection_wkt)
         self.assertEqual(actual_pixel_size, expected_pixel_size)
