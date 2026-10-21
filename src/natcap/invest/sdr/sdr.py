@@ -645,10 +645,10 @@ def execute(args):
             parameter (L) in the LS factor. If the calculated value of L
             exceeds 'l_max' it will be clamped to this value.
         args['target_projection_id'] (string): (optional) ``id`` of a spatial
-            input listed in ``MODEL_SEPC.inputs`` that defines the target
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
             projection.
         args['target_pixelsize_id'] (string): (optional) ``id`` of a spatial
-            input listed in ``MODEL_SEPC.inputs`` that defines the target
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
             pixel size.
         args['n_workers'] (int): if present, indicates how many worker
             processes should be used in parallel processing. -1 indicates

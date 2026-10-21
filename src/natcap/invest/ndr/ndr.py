@@ -767,10 +767,10 @@ def execute(args):
             point value between 0 and 1. This field characterizes the retention
             due to biochemical degradation in soils.  Required if ``calc_n``.
         args['target_projection_id'] (string): (optional) ``id`` of a spatial
-            input listed in ``MODEL_SEPC.inputs`` that defines the target
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
             projection.
         args['target_pixelsize_id'] (string): (optional) ``id`` of a spatial
-            input listed in ``MODEL_SEPC.inputs`` that defines the target
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
             pixel size.
         args['n_workers'] (int): if present, indicates how many worker
             processes should be used in parallel processing. -1 indicates
@@ -815,8 +815,8 @@ def execute(args):
         target_path_list=[f_reg['watershed_results_ndr']],
         task_name='create target vector by reprojecting watersheds')
 
-    target_pixel_size = pygeoprocessing.get_raster_info(
-        target_pixelsize_path)['pixel_size']
+    target_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_projection_wkt)
 
     base_raster_list = [
         args['dem_path'], args['lulc_path'], args['runoff_proxy_path']]
