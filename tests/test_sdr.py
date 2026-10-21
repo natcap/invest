@@ -143,9 +143,9 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(26911)
-        target_projection_wkt = srs.ExportToWkt()
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(26911)
+        target_projection_wkt = target_srs.ExportToWkt()
         target_raster_path = os.path.join(self.workspace_dir, 'reproj.tif')
         pygeoprocessing.warp_raster(
             args['erodibility_path'], (30, -30), target_raster_path,
@@ -168,15 +168,23 @@ class SDRTests(unittest.TestCase):
         output_usle_path = os.path.join(args['workspace_dir'], "usle.tif")
         actual_pixel_size = pygeoprocessing.get_raster_info(
             output_usle_path)['pixel_size']
-        expected_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+
+        output_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
             args[args['target_pixelsize_id']], target_projection_wkt)
+        min_pixel_size = numpy.min(numpy.abs(output_pixel_size))
+        expected_pixel_size = (min_pixel_size, -min_pixel_size)
         self.assertEqual(actual_pixel_size, expected_pixel_size)
 
-        self.assertEqual(pygeoprocessing.get_raster_info(
-            output_usle_path)['projection_wkt'], target_projection_wkt)
-        self.assertEqual(pygeoprocessing.get_vector_info(
-            os.path.join(args['workspace_dir'], "watershed_results_sdr.shp"))
-            ['projection_wkt'], target_projection_wkt)
+        usle_srs = osr.SpatialReference()
+        usle_srs.ImportFromWkt(pygeoprocessing.get_raster_info(
+            output_usle_path)['projection_wkt'])
+        self.assertTrue(usle_srs.IsSame(target_srs))
+        # Check watersheds prj wkt explicitly because now we're reprojecting it
+        watershed_results_srs = osr.SpatialReference()
+        watershed_results_srs.ImportFromWkt(
+            utils.get_raster_or_vector_projection(
+                os.path.join(args['workspace_dir'], "watershed_results_sdr.shp")))
+        self.assertTrue(watershed_results_srs.IsSame(target_srs))
 
         # slightly different values using erosivity (30m resolution)
         # as target_pixelsize_id and different target projection

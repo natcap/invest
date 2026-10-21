@@ -206,9 +206,9 @@ class NDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(5070)
-        target_projection_wkt = srs.ExportToWkt()
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(5070)
+        target_projection_wkt = target_srs.ExportToWkt()
         target_raster_path = os.path.join(self.workspace_dir, 'reproj.tif')
         target_pixel_size = (30, -30)
         pygeoprocessing.warp_raster(
@@ -237,12 +237,13 @@ class NDRTests(unittest.TestCase):
 
         output_raster_info = pygeoprocessing.get_raster_info(
             os.path.join(self.workspace_dir, 'n_surface_export.tif'))
-        actual_projection_wkt = output_raster_info['projection_wkt']
+        output_srs = osr.SpatialReference()
+        output_srs.ImportFromWkt(output_raster_info['projection_wkt'])
         # can get pixel size directly (without converting to units of target
         # projection) since same raster input for both target projection
         # and pixel size
         actual_pixel_size = output_raster_info['pixel_size']
-        self.assertEqual(actual_projection_wkt, target_projection_wkt)
+        self.assertTrue(output_srs.IsSame(target_srs))
         self.assertEqual(actual_pixel_size, target_pixel_size)
 
         result_vector = ogr.Open(os.path.join(
