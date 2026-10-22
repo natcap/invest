@@ -51,13 +51,21 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
 
   inputFieldOrder.map(
     (inputGroup) => {
-      return inputGroup.input_ids.map((item) => {
-        if (typeof item === 'string') {
-          return [item]
-        } else {
-          return item.input_ids
-        }
-      }).flat()
+      // support both new and old input group formats because the plugin
+      // environment could have an older version of invest installed.
+      // the old format is an array of input ids. the new format is an
+      // object with an input_ids attribute.
+      if (Array.isArray(inputGroup)) {
+        return inputGroup
+      } else {
+        return inputGroup.input_ids.map((item) => {
+          if (typeof item === 'string') {
+            return [item]
+          } else {
+            return item.input_ids
+          }
+        }).flat()
+      }
   }).flat().forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and

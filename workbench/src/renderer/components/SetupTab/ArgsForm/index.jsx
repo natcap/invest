@@ -138,6 +138,11 @@ class ArgsForm extends React.Component {
     const defaultActiveKeys = [];
     let k = 0;
     argsOrder.forEach((inputGroup) => {
+      // support both new and old input group formats because the plugin
+      // environment could have an older version of invest installed.
+      // the old format is an array of input ids. the new format is an
+      // object with an input_ids attribute.
+      const inputIDs = Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
       const groupItems = [];
       inputGroup.input_ids.forEach((groupItem) => {
         let subGroupItems;
