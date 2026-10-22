@@ -2,8 +2,9 @@ import base64
 import collections
 import logging
 import math
-import textwrap
 import os
+import textwrap
+import time
 from io import BytesIO
 from enum import Enum
 
@@ -242,40 +243,49 @@ def _read_masked_array(filepath, resample_method, target_width):
             - resampled (boolean): whether or not the array is an overview
 
     """
+
     info = pygeoprocessing.get_raster_info(filepath)
     nodata = info['nodata'][0]
     resampled = False
     raster_width = info['raster_size'][0]
-    # image_width = 600  # px
-    # if os.path.getsize(filepath) > 4e6:
-    # TODO: the external ovr is actually larger in filesize
-    # than the original tif! It is probably not being compressed.
-    # What happens if the ovr is stored internally?
-    if raster_width > target_width:
-        level = raster_width // target_width
+    # The minimum resample is a factor of 2, so only resample
+    # if the raster is more than 2x the target width
+    if raster_width >= target_width * 2:
         resampled = True
+        level = raster_width // target_width
         raster = gdal.OpenEx(filepath)
         band = raster.GetRasterBand(1)
+        LOGGER.info(f'Overview level {level}')
+
+        def overviews_progress(*args, **kwargs):
+            pct_complete, name, other = args
+            percent = round(pct_complete * 100, 2)
+            if time.time() - overviews_progress.last_progress_report > 5.0:
+                LOGGER.info(f"Overviews progress: {percent}%")
+                overviews_progress.last_progress_report = time.time()
+        overviews_progress.last_progress_report = time.time()
+
+        # BuildOverviews will add to existing overviews, but we always
+        # want to rebuild the level we care about in case the original
+        # data changed.
+        # The tif is tracked by taskgraph; use external overviews so
+        # we don't update the tif.
+        raster.BuildOverviews(
+            resampling=resample_method,
+            overviewlist=[level],
+            callback=overviews_progress,
+            options={'LOCATION': "EXTERNAL"})
+        # Find the overview with width closest to,
+        # but not smaller than, target_width
+        # Overviews are ordered from largest array size to smallest
         ovr_idx = 0
-        if band.GetOverviewCount() == 0:
-            LOGGER.info(f'Overview level {level}')
-            pygeoprocessing.build_overviews(
-                filepath,
-                internal=False,
-                resample_method=resample_method,
-                overwrite=False, levels=[level])
-        else:
-            # Find the overview with width closest to,
-            # but not smaller than, target_width
-            # Overviews are ordered from largest array size to smallest
-            for i in range(band.GetOverviewCount()):
-                ovr_idx = i
-                if band.GetOverview(i).XSize < target_width:
-                    break
+        for i in range(band.GetOverviewCount()):
+            ovr_idx = i
+            if band.GetOverview(i).XSize < target_width * 2:
+                break
 
         raster = gdal.OpenEx(filepath)
         band = raster.GetRasterBand(1)
-        # n = band.GetOverviewCount()
         array = band.GetOverview(ovr_idx).ReadAsArray()
         raster = band = None
     else:
