@@ -850,13 +850,14 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
         # If 1 plot, make an extra column for the html table.
         # If > 1 map, the table will always go on its own row.
         small_plots = True
-    fig, axs = _figure_subplots(
+    fig, axs, subplot_width = _figure_subplots(
         xy_ratio, n_plots=n_plots, small_plots=small_plots)
     imshow_kwargs = {}
     imshow_kwargs['interpolation'] = 'none'
 
     for ax, raster_path in zip(axs, raster_path_list):
-        arr, resampled = _read_masked_array(raster_path, resample_alg)
+        arr, resampled = _read_masked_array(
+            raster_path, resample_alg, subplot_width)
         ax.set_title(**_get_title_kwargs(
             os.path.basename(raster_path), resampled, 100))
 
