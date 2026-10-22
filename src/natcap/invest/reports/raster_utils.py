@@ -349,7 +349,7 @@ def _figure_subplots(xy_ratio, n_plots, small_plots=False):
     plt.close()
     if n_plots == 1:
         axs = numpy.array([axs])
-    return fig, axs, int(sub_width)
+    return fig, axs, sub_width
 
 
 def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
@@ -484,7 +484,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
     n_plots = len(raster_list)
     xy_ratio = _get_aspect_ratio(bbox)
     fig, axs, subplot_width = _figure_subplots(xy_ratio, n_plots)
-    target_px_width = subplot_width * MPL_SAVE_FIG_KWARGS['dpi']
+    target_px_width = int(subplot_width * MPL_SAVE_FIG_KWARGS['dpi'])
 
     # To ensure that plots in same group are the same size, subtitle_offset
     # padding is needed if _any_ raster in list has units (see InVEST #2471)
