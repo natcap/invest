@@ -225,13 +225,15 @@ def caption_raster_list(raster_list: list[RasterPlotConfig]):
 def _read_masked_array(filepath, resample_method, target_width):
     """Read a raster into a masked numpy array.
 
-    If the raster is large, build overviews and then read array from the
-    smallest-sized overview. Nodata values are assigned ``numpy.nan``
+    If the raster is wider in pixels than ``target_width * 2``,
+    build the smallest overview that is still larger than ``target_width``
+    and read array from that overview. Nodata values are assigned ``numpy.nan``
     to facilitate matplotlib plotting.
 
     Args:
         filepath (str): path to the raster file.
         resample_method (str): GDAL resampling method to use if resampling
+        target_width (int): target width in pixels to resample towards.
 
     Returns:
         tuple: A 2-tuple containing:
