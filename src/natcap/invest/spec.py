@@ -244,7 +244,8 @@ class InputSubGroup(BaseModel):
 class InputGroup(BaseModel):
     """Represent a group of input fields for display in the workbench.
 
-
+    The inputs in this group will be visually grouped together and separated
+    from other groups.
     """
 
     group_label: str = ''

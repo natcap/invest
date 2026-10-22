@@ -1,13 +1,10 @@
 import classNames from 'classnames';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { useContext } from 'react';
 
 import Accordion from 'react-bootstrap/Accordion'
-import AccordionContext from 'react-bootstrap/AccordionContext';
 import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
-import { useAccordionButton } from 'react-bootstrap/AccordionButton';
 
 import ArgInput from '../ArgInput';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
@@ -135,7 +132,6 @@ class ArgsForm extends React.Component {
       scrollEventCount,
     } = this.props;
     const formItems = [];
-    const defaultActiveKeys = [];
     let k = 0;
     argsOrder.forEach((inputGroup) => {
       // support both new and old input group formats because the plugin
