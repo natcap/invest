@@ -221,10 +221,18 @@ def set_metadata_field_descriptions(field_specs, resource):
             LOGGER.debug(error)
 
 
-class InputTable(BaseModel):
-    """Represent a group of input fields to format like a table."""
+class InputSubGroup(BaseModel):
+    """Represent a sub-group of input fields to display in the workbench.
 
-    label: str = ''
+    The inputs in this sub-group will be displayed with condensed vertical
+    spacing. This is useful for models that have a lot of closely-related
+    inputs that otherwise might take up too much space in the form.
+
+    Because of the condensed layout, inputs in a sub-group are limited to
+    NumberInput or StringInput types.
+    """
+
+    group_label: str = ''
     """Optional label that will be displayed in the workbench above
        this group of inputs."""
 
@@ -232,31 +240,20 @@ class InputTable(BaseModel):
     """List of model input ids that belong to this group. Each string must
        match the id of an Input in the model."""
 
-    @model_serializer()
-    def serialize(self):
-        return {
-            'group_label': self.label,
-            'input_ids': self.input_ids,
-        }
-
 
 class InputGroup(BaseModel):
-    """Represent a group of input fields for display in the workbench."""
+    """Represent a group of input fields for display in the workbench.
 
-    label: str = ''
+
+    """
+
+    group_label: str = ''
     """Optional label that will be displayed in the workbench above
        this group of inputs."""
 
-    input_ids: list[str | InputTable]
-    """List of model input ids that belong to this group. Each string must
-       match the id of an Input in the model."""
-
-    @model_serializer()
-    def serialize(self):
-        return {
-            'group_label': self.label,
-            'input_ids': self.input_ids,
-        }
+    input_ids: list[str | InputSubGroup]
+    """List of model input ids or InputSubGroups that belong to this group.
+       Each string must match the id of an Input in the model."""
 
 
 class ImmutableBaseModel(BaseModel):
@@ -2428,12 +2425,18 @@ class ModelSpec(ImmutableBaseModel):
             if isinstance(group, InputGroup):
                 group = group.input_ids
             for item in group:
-                if isinstance(item, InputTable):
+                if isinstance(item, InputSubGroup):
                     for key in item.input_ids:
                         if key in found_keys:
                             raise ValueError(
                                 f'Key {key} appears more than once in input_field_order')
                         found_keys.add(key)
+                        _input = self.get_input(key)
+                        if not (isinstance(_input, NumberInput) or
+                                isinstance(_input, StringInput)):
+                            raise ValueError(
+                                f'Input {key} is in an InputSubGroup but is '
+                                'not a NumberInput or StringInput.')
                 else:
                     if item in found_keys:
                         raise ValueError(

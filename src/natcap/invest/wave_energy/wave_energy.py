@@ -117,8 +117,8 @@ MODEL_SPEC = spec.ModelSpec(
         ["machine_perf_path", "machine_param_path"],
         spec.InputGroup(input_ids=[
             "valuation_container",
-            spec.InputTable(
-                label='Machine Economic Parameters',
+            spec.InputSubGroup(
+                group_label='Machine Economic Parameters',
                 input_ids=['capmax', 'cc', 'cml', 'cul', 'col', 'omc', 'p',
                            'r', 'smlpm']),
             "land_gridPts_path",
