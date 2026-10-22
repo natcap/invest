@@ -838,6 +838,12 @@ exceed 100% of window.*/
   margin-left: -1px;
 }
 
+.args-form .form-control.is-invalid {
+  &:focus {
+    z-index: 3;
+  }
+}
+
 input.input-dragging {
   border: 4px dashed #cccccc;
 }
