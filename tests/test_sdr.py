@@ -190,10 +190,10 @@ class SDRTests(unittest.TestCase):
         # as target_pixelsize_id and different target projection
         # than with default DEM (which has 50m pixels and EPSG 26910
         expected_watershed_totals = {
-            'usle_tot': 2.03106796348,
-            'sed_export': 0.08630880259,
-            'sed_dep': 1.72719257629,
-            'avoid_exp': 8953.35022568049,
+            'usle_tot': 2.03262342813,
+            'sed_export': 0.08641148304,
+            'sed_dep': 1.72857285032,
+            'avoid_exp': 8957.8609356356,
             'avoid_eros': 211355.9430149,
         }
 

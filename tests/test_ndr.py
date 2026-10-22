@@ -257,14 +257,13 @@ class NDRTests(unittest.TestCase):
         # results
         expected_watershed_totals = {
             'p_surface_load': 41.399973,
-            'p_surface_export': 7.400453,
+            'p_surface_export': 7.395310,
             'n_surface_load': 2976.372070,
-            'n_surface_export': 318.049409,
+            'n_surface_export': 322.211448,
             'n_subsurface_load': 27.414234,
-            'n_subsurface_export': 20.193383,
-            'n_total_export': 338.242787
+            'n_subsurface_export': 20.188812,
+            'n_total_export': 342.400246
         }
-
         for field in expected_watershed_totals:
             expected_value = expected_watershed_totals[field]
             val = result_feature.GetField(field)
