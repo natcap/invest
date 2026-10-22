@@ -1024,20 +1024,21 @@ class RasterResamplingTests(unittest.TestCase):
         target_raster_path = os.path.join(self.workspace_dir, 'foo.tif')
         
         # raster width < target plot width; should not be resampled
-        raster_shape = (target_width - 100, target_width)
-        make_simple_raster(target_raster_path, raster_shape)
+        # shape here is numpy shape: nrows, ncols. So raster width is the second value
+        nrows, ncols = (target_width, target_width - 100)
+        make_simple_raster(target_raster_path, (nrows, ncols))
         array, resampled = raster_utils._read_masked_array(
             target_raster_path, 'near', target_width)
         self.assertFalse(resampled)
-        self.assertEqual(array.shape, raster_shape)
+        self.assertEqual(array.shape, (nrows, ncols))
 
         # raster width < 2 * target plot width; should not be resampled
-        raster_shape = (target_width + target_width // 2, target_width)
-        make_simple_raster(target_raster_path, raster_shape)
+        nrows, ncols = (target_width, target_width + target_width // 2)
+        make_simple_raster(target_raster_path, (nrows, ncols))
         array, resampled = raster_utils._read_masked_array(
             target_raster_path, 'near', target_width)
         self.assertFalse(resampled)
-        self.assertEqual(array.shape, raster_shape)
+        self.assertEqual(array.shape, (nrows, ncols))
 
     def test_read_masked_array_resample(self):
         """Test _read_masked_array builds overviews for a large raster."""
@@ -1045,14 +1046,14 @@ class RasterResamplingTests(unittest.TestCase):
         target_raster_path = os.path.join(self.workspace_dir, 'foo.tif')
 
         # raster width > 2 * target plot width; should build overviews
-        raster_shape = (int(target_width * 2.5), int(target_width * 2.5))
-        make_simple_raster(target_raster_path, raster_shape)
+        nrows, ncols = (int(target_width * 2.5), int(target_width * 2.5))
+        make_simple_raster(target_raster_path, (nrows, ncols))
         array, resampled = raster_utils._read_masked_array(
             target_raster_path, 'near', target_width)
         self.assertTrue(resampled)
         self.assertTrue(os.path.exists(f'{target_raster_path}.ovr'))
-        self.assertGreaterEqual(array.shape[0], target_width)
-        self.assertLess(array.shape[0], target_width * 2)
+        self.assertGreaterEqual(array.shape[1], target_width)
+        self.assertLess(array.shape[1], target_width * 2)
 
     def test_read_masked_array_existing_overviews(self):
         """Test _read_masked_array finds the best-sized overview."""
@@ -1062,8 +1063,8 @@ class RasterResamplingTests(unittest.TestCase):
         target_width = 600  # px
         target_raster_path = os.path.join(self.workspace_dir, 'foo.tif')
 
-        raster_shape = (target_width * 4, target_width * 4)
-        make_simple_raster(target_raster_path, raster_shape)
+        nrows, ncols = (target_width * 4, target_width * 4)
+        make_simple_raster(target_raster_path, (nrows, ncols))
         raster = gdal.OpenEx(target_raster_path)
         raster.BuildOverviews(
             resampling='near',
@@ -1084,5 +1085,5 @@ class RasterResamplingTests(unittest.TestCase):
         # Should not have clobbered existing overviews
         self.assertEqual(band.GetOverviewCount(), n_overviews)
         # Should find the "goldilocks" array from among multiple overviews
-        self.assertGreaterEqual(array.shape[0], target_width)
-        self.assertLess(array.shape[0], target_width * 2)
+        self.assertGreaterEqual(array.shape[1], target_width)
+        self.assertLess(array.shape[1], target_width * 2)

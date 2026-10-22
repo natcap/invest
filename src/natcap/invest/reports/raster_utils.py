@@ -246,6 +246,7 @@ def _read_masked_array(filepath, resample_method, target_width):
     nodata = info['nodata'][0]
     resampled = False
     raster_width = info['raster_size'][0]
+    target_width = int(target_width)
     # The minimum resample is a factor of 2, so only resample
     # if the raster is more than 2x the target width
     if raster_width >= target_width * 2:
@@ -253,7 +254,6 @@ def _read_masked_array(filepath, resample_method, target_width):
         level = raster_width // target_width
         raster = gdal.OpenEx(filepath)
         band = raster.GetRasterBand(1)
-        LOGGER.info(f'Overview level {level}')
 
         def overviews_progress(*args, **kwargs):
             pct_complete, name, other = args
@@ -294,7 +294,6 @@ def _read_masked_array(filepath, resample_method, target_width):
     else:
         valid_mask = numpy.full(array.shape, True)
     masked_array[valid_mask] = array[valid_mask]
-    LOGGER.info(f'plotting array of shape {masked_array.shape}')
     return (masked_array, resampled)
 
 
@@ -350,7 +349,7 @@ def _figure_subplots(xy_ratio, n_plots, small_plots=False):
     plt.close()
     if n_plots == 1:
         axs = numpy.array([axs])
-    return fig, axs, sub_width
+    return fig, axs, int(sub_width)
 
 
 def _get_title_line_width(n_plots: int, xy_ratio: float) -> int:
@@ -684,7 +683,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
     xy_ratio = _get_aspect_ratio(bbox)
     fig, axes, subplot_width = _figure_subplots(
         xy_ratio, n_plots, small_plots=small_plots)
-    target_px_width = subplot_width * MPL_SAVE_FIG_KWARGS['dpi']
+    target_px_width = int(subplot_width * MPL_SAVE_FIG_KWARGS['dpi'])
 
     if transform is None:
         transform = 'linear'
