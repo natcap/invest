@@ -1,3 +1,4 @@
+import classNames from 'classnames';
 import React, { useEffect, useId, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -39,35 +40,39 @@ function filterSpatialOverlapFeedback(message, filepath) {
   return `${newPrefix}\n${bboxFormatted}`;
 }
 
-function FormLabel(props) {
+function InputLabel(props) {
   const {
-    inputId, argkey, argname, argtype, required, units
+    inputId, argkey, argname, argtype, required, units, tightSpacing
   } = props;
 
   const userFriendlyArgType = parseArgType(argtype);
   const optional = typeof required === 'boolean' && !required;
   const includeComma = userFriendlyArgType && optional;
 
-  return (
-    <Form.Label column sm="3" htmlFor={inputId}>
-      <span className="argname">{argname} </span>
-      {
-       (userFriendlyArgType || optional) &&
-        <span>
-          (
-            {userFriendlyArgType}
-            {includeComma && ', '}
-            {optional && <em>{i18n.t('optional')}</em>}
-          )
-        </span>
-      }
-      {/* display units at the end of the arg name, if applicable */}
-      { (units && units !== 'unitless') ? <span> ({units})</span> : <React.Fragment /> }
-    </Form.Label>
-  );
+  if (tightSpacing) {
+    return <Form.Label htmlFor={inputId}>{argname}</Form.Label>
+  } else {
+    return (
+      <Form.Label column sm="3" htmlFor={inputId}>
+        <span className="argname">{argname} </span>
+        {
+         (userFriendlyArgType || optional) &&
+          <span>
+            (
+              {userFriendlyArgType}
+              {includeComma && ', '}
+              {optional && <em>{i18n.t('optional')}</em>}
+            )
+          </span>
+        }
+        {/* display units at the end of the arg name, if applicable */}
+        { (units && units !== 'unitless') ? <span> ({units})</span> : <React.Fragment /> }
+      </Form.Label>
+    );
+  }
 }
 
-FormLabel.propTypes = {
+InputLabel.propTypes = {
   argkey: PropTypes.string.isRequired,
   argname: PropTypes.string.isRequired,
   argtype: PropTypes.string.isRequired,
@@ -75,14 +80,16 @@ FormLabel.propTypes = {
     [PropTypes.string, PropTypes.bool]
   ),
   units: PropTypes.string,
+  tightSpacing: PropTypes.bool,
 };
 
-function Feedback({argkey, message = '', tightSpacing}) {
+function Feedback({argkey, message = '', tightSpacing = false}) {
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
     <Form.Control.Feedback
-      className={`d-block ${tightSpacing ? 'tight-spacing ': ''}col-1`}
+      className={classNames(
+        'd-block', 'col-1', {'tight-spacing': tightSpacing})}
       type="invalid"
       id={`${argkey}-feedback`}
     >
@@ -212,7 +219,6 @@ export default function ArgInput({
         argkey={argkey}
         argtype={argSpec.type}
         message={validationMessage}
-        tightSpacing={tightSpacing}
       />
     );
   }
@@ -222,7 +228,7 @@ export default function ArgInput({
     fileSelector = (
       <Button
         aria-label={`browse for ${argSpec.name}`}
-        className={tightSpacing ? "rounded-0" : "ms-2"}
+        className="ms-2"
         id={inputId}
         variant="outline-dark"
         value={argSpec.type} // dialog will limit options accordingly
@@ -302,77 +308,72 @@ export default function ArgInput({
           onDragEnter={dragEnterHandler}
           onDragLeave={dragLeavingHandler}
           aria-describedby={`${argkey}-feedback`}
-          className={tightSpacing ? "input-field-tight": ""}
+          className={classNames({"tight-spacing": tightSpacing})}
         />
         {fileSelector}
       </React.Fragment>
     );
   }
 
+  const aboutModal = (
+    <AboutModal
+      arg={argSpec}
+      userguide={userguide}
+      isCoreModel={isCoreModel}
+      argkey={argkey}
+      tightSpacing={tightSpacing}
+    />);
 
-  const className = enabled ? null : 'arg-disable';
+  const inputLabel = (
+    <InputLabel
+      inputId={inputId}
+      argkey={argkey}
+      argname={argSpec.name}
+      argtype={argSpec.type}
+      required={argSpec.required}
+      units={argSpec.units} // undefined for all types except number
+      className="text-nowrap"
+      tightSpacing={tightSpacing}
+    />
+  )
+
+  let innerContent;
   if (tightSpacing) {
-    return (
-      <Form.Group
-        as={Row}
-        key={argkey}
-        data-testid={`group-${argkey}`}
-        className={className} // this grays out the label but doesn't actually disable the field
-      >
-        <InputGroup className="d-flex flex-nowrap w-100">
-          <Col sm='4' className='argname-tight-spacing'>
-            <Form.Label htmlFor={inputId}>
-              <AboutModal
-                arg={argSpec}
-                userguide={userguide}
-                isCoreModel={isCoreModel}
-                argkey={argkey}
-                tightSpacing={tightSpacing}
-              />
-              {argSpec.name}
-            </Form.Label>
-          </Col>
-          <Col sm='3'>{form}</Col>
-          <Col sm='4'>{feedback}</Col>
-        </InputGroup>
-      </Form.Group>
+    innerContent = (
+      <InputGroup className="d-flex flex-nowrap w-100">
+        <Col sm='4' className='argname tight-spacing'>
+          {aboutModal}
+          {inputLabel}
+        </Col>
+        <Col sm='3'>{form}</Col>
+        <Col sm='4'>{feedback}</Col>
+      </InputGroup>
     );
   } else {
-    return (
-      <Form.Group
-        as={Row}
-        key={argkey}
-        data-testid={`group-${argkey}`}
-        className={className} // this grays out the label but doesn't actually disable the field
-      >
-        <FormLabel
-          inputId={inputId}
-          argkey={argkey}
-          argname={argSpec.name}
-          argtype={argSpec.type}
-          required={argSpec.required}
-          units={argSpec.units} // undefined for all types except number
-          className="text-nowrap"
-          tightSpacing={tightSpacing}
-        />
+    innerContent = (
+      <>
+        {inputLabel}
         <Col>
           <InputGroup>
             <div className="d-flex flex-nowrap w-100">
-              <AboutModal
-                arg={argSpec}
-                userguide={userguide}
-                isCoreModel={isCoreModel}
-                argkey={argkey}
-                tightSpacing={tightSpacing}
-              />
+              {aboutModal}
               {form}
             </div>
             {feedback}
           </InputGroup>
         </Col>
-      </Form.Group>
-    );
+    </>);
   }
+  return (
+    <Form.Group
+      as={Row}
+      key={argkey}
+      data-testid={`group-${argkey}`}
+      className={classNames({'arg-disable': !enabled})} // this grays out the label but doesn't actually disable the field
+    >
+      {innerContent}
+    </Form.Group>
+  );
 }
 
 ArgInput.propTypes = {

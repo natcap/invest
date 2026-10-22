@@ -794,10 +794,8 @@ exceed 100% of window.*/
   padding-left: 16px;
 }
 
-.argname-tight-spacing {
-  text-transform: capitalize;
-  font-weight: 600;
-  /*text-wrap: nowrap;*/
+.argname.tight-spacing {
+  padding-left: 0;
   display: inline-flex;
   align-items: center;
   flex: 1 1 auto;
@@ -829,6 +827,11 @@ exceed 100% of window.*/
   /*always hold space for a validation mark so the rightmost
   text is never hidden by the mark when it appears.*/
   padding-right: var(--form-field-padding-right);
+}
+
+.args-form .form-control.tight-spacing {
+  border-radius: 0 !important;
+  /*height: 100%;*/
 }
 
 input.input-dragging {
@@ -876,11 +879,6 @@ input[type=text]::placeholder {
     background-position: center right calc((var(--form-field-padding-right) - var(--caret-width)) / 2);
     background-size: var(--caret-width);
   }
-}
-
-.input-field-tight {
-  border-radius: 0 !important;
-  height: 100%;
 }
 
 /* InVEST Log Tab */
