@@ -53,7 +53,7 @@ const BASE_ARGS_ENABLED = {}
 Object.keys(BASE_MODEL_SPEC.args).forEach((arg) => {
   BASE_ARGS_ENABLED[arg] = true;
 });
-const INPUT_FIELD_ORDER = [Object.keys(BASE_MODEL_SPEC.args)];
+const INPUT_FIELD_ORDER = [{ group_label: '', input_ids: Object.keys(BASE_MODEL_SPEC.args)}];
 
 /**
  * Render a SetupTab component given the necessary specs.
@@ -99,7 +99,7 @@ describe('Arguments form input types', () => {
   });
 
   test.each([
-    ['directory'],
+    ['workspace'],
     ['csv'],
     ['vector'],
     ['raster'],
@@ -258,7 +258,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Change value & get feedback on a required input', async () => {
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText,
@@ -268,8 +268,10 @@ describe('Arguments form interactions', () => {
 
     // A required input with no value is invalid (red X), but
     // feedback does not display until the input has been touched.
-    expect(input).toHaveClass('is-invalid');
-    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+      expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
+    });
 
     await userEvent.type(input, 'foo');
     await waitFor(() => {
@@ -289,7 +291,7 @@ describe('Arguments form interactions', () => {
 
   test('Type fast & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
@@ -305,7 +307,7 @@ describe('Arguments form interactions', () => {
 
   test('Type slow & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
@@ -328,7 +330,9 @@ describe('Arguments form interactions', () => {
     } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
-    expect(input).toHaveClass('is-invalid');
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+    });
     expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
     await userEvent.click(input);
@@ -349,7 +353,9 @@ describe('Arguments form interactions', () => {
 
     // An optional input with no value is valid, but green check
     // does not display until the input has been touched.
-    expect(input).not.toHaveClass('is-valid', 'is-invalid');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('is-valid', 'is-invalid');
+    });
 
     await userEvent.click(input);
     await waitFor(() => {
@@ -360,7 +366,7 @@ describe('Arguments form interactions', () => {
   test('Open info dialog, expect text & link', async () => {
     const spy = jest.spyOn(ipcRenderer, 'send')
       .mockImplementation(() => Promise.resolve());
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     const { findByText, findByRole } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
@@ -374,7 +380,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Open info dialog, expect text but no link if model is a plugin', async () => {
-    const spec = baseArgsSpec('directory');
+    const spec = baseArgsSpec('workspace');
     const { findByText, findByRole, queryByRole } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER, undefined, false);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
@@ -404,7 +410,7 @@ describe('UI spec functionality', () => {
     };
     fetchArgsEnabled.mockResolvedValue({ arg1: false, arg2: true });
 
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
     const arg1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
@@ -435,7 +441,7 @@ describe('UI spec functionality', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     const {
       findByLabelText, findByText, queryByText,
@@ -484,8 +490,15 @@ describe('UI spec functionality', () => {
       arg1: true, arg2: true, arg3: true, arg4: true, arg5: true, arg6: true
     });
 
-    // intentionally leaving out arg6, it should not be in the setup form
-    const inputFieldOrder = [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']];
+    // intentionally leaving out arg6, it should not be in the setup form.
+    // test both the new input group object format and the old list format.
+    // previous invest server versions will return a plain list of input ids.
+    const inputFieldOrder = [
+      { group_label: '', input_ids: ['arg4'] },
+      { group_label: '', input_ids: ['arg3', 'arg2'] },
+      { group_label: 'Group A', input_ids: ['arg1'] },
+      ['arg5']
+    ];
 
     const { findByTestId, queryByText } = renderSetupFromSpec(spec, inputFieldOrder);
     const form = await findByTestId('setup-form');
@@ -497,11 +510,13 @@ describe('UI spec functionality', () => {
       // Input nodes should be in the order defined in the spec
       expect(form.childNodes[0])
         .toHaveTextContent(RegExp(`${spec.args.arg4.name}`));
-      expect(form.childNodes[1].childNodes[0])
+      expect(form.childNodes[1].childNodes[0].childNodes[0])
         .toHaveTextContent(RegExp(`${spec.args.arg3.name}`));
-      expect(form.childNodes[1].childNodes[1])
+      expect(form.childNodes[1].childNodes[0].childNodes[1])
         .toHaveTextContent(RegExp(`${spec.args.arg2.name}`));
-      expect(form.childNodes[2])
+      expect(form.childNodes[2].childNodes[0])
+        .toHaveTextContent('Group A');
+      expect(form.childNodes[2].childNodes[0].childNodes[0])
         .toHaveTextContent(RegExp(`${spec.args.arg1.name}`));
       expect(form.childNodes[3])
         .toHaveTextContent(RegExp(`${spec.args.arg5.name}`));
@@ -529,7 +544,7 @@ describe('Misc form validation stuff', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     // Mocking to return the payload so we can assert we always send
     // correct payload to this endpoint.
@@ -561,7 +576,7 @@ describe('Misc form validation stuff', () => {
         },
       },
     };
-    const inputFieldOrder =[Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     const vectorValue = './vector.shp';
     const expectedVal1 = '-84.9';
     const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
@@ -622,7 +637,7 @@ describe('Misc form validation stuff', () => {
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     const { findByLabelText, queryByText } = renderSetupFromSpec(
       spec, inputFieldOrder, { arg1: false, arg2: false } );
@@ -666,7 +681,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -674,7 +689,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -724,7 +739,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -764,7 +779,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -772,7 +787,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -815,7 +830,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -823,7 +838,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -863,7 +878,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
@@ -873,26 +888,30 @@ describe('Form drag-and-drop', () => {
       findByLabelText, findByTestId,
     } = renderSetupFromSpec(spec, inputFieldOrder);
     const setupForm = await findByTestId('setup-form');
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
     const file = new File([], 'test.csv');
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).toHaveClass('input-dragging');
-    expect(setupForm).not.toHaveClass('dragging');
+    await waitFor(() => {
+      expect(input).toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.drop(setupInput, {
+    await waitFor(() => fireEvent.drop(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
-    expect(setupInput).not.toHaveClass('dragging');
-    expect(setupInput).toHaveValue('test.csv');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).not.toHaveClass('dragging');
+      expect(input).toHaveValue('test.csv');
+    });
   });
 
   test('DragEnter on an input adds "input-dragging" class; DragLeave removes "input-dragging" class', async () => {
@@ -909,30 +928,38 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
-    const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const {
+      findByLabelText, findByTestId,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
     const file = new File([], 'test.csv')
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.dragLeave(setupInput, {
+    await waitFor(() => fireEvent.dragLeave(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+    });
   });
 
   test('DragEnter on a disabled input does not add "input-dragging" class; Drop neither adds "input-dragging" class nor populates input', async () => {
@@ -941,7 +968,7 @@ describe('Form drag-and-drop', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -950,32 +977,40 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
 
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: false });
 
-    const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
-    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
+    const {
+      findByLabelText, findByTestId,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
 
     const file = new File([], 'test.gpkg');
 
-    await waitFor(() => fireEvent.dragEnter(setupInput, {
+    await waitFor(() => fireEvent.dragEnter(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(setupForm).not.toHaveClass('dragging');
+    });
 
-    await waitFor(() => fireEvent.drop(setupInput, {
+    await waitFor(() => fireEvent.drop(input, {
       dataTransfer: {
         files: [file],
       }
     }));
-    expect(setupInput).not.toHaveClass('input-dragging');
-    expect(setupInput).toHaveValue('');
+    await waitFor(() => {
+      expect(input).not.toHaveClass('input-dragging');
+      expect(input).toHaveValue('');
+    });
   });
 });
 
@@ -986,7 +1021,7 @@ describe('loadParametersFromFile', () => {
       args: {
         arg1: {
           name: 'Workspace',
-          type: 'directory',
+          type: 'workspace',
         },
         arg2: {
           name: 'AOI',
@@ -994,7 +1029,7 @@ describe('loadParametersFromFile', () => {
         },
       },
     };
-    const inputFieldOrder = [Object.keys(spec.args)];
+    const inputFieldOrder = [{ group_label: '', input_ids: Object.keys(spec.args)}];
     const mockDatastack = {
       model_id: 'coastal_purple_carbon',
       model_title: 'Coastal Purple Carbon',

@@ -1,6 +1,8 @@
 # coding=UTF-8
 """Carbon Storage and Sequestration."""
+import csv
 import logging
+import os
 
 from osgeo import gdal
 import numpy
@@ -234,6 +236,35 @@ MODEL_SPEC = spec.ModelSpec(
             created_if="lulc_alt_path",
             data_type=float,
             units=u.currency / u.hectare
+        ),
+        spec.CSVOutput(
+            id="summary_csv",
+            path="raster_values_summary.csv",
+            about=gettext(
+                "Table summarizing output raster total values, units, and filenames."
+            ),
+            columns=[
+                spec.StringOutput(
+                    id="raster_label",
+                    about=gettext("Label for the raster being described"),
+                ),
+                spec.NumberOutput(
+                    id="total",
+                    about=gettext(
+                        "Sum of raster values (units depend upon the raster"
+                        " being summed and are listed in the 'units' column)"),
+                    units=u.other
+                ),
+                spec.StringOutput(
+                    id="units",
+                    about=gettext("The units of the value in the 'total' column"),
+                ),
+                spec.StringOutput(
+                    id="filename",
+                    about=gettext("The raster filename"),
+                ),
+            ],
+            index_col="raster_label"
         ),
         spec.SingleBandRasterOutput(
             id="c_above_bas",
@@ -495,6 +526,36 @@ def execute(args):
                 task_name='calculate_%s' % output_key)
             calculate_npv_tasks.append(calculate_npv_task)
 
+    summary_dependent_task_list = [sum_rasters_task_lookup['bas']]
+    rasters_to_summarize = [
+        (file_registry['c_storage_bas'], gettext('Baseline Carbon Storage'),
+         u.metric_ton)
+    ]
+    if args['calc_sequestration']:
+        rasters_to_summarize.extend([
+            (file_registry['c_storage_alt'], gettext('Alternate Carbon Storage'),
+             u.metric_ton),
+            (file_registry['c_change_bas_alt'], gettext('Change in Carbon Storage'),
+             u.metric_ton)
+        ])
+        summary_dependent_task_list.extend([
+            sum_rasters_task_lookup['alt'],
+            diff_rasters_task_lookup['alt']
+        ])
+    if args['do_valuation']:
+        rasters_to_summarize.append(
+            (file_registry['npv_alt'], gettext('Net Present Value of Carbon Change'),
+             u.currency)
+        )
+        summary_dependent_task_list.extend(calculate_npv_tasks)
+    _ = graph.add_task(
+        _generate_summary_results_table,
+        args=(rasters_to_summarize, file_registry['summary_csv']),
+        target_path_list=[file_registry['summary_csv']],
+        dependent_task_list=summary_dependent_task_list,
+        task_name='create_summary_csv')
+
+    graph.close()
     graph.join()
     return file_registry.registry
 
@@ -580,6 +641,61 @@ def _calculate_npv(c_change_carbon_path, valuation_constant, npv_out_path):
         op=lambda carbon: carbon * valuation_constant,
         rasters=[c_change_carbon_path],
         target_path=npv_out_path)
+
+
+def _generate_summary_results_table(raster_list, target_csv_path):
+    """Summarize output rasters.
+
+    Args:
+        raster_label_path_list (list[tuple]): list of tuples for each output
+            raster to summarize, containing:
+
+            * The raster filepath
+            * The label to write to the first column of the output CSV
+            * The units of the value
+
+        target_csv_path (string): path to output summary CSV.
+
+    Returns:
+        None.
+    """
+    summary_details = []
+    for raster_path, label, units in raster_list:
+        raster_info = pygeoprocessing.get_raster_info(raster_path)
+        nodata = raster_info['nodata'][0]
+
+        # Calculate sum
+        raster_sum = 0.0
+        for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
+            raster_sum += numpy.sum(
+                block[~pygeoprocessing.array_equals_nodata(
+                        block, nodata)], dtype=numpy.float64)
+
+        # Adjust for units
+        pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+        # Since each pixel value is in t/ha, ``total`` is in (t/ha * px) = t•px/ha
+        # Adjusted sum =
+        # ([total] t•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = t
+        summary_stat = raster_sum * pixel_area / 10000
+
+        summary_details.append({
+            'label': label,
+            'total': summary_stat,
+            'units': units,
+            'filename': os.path.basename(raster_path)
+        })
+
+    with open(target_csv_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow([gettext('Raster'),
+                         gettext('Total'),
+                         gettext('Units'),
+                         gettext('Filename')])
+        for raster_dict in summary_details:
+            writer.writerow([raster_dict['label'],
+                             raster_dict['total'],
+                             raster_dict['units'],
+                             raster_dict['filename']])
 
 
 @validation.invest_validator

@@ -1,7 +1,9 @@
+import json
 import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 import geometamaker
 import numpy
@@ -236,15 +238,10 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_directory_spec(self):
         self.maxDiff = None
-        dir_spec = spec.DirectoryInput(
-            id="bar",
-            about="Description",
-            name="Bar",
-            contents=[]
-        )
+        dir_spec = spec.WorkspaceInput()
         out = dir_spec.describe_rst()
         expected_rst = ([
-            '**Bar** (`directory <input_types.html#directory>`__, *required*): Description'
+            f'**workspace directory** (`workspace directory <input_types.html#workspace>`__, *required*): {dir_spec.about}'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
@@ -335,8 +332,8 @@ class ResultsSuffixTests(unittest.TestCase):
         self.assertEqual(missing_suffix, [])
 
 
-class MissingResultsSuffixTests(unittest.TestCase):
-    """Test ModelSpec.execute for model without ResultsSuffixInput."""
+class ModelSpecExecuteTests(unittest.TestCase):
+    """Test ModelSpec.execute."""
 
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
@@ -395,6 +392,48 @@ class MissingResultsSuffixTests(unittest.TestCase):
         carbon.MODEL_SPEC.execute(args, **execute_kwargs)
         assert_complete_execute(
             args, carbon.MODEL_SPEC, **execute_kwargs)
+
+    @patch('natcap.invest.carbon.carbon.execute')
+    def test_execute_function_returns_none(self, mock_execute):
+        """ModelSpec.execute tolerates missing file_registry dict."""
+        from natcap.invest import carbon
+        mock_execute = Mock()
+        mock_execute.return_value = None
+
+        execute_kwargs = {
+            'check_outputs': True,
+            'generate_metadata': True,
+            'save_file_registry': True,
+            'generate_report': True
+        }
+        kwargs_used = [f'{k}={v}' for k, v in execute_kwargs.items()]
+        message = "`execute` was called with {kwargs}, but no" \
+                  " file registry dictionary was returned from `execute`."
+
+        with self.assertLogs('natcap.invest.spec', level='WARNING') as cm:
+            carbon.MODEL_SPEC.execute({}, **execute_kwargs)
+        self.assertIn(
+            message.format(kwargs=', '.join(kwargs_used)),
+            ' '.join(cm.output))
+
+    @patch('natcap.invest.carbon.carbon.execute')
+    def test_execute_function_returns_empty_dict(self, mock_execute):
+        """ModelSpec.execute tolerates an empty file_registry dict."""
+        from natcap.invest import carbon
+        mock_execute = Mock()
+        mock_execute.return_value = {}
+
+        execute_kwargs = {
+            'check_outputs': True,
+            'generate_metadata': True,
+            'save_file_registry': True,
+            'generate_report': True
+        }
+
+        try:
+            carbon.MODEL_SPEC.execute({}, **execute_kwargs)
+        except Exception as error:
+            self.fail(error)
 
 
 class InputTests(unittest.TestCase):
@@ -526,3 +565,83 @@ class ModelSpecTests(unittest.TestCase):
         from natcap.invest.carbon import MODEL_SPEC
         with self.assertRaises(ValidationError):
             MODEL_SPEC.model_id = 'foo'
+
+    def test_json_serialization(self):
+        """Test serizalizing the ModelSpec."""
+        test_spec = spec.ModelSpec(
+            model_id="foo",
+            model_title="Foo",
+            userguide="",
+            reporter="",
+            about="",
+            validate_spatial_overlap=True,
+            different_projections_ok=False,
+            aliases=(),
+            module_name=__name__,
+            input_field_order=[
+                ["workspace_dir"],
+                spec.InputGroup(label="Group A", input_ids=["baz"])
+            ],
+            inputs=[
+                spec.WORKSPACE,
+                spec.NumberInput(id="baz", data_type=int, units=None)
+            ],
+            outputs=[
+                spec.SingleBandRasterOutput(
+                    id="c_storage_bas",
+                    path="c_storage_bas.tif",
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                )
+            ]
+        )
+        self.assertEqual(
+            json.loads(test_spec.model_dump_json()),
+            {
+                'model_id': 'foo',
+                'model_title': 'Foo',
+                'userguide': '',
+                'aliases': 'set()',
+                'reporter': '',
+                'about': '',
+                'input_field_order': [
+                    {'group_label': '', 'input_ids': ['workspace_dir']},
+                    {'group_label': 'Group A', 'input_ids': ['baz']}
+                ],
+                'different_projections_ok': False,
+                'validate_spatial_overlap': True,
+                'args': {
+                    'workspace_dir': {
+                        'about': spec.WORKSPACE.about,
+                        'required': True,
+                        'allowed': True,
+                        'hidden': False,
+                        'id': 'workspace_dir',
+                        'name': 'workspace directory',
+                        'type': 'workspace'
+                    },
+                    'baz': {
+                        'id': 'baz',
+                        'about': None,
+                        'name': None,
+                        'required': True,
+                        'allowed': True,
+                        'hidden': False,
+                        'units': None,
+                        'expression': None,
+                        'type': 'number'
+                    }
+                },
+                'outputs': {
+                    'c_storage_bas': {
+                        'id': 'c_storage_bas',
+                        'about': None,
+                        'created_if': True,
+                        'path': 'c_storage_bas.tif',
+                        'data_type': 'number',
+                        'units': 't/ha'
+                    }
+                },
+                'module_name': __name__
+            }
+        )

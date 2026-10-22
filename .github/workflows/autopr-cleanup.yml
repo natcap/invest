@@ -18,7 +18,7 @@ jobs:
         steps:
             # We do need the repo to be checked out to be able to refer to an
             # origin.  Shallow clone is fine.
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v7
 
             - run: |
                 set -x

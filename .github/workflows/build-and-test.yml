@@ -29,10 +29,10 @@ jobs:
     name: Check for syntax errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -51,9 +51,9 @@ jobs:
     name: Check RST syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         name: Set up python
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
@@ -74,13 +74,13 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        os: [windows-latest, macos-15-intel, ubuntu-latest]
+        os: [windows-latest, macos-26-intel, ubuntu-latest]
         include:
           - os: ubuntu-latest
             python-version: "3.10"
             platform-specific-dependencies: libxcrypt
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -89,7 +89,7 @@ jobs:
       # Test data is way, way faster by contrast (on the order of a few
       # seconds to archive).
       - name: Restore git-LFS test data cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
@@ -114,7 +114,7 @@ jobs:
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             ${{ matrix.platform-specific-dependencies }}
             python=${{ matrix.python-version }}
-            twine
+            twine>=6.1.0
             gdal==${{ env.GDAL_VERSION_FOR_WHEEL_BUILD }}
             wheel
 
@@ -122,7 +122,7 @@ jobs:
         continue-on-error: true
         # Using 'dawidd6' since 'download-artifact' GH action doesn't
         # support downloading artifacts from prior workflow runs
-        uses: dawidd6/action-download-artifact@v11
+        uses: dawidd6/action-download-artifact@v23
         with:
           workflow: build-and-test.yml
           # Get frozen conda env artifact from last successful workflow
@@ -174,20 +174,20 @@ jobs:
 
       # Only upload sdist from one of the matrix cases because they should all be the same
       - name: Upload sdist artifact
-        uses: actions/upload-artifact@v4
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        uses: actions/upload-artifact@v7
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-26-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         with:
           name: Source distribution
           path: dist/*.tar.gz
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist/*.whl
 
       - name: Upload conda env artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
@@ -209,7 +209,7 @@ jobs:
 
       # Only upload sdist from one of the matrix cases because they should all be the same
       - name: Deploy sdist to GCS
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-26-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         run: make deploy_sdist
 
   validate-resources:
@@ -217,7 +217,7 @@ jobs:
     runs-on: windows-latest
     needs: check-syntax-errors
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -248,11 +248,11 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        os: [windows-latest, macos-15-intel]
+        os: [windows-latest, macos-26-intel, macos-latest]
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -270,13 +270,13 @@ jobs:
         run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
       - name: Set up node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -285,6 +285,8 @@ jobs:
         if: steps.nodemodules-cache.outputs.cache-hit != 'true'
         working-directory: workbench
         run: |
+          echo "Node version: $(node --version)"
+          echo "Node path: $(which node)"
           yarn config set network-timeout 600000 -g
           yarn install
 
@@ -292,7 +294,11 @@ jobs:
         working-directory: workbench
         env:
           CI: true
-        run: yarn test
+        run: |
+          echo "Node version: $(node --version)"
+          echo "Node path: $(which node)"
+          echo "Yarn path: $(which yarn)"
+          yarn test
 
   build-binaries:
     name: Build binaries
@@ -301,18 +307,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15-intel, windows-latest]
+        os: [windows-latest, macos-26-intel, macos-latest]
         include:
-          - os: macos-15-intel
+          - os: macos-26-intel
             puppeteer-log: ~/Library/Logs/invest-workbench/
-            workspace-path: InVEST-failed-mac-workspace.tar
+            workspace-path: InVEST-failed-mac-x64-workspace.tar
             binary-extension: dmg
+            micromamba-subdir: osx-64
+          - os: macos-latest
+            puppeteer-log: ~/Library/Logs/invest-workbench/
+            workspace-path: InVEST-failed-mac-arm64-workspace.tar
+            binary-extension: dmg
+            micromamba-subdir: osx-arm64
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
-            workspace-path: InVEST-failed-windows-workspace.tar
+            workspace-path: InVEST-failed-windows-x64-workspace.tar
             binary-extension: exe
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -354,13 +366,13 @@ jobs:
         run: make CONDA="$MAMBA_EXE" binaries
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -369,24 +381,34 @@ jobs:
         if: steps.nodemodules-cache.outputs.cache-hit != 'true'
         working-directory: workbench
         run: |
+          echo "Node version: $(node --version)"
+          echo "Node path: $(which node)"
           yarn config set network-timeout 600000 -g
           yarn install
 
       - name: Download micromamba for distribution (MacOS)
-        if: matrix.os == 'macos-15-intel'
-        run: |
-          curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
-          mv bin/micromamba dist/
-          ./dist/micromamba --help  # make sure the executable works
+        uses: nick-fields/retry@v3
+        if: runner.os == 'macOS'  # capture both intel and arm runners
+        with:
+          timeout_seconds: 15
+          max_attempts: 3
+          command: |
+            curl -Ls https://micro.mamba.pm/api/micromamba/${{ matrix.micromamba-subdir }}/latest | tar -xvj bin/micromamba
+            mv bin/micromamba dist/
+            ./dist/micromamba --help  # make sure the executable works
 
-      - name: Download micromamba for distribution (Windows)
+      - name: Download micromamba for distribution (Winodws)
+        uses: nick-fields/retry@v3
         if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Invoke-Webrequest -URI https://micro.mamba.pm/api/micromamba/win-64/latest -OutFile micromamba.tar.bz2
-          tar xf micromamba.tar.bz2
-          MOVE -Force Library\bin\micromamba.exe dist\micromamba.exe
-          .\dist\micromamba.exe --help  # make sure the executable works
+        with:
+          timeout_seconds: 15
+          max_attempts: 3
+          shell: pwsh
+          command: |
+            Invoke-Webrequest -URI https://micro.mamba.pm/api/micromamba/win-64/latest -OutFile micromamba.tar.bz2
+            tar xf micromamba.tar.bz2
+            MOVE -Force Library\bin\micromamba.exe dist\micromamba.exe
+            .\dist\micromamba.exe --help  # make sure the executable works
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
@@ -419,18 +441,20 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
         run: |
+          make print-VERSION
+          git status
           make codesign
 
       - name: Upload workbench binary artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: Workbench-${{ runner.os }}-binary
+          name: Workbench-${{ runner.os }}-${{ runner.arch }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: InVEST-user-guide
           path: dist/InVEST_*_userguide.zip
@@ -439,8 +463,7 @@ jobs:
         id: invest-autotest
         if : |
           (github.event_name == 'push' &&
-          (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
-          (github.event_name == 'pull_request' && startsWith(github.head_ref, 'autorelease'))
+          (startsWith(github.ref, 'refs/heads/release') || startsWith(github.head_ref, 'autorelease') || github.ref == 'refs/heads/main'))
         run: |
           mkdir autotest_dir
           make invest_autotest AUTOTEST_DIR=autotest_dir
@@ -463,17 +486,17 @@ jobs:
         run: npx cross-env CI=true yarn run test-electron-app
 
       - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: ${{ runner.os }}_puppeteer_log.zip'
+          name: ${{ runner.os }}_${{ runner.arch }}_puppeteer_log.zip'
           path: ${{ matrix.puppeteer-log }}
 
       - name: Upload workspace on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: InVEST-failed-${{ runner.os }}-workspace
+          name: InVEST-failed-${{ runner.os }}-${{ runner.arch }}-workspace
           path: ${{ github.workspace }}
 
   build-sampledata:
@@ -481,7 +504,7 @@ jobs:
     needs: check-syntax-errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -489,10 +512,10 @@ jobs:
         # dependencies of setup.py, needed to get the version string
         run: pip install babel cython numpy setuptools setuptools_scm wheel
 
-      - run: make sampledata
+      - run: make sampledata sampledata_single
 
       - name: Upload sample data artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: InVEST-sample-data
           path: dist/*.zip

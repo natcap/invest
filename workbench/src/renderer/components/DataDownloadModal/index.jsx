@@ -264,7 +264,7 @@ class DataDownloadModal extends React.Component {
                   >
                     <MdErrorOutline
                       size="2em"
-                      className="pr-1"
+                      className="pe-1"
                     />
                     {t('Please choose a different folder. '
                       + 'This application does not have permission to write to folder:')}
@@ -280,7 +280,6 @@ class DataDownloadModal extends React.Component {
             <Button
               variant="secondary-outline"
               onClick={this.closeDialog}
-              className="float-right"
               aria-label="Close modal"
             >
               <MdClose />

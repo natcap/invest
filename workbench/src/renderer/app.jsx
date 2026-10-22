@@ -15,7 +15,6 @@ import Spinner from 'react-bootstrap/Spinner';
 import Tooltip from 'react-bootstrap/Tooltip';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import { MdClose, MdHome } from 'react-icons/md';
-import { AiOutlineTrademarkCircle } from 'react-icons/ai';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -36,7 +35,7 @@ const { ipcRenderer } = window.Workbench.electron;
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
  */
-export default function App(props) {
+export default function App({isFirstRun = false, isNewVersion = false, nCPU = 1}) {
 
   const [activeTab, setActiveTab] = useState('home');
   const [openJobs, setOpenJobs] = useState(new Map());
@@ -54,10 +53,10 @@ export default function App(props) {
   useEffect(() => {
     async function setup() {
       await updateInvestList();
-      setShowDownloadModal(props.isFirstRun);
+      setShowDownloadModal(isFirstRun);
       // Show changelog if this is a new version,
       // but if it's the first run ever, wait until after download modal closes.
-      setShowChangelog(props.isNewVersion && !props.isFirstRun);
+      setShowChangelog(isNewVersion && !isFirstRun);
       await i18n.changeLanguage(window.Workbench.LANGUAGE);
       ipcRenderer.on('download-status', (downloadedNofN) => {
         setDownloadedNofN(downloadedNofN)
@@ -78,7 +77,7 @@ export default function App(props) {
     setShowDownloadModal(shouldShow);
     // After close, show changelog if new version and app has just launched
     // (i.e., show changelog only once, after the first time the download modal closes).
-    if (!shouldShow && props.isNewVersion && !changelogDismissed) {
+    if (!shouldShow && isNewVersion && !changelogDismissed) {
       setShowChangelog(true);
     }
   }
@@ -131,12 +130,18 @@ export default function App(props) {
   /**
    * Update properties of an open InvestTab.
    * @param {string} tabID - the unique identifier of an open tab
-   * @param {obj} jobObj - key-value pairs of any job properties to be updated
+   * @param {object} jobObj - key-value pairs of any job properties to be updated
    * @param {boolean} save - if true, save the updated job to persistent store
    */
   async function updateJobProperties(tabID, jobObj, save = false) {
+    const existingJob = openJobs.get(tabID);
+    // It's worth checking before updating state because this component
+    // has so many children and most of the time the job properties have
+    // not changed.
+    if (existingJob.isSuperSet(jobObj)) { return; }
+
+    const updatedJob = new InvestJob({ ...existingJob, ...jobObj });
     const newOpenJobs = new Map(openJobs);
-    const updatedJob = { ...openJobs.get(tabID), ...jobObj };
     newOpenJobs.set(tabID, updatedJob);
     setOpenJobs(newOpenJobs);
     if (save) {
@@ -217,7 +222,7 @@ export default function App(props) {
     if (investList) {
       const modelType = investList[job.modelID].type;
       if (modelType === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+        badge = <Badge bg="secondary">Plugin</Badge>;
       }
     }
 
@@ -233,7 +238,7 @@ export default function App(props) {
       >
         <Nav.Item
           key={id}
-          className={id === activeTab ? 'active' : ''}
+          className="model-run-tab"
         >
           <Nav.Link
             eventKey={id}
@@ -248,7 +253,7 @@ export default function App(props) {
           >
             {badge}
             {statusSymbol}
-            {` ${job.modelTitle}`}
+            <span className="model-name">{` ${job.modelTitle}`}</span>
           </Nav.Link>
           <Button
             aria-label={`close ${job.modelTitle} tab`}
@@ -269,7 +274,6 @@ export default function App(props) {
       <TabPane
         key={id}
         eventKey={id}
-        aria-label={`${job.modelTitle} tab`}
       >
         <InvestTab
           job={job}
@@ -315,71 +319,65 @@ export default function App(props) {
         <SettingsModal
           show={showSettingsModal}
           close={() => setShowSettingsModal(false)}
-          nCPU={props.nCPU}
+          nCPU={nCPU}
         />
       )}
-      <TabContainer activeKey={activeTab}>
-        <Navbar
-          onDragOver={dragOverHandlerNone}
-        >
-          <Row
-            className="w-100 flex-nowrap"
+      <TabContainer
+        activeKey={activeTab}
+        defaultActiveKey="home"
+      >
+        <div className="navbar">
+          <Nav
+            variant="tabs"
+            onDragOver={dragOverHandlerNone}
+            onSelect={setActiveTab}
           >
-            <Col sm={3}>
-              <Navbar.Brand>
+            <div className="navbar-left">
+              <Nav.Item>
                 <Nav.Link
-                  onSelect={setActiveTab}
                   eventKey="home"
+                  className="nav-link-home"
                 >
                   <MdHome />
-                  InVEST
+                  <span className="nav-link-text">InVEST</span>
+                  <sup className="rtm">®</sup>
                 </Nav.Link>
-              </Navbar.Brand>
-              <AiOutlineTrademarkCircle className="rtm" />
-            </Col>
-            <Col className="navbar-middle">
-              <Nav
-                justify
-                variant="tabs"
-                className="mr-auto"
-                activeKey={activeTab}
-                onSelect={setActiveTab}
-              >
-                {investNavItems}
-              </Nav>
-            </Col>
-            <Col className="text-right navbar-right">
-              {
-                (downloadedNofN)
-                  ? (
-                    <DownloadProgressBar
-                      downloadedNofN={downloadedNofN}
-                      expireAfter={5000} // milliseconds
-                    />
-                  )
-                  : <div />
-              }
-              <AppMenu
-                openDownloadModal={() => toggleDownloadModal(true)}
-                openPluginModal={() => setShowPluginModal(true)}
-                openChangelogModal={() => setShowChangelog(true)}
-                openSettingsModal={() => setShowSettingsModal(true)}
-                openMetadataModal={() => setShowMetadataModal(true)}
-              />
-            </Col>
-          </Row>
-        </Navbar>
-
+              </Nav.Item>
+            </div>
+            <div className="navbar-middle">
+              {investNavItems}
+            </div>
+          </Nav>
+          <div className="navbar-right">
+            {
+              downloadedNofN
+              && (
+                <DownloadProgressBar
+                downloadedNofN={downloadedNofN}
+                expireAfter={5000} // milliseconds
+                />
+              )
+            }
+            <AppMenu
+              openDownloadModal={() => toggleDownloadModal(true)}
+              openPluginModal={() => setShowPluginModal(true)}
+              openChangelogModal={() => setShowChangelog(true)}
+              openSettingsModal={() => setShowSettingsModal(true)}
+              openMetadataModal={() => setShowMetadataModal(true)}
+            />
+          </div>
+        </div>
         <TabContent
-          id="home-tab-content"
+          className="main-tab-content"
           onDragOver={dragOverHandlerNone}
         >
           <TabPane
             eventKey="home"
-            aria-label="home tab"
+            className="home-tabpanel container-fluid"
           >
-            {(investList)
-              ? (
+            {
+              investList
+              && (
                 <HomeTab
                   investList={investList}
                   openInvestModel={openInvestModel}
@@ -387,7 +385,8 @@ export default function App(props) {
                   deleteJob={deleteJob}
                   clearRecentJobs={clearRecentJobs}
                 />
-              ) : <div />}
+              )
+            }
           </TabPane>
           {investTabPanes}
         </TabContent>
@@ -400,12 +399,4 @@ App.propTypes = {
   isFirstRun: PropTypes.bool,
   isNewVersion: PropTypes.bool,
   nCPU: PropTypes.number,
-};
-
-// Setting a default here mainly to make testing easy, so these props
-// can be undefined for unrelated tests.
-App.defaultProps = {
-  isFirstRun: false,
-  isNewVersion: false,
-  nCPU: 1,
 };

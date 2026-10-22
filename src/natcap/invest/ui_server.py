@@ -68,7 +68,7 @@ def get_invest_getspec():
     importlib.reload(natcap.invest.validation_messages)
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
-    return model_module.MODEL_SPEC.to_json()
+    return model_module.MODEL_SPEC.model_dump_json()
 
 
 @app.route(f'/{PREFIX}/dynamic_dropdowns', methods=['POST'])
@@ -274,18 +274,8 @@ def log_model_start():
         pyname=models.model_id_to_pyname[modelID],
         model_args=json.loads(payload['model_args']),
         invest_interface=payload['invest_interface'],
-        session_id=payload['session_id'],
-        type=payload['type'],
-        source=payload.get('source', None))  # source only used for plugins
-    return 'OK'
-
-
-@app.route(f'/{PREFIX}/log_model_exit', methods=['POST'])
-def log_model_exit():
-    payload = request.get_json()
-    usage._log_exit_status(
-        payload['session_id'],
-        payload['status'])
+        model_type=payload['model_type'],  # 'core' or 'plugin'
+        plugin_source=payload.get('plugin_source', None))  # source only used for plugins
     return 'OK'
 
 

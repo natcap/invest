@@ -62,8 +62,99 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
+
 Unreleased Changes
 ------------------
+
+General
+=======
+* Added support for labeled input groups. ``spec.InputGroup`` was added to
+  represent a group of input fields that may have a label.
+  ``spec.ModelSpec.input_field_order`` can now contain ``spec.InputGroup``s
+  as well as lists. The ``spec.InputGroup.label`` will be displayed on that
+  section of the model input form in the workbench.
+  (`#1602 <https://github.com/natcap/invest/issues/1602>`_)
+* The ``to_json`` method of ``spec.ModelSpec`` has been deprecated.
+  Serialization should now be done using the pydantic ``model_dump_json``
+  method.
+
+Workbench
+=========
+* The InVEST workbench is now built for both Intel and Apple Silicon
+  architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+
+
+3.20.2 (2026-09-02)
+-------------------
+
+General
+=======
+* Fixed a bug that prevented non-spatial files referenced in CSVs from being
+  added to datastack archives. Refactored some datastack creation logic into
+  class methods on input and output specs.
+  (`#2589 <https://github.com/natcap/invest/issues/2589>`_)
+* Fixed a bug where an error state while reading a remote GDAL dataset
+  could result in a deadlock during invest validation.
+  (`#2724 <https://github.com/natcap/invest/issues/2724>`_)
+
+Wind Energy
+===========
+* Fixed a bug where the model would raise a ``RuntimeError`` if the input
+  land polygon and AOI had the same projection.
+  (`#2707 <https://github.com/natcap/invest/issues/2707>`_)
+
+3.20.1 (2026-08-13)
+-------------------
+
+General
+=======
+* Fixed an issue with cross-compiling ``natcap.invest`` for non-native
+  architectures, particularly on conda-forge.  This should also speed up
+  the operation of ``setup.py``.
+  (`#2630 <https://github.com/natcap/invest/issues/2630>`_)
+
+Workbench
+=========
+* Added a file browse button to the input field for selecting a
+  local plugin directory to install.
+  (`#2641 <https://github.com/natcap/invest/issues/2641>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda executable is used to run plugins.
+  (`#2645 <https://github.com/natcap/invest/issues/2645>`_)
+* Added an option in the Manage Plugins modal to configure which
+  conda environment is used to run each plugin.
+  (`#2646 <https://github.com/natcap/invest/issues/2646>`_)
+* Improved handling of errors on plugin server startup.
+  (`#2637 <https://github.com/natcap/invest/issues/2637>`_)
+* The "View Results" button now supports plugins.
+  (`#2638 <https://github.com/natcap/invest/issues/2638>`_)
+* The base report template now better supports plugins by including a link to
+  plugin-specific documentation instead of a link to the InVEST User Guide.
+  (`#2640 <https://github.com/natcap/invest/issues/2640>`_)
+* Bootstrap and React Bootstrap dependencies have been updated to their latest
+  stable versions (Bootstrap 5.3.8, React Bootstrap 2.10.10).
+  (`#1798 <https://github.com/natcap/invest/issues/1798>`_)
+* React dependency has been updated to its latest stable version (19.2.7).
+  (`#2481 <https://github.com/natcap/invest/issues/2481>`_)
+* Fixed a bug in the Manage Plugins modal where dragging and dropping
+  a plugin directory into the local filepath would open a new window.
+  (`#2642 <https://github.com/natcap/invest/issues/2642>`_)
+* Some general performance enhancements related to React components
+  and the responsiveness of model input text fields.
+  (`#2699 <https://github.com/natcap/invest/issues/2699>`_)
+
+3.20.0 (2026-06-11)
+-------------------
+
+Highlights
+==========
+* InVEST Reports are now available for these additional models:
+    * Annual Water Yield
+    * Urban Cooling
+    * Urban Nature Access
+
+  Reports are visual summaries of model results. `View sample reports.
+  <http://releases.naturalcapitalproject.org/?prefix=invest-reports/latest/>`_
 
 General
 =======
@@ -75,6 +166,11 @@ General
 * ``Input, Output, and ModelSpec`` classes now create immutable objects.
   Use ``model_copy(update=dict(...))`` to copy an object and update attributes.
   (`#2228 <https://github.com/natcap/invest/issues/2228>`_)
+* Replaced ``natcap.invest.spec.DirectoryInput`` with
+  ``natcap.invest.spec.WorkspaceInput`` (for workspace directories only). Input
+  data that was previously grouped in a directory should instead use an individual
+  ``Input`` for each file, or a ``CSVInput`` to list out multiple files.
+  (`#2179 <https://github.com/natcap/invest/issues/2179>`_)
 * Made some styling and usability improvements to the Vega-Lite visualizations
   (e.g., vector plots, histograms) that appear in some InVEST reports.
   (`#2532 <https://github.com/natcap/invest/issues/2532>`_)
@@ -83,6 +179,18 @@ General
 * Fixed an issue with Windows binary builds where users would see runtime
   warnings saying ``GDAL_DATA`` is not defined.
   (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
+* Avoid logging a Python traceback and avoid attempting to generate metadata
+  and an html report if a model's ``execute`` function does not return a
+  ``FileRegistry.registry`` dictionary.
+  (`#2555 <https://github.com/natcap/invest/issues/2555>`_)
+* Reports now display a Raster Attribute Table for Land Use/Land Cover
+  input rasters. (`#2333 <https://github.com/natcap/invest/issues/2333>`_)
+* When saving a datastack, CSVs are now copied into argument-named
+  subfolders, which preserves original filenames and ensures metadata
+  compatibility. (`#2442 <https://github.com/natcap/invest/issues/2442>`_)
+* Added the ``--no-report`` flag to the command line interface, which allows
+  users to disable report generation.
+  (`#2573 <https://github.com/natcap/invest/issues/2573>`_)
 
 Workbench
 =========
@@ -96,11 +204,29 @@ Workbench
   failing silently. (`#2489 <https://github.com/natcap/invest/issues/2489>`_)
 * Added a link to the InVEST Plugin Developer's Guide to the Workbench Manage
   Plugins modal. (`#2145 <https://github.com/natcap/invest/issues/2145>`_)
+* Added a disclosure about InVEST usage data to the Workbench installer
+  and to the in-Workbench "About InVEST" page. For more details, refer to the
+  `InVEST Usage Data Notice <https://naturalcapitalalliance.stanford.edu/
+  software/invest/invest-downloads-data#usage-data>`_.
+  (`#2553 <https://github.com/natcap/invest/issues/2553>`_)
+* Removed outdated usage-logging code to reflect current data collection
+  practices. (`#2600 <https://github.com/natcap/invest/issues/2600>`_)
 
 Annual Water Yield
 ==================
 * Allow watershed input to have a POLYGON or MULTIPOLYGON geometry type.
   (`#2513 <https://github.com/natcap/invest/issues/2513>`_)
+* The model now generates a report, a visual summary of results, available in
+  the output workspace and also viewable from the Workbench after the model run
+  completes. (`#2533 <https://github.com/natcap/invest/issues/2533>`_)
+
+Carbon Storage and Sequestration
+================================
+* Added a new output, ``raster_values_summary.csv``, which provides a summary
+  of the model's raster outputs. This table already appeared at the top of the
+  Carbon report but is now created by the model module itself rather than the
+  reporter, in order to make it available as a CSV in the output directory.
+  (`#2531 <https://github.com/natcap/invest/issues/2531>`_)
 
 SDR
 ===
@@ -109,6 +235,20 @@ SDR
   because they can still be rasterized and used in zonal_statistics.
   (`#2386 <https://github.com/natcap/invest/issues/2386>`_)
 
+Urban Cooling
+=============
+* The Urban Cooling model now generates a report, a visual summary of results,
+  available in the output workspace and also viewable from the Workbench after
+  the model run completes.
+  (`#2322 <https://github.com/natcap/invest/issues/2322>`_)
+* The ``T_air`` and ``cc`` outputs have been moved out of the intermediate
+  directory and into the main output workspace.
+  (`#2564 <https://github.com/natcap/invest/issues/2564>`_)
+
+Urban Nature Access
+===================
+* The model now generates a report which displays a visual summary of results
+  and metadata. (`#2534 <https://github.com/natcap/invest/issues/2534>`_)
 
 3.19.0 (2026-04-16)
 -------------------

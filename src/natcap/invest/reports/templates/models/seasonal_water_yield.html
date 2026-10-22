@@ -1,5 +1,10 @@
 {% extends 'base.html' %}
 
+{% block styles %}
+  {{ super() }}
+  {% include 'datatable-styles.html' %}
+{% endblock styles %}
+
 {% block content %}
   {{ super() }}
   {% from 'args-table.html' import args_table %}
@@ -82,7 +87,17 @@
   )}}
 
   {{ accordion_section(
-    'Raster Inputs',
+    'Land Use/Land Cover Input',
+    content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(lulc_img_src, 'LULC Input'), 60),
+      (wide_table(lulc_legend_html | safe), 40),
+      (caption(lulc_caption, definition_list=True), 100),
+    ])
+  )}}
+
+  {{ accordion_section(
+    'Other Inputs',
     content_grid([
       (caption(raster_group_caption, pre_caption=True), 100),
       (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
@@ -115,6 +130,7 @@
 {% from 'vegalite-plot.html' import embed_vega %}
 {% block scripts %}
   {{ super() }}
+  {% include 'datatable-js.html' %}
   {% include "vega-dependencies.html" %}
   {% include 'vega-embed-js.html' %}
   {% set chart_spec_id_list = [

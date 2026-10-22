@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 828eb570dab6a84751fcbe0eff430ec66e4a1621
+GIT_SAMPLE_DATA_REPO_REV    := 4202b5914fa8b5215c814ce13d87b1f7c64a6309
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 246909bb6f72a7b18f3afb08c82c2310ecfaa5a4
+GIT_TEST_DATA_REPO_REV      := 44a4fdcc550c094050c9d4247d5f8f1ca1c2488e
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 3954f327f0519c884e05a60a9d3d0a3b307bbb6f
+GIT_UG_REPO_REV             := 8a54f562ae4c3ce4b154320818d7e5707cedda3d
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -124,7 +124,7 @@ INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DAT
 
 
 .PHONY: fetch install binaries apidocs userguide changelog sampledata \
-test clean help check python_packages purge deploy \
+sampledata_single test clean help check python_packages purge deploy \
 deploy_wheel deploy_sdist deploy_data deploy_userguide deploy_workbench codesign \
 validate_sampledata validate_userguide_filenames invest_autotest deploy_autotest_reports \
 $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
@@ -153,6 +153,7 @@ help:
 	@echo "  python_packages              to build natcap.invest wheel and source distributions"
 	@echo "  codesign                     to enqueue a built binary for signing using our codesigning service"
 	@echo "  sampledata                   to build sample data zipfiles"
+	@echo "  sampledata_single            to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test                         to run pytest on the tests directory"
 	@echo "  validate_sampledata          to run invest model validation on sampledata datastacks"
 	@echo "  validate_userguide_filenames to validate that userguide filenames exist"
@@ -341,6 +342,12 @@ sampledata: $(ZIPTARGETS)
 	$(PYTHON) scripts/build_sampledata_filesize_registry.py $(CURDIR)/$(DIST_DATA_DIR)
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "$(ZIP) -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
+
+SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
+sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
+
+$(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
+	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git"
 
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"

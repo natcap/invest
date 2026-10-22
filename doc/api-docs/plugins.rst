@@ -6,12 +6,18 @@ InVEST® Plugins: Developer's Guide
 What is a plugin?
 -----------------
 
-Conceptually, an InVEST plugin is an ecosystem services model. Like the core InVEST
-models, it takes in data of various formats (usually including some geospatial data),
-processes that data, and produces output files that contain the results.
-Unlike the core models, a plugin is not "official", i.e., not reviewed or maintained
-by NatCap. Plugins may be developed, used, and distributed totally independently of
-the ``natcap/invest`` repo and the Natural Capital Alliance.
+Conceptually, an InVEST plugin is an ecosystem services model or performs functions
+related to ecosystem services modeling. A plugin could be a new stand-alone model, a
+variation on a model that already exists in core InVEST, or a workflow that composes
+multiple models to solve a domain-specific problem. A plugin could also perform
+pre-processing steps to prepare data for use in modeling, or post-processing steps on
+the outputs from another model.
+
+Like the core InVEST models, it takes in data of various formats (usually including
+some geospatial data), processes that data, and produces output files that contain the
+results. Unlike the core models, a plugin is not "official," i.e., not reviewed or
+maintained by NatCap. Plugins may be developed, used, and distributed totally
+independently of the ``natcap/invest`` repo and the Natural Capital Alliance.
 
 In a technical sense, an InVEST plugin is a python package that conforms to the
 ``natcap.invest`` plugin API. This makes it possible to run the plugin from the
@@ -52,6 +58,16 @@ plugin API requires attention to many details that are easily overlooked when
 writing a basic script. Going through the process of developing a model into a
 plugin will help to catch bugs and identify assumptions that may exist in your
 math or your code.
+
+.. note::
+
+    If you have created a plugin and want to share it with others, consider submitting
+    it for inclusion in the `InVEST Community Plugin Registry <https://natcap.github.io/invest-plugin-registry/>`_.
+
+    The goal of the Plugin Registry is to make it easy for members of the InVEST
+    community to both share the plugins they have created and discover plugins created
+    by others. To learn more about getting your plugin included, take a look at the
+    `Submission Guidelines <https://natcap.github.io/invest-plugin-registry/docs/submission_process.html>`_.
 
 Example plugins
 ---------------

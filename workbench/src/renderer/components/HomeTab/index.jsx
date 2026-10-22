@@ -9,12 +9,10 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 import { useTranslation } from 'react-i18next';
-import {
-  BsTrash3,
-} from 'react-icons/bs';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
+import RecentJobCard from './RecentJobCard';
 
 const { logger } = window.Workbench;
 
@@ -80,7 +78,7 @@ export default class HomeTab extends React.Component {
       let modelTitle = investList[modelID].modelTitle;
       let badge;
       if (investList[modelID].type === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+        badge = <Badge className="me-1" bg="secondary">Plugin</Badge>;
       }
       if (nonUniqueTitles.includes(modelTitle)) {
         modelTitle = `${modelTitle} ${investList[modelID].version}`;
@@ -106,7 +104,6 @@ export default class HomeTab extends React.Component {
             {investButtons}
             <ListGroup.Item
               key="browse"
-              className="px-0 py-2 border-0"
             >
               <OpenButton
                 className="open-button text-wrap"
@@ -173,55 +170,16 @@ function RecentInvestJobs(props) {
 
   const recentButtons = [];
   recentJobs.forEach((job) => {
-    if (job && job.argsValues && job.modelTitle) {
-      let badge;
-      if (job.type === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
-      }
-      recentButtons.push(
-        <Card
-          className="col-12 text-left recent-job-card mr-2 w-100"
+    if (job && job.argsValues.workspace_dir && job.modelTitle) {
+      const card = (
+        <RecentJobCard
+          job={job}
+          deleteJob={deleteJob}
+          handleClick={handleClick}
           key={job.hash}
-        >
-          <Card.Header>
-            <div className="badge-container">
-              {badge}
-            </div>
-            <span className="header-title">{job.modelTitle}</span>
-            <Button
-              variant="outline-light"
-              onClick={() => deleteJob(job.hash)}
-              className="float-right border-0"
-              aria-label="delete"
-            >
-              <BsTrash3 size="1.5rem" />
-            </Button>
-          </Card.Header>
-          <Card.Body
-            className="text-left border-0"
-            as="button"
-            onClick={() => handleClick(job)}
-          >
-            <Card.Title>
-              <span className="text-heading">{'Workspace: '}</span>
-              <span className="text-mono">{job.argsValues.workspace_dir}</span>
-            </Card.Title>
-            <Card.Title>
-              <span className="text-heading">{'Suffix: '}</span>
-              <span className="text-mono">{job.argsValues.results_suffix}</span>
-            </Card.Title>
-            <Card.Footer className="text-muted">
-              <span className="timestamp">{job.humanTime}</span>
-              <span className="status">
-                {(job.status === 'success'
-                  ? <span className="status-success">{t('Model Complete')}</span>
-                  : <span className="status-error">{job.status}</span>
-                )}
-              </span>
-            </Card.Footer>
-          </Card.Body>
-        </Card>
+        />
       );
+      recentButtons.push(card);
     }
   });
 
@@ -232,7 +190,7 @@ function RecentInvestJobs(props) {
           ? recentButtons
           : (
             <Card
-              className="col-12 text-left recent-job-card mr-2 w-100"
+              className="col-12 text-start recent-job-card me-2 w-100"
               key="placeholder"
             >
               <Card.Header>
@@ -246,20 +204,20 @@ function RecentInvestJobs(props) {
                 </Card.Title>
               </Card.Body>
             </Card>
-        )}
+          )}
       </Row>
       {recentButtons.length > 0
-        &&
-        <Row>
-          <Button
-            variant="secondary"
-            onClick={clearRecentJobs}
-            className="col-12"
-          >
-            {t('Clear all model runs')}
-          </Button>
-        </Row>
-      }
+        && (
+          <Row>
+            <Button
+              variant="secondary"
+              onClick={clearRecentJobs}
+              className="col-12"
+            >
+              {t('Clear all model runs')}
+            </Button>
+          </Row>
+        )}
     </Container>
   );
 }

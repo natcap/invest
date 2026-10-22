@@ -7,7 +7,6 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.StringInput(id='c'),
     spec.FileInput(id='foo'),
     spec.FileInput(id='bar'),
-    spec.DirectoryInput(id='data_dir', contents=[]),
     spec.SingleBandRasterInput(id='raster', units=None),
     spec.VectorInput(id='vector', fields=[], geometry_types=set()),
     spec.CSVInput(id='simple_table'),
@@ -16,11 +15,12 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
         columns=[
             spec.IntegerInput(id='ID'),
             spec.RasterOrVectorInput(
-                id='path',
+                id='spatial_path',
                 fields=[],
                 geometry_types={'POINT', 'POLYGON'},
                 units=None
-            )
+            ),
+            spec.FileInput(id='nonspatial_path')
         ]
     )],
     outputs=[],
@@ -29,6 +29,6 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     userguide='',
     module_name=__name__,
     input_field_order=[
-        ['blank', 'a', 'b', 'c', 'foo', 'bar', 'data_dir',
-         'raster', 'vector', 'simple_table', 'spatial_table']]
+        ['blank', 'a', 'b', 'c', 'foo', 'bar', 'raster',
+         'vector', 'simple_table', 'spatial_table']]
 )

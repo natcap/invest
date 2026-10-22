@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import glob from 'glob';
+import { glob } from 'glob';
 import { spawn, spawnSync } from 'child_process';
 
 import { rimraf } from 'rimraf';
@@ -213,7 +213,7 @@ test('Run a real invest model', async () => {
   const argsForm = await page.waitForSelector('.args-form');
 
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace (directory)"][role="textbox"]');
+    'aria/[name="Workspace Directory"][role="textbox"]');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const aoi = await argsForm.waitForSelector(
     'aria/[name="Area Of Interest (vector)"][role="textbox"]');
@@ -239,7 +239,7 @@ test('Run a real invest model', async () => {
   // Cancel button does not appear until after invest has confirmed
   // it is running. So extra timeout on the query:
   const cancelButton = await sidebar.waitForSelector(
-    'aria/[name="Cancel Run"][role="button"]', { timeout: 30000 });
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 60000 });
   await cancelButton.click();
   await sidebar.waitForSelector('text/Run Canceled');
   await page.waitForSelector('aria/[name="Open Workspace"][role="button"]');
@@ -307,7 +307,7 @@ test('Open each model and each local userguide', async () => {
     }
 
     await ugPage.close();
-    const tab = await page.waitForSelector('.nav-item');
+    const tab = await page.waitForSelector('.model-run-tab');
     const closeTabBtn = await tab.waitForSelector('aria/[role="button"]');
     await closeTabBtn.click();
     await new Promise(r => setTimeout(r, 100)); // allow for Home Tab to be visible again

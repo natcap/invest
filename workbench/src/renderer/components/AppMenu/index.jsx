@@ -17,7 +17,7 @@ export default function AppMenu(props) {
         <GiHamburgerMenu />
       </Dropdown.Toggle>
       <Dropdown.Menu
-        align="right"
+        align="end"
         className="app-menu"
       >
         <Dropdown.Item

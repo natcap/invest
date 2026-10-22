@@ -1,0 +1,65 @@
+<!--
+  - `model_id` (str): the `model_id` defined on the `MODEL_SPEC`. Checked
+    against a list of known core model IDs to determine whether to link to the
+    InVEST User Guide.
+  - `userguide_page` (str): the `userguide` defined on the `MODEL_SPEC`. Used
+    to render a link to the InVEST User Guide, or, in the case of plugins
+    (i.e., non-core models), to the plugin documentation. If `userguide_page`
+    is empty, no link is rendered.
+  - `model_name` (str): the `model_name` defined on the `MODEL_SPEC.` Used in
+    the visible link text.
+
+  Note that `core_models` is a list containing the `MODEL_SPEC`-defined
+  `model_id` for every core InVEST model. Since model IDs are stable by
+  design, this list shouldn't require updates except when a new model is added
+  or when a model is deprecated (and removed from the User Guide).
+\-->
+
+{% macro userguide_link(
+  model_id, userguide_page, model_name
+) -%}
+  {% set core_models = [
+    'annual_water_yield',
+    'carbon',
+    'coastal_blue_carbon',
+    'coastal_blue_carbon_preprocessor',
+    'coastal_vulnerability',
+    'crop_production_percentile',
+    'crop_production_regression',
+    'delineateit',
+    'forest_carbon_edge_effect',
+    'habitat_quality',
+    'habitat_risk_assessment',
+    'ndr',
+    'pollination',
+    'recreation',
+    'routedem',
+    'scenario_generator_proximity',
+    'scenic_quality',
+    'sdr',
+    'seasonal_water_yield',
+    'stormwater',
+    'urban_cooling_model',
+    'urban_flood_risk_mitigation',
+    'urban_mental_health',
+    'urban_nature_access',
+    'wave_energy',
+    'wind_energy'
+  ] %}
+  {% set is_core_model = True if model_id in core_models else False %}
+  {% if is_core_model and userguide_page %}
+    <p>To learn more about the {{ model_name }} model, visit the
+      <a
+        target="_blank"
+        href="https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/{{ userguide_page }}"
+      >InVEST User Guide (opens in new browser window)</a>.
+    </p>
+  {% elif userguide_page %}
+    <p>To learn more about the {{ model_name }} plugin, visit the
+      <a
+        target="_blank"
+        href="{{ userguide_page }}"
+      >{{ model_name }} documentation (opens in new browser window)</a>.
+    </p>
+  {% endif %}
+{%- endmacro %}

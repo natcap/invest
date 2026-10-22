@@ -40,21 +40,21 @@ describe('InVEST subprocess testing', () => {
     args: {
       workspace_dir: {
         name: 'Workspace',
-        type: 'directory',
+        type: 'workspace',
       },
       results_suffix: {
         name: 'Suffix',
         type: 'freestyle_string',
       },
     },
-    input_field_order: [['workspace_dir', 'results_suffix']],
+    input_field_order: [{ group_label: '', input_ids: ['workspace_dir', 'results_suffix']}],
     model_title: 'Eco Model',
     model_id: 'eco',
     module_name: 'natcap.invest.eco',
     userguide: 'eco.html',
     reporter: 'natcap.invest.reports.eco',
   };
-  let tempWorkspace;
+  let tempTestWorkspace;
   // invest always emits this message, and the workbench always listens for it:
   const stdOutLogfileSignal = 'Writing log messages to [/foo/bar/invest-log.txt]';
   const stdOutText = 'hello from invest';
@@ -95,10 +95,14 @@ describe('InVEST subprocess testing', () => {
       text: async () => 'foo',
     };
     fetch.mockResolvedValue(response);
+    tempTestWorkspace = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'workbench-test-')
+    );
   });
 
   afterAll(() => {
     removeIpcMainListeners();
+    fs.rmSync(tempTestWorkspace, { recursive: true });
   });
 
   beforeEach(() => {
@@ -117,15 +121,14 @@ describe('InVEST subprocess testing', () => {
       fs.writeFileSync(payload.filepath, 'foo');
       return Promise.resolve({ text: () => 'foo' });
     });
-    tempWorkspace = fs.mkdtempSync(os.tmpdir());
   });
 
   afterEach(async () => {
     await InvestJob.clearStore();
-    fs.rmSync(tempWorkspace, { recursive: true });
   });
 
   test('exit without error - expect log & alert display', async () => {
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
@@ -142,7 +145,8 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, tempWorkspace);
+    await userEvent.click(workspaceInput);
+    await userEvent.paste(tempWorkspace);
     // Write a report to the workspace because that's something
     // that execute will normally do.
     fs.writeFileSync(
@@ -178,8 +182,8 @@ describe('InVEST subprocess testing', () => {
     await waitFor(() => expect(execute).toBeEnabled());
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: 'InVEST' }));
-    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    await userEvent.click(getByRole('tab', { name: /^InVEST/ }));
+    const homeTab = getByRole('tabpanel', { name: /^InVEST/ });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();
@@ -188,6 +192,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('exit with error - expect log & alert display', async () => {
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
@@ -204,7 +209,8 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, tempWorkspace);
+    await userEvent.click(workspaceInput);
+    await userEvent.paste(tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
@@ -236,8 +242,8 @@ describe('InVEST subprocess testing', () => {
     expect(queryByText('View Results')).toBeNull(); // did not write report
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: 'InVEST' }));
-    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    await userEvent.click(getByRole('tab', { name: /^InVEST/ }));
+    const homeTab = getByRole('tabpanel', { name: /^InVEST/ });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();
@@ -246,6 +252,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('user terminates process - expect log & alert display', async () => {
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
@@ -262,7 +269,8 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, tempWorkspace);
+    await userEvent.click(workspaceInput);
+    await userEvent.paste(tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
@@ -291,8 +299,8 @@ describe('InVEST subprocess testing', () => {
       .toHaveTextContent('Run Canceled');
 
     // A recent job card should be rendered
-    await userEvent.click(getByRole('button', { name: 'InVEST' }));
-    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    await userEvent.click(getByRole('tab', { name: /^InVEST/ }));
+    const homeTab = getByRole('tabpanel', { name: /^InVEST/ });
     const workspaceText = await within(homeTab).findByText(tempWorkspace);
     const card = workspaceText.closest('button');
     expect(card).toBeInTheDocument();
@@ -301,6 +309,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('Run & re-run a job - expect new log display', async () => {
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
@@ -315,7 +324,8 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await findByLabelText(
       (content) => content.startsWith(spec.args.workspace_dir.name)
     );
-    await userEvent.type(workspaceInput, tempWorkspace);
+    await userEvent.click(workspaceInput);
+    await userEvent.paste(tempWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
     await userEvent.click(execute);
@@ -363,6 +373,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('Load Recent run & re-run it - expect new log display', async () => {
+    const tempWorkspace = fs.mkdtempSync(path.join(tempTestWorkspace, 'ws-'));
     const mockInvestProc = getMockedInvestProcess();
     const argsValues = {
       workspace_dir: tempWorkspace,
