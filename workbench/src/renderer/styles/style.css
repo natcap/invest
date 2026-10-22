@@ -791,7 +791,6 @@ exceed 100% of window.*/
 .argname {
   text-transform: capitalize;
   font-weight: 600;
-  padding-left: 16px;
 }
 
 .argname.tight-spacing {
@@ -817,10 +816,15 @@ exceed 100% of window.*/
 .args-form .form-label {
   padding-top: 0;
   padding-bottom: 0;
+  margin-left: 16px;
+}
+
+.args-form .form-label.tight-spacing {
   margin-top: 4px;
   margin-bottom: 4px;
+  margin-left: 0;
   display: flex;
-  align-items: center
+  align-items: center;
 }
 
 .args-form .form-control[type=text] {
@@ -831,7 +835,7 @@ exceed 100% of window.*/
 
 .args-form .form-control.tight-spacing {
   border-radius: 0 !important;
-  /*height: 100%;*/
+  margin-left: -1px;
 }
 
 input.input-dragging {
@@ -865,7 +869,10 @@ input[type=text]::placeholder {
   font-size: 1.5rem;
 }
 
-.args-form .input-group {
+.form-container {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
   margin-top: -1px;
   position: relative;
   .form-select,

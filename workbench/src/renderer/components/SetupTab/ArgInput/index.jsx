@@ -50,7 +50,11 @@ function InputLabel(props) {
   const includeComma = userFriendlyArgType && optional;
 
   if (tightSpacing) {
-    return <Form.Label htmlFor={inputId}>{argname}</Form.Label>
+    return (
+      <Form.Label className='tight-spacing' htmlFor={inputId}>
+        {argname}
+      </Form.Label>
+    );
   } else {
     return (
       <Form.Label column sm="3" htmlFor={inputId}>
@@ -340,27 +344,25 @@ export default function ArgInput({
   let innerContent;
   if (tightSpacing) {
     innerContent = (
-      <InputGroup className="d-flex flex-nowrap w-100">
+      <div className="form-container">
         <Col sm='4' className='argname tight-spacing'>
           {aboutModal}
           {inputLabel}
         </Col>
-        <Col sm='3'>{form}</Col>
+        <Col sm='3' className='d-flex'>{form}</Col>
         <Col sm='4'>{feedback}</Col>
-      </InputGroup>
+      </div>
     );
   } else {
     innerContent = (
       <>
         {inputLabel}
         <Col>
-          <InputGroup>
-            <div className="d-flex flex-nowrap w-100">
-              {aboutModal}
-              {form}
-            </div>
-            {feedback}
-          </InputGroup>
+          <div className="form-container">
+            {aboutModal}
+            {form}
+          </div>
+          {feedback}
         </Col>
     </>);
   }
