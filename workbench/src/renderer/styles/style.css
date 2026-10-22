@@ -711,7 +711,7 @@ exceed 100% of window.*/
   margin-bottom: 1.5rem;
 }
 
-.arg-table {
+.sub-group-accordion {
 
   background-color: inherit;
 
@@ -733,15 +733,15 @@ exceed 100% of window.*/
   }
 }
 
-.arg-table .card-header {
+.sub-group-accordion .card-header {
   font-weight: 600;
 }
 
-.arg-table .accordion-collapse {
+.sub-group-accordion .accordion-collapse {
   background-color: var(--bs-card-cap-bg);
 }
 
-.arg-table .table-enabled {
+.sub-group-accordion .accordion-header:not(.disabled) {
 
   & > ::after {
     display: none;
@@ -752,7 +752,7 @@ exceed 100% of window.*/
   }
 }
 
-.arg-table .table-disabled {
+.sub-group-accordion .accordion-header.disabled {
 
   & > ::after {
     color: #a5a5a5;
@@ -771,7 +771,7 @@ exceed 100% of window.*/
   padding: 1.5rem 0;
 }
 
-.arg-group-tight {
+.sub-group {
   gap: 0;
   margin: 16px;
 }

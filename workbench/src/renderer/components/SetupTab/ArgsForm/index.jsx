@@ -1,3 +1,4 @@
+import classNames from 'classnames';
 import React from 'react';
 import PropTypes from 'prop-types';
 import { useContext } from 'react';
@@ -139,7 +140,7 @@ class ArgsForm extends React.Component {
     argsOrder.forEach((inputGroup) => {
       const groupItems = [];
       inputGroup.input_ids.forEach((groupItem) => {
-        let tabularGroupItems;
+        let subGroupItems;
         if (typeof groupItem === 'string') {
           const argkey = groupItem;
           groupItems.push(
@@ -163,11 +164,11 @@ class ArgsForm extends React.Component {
               tightSpacing={false}
             />
           );
-        } else {  // is an object representing a tabular group
-          tabularGroupItems = [];
+        } else {  // is an object representing a sub-group
+          subGroupItems = [];
           let anyEnabled = false;
           groupItem.input_ids.forEach((argkey) => {
-            tabularGroupItems.push(
+            subGroupItems.push(
               <ArgInput
                 argkey={argkey}
                 argSpec={argsSpec[argkey]}
@@ -192,21 +193,21 @@ class ArgsForm extends React.Component {
               anyEnabled = true;
             }
           });
-          // Input groups that have all their inputs disabled will be rendered
+          // Sub-groups that have all their inputs disabled will be rendered
           // as a collapsed accordion section. If any input is enabled,
           groupItems.push(
             <Accordion activeKey={anyEnabled ? k : undefined} key={groupItem.group_label}>
-            <Accordion.Item as={Card} className="arg-table"
+            <Accordion.Item as={Card} className="sub-group-accordion"
                 eventKey={k} key={k}
                 >
               {groupItem.group_label &&
-                <Accordion.Header as={Card.Header} className={anyEnabled ? 'table-enabled' : 'table-disabled'}>
+                <Accordion.Header as={Card.Header} className={classNames({'disabled': !anyEnabled})}>
                   {groupItem.group_label}
                 </Accordion.Header>
               }
               <Accordion.Collapse eventKey={k}>
-                <Form.Group className='arg-group-tight'>
-                  {tabularGroupItems}
+                <Form.Group className='sub-group'>
+                  {subGroupItems}
                 </Form.Group>
               </Accordion.Collapse>
             </Accordion.Item>
