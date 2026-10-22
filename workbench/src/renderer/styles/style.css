@@ -66,10 +66,8 @@ button {
   margin-right: 0.5rem;
 }
 
-.info-button-tight {
+.info-button.tight {
   border: 0;
-  color: var(--lagunita-light);
-  border-color: var(--lagunita-light);
   &:hover, &:focus {
     background: none;
   }
@@ -79,7 +77,7 @@ button {
   }
 }
 
-.info-button-outline {
+.info-icon-outline {
   color: var(--lagunita-light);
   background: none;
   border-color: var(--lagunita-light);
@@ -665,13 +663,9 @@ exceed 100% of window.*/
 .args-form .accordion {
   --bs-accordion-border-width: 0;
   --bs-accordion-bg: none;
-  --bs-accordion-body-padding-x: 0;
-  --bs-accordion-body-padding-y: 0;
 }
 
 .args-form .accordion-header {
-  --bs-accordion-active-bg: white;
-  --bs-accordion-btn-padding-y: 0;
   border-bottom: 0;
 }
 
@@ -712,9 +706,7 @@ exceed 100% of window.*/
 }
 
 .sub-group-accordion {
-
   background-color: inherit;
-
   & > legend {
     float: none;
     width: auto;
@@ -723,11 +715,9 @@ exceed 100% of window.*/
     font-size: inherit;
     font-weight: 600;
   }
-
   & button {
     font-weight: 600;
   }
-
   & :after {
     margin-left: 0.5rem;
   }
@@ -742,22 +732,18 @@ exceed 100% of window.*/
 }
 
 .sub-group-accordion .accordion-header:not(.disabled) {
-
   & > ::after {
     display: none;
   }
-
   & > button {
     cursor: default;
   }
 }
 
 .sub-group-accordion .accordion-header.disabled {
-
   & > ::after {
     color: #a5a5a5;
   }
-
   & > button {
     color: #a5a5a5;
   }

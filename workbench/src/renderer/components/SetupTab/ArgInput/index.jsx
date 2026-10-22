@@ -442,14 +442,14 @@ function AboutModal(props) {
     <React.Fragment>
       <Button
         aria-label={`info about ${arg.name}`}
-        className={tightSpacing ? "info-button-tight" : "info-button"}
+        className={classNames('info-button', {'tight': tightSpacing})}
         onClick={handleAboutOpen}
         variant="outline-info"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         { isHovered & tightSpacing ?
-          <MdInfoOutline className="info-btn-outline" /> :
+          <MdInfoOutline className="info-icon-outline" /> :
           <MdInfo />
         }
       </Button>
