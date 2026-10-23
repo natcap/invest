@@ -140,7 +140,7 @@ class ArgsForm extends React.Component {
       // object with an input_ids attribute.
       const inputIDs = Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
       const groupItems = [];
-      inputGroup.input_ids.forEach((groupItem) => {
+      inputIDs.forEach((groupItem) => {
         let subGroupItems;
         if (typeof groupItem === 'string') {
           const argkey = groupItem;
@@ -228,7 +228,6 @@ class ArgsForm extends React.Component {
             {groupItems}
           </Form.Group>
         </fieldset>
-
       );
       k += 1;
     });
@@ -244,9 +243,7 @@ class ArgsForm extends React.Component {
         onDragEnter={this.dragEnterHandler}
         onDragLeave={this.dragLeaveHandler}
       >
-        <Accordion flush alwaysOpen>
-          {formItems}
-        </Accordion>
+        {formItems}
       </Form>
     );
   }
