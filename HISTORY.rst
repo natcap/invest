@@ -74,6 +74,12 @@ General
   as well as lists. The ``spec.InputGroup.label`` will be displayed on that
   section of the model input form in the workbench.
   (`#1602 <https://github.com/natcap/invest/issues/1602>`_)
+* Added support for collapsible sub-groups of inputs. ``spec.InputSubGroup``
+  was introduced to represent a closely-related group of inputs that are
+  displayed together with tighter vertical spacing. If all inputs in a sub-
+  group are disabled, the sub-group renders as a collapsible section.
+  (`#1601 <https://github.com/natcap/invest/issues/1601>`_),
+  (`#2726 <https://github.com/natcap/invest/issues/2726>`_)
 * The ``to_json`` method of ``spec.ModelSpec`` has been deprecated.
   Serialization should now be done using the pydantic ``model_dump_json``
   method.
