@@ -197,13 +197,13 @@ class ArgsForm extends React.Component {
           // Sub-groups that have all their inputs disabled will be rendered
           // as a collapsed accordion section. If any input is enabled,
           groupItems.push(
-            <Accordion activeKey={anyEnabled ? k : undefined} key={groupItem.group_label}>
+            <Accordion activeKey={anyEnabled ? k : undefined} key={groupItem.subgroup_label}>
             <Accordion.Item as={Card} className="sub-group-accordion"
                 eventKey={k} key={k}
                 >
-              {groupItem.group_label &&
+              {groupItem.subgroup_label &&
                 <Accordion.Header as={Card.Header} className={classNames({'disabled': !anyEnabled})}>
-                  {groupItem.group_label}
+                  {groupItem.subgroup_label}
                 </Accordion.Header>
               }
               <Accordion.Collapse eventKey={k}>

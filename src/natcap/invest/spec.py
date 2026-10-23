@@ -232,9 +232,9 @@ class InputSubGroup(BaseModel):
     NumberInput or StringInput types.
     """
 
-    group_label: str = ''
+    subgroup_label: str = ''
     """Optional label that will be displayed in the workbench above
-       this group of inputs."""
+       this subgroup of inputs."""
 
     input_ids: list[str]
     """List of model input ids that belong to this group. Each string must

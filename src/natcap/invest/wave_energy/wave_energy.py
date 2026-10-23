@@ -115,10 +115,10 @@ MODEL_SPEC = spec.ModelSpec(
         spec.InputGroup(input_ids=["workspace_dir", "results_suffix"]),
         ["wave_base_data_table", "analysis_area", "aoi_path", "dem_path"],
         ["machine_perf_path", "machine_param_path"],
-        spec.InputGroup(input_ids=[
+        spec.InputGroup(group_label='valuation', input_ids=[
             "valuation_container",
             spec.InputSubGroup(
-                group_label='Machine Economic Parameters',
+                subgroup_label='Machine Economic Parameters',
                 input_ids=['capmax', 'cc', 'cml', 'cul', 'col', 'omc', 'p',
                            'r', 'smlpm']),
             "land_gridPts_path",
