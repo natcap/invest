@@ -1,5 +1,4 @@
 """Testing module for validation."""
-import functools
 import os
 import shutil
 import stat
@@ -13,10 +12,11 @@ import warnings
 from unittest.mock import Mock
 
 import numpy
-import pandas
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+import pandas
+import pytest
 
 from natcap.invest import spec
 from natcap.invest.spec import (
@@ -1050,12 +1050,16 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(result['val2'][0], 2)
         self.assertEqual(result['lucode'][1], 2)
 
+    # don't fail on this pandas ParserWarning about extra fields
+    # because we test that pandas will truncate lines with extra fields
+    # and the line is not actually skipped, as the msg indicates.
+    @pytest.mark.filterwarnings("default::pandas.errors.ParserWarning")
     def test_trailing_comma_second_line(self):
         """validation: test a trailing commas on lines are handled properly."""
         csv_text = ("lucode,desc,val1,val2\n"
                     "1,corn,0.5,2\n"
-                    "2,bread,1,4,\n"      # single trailing comma
-                    "3,beans,0.5,4,,,\n"  # many trailing commas
+                    "2,bread,1,4,\n"     # single trailing comma
+                    "3,beans,0.5,4,,,\n" # many trailing commas
                     "4,butter,9,1")
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as table_file:
