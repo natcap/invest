@@ -73,7 +73,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, macos-26-intel, ubuntu-latest]
     steps:
       - uses: actions/checkout@v7
