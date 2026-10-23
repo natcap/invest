@@ -114,9 +114,9 @@ class SetupTab extends React.Component {
 
     this.state = {
       argsValues: null,
-      argsValidation: null,
+      argsValidation: {},
       argsValid: false,
-      argsEnabled: null,
+      argsEnabled: {},
       argsDropdownOptions: null,
       saveAlerts: {},
       scrollEventCount: 0,
@@ -158,26 +158,8 @@ class SetupTab extends React.Component {
       argsDropdownOptions,
     } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {});
 
-    // map each arg to an empty object, to fill in later
-    // here we use the argsSpec because it includes all args, even ones like
-    // n_workers, which do get validated.
-    const argsValidation = Object.keys(argsSpec).reduce((acc, argkey) => {
-      acc[argkey] = {};
-      return acc;
-    }, {});
-    // here we only use the keys in inputFieldOrder because args that
-    // aren't displayed in the form don't need an enabled/disabled state.
-    // all args default to being enabled
-    const argKeys = getArgKeysFromInputFieldOrder(inputFieldOrder);
-    const argsEnabled = argKeys.reduce((acc, argkey) => {
-      acc[argkey] = true;
-      return acc;
-    }, {});
-
     this.setState({
       argsValues: argsValues,
-      argsValidation: argsValidation,
-      argsEnabled: argsEnabled,
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
@@ -511,8 +493,10 @@ class SetupTab extends React.Component {
         const argkeys = result[0]; // array of arg keys
         const message = result[1]; // string that describes those args
         argkeys.forEach((key) => {
-          argsValidation[key].validationMessage = message;
-          argsValidation[key].valid = false;
+          argsValidation[key] = {
+            validationMessage: message,
+            valid: false,
+          };
           keyset.delete(key);
         });
       });
@@ -522,8 +506,10 @@ class SetupTab extends React.Component {
       // inputs will not display a validation state, so it's okay
       // to simply set all these as valid here.
       keyset.forEach((k) => {
-        argsValidation[k].valid = true;
-        argsValidation[k].validationMessage = '';
+        argsValidation[k] = {
+          valid: true,
+          validationMessage: '',
+        };
       });
       if (this._isMounted) {
         this.setState({
@@ -535,8 +521,10 @@ class SetupTab extends React.Component {
     // B) All args were validated and none were invalid:
     } else {
       keyset.forEach((k) => {
-        argsValidation[k].valid = true;
-        argsValidation[k].validationMessage = '';
+        argsValidation[k] = {
+          valid: true,
+          validationMessage: '',
+        };
       });
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can

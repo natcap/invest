@@ -151,15 +151,15 @@ class ArgsForm extends React.Component {
               userguide={userguide}
               isCoreModel={isCoreModel}
               dropdownOptions={argsDropdownOptions[argkey]}
-              enabled={argsEnabled[argkey]}
+              enabled={argsEnabled[argkey] ?? true}
               updateArgValues={this.props.updateArgValues}
               handleFocus={this.handleFocus}
               inputDropHandler={this.inputDropHandler}
-              isValid={argsValidation[argkey].valid}
+              isValid={(argsValidation[argkey] ?? {}).valid}
               key={argkey}
               selectFile={this.selectFile}
               touched={argsValues[argkey].touched}
-              validationMessage={argsValidation[argkey].validationMessage}
+              validationMessage={(argsValidation[argkey] ?? {}).validationMessage}
               value={argsValues[argkey].value}
               scrollEventCount={scrollEventCount}
               tightSpacing={false}
@@ -176,21 +176,21 @@ class ArgsForm extends React.Component {
                 userguide={userguide}
                 isCoreModel={isCoreModel}
                 dropdownOptions={argsDropdownOptions[argkey]}
-                enabled={argsEnabled[argkey]}
+                enabled={argsEnabled[argkey] ?? true}
                 updateArgValues={this.props.updateArgValues}
                 handleFocus={this.handleFocus}
                 inputDropHandler={this.inputDropHandler}
-                isValid={argsValidation[argkey].valid}
+                isValid={(argsValidation[argkey] ?? {}).valid}
                 key={argkey}
                 selectFile={this.selectFile}
                 touched={argsValues[argkey].touched}
-                validationMessage={argsValidation[argkey].validationMessage}
+                validationMessage={(argsValidation[argkey] ?? {}).validationMessage}
                 value={argsValues[argkey].value}
                 scrollEventCount={scrollEventCount}
                 tightSpacing={true}
               />
             );
-            if (argsEnabled[argkey]) {
+            if (argsEnabled[argkey] ?? true) {
               anyEnabled = true;
             }
           });
