@@ -1055,7 +1055,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
     # and the line is not actually skipped, as the msg indicates.
     @pytest.mark.filterwarnings("default::pandas.errors.ParserWarning")
     def test_trailing_comma_second_line(self):
-        """validation: test a trailing commas on lines are handled properly."""
+        """validation: test trailing commas on lines are handled properly."""
         csv_text = ("lucode,desc,val1,val2\n"
                     "1,corn,0.5,2\n"
                     "2,bread,1,4,\n"     # single trailing comma

@@ -77,6 +77,8 @@ General
 * The ``to_json`` method of ``spec.ModelSpec`` has been deprecated.
   Serialization should now be done using the pydantic ``model_dump_json``
   method.
+* No longer testing and building with Python 3.10, which reached EOL.
+  (`#2782 <https://github.com/natcap/invest/issues/2782>`_)
 
 Workbench
 =========
