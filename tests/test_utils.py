@@ -319,6 +319,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             table_file.write(csv_text)
 
         df = utils.read_csv_to_dataframe(table_path)
+        print(df)
         self.assertEqual(list(df.columns), ['lucode', 'desc', 'val1', 'val2'])
         self.assertEqual(df['lucode'][0], 1)
         self.assertEqual(df['desc'][1], 'bread')

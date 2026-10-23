@@ -1051,11 +1051,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(result['lucode'][1], 2)
 
     def test_trailing_comma_second_line(self):
-        """validation: test a trailing comma on second line is handled properly."""
+        """validation: test a trailing commas on lines are handled properly."""
         csv_text = ("lucode,desc,val1,val2\n"
                     "1,corn,0.5,2\n"
-                    "2,bread,1,4,\n"
-                    "3,beans,0.5,4\n"
+                    "2,bread,1,4,\n"      # single trailing comma
+                    "3,beans,0.5,4,,,\n"  # many trailing commas
                     "4,butter,9,1")
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as table_file:

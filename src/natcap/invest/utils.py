@@ -309,6 +309,11 @@ def read_csv_to_dataframe(path, **kwargs):
     Returns:
         pandas.DataFrame with the contents of the given CSV
     """
+    def _ignore_trailing_delimeters(line: list):
+        if line[-1] == '':
+            return _ignore_trailing_delimeters(line[:-1])
+        return line
+
     try:
         df = pandas.read_csv(
             path,
@@ -317,6 +322,7 @@ def read_csv_to_dataframe(path, **kwargs):
                 'sep': None,
                 'engine': 'python',
                 'encoding': 'utf-8-sig',
+                'on_bad_lines': _ignore_trailing_delimeters,
                 **kwargs
             })
     except UnicodeDecodeError:
