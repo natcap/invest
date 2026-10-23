@@ -812,7 +812,21 @@ exceed 100% of window.*/
   margin-left: -1px;
 }
 
+/*
+For sub-groups where adjacent inputs share a 1px border,
+the invalid red outline should be in front.
+On focus, the wider red (invalid) / green (valid) highlighted border
+should be in front of any other border.
+*/
 .args-form .form-control.is-invalid {
+  z-index: 2;
+
+  &:focus {
+    z-index: 3;
+  }
+}
+
+.args-form .form-control.is-valid {
   &:focus {
     z-index: 3;
   }

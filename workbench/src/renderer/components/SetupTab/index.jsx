@@ -29,6 +29,27 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 const { logger } = window.Workbench;
 
+function getArgKeysFromInputFieldOrder(inputFieldOrder) {
+  return inputFieldOrder.map(
+    (inputGroup) => {
+      // support both new and old input group formats because the plugin
+      // environment could have an older version of invest installed.
+      // the old format is an array of input ids. the new format is an
+      // object with an input_ids attribute.
+      if (Array.isArray(inputGroup)) {
+        return inputGroup
+      } else {
+        return inputGroup.input_ids.map((item) => {
+          if (typeof item === 'string') {
+            return [item]
+          } else {
+            return item.input_ids
+          }
+        }).flat()
+      }
+  }).flat();
+}
+
 /** Initialize values of InVEST args based on the model's UI Spec.
  *
  * Values initialize with either a complete args dict, or with empty/default values.
@@ -49,24 +70,8 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
   const argsValues = {};
   const argsDropdownOptions = {};
 
-  inputFieldOrder.map(
-    (inputGroup) => {
-      // support both new and old input group formats because the plugin
-      // environment could have an older version of invest installed.
-      // the old format is an array of input ids. the new format is an
-      // object with an input_ids attribute.
-      if (Array.isArray(inputGroup)) {
-        return inputGroup
-      } else {
-        return inputGroup.input_ids.map((item) => {
-          if (typeof item === 'string') {
-            return [item]
-          } else {
-            return item.input_ids
-          }
-        }).flat()
-      }
-  }).flat().forEach((argkey) => {
+  const argKeys = getArgKeysFromInputFieldOrder(inputFieldOrder);
+  argKeys.forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.
@@ -163,9 +168,8 @@ class SetupTab extends React.Component {
     // here we only use the keys in inputFieldOrder because args that
     // aren't displayed in the form don't need an enabled/disabled state.
     // all args default to being enabled
-    const argsEnabled = inputFieldOrder.map(
-      (inputGroup) => inputGroup.input_ids
-    ).flat().reduce((acc, argkey) => {
+    const argKeys = getArgKeysFromInputFieldOrder(inputFieldOrder);
+    const argsEnabled = argKeys.reduce((acc, argkey) => {
       acc[argkey] = true;
       return acc;
     }, {});
