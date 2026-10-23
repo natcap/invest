@@ -997,13 +997,14 @@ code {
     color: var(--invest-green);
   }
 
-  .search-modal-content-heading {
+  .search-modal-content-summary {
     &:focus-visible {
       outline-style: dotted;
       outline-width: 2px;
       outline-offset: 6px;
     }
 
+    &.search-error,
     &:has(+ .search-error) {
       outline-color: var(--digital-red);
     }

@@ -41,7 +41,7 @@ class UFRMTests(unittest.TestCase):
             'built_infrastructure_vector_path': os.path.join(
                 base_dir, '..', 'data', 'invest-test-data', 'ufrm',
                 'infrastructure.gpkg'),
-            'curve_number_table_path': os.path.join(
+            'biophysical_table_path': os.path.join(
                 base_dir, '..', 'data', 'invest-test-data', 'ufrm',
                 'Biophysical_water_SF.csv'),
             'infrastructure_damage_loss_table_path': os.path.join(
@@ -194,14 +194,14 @@ class UFRMTests(unittest.TestCase):
 
         bad_cn_table_path = os.path.join(
             self.workspace_dir, 'bad_cn_table.csv')
-        cn_table = pandas.read_csv(args['curve_number_table_path'])
+        cn_table = pandas.read_csv(args['biophysical_table_path'])
 
         # drop a row with an lucode known to exist in lulc raster
         # This is a code that will successfully index into the
         # CN table sparse matrix, but will not return valid data.
         bad_cn_table = cn_table[cn_table['lucode'] != 0]
         bad_cn_table.to_csv(bad_cn_table_path, index=False)
-        args['curve_number_table_path'] = bad_cn_table_path
+        args['biophysical_table_path'] = bad_cn_table_path
 
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
@@ -217,7 +217,7 @@ class UFRMTests(unittest.TestCase):
         # LULC raster has values from 0 to 21.
         bad_cn_table = cn_table[cn_table['lucode'] < 15]
         bad_cn_table.to_csv(bad_cn_table_path, index=False)
-        args['curve_number_table_path'] = bad_cn_table_path
+        args['biophysical_table_path'] = bad_cn_table_path
 
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
@@ -306,12 +306,12 @@ class UFRMTests(unittest.TestCase):
         # area.
         self.assertEqual(len(aoi_damage_dict), 1)
         numpy.testing.assert_allclose(aoi_damage_dict[0], 5645.787282992962)
-    
+
     def test_ufrm_smax(self):
         """UFRM: test _s_max operation."""
         from natcap.invest.urban_flood_risk_mitigation import \
             urban_flood_risk_mitigation
-        
+
         cn_nodata = -1
         result_nodata = -9999
         # These varying percent slope values should cover all of the slope
@@ -372,28 +372,28 @@ class UFRMTests(unittest.TestCase):
                 validation_messages.MISSING_KEY)])
 
         args = self._make_args()
-        cn_table = pandas.read_csv(args['curve_number_table_path'])
+        cn_table = pandas.read_csv(args['biophysical_table_path'])
         cn_table = cn_table.drop(columns=[f'CN_{code}' for code in 'ABCD'])
         new_cn_path = os.path.join(self.workspace_dir, 'new_cn_table.csv')
         cn_table.to_csv(new_cn_path, index=False)
-        args['curve_number_table_path'] = new_cn_path
+        args['biophysical_table_path'] = new_cn_path
         result = urban_flood_risk_mitigation.validate(args)
         self.assertEqual(
             result,
-            [(['curve_number_table_path'],
+            [(['biophysical_table_path'],
               validation_messages.MATCHED_NO_HEADERS.format(
                   header='column', header_name='cn_a'))])
 
         # test missing CN_X values raise warnings
         args = self._make_args()
-        cn_table = pandas.read_csv(args['curve_number_table_path'])
+        cn_table = pandas.read_csv(args['biophysical_table_path'])
         cn_table.at[0, 'CN_A'] = numpy.nan
         new_cn_path = os.path.join(
             self.workspace_dir, 'cn_missing_value_table.csv')
         cn_table.to_csv(new_cn_path, index=False)
-        args['curve_number_table_path'] = new_cn_path
+        args['biophysical_table_path'] = new_cn_path
         result = urban_flood_risk_mitigation.validate(args)
         self.assertEqual(
             result,
-            [(['curve_number_table_path'],
+            [(['biophysical_table_path'],
               'Null value(s) found in column "cn_a"')])

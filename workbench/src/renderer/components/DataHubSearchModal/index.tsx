@@ -17,6 +17,7 @@ import {
 import {
   DataHubSearchIntroContent,
   DataHubSearchIntroFooter,
+  DataHubSearchLoadingContent,
   DataHubSearchResultsContent,
   DataHubSearchResultsFooter,
   DataHubSearchSearchingContent
@@ -31,18 +32,24 @@ interface DataHubSearchModalProps {
   closeModal: () => {},
   query: DataHubSearchQuery,
   aoiInputName: string,
+  argsValidationComplete: boolean,
   aoiIsValid: boolean,
+  updateSearchExtent: () => {},
+  searchExtentUpdateComplete: boolean,
   selectSearchResult: (url: string, collections: string[]) => {},
   requestFocusOnAoiInput: () => {},
 }
 
 const DHAL_BASE_URL = 'https://data.naturalcapitalalliance.stanford.edu/dhal/search_dataset/';
 
-const INTRO_STEP = 0;
-const SEARCHING_STEP = 1;
-const RESULTS_STEP = 2;
+enum searchStep {
+  LOADING,
+  INTRO,
+  SEARCHING,
+  RESULTS,
+}
 
-export const searchModalContentHeadingCssClass = 'search-modal-content-heading';
+export const searchModalContentSummaryCssClass = 'search-modal-content-summary';
 export const searchModalAutoFocusId = 'search-modal-auto-focus';
 const autoFocusSelector = `#${searchModalAutoFocusId}`;
 
@@ -52,14 +59,31 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
     closeModal,
     query,
     aoiInputName,
+    argsValidationComplete,
     aoiIsValid,
+    updateSearchExtent,
+    searchExtentUpdateComplete,
     selectSearchResult,
     requestFocusOnAoiInput,
   } = props;
 
   const { t } = useTranslation();
 
-  const [step, setStep] = useState<number>(INTRO_STEP);
+  const getLoadingOrIntroStep = (): searchStep => {
+    if (
+      query.datatype === 'raster'
+      && (!argsValidationComplete || (aoiIsValid && !searchExtentUpdateComplete))
+    ) {
+      // Disallow searching for a raster while waiting for AOI validation or
+      // for a valid extent.
+      return searchStep.LOADING;
+    } else {
+      // Allow search or render "Invalid AOI" error as appropriate.
+      return searchStep.INTRO;
+    }
+  }
+
+  const [step, setStep] = useState<searchStep>(getLoadingOrIntroStep());
   const [numSearchResults, setNumSearchResults] = useState<number>(0);
   const [searchResults, setSearchResults] = useState<DataHubSearchResult[]>([]);
   const [allExpanded, setAllExpanded] = useState<boolean>(false);
@@ -71,20 +95,32 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
   const searchAllowed: boolean = aoiIsValid || query.datatype === 'csv';
 
   useEffect(() => {
+    if (query.datatype === 'raster' && argsValidationComplete) {
+      updateSearchExtent();
+    }
+  }, [argsValidationComplete]);
+
+  useEffect(() => {
+    setStep(getLoadingOrIntroStep());
+  }, [argsValidationComplete, aoiIsValid, searchExtentUpdateComplete]);
+
+  useEffect(() => {
     // This effect supports screen reader navigation by auto-focusing the
     // element (typically a heading) that provides a summary of new content,
     // whenever modal content changes. If a designated content summary element
     // does not exist, the modal itself receives focus.
-    const contentSummaryElement: HTMLElement | null = autoFocusRef.current?.dialog?.querySelector(autoFocusSelector);
-    if (contentSummaryElement) {
-      contentSummaryElement.focus();
-    } else {
-      autoFocusRef.current?.dialog?.focus();
+    if (show) {
+      const contentSummaryElement: HTMLElement | null = autoFocusRef.current?.dialog?.querySelector(autoFocusSelector);
+      if (contentSummaryElement) {
+        contentSummaryElement.focus();
+      } else {
+        autoFocusRef.current?.dialog?.focus();
+      }
     }
-  }, [step]);
+  }, [show, step]);
 
   const search = async () => {
-    setStep(SEARCHING_STEP);
+    setStep(searchStep.SEARCHING);
     setSearchError(false);
 
     const params = new DHALSearchParams(query);
@@ -115,7 +151,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
       setSearchError(true);
       logger.error((error as Error).message);
     } finally {
-      setStep(RESULTS_STEP);
+      setStep(searchStep.RESULTS);
     }
   };
 
@@ -148,10 +184,11 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
   };
 
   const close = () => {
-    // Setting step to 0 "resets" modal state each time it closes.
-    // @TODO: ¿consider preserving step number to prevent repeated user interactions,
-    // perhaps resetting step number only if/when query params have changed?
-    setStep(0);
+    // Reset modal to loading or intro step each time it closes.
+    // @TODO: Consider preserving step number to prevent repeated user
+    // interactions and/or repeated Data Hub queries, resetting step only
+    // if/when query params have changed.
+    setStep(getLoadingOrIntroStep());
     closeModal();
   };
 
@@ -179,7 +216,11 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
       </Modal.Header>
       <Modal.Body>
         {
-          searchAllowed &&
+          step === searchStep.LOADING &&
+          <DataHubSearchLoadingContent />
+        }
+        {
+          step !== searchStep.LOADING && searchAllowed &&
           <>
             <DataHubSearchParams
               tags={query.tags}
@@ -190,18 +231,18 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
           </>
         }
         {
-          step === INTRO_STEP &&
+          step === searchStep.INTRO &&
           <DataHubSearchIntroContent
             aoiInputName={aoiInputName}
             searchAllowed={searchAllowed}
           />
         }
         {
-          step === SEARCHING_STEP &&
+          step === searchStep.SEARCHING &&
           <DataHubSearchSearchingContent />
         }
         {
-          step === RESULTS_STEP &&
+          step === searchStep.RESULTS &&
           <DataHubSearchResultsContent
             searchError={searchError}
             numSearchResults={numSearchResults}
@@ -214,7 +255,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
         }
       </Modal.Body>
       {
-        step === INTRO_STEP &&
+        step === searchStep.INTRO &&
         <Modal.Footer>
           <DataHubSearchIntroFooter
             searchAllowed={searchAllowed}
@@ -226,7 +267,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
         </Modal.Footer>
       }
       {
-        step === RESULTS_STEP && searchError &&
+        step === searchStep.RESULTS && searchError &&
         <Modal.Footer>
           <DataHubSearchResultsFooter
             searchError={searchError}
