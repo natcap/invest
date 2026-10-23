@@ -669,17 +669,3 @@ class ModelSpecTests(unittest.TestCase):
                 'module_name': __name__
             }
         )
-
-        {'model_id': 'foo',
-        'model_title': 'Foo', 'userguide': '',
-        'input_field_order': [
-            {'group_label': '', 'input_ids': ['workspace_dir']},
-            {
-                'group_label': '',
-                'input_ids': [
-                    'bar',
-                    {'group_label': '', 'input_ids': ['baz']}
-                ]
-            }
-        ], 'outputs': {'c_storage_bas': {'id': 'c_storage_bas', 'about': None, 'created_if': True, 'path': 'c_storage_bas.tif', 'data_type': 'number', 'units': 't/ha'}}, 'validate_spatial_overlap': True, 'different_projections_ok': False, 'aliases': 'set()', 'module_name': 'tests.test_spec', 'reporter': '', 'about': '', 'args': {'workspace_dir': {'about': "The folder where all the model's output files will be written. If this folder does not exist, it will be created. If data already exists in the folder, it will be overwritten.", 'required': True, 'allowed': True, 'hidden': False, 'id': 'workspace_dir', 'name': 'workspace directory', 'type': 'workspace'}, 'bar': {'id': 'bar', 'about': None, 'name': None, 'required': True, 'allowed': True, 'hidden': False, 'units': None, 'expression': None, 'type': 'number'}, 'baz': {'id': 'baz', 'about': None, 'name': None, 'required': True, 'allowed': True, 'hidden': False, 'units': None, 'expression': None, 'type': 'number'}}}
-
