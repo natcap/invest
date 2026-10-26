@@ -28,7 +28,8 @@ The playbook will,
 
 Run the playbook from a control node, a system where `ansible` is installed.
 Windows control nodes should use a WSL environment.  
-Specify a user that has ssh access from the control node to the VM.
+Specify a VM user that has ssh access from the control node to the VM.
+After it connects, the playbook will switch to the "rec" user.
 ```
 ansible-playbook -u dfisher5 -i inventory.ini playbook.yml
 ```
