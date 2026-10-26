@@ -80,6 +80,8 @@ General
 * When plotting rasters in reports, avoid building unnecessary overviews
   by determining the target plot width and building a single overview for
   that width. (`#2576 <https://github.com/natcap/invest/issues/2576>`_)
+* No longer testing and building with Python 3.10, which reached EOL.
+  (`#2782 <https://github.com/natcap/invest/issues/2782>`_)
 
 Workbench
 =========
