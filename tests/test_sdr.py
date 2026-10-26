@@ -186,7 +186,7 @@ class SDRTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], "watershed_results_sdr.shp")))
         self.assertTrue(watershed_results_srs.IsSame(target_srs))
 
-        # slightly different values using erosivity (30m resolution)
+        # different values using erosivity (30m resolution)
         # as target_pixelsize_id and different target projection
         # than with default DEM (which has 50m pixels and EPSG 26910
         expected_watershed_totals = {

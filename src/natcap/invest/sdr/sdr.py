@@ -31,8 +31,7 @@ LOGGER = logging.getLogger(__name__)
 _model_description = gettext(
     """
     The InVEST Sediment Delivery Ratio (SDR) model quantifies and maps overland 
-    sediment generation and delivery to the stream. It works at the spatial 
-    resolution of the input digital elevation model (DEM). For each pixel, the 
+    sediment generation and delivery to the stream. For each pixel, the 
     model computes the amount of annual soil loss from that pixel, then 
     computes the sediment delivery ratio (SDR), which is the proportion of 
     soil loss actually reaching the stream. Sediment retention services are 
@@ -175,8 +174,11 @@ MODEL_SPEC = spec.ModelSpec(
         spec.FLOW_DIR_ALGORITHM,
         spec.TARGET_PROJECTION.model_copy(update=dict(
             about=spec.TARGET_PROJECTION.about + gettext(
-                "We do not recommend deviating from the projection of the "
-                "DEM, as this may cause unexpected results."),
+                " If your DEM is already projected (with linear units of "
+                "meters), we recommend using it as the target projection "
+                "source to avoid warping the DEM further. However, if the "
+                "DEM does not meet this model's projection requirements, "
+                "choose a different target projection source."),
             projection_units=u.meter
         )),
         spec.TARGET_PIXELSIZE.model_copy(update=dict(
@@ -184,8 +186,9 @@ MODEL_SPEC = spec.ModelSpec(
                 "The pixel will be a square with a side length equal to the "
                 "smaller of this raster's pixel width and height. This raster "
                 "will also be used to set the alignment during resampling. We "
-                "do not recommend deviating from the pixel size of the DEM, "
-                "as this may cause unexpected results. "
+                "recommend using the DEM as the target pixel size source to "
+                "avoid warping this raster, which may cause unexpected "
+                "results."
             )
         ))
     ],
@@ -499,7 +502,8 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/aligned_drainage.tif",
             about=gettext(
                 "Copy of the input drainage map, clipped to the extent of the"
-                " other raster inputs and aligned to the DEM."
+                " other raster inputs and aligned to the target pixel size"
+                " source."
             ),
             created_if="drainage_path",
             data_type=int,
@@ -509,8 +513,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="aligned_erodibility",
             path="intermediate_outputs/aligned_erodibility.tif",
             about=gettext(
-                "Copy of the input erodibility map, clipped to the extent of the"
-                " other raster inputs and aligned to the DEM."
+                "Copy of the input erodibility map, clipped to the extent of"
+                " the other raster inputs and aligned to the target pixel size"
+                " source."
             ),
             data_type=float,
             units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter)
@@ -520,7 +525,8 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/aligned_erosivity.tif",
             about=gettext(
                 "Copy of the input erosivity map, clipped to the extent of the"
-                " other raster inputs and aligned to the DEM."
+                " other raster inputs and aligned to the target pixel size"
+                " source."
             ),
             data_type=float,
             units=u.megajoule * u.millimeter / (u.hectare * u.hour * u.year)
@@ -529,8 +535,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="aligned_lulc",
             path="intermediate_outputs/aligned_lulc.tif",
             about=gettext(
-                "Copy of the input Land Use Land Cover map, clipped to the extent"
-                " of the other raster inputs and aligned to the DEM."
+                "Copy of the input Land Use Land Cover map, clipped to the"
+                " extent of the other raster inputs and aligned to the target"
+                " pixel size source."
             ),
             data_type=int,
             units=u.none
@@ -539,11 +546,11 @@ MODEL_SPEC = spec.ModelSpec(
             id="mask",
             path="intermediate_outputs/mask.tif",
             about=gettext(
-                "A raster aligned to the DEM and clipped to the extent of the"
-                " other raster inputs. Pixel values indicate where a nodata value"
-                " exists in the stack of aligned rasters (pixel value of 0), or"
-                " if all values in the stack of rasters at this pixel location"
-                " are valid."
+                "A raster aligned to the target pixel size source and clipped"
+                " to the extent of the other raster inputs. Pixel values"
+                " indicate where a nodata value exists in the stack of aligned"
+                " rasters (pixel value of 0), or if all values in the stack of"
+                " rasters at this pixel location are valid."
             ),
             data_type=int,
             units=u.none
@@ -707,12 +714,13 @@ def execute(args):
             args=(
                 args['watersheds_path'], target_projection_wkt,
                 f_reg['reprojected_watersheds']),
+            kwargs={'driver_name': 'GPKG'},
             target_path_list=[f_reg['reprojected_watersheds']],
             task_name='reproject watersheds')
-        watersheds = f_reg['reprojected_watersheds']
+        watersheds_path = f_reg['reprojected_watersheds']
         align_dependent_tasks = [reproject_watersheds]
     else:
-        watersheds = args['watersheds_path']
+        watersheds_path = args['watersheds_path']
         align_dependent_tasks = []
 
     align_task = task_graph.add_task(
@@ -722,10 +730,10 @@ def execute(args):
             target_pixel_size, 'intersection'),
         kwargs={
             'target_projection_wkt': target_projection_wkt,
-            'base_vector_path_list': (watersheds,),
+            'base_vector_path_list': (watersheds_path,),
             'raster_align_index': base_list.index(target_pixelsize_path),
             'vector_mask_options': {
-                'mask_vector_path': watersheds,
+                'mask_vector_path': watersheds_path,
             },
         },
         target_path_list=aligned_list,
@@ -1066,7 +1074,7 @@ def execute(args):
     _ = task_graph.add_task(
         func=_generate_report,
         args=(
-            watersheds, f_reg['usle'],
+            watersheds_path, f_reg['usle'],
             f_reg['sed_export'], f_reg['sed_deposition'],
             f_reg['avoided_export'], f_reg['avoided_erosion'],
             f_reg['watershed_results_sdr']),
