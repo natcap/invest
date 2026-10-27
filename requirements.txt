@@ -11,7 +11,7 @@
 # on pip.
 
 gdal>=3.4.2,<=3.10.3
-ligbdal-core<=3.10.3
+libgdal-core<=3.10.3
 libcurl<=8.18.0
 pyro5
 pandas>=1.2.1
