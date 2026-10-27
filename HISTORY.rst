@@ -78,6 +78,14 @@ General
   Serialization should now be done using the pydantic ``model_dump_json``
   method.
 
+Visitation: Recreation and Tourism
+==================================
+* This model will no longer be functional in InVEST versions prior to 3.19.0.
+  The server infrastructure supporting those earlier versions will go offline.
+  Visitation results produced by the server supporting versions 3.15.0 - 3.18.0
+  are identical to results produced by version 3.19.0 and beyond.
+  We recommend updating to the latest version of InVEST.
+
 
 3.20.2 (2026-09-02)
 -------------------
