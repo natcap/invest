@@ -53,7 +53,7 @@ describe('Run status Alert renders with status from a recent run', () => {
     pyname: 'natcap.invest.foo',
     model_title: 'Foo Model',
     userguide: 'foo.html',
-    input_field_order: [['workspace']],
+    input_field_order: [{ group_label: '', input_ids: ['workspace']}],
     args: {
       workspace: {
         name: 'Workspace',
@@ -213,7 +213,7 @@ describe('Sidebar Buttons', () => {
     pyname: 'natcap.invest.foo',
     model_title: 'Foo Model',
     userguide: 'foo.html',
-    input_field_order: [['workspace', 'port']],
+    input_field_order: [{ group_label: '', input_ids: ['workspace', 'port']}],
     args: {
       workspace: {
         name: 'Workspace',
@@ -633,7 +633,7 @@ describe('InVEST Run Button', () => {
     pyname: 'natcap.invest.bar',
     model_title: 'Bar Model',
     userguide: 'bar.html',
-    input_field_order: [['a', 'b', 'c']],
+    input_field_order: [{ group_label: '', input_ids: ['a', 'b', 'c']}],
     args: {
       a: {
         name: 'abar',

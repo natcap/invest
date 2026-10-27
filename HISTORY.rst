@@ -63,9 +63,28 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+General
+=======
+* Added support for labeled input groups. ``spec.InputGroup`` was added to
+  represent a group of input fields that may have a label.
+  ``spec.ModelSpec.input_field_order`` can now contain ``spec.InputGroup``s
+  as well as lists. The ``spec.InputGroup.label`` will be displayed on that
+  section of the model input form in the workbench.
+  (`#1602 <https://github.com/natcap/invest/issues/1602>`_)
+* The ``to_json`` method of ``spec.ModelSpec`` has been deprecated.
+  Serialization should now be done using the pydantic ``model_dump_json``
+  method.
+* No longer testing and building with Python 3.10, which reached EOL.
+  (`#2782 <https://github.com/natcap/invest/issues/2782>`_)
+
+Workbench
+=========
+* The InVEST workbench is now built for both Intel and Apple Silicon
+  architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+
 
 General
 =======
