@@ -131,32 +131,28 @@ class ArgsForm extends React.Component {
   /* Some local state to support handling of calls to updateSearchExtent. */
   currentBoundingBox = [];
   pendingAoiPath = '';
-  aoiBboxCallStack = [];
+  currentBboxRequest = null;
 
   /**
    * @function updateSearchExtentState
-   * If the provided timestamp is at the top of the call stack,
-   * update search extent-related state and clear call stack.
+   * If the provided bbox request is the currentBboxRequest,
+   * OR if the bbox is empty,
+   * update search extent-related state and reset currentBboxRequest.
    * Otherwise, do nothing.
    *
-   * @param {number} timestamp
    * @param {array[number]} bbox
+   * @param {Promise | null} bboxRequest, defaults to null
    *
    * @returns {void}
    */
-  updateSearchExtentState = (timestamp, bbox) => {
-    const stackSize = this.aoiBboxCallStack.length;
-    if (stackSize && this.aoiBboxCallStack[stackSize - 1] === timestamp) {
-      console.log(`Updating state and clearing call stack…`);
-      this.aoiBboxCallStack = [];
+  updateSearchExtentState = (bbox, bboxRequest = null) => {
+    if (bboxRequest === this.currentBboxRequest || !bbox.length) {
+      this.currentBboxRequest = null;
       this.currentBoundingBox = bbox;
       this.setState({
         searchExtent: this.currentBoundingBox,
         searchExtentUpdateComplete: true,
       });
-    // @TODO: Remove else block when done testing.
-    } else {
-      console.log('Ignoring outdated call.');
     }
   };
 
@@ -173,6 +169,13 @@ class ArgsForm extends React.Component {
     const aoiIsValid = argsValidation[aoiInputId]?.valid || false;
     const aoiPath = argsValues[aoiInputId]?.value || '';
 
+    // Whenever AOI validation status is updated, updateSearchExtent is called
+    // from each search modal. Since each search-enabled input has its own
+    // search modal, this means there are multiple near-simultaneous calls.
+    // These initial checks avoid processing those duplicate calls
+    // and also skip calls that come in while validation is in progress
+    // (since any bbox updates now will be outdated once validation updates).
+
     // If awaiting validation
     // OR if awaiting a bounding box calculation for this aoiPath
     // OR if AOI is invalid and bounding box is already [],
@@ -182,7 +185,6 @@ class ArgsForm extends React.Component {
       || aoiPath === this.pendingAoiPath
       || (!aoiIsValid && !this.currentBoundingBox.length)
     ) {
-      console.log('Bbox is unchanged, or bbox calculation for this aoiPath is in progress. Goodbye.');
       return;
     }
 
@@ -191,21 +193,16 @@ class ArgsForm extends React.Component {
       searchExtentUpdateComplete: false,
     });
 
-    // Store timestamp in call stack.
-    // State will be updated only if this is the latest call.
-    const timestamp = Date.now();
-    this.aoiBboxCallStack.push(timestamp);
-    console.log(this.aoiBboxCallStack);
-
     if (!aoiIsValid && this.currentBoundingBox.length) {
-      this.updateSearchExtentState(timestamp, []);
+      this.updateSearchExtentState([]);
     } else if (aoiPath !== this.pendingAoiPath) {
       this.pendingAoiPath = aoiPath;
-      console.log(`Fetching bounding box for ${aoiPath}…`);
-      getVectorBoundingBox(
+      const bboxRequest = getVectorBoundingBox(
         { vector_path: aoiPath }
-      ).then(({ vector_bbox }) => {
-        this.updateSearchExtentState(timestamp, vector_bbox);
+      );
+      this.currentBboxRequest = bboxRequest;
+      bboxRequest.then(({ vector_bbox }) => {
+        this.updateSearchExtentState(vector_bbox, bboxRequest);
         this.pendingAoiPath = '';
       });
       // Note: state is updated only when handling the response to the latest

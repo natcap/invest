@@ -94,7 +94,6 @@ class SetupTab extends React.Component {
     this.validationTimer = null;
     this.enabledTimer = null;
     this.dropdownTimer = null;
-    this.validationCallStack = [];
 
     this.state = {
       argsValues: null,
@@ -481,11 +480,13 @@ class SetupTab extends React.Component {
     this.validationTimer = setTimeout(this.investValidate, 200);
   }
 
+  currentValidationRequest = null;
+
   /** Validate an arguments dictionary using the InVEST model's validate function.
    *
    * @returns {void}
    */
-  async investValidate() {
+  investValidate() {
     if (this.props.aoiInputId) {
       // If aoiInputId is defined, we need finer control over validation state
       // to allow the search modal to determine when searching is allowed.
@@ -502,27 +503,39 @@ class SetupTab extends React.Component {
         }
       });
     }
-    const { argsSpec, modelID } = this.props;
-    const { argsValues, argsValidation, argsValid, argsEnabled } = this.state;
-    const keyset = new Set(Object.keys(argsSpec));
+    const { modelID } = this.props;
+    const { argsValues } = this.state;
     const payload = {
       model_id: modelID,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
-    // On fetch, store timestamp in validation call stack.
-    const timestamp = Date.now();
-    this.validationCallStack.push(timestamp);
+    const validationRequest = fetchValidation(payload);
+    this.currentValidationRequest = validationRequest;
+    validationRequest.then(results => this.updateValidationState(results, validationRequest));
+  }
 
-    const results = await fetchValidation(payload);
+  /**
+   * If the provided validation request is the currentValidationRequest,
+   * update state and reset currentValidationRequest.
+   * Otherwise, do nothing.
+   *
+   * @param {array[array[array[string]], string]} results
+   * @param {Promise} validationRequest
+   */
+  updateValidationState(results, validationRequest) {
+    // If validation requires a network call (i.e., if an arg value is a
+    // remote URL), we don't know how long it will take to receive a response,
+    // and if a new validation request comes in while awaiting that response,
+    // the second request could resolve before the first one. To avoid
+    // unnecessary state updates in such cases, we update state only when we
+    // receive a response to the current (i.e., most recent) request.
+    // If we later receive responses to earlier requests, we ignore them.
+    if (validationRequest === this.currentValidationRequest) {
+      this.currentValidationRequest = null;
 
-    // On response, check top of call stack for corresponding timestamp.
-    // If timestamp is at top of stack (meaning it's the most recent call),
-    // update state and empty stack.
-    // Otherwise, do nothing.
-    const stackSize = this.validationCallStack.length;
-    if (stackSize && this.validationCallStack[stackSize - 1] === timestamp) {
-      // console.log('Received response to latest validation call. Clearing call stack…');
-      this.validationCallStack = [];
+      const { argsSpec } = this.props;
+      const { argsValues, argsValidation, argsValid, argsEnabled } = this.state;
+      const keyset = new Set(Object.keys(argsSpec));
 
       // Invalidate a target spatial dropdown when its selected input is disabled
       const validateSpatialDropdownSelections = () => {
@@ -594,24 +607,27 @@ class SetupTab extends React.Component {
         // The model is valid only if no target dropdown points to
         // an input that is currently disabled
         const newArgsValid = !invalidSpatialDropdown;
+        const searchEnabled = this.props.aoiInputId;
 
         // It's possible all args were already valid, in which case
         // no validation state has changed and this setState call can
         // be avoided entirely.
-        if (argsValid !== newArgsValid && this._isMounted) {
+        // Update state in the following cases:
+        // 1. Not all args were valid, and now they are.
+        // 2. An invalid spatial dropdown was found.
+        // 3. Data Hub search is enabled.
+        if (
+          (
+            argsValid !== newArgsValid
+            || invalidSpatialDropdown
+            || searchEnabled
+          )
+          && this._isMounted
+        ) {
           this.setState({
             argsValidationComplete: true,
             argsValidation: argsValidation,
             argsValid: newArgsValid,
-          });
-        } else if ((invalidSpatialDropdown || this.props.aoiInputId) && this._isMounted) {
-          // If invalidSpatialDropdown, overall validity may already be false,
-          // but the dropdown's validation message still needs to be committed.
-          // If aoiInputId is defined, force a state update to allow the search
-          // modal to determine whether searching is now allowed.
-          this.setState({
-            argsValidationComplete: true,
-            argsValidation,
           });
         }
       }

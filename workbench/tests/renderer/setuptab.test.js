@@ -621,16 +621,18 @@ describe('Misc form validation stuff', () => {
     // Mocking to return the payload so we can assert we always send
     // correct payload to this endpoint.
     fetchValidation.mockImplementation(
-      (payload) => payload
+      (payload) => new Promise((resolve, _reject) => resolve(payload))
     );
     fetchArgsEnabled.mockResolvedValue({ a: true, b: true, c: true });
 
     renderSetupFromSpec(spec, inputFieldOrder);
     await waitFor(() => {
       const expectedKeys = ['model_id', 'args'];
-      const payload = fetchValidation.mock.results[0].value;
-      expectedKeys.forEach((key) => {
-        expect(Object.keys(payload)).toContain(key);
+      const validationResponse = fetchValidation.mock.results[0].value;
+      validationResponse.then(payload => {
+        expectedKeys.forEach((key) => {
+          expect(Object.keys(payload)).toContain(key);
+        });
       });
     });
   });
@@ -1876,8 +1878,6 @@ describe('Effects of async validation & bounding box calculation on search modal
         queryByText,
       } = renderSetupFromSpec(spec, inputFieldOrder);
 
-      // console.log(`Test start: ${jest.now()}`);
-
       // 0. SetupTab has loaded but there have been no user interactions.
       expect(fetchValidation).toHaveBeenCalledTimes(1);
 
@@ -1892,7 +1892,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async ()=> {
         await jest.advanceTimersToNextTimerAsync(); // time = 200
       });
-      // console.log(`fetchValidation A: ${jest.now()}`);
       expect(fetchValidation).toHaveBeenCalledTimes(2);
 
       // 3. Open search modal and check for loading spinner.
@@ -1914,7 +1913,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async() => {
         await jest.advanceTimersToNextTimerAsync(); // time = 1200
       });
-      // console.log(`getVectorBoundingBox A: ${jest.now()}`);
       expect(getVectorBoundingBox).toHaveBeenCalledTimes(1);
       expect(getVectorBoundingBox).toHaveBeenCalledWith({vector_path: 'path/to/aoi_A'});
 
@@ -1926,7 +1924,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async() => {
         await jest.advanceTimersByTimeAsync(300); // time = 1500
       });
-      // console.log(`enter AOI B: ${jest.now()}`);
       fireEvent.change(aoiInputField, {target: {value: 'path/to/aoi_B'}});
 
       // 6. Advance to next timer and check that fetchValidation
@@ -1937,7 +1934,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async ()=> {
         await jest.advanceTimersToNextTimerAsync(); // time = 1700
       });
-      // console.log(`fetchValidation B: ${jest.now()}`);
       expect(fetchValidation).toHaveBeenCalledTimes(3);
 
       spinner = await findByText('Please wait');
@@ -1961,7 +1957,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async ()=> {
         await jest.advanceTimersToNextTimerAsync(); // time = 2700
       });
-      // console.log(`validation reponse B: ${jest.now()}`);
       expect(getVectorBoundingBox).toHaveBeenCalledTimes(2);
       expect(getVectorBoundingBox).toHaveBeenCalledWith({vector_path: 'path/to/aoi_B'});
 
@@ -1973,7 +1968,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async() => {
         await jest.advanceTimersByTimeAsync(300); // time = 3000
       });
-      // console.log(`re-enter AOI A: ${jest.now()}`);
       fireEvent.change(aoiInputField, {target: {value: 'path/to/aoi_A'}});
 
       // 10. Advance to next timer and check that fetchValidation
@@ -1984,7 +1978,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async ()=> {
         await jest.advanceTimersToNextTimerAsync(); // time = 3200
       });
-      // console.log(`fetchValidation A2: ${jest.now()}`);
       expect(fetchValidation).toHaveBeenCalledTimes(4);
 
       // 11. Advance to next timer and check that loading spinner is still there.
@@ -1993,7 +1986,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async ()=> {
         await jest.advanceTimersToNextTimerAsync(); // time = 3700
       });
-      // console.log(`validation response B: ${jest.now()}`);
       spinner = await findByText('Please wait');
       expect(spinner).toBeInTheDocument();
 
@@ -2005,7 +1997,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async ()=> {
         await jest.advanceTimersToNextTimerAsync(); // time = 4200
       });
-      // console.log(`validation response B: ${jest.now()}`);
       expect(getVectorBoundingBox).toHaveBeenCalledTimes(3);
       expect(getVectorBoundingBox.mock.calls[2][0]).toEqual({vector_path: 'path/to/aoi_A'});
 
@@ -2018,7 +2009,6 @@ describe('Effects of async validation & bounding box calculation on search modal
       await act(async () => {
         await jest.advanceTimersToNextTimerAsync(); // time = 5200
       });
-      // console.log(`all calls complete: ${jest.now()}`);
       const queryExtentA = await findByText(mockBboxResponseA.vector_bbox.join(', '));
       expect(queryExtentA).toBeInTheDocument();
       const queryExtentB = await queryByText(mockBboxResponseB.vector_bbox.join(', '));
