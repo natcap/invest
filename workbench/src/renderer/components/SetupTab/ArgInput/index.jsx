@@ -275,9 +275,9 @@ export default function ArgInput({
   };
 
   const enableSearch = (
-    isCoreModel
-    && aoiInputName
+    aoiInputName
     && aoiInputName !== argSpec.name
+    && enabled
     && ['csv', 'raster'].includes(argSpec.type)
     && argSpec.keywords
     && argSpec.keywords.length > 0
