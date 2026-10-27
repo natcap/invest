@@ -12,6 +12,7 @@ from osgeo import ogr
 
 from natcap.invest import gettext
 from natcap.invest import spec
+from natcap.invest import utils
 from natcap.invest import validation
 from natcap.invest.sdr import sdr
 from natcap.invest.unit_registry import u
@@ -43,6 +44,8 @@ MODEL_SPEC = spec.ModelSpec(
     about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
+    default_projection_id="dem_path",
+    default_pixelsize_id="dem_path",
     aliases=(),
     module_name=__name__,
     input_field_order=[
@@ -52,13 +55,14 @@ MODEL_SPEC = spec.ModelSpec(
         ["calc_p"],
         ["calc_n", "subsurface_critical_length_n", "subsurface_eff_n"],
         ["flow_dir_algorithm", "threshold_flow_accumulation",
-         "k_param", "runoff_proxy_av"]
+         "k_param", "runoff_proxy_av"],
+        ["target_projection_id", "target_pixelsize_id"]
     ],
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.PROJECTED_DEM,
+        spec.DEM,
         spec.SingleBandRasterInput(
             id="lulc_path",
             name=gettext("land use/land cover"),
@@ -69,7 +73,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=int,
             units=u.none,
-            projected=True
         ),
         spec.SingleBandRasterInput(
             id="runoff_proxy_path",
@@ -92,7 +95,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[],
-            projected=True
         ),
         spec.CSVInput(
             id="biophysical_table_path",
@@ -270,7 +272,23 @@ MODEL_SPEC = spec.ModelSpec(
             allowed="calc_n",
             units=u.none
         ),
-        spec.FLOW_DIR_ALGORITHM
+        spec.FLOW_DIR_ALGORITHM,
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            about=spec.TARGET_PROJECTION.about + gettext(
+                " If your DEM is already projected (with linear units of "
+                "meters), we recommend using it as the target projection "
+                "source to avoid warping the DEM further. However, if the "
+                "DEM does not meet this model's projection requirements, "
+                "choose a different target projection source."),
+            projection_units=u.meter
+        )),
+        spec.TARGET_PIXELSIZE.model_copy(update=dict(
+            about=spec.TARGET_PIXELSIZE.about + gettext(
+                "This raster will also be used to set the alignment during "
+                "resampling. We recommend using the DEM as the target pixel "
+                "size source to avoid warping this raster, which may cause "
+                "unexpected results.")
+        ))
     ],
     outputs=[
         spec.VectorOutput(
@@ -752,6 +770,12 @@ def execute(args):
             efficiency that can be reached through subsurface flow, a floating
             point value between 0 and 1. This field characterizes the retention
             due to biochemical degradation in soils.  Required if ``calc_n``.
+        args['target_projection_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            projection.
+        args['target_pixelsize_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            pixel size.
         args['n_workers'] (int): if present, indicates how many worker
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
@@ -762,6 +786,9 @@ def execute(args):
 
     """
     args, f_reg, task_graph = MODEL_SPEC.setup(args)
+    args = MODEL_SPEC.preprocess_spatial_reference_args(args)
+    target_projection_path = args[args['target_projection_id']]
+    target_pixelsize_path = args[args['target_pixelsize_id']]
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
@@ -781,13 +808,19 @@ def execute(args):
     # these are used for aggregation in the last step
     field_pickle_map = {}
 
-    create_vector_task = task_graph.add_task(
-        func=create_vector_copy,
-        args=(args['watersheds_path'], f_reg['watershed_results_ndr']),
+    target_projection_wkt = utils.get_raster_or_vector_projection(
+        target_projection_path)
+    create_and_reproject_vector_task = task_graph.add_task(
+        func=pygeoprocessing.reproject_vector,
+        args=(
+            args['watersheds_path'], target_projection_wkt,
+            f_reg['watershed_results_ndr']),
+        kwargs={'driver_name': 'GPKG'},
         target_path_list=[f_reg['watershed_results_ndr']],
-        task_name='create target vector')
+        task_name='create target vector by reprojecting watersheds')
 
-    dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
+    target_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_projection_wkt)
 
     base_raster_list = [
         args['dem_path'], args['lulc_path'], args['runoff_proxy_path']]
@@ -798,13 +831,15 @@ def execute(args):
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
             base_raster_list, aligned_raster_list,
-            ['near']*len(base_raster_list), dem_info['pixel_size'],
+            ['bilinear', 'near', 'bilinear'], target_pixel_size,
             'intersection'),
         kwargs={
-            'base_vector_path_list': [args['watersheds_path']],
-            'raster_align_index': 0  # align to the grid of the DEM
+            'target_projection_wkt': target_projection_wkt,
+            'base_vector_path_list': [f_reg['watershed_results_ndr']],
+            'raster_align_index': base_raster_list.index(target_pixelsize_path)
         },
         target_path_list=aligned_raster_list,
+        dependent_task_list=[create_and_reproject_vector_task],
         task_name='align rasters')
 
     # Since we mask multiple rasters using the same vector, we can just do the
@@ -814,7 +849,7 @@ def execute(args):
         func=_create_mask_raster,
         kwargs={
             'source_raster_path': f_reg['aligned_dem'],
-            'source_vector_path': args['watersheds_path'],
+            'source_vector_path': f_reg['watershed_results_ndr'],
             'target_raster_path': f_reg['mask']
         },
         target_path_list=[f_reg['mask']],
@@ -1221,7 +1256,7 @@ def execute(args):
                     f_reg['subsurface_export_n_pickle']),
                 target_path_list=[f_reg['subsurface_export_n_pickle']],
                 dependent_task_list=[
-                    subsurface_export_task, create_vector_task],
+                    subsurface_export_task],
                 task_name='aggregate n subsurface export')
 
             _ = task_graph.add_task(
@@ -1232,7 +1267,7 @@ def execute(args):
                     f_reg['total_export_n_pickle']),
                 target_path_list=[
                     f_reg[f'total_export_{nutrient}_pickle']],
-                dependent_task_list=[total_export_task, create_vector_task],
+                dependent_task_list=[total_export_task],
                 task_name='aggregate n total export')
 
             _ = task_graph.add_task(
@@ -1243,7 +1278,7 @@ def execute(args):
                     f_reg[f'subsurface_load_{nutrient}_pickle']),
                 target_path_list=[
                     f_reg[f'subsurface_load_{nutrient}_pickle']],
-                dependent_task_list=[subsurface_load_task, create_vector_task],
+                dependent_task_list=[subsurface_load_task],
                 task_name=f'aggregate {nutrient} subsurface load')
 
             field_pickle_map['n_subsurface_export'] = f_reg[
@@ -1259,7 +1294,7 @@ def execute(args):
                 (f_reg[f'{nutrient}_surface_export'], 1), f_reg['watershed_results_ndr'],
                 f_reg[f'surface_export_{nutrient}_pickle']),
             target_path_list=[f_reg[f'surface_export_{nutrient}_pickle']],
-            dependent_task_list=[surface_export_task, create_vector_task],
+            dependent_task_list=[surface_export_task],
             task_name=f'aggregate {nutrient} export')
 
         _ = task_graph.add_task(
@@ -1268,7 +1303,7 @@ def execute(args):
                 (f_reg[f'surface_load_{nutrient}'], 1), f_reg['watershed_results_ndr'],
                 f_reg[f'surface_load_{nutrient}_pickle']),
             target_path_list=[f_reg[f'surface_load_{nutrient}_pickle']],
-            dependent_task_list=[surface_load_task, create_vector_task],
+            dependent_task_list=[surface_load_task],
             task_name=f'aggregate {nutrient} surface load')
 
     task_graph.close()
@@ -1723,16 +1758,3 @@ def _aggregate_and_pickle_total(
 
     with open(target_pickle_path, 'wb') as target_pickle_file:
         pickle.dump(result, target_pickle_file)
-
-
-def create_vector_copy(base_vector_path, target_vector_path):
-    """Create a copy of base vector."""
-    if os.path.exists(target_vector_path):
-        os.remove(target_vector_path)
-
-    base_wkt = pygeoprocessing.get_vector_info(
-        base_vector_path)['projection_wkt']
-    # use reproject_vector to create a copy in geopackage format
-    # keeping the original projection
-    pygeoprocessing.reproject_vector(
-        base_vector_path, base_wkt, target_vector_path, driver_name='GPKG')
