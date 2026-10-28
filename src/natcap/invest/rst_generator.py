@@ -5,6 +5,7 @@ from docutils import utils
 from docutils.parsers import rst
 from natcap.invest import set_locale
 from natcap.invest import spec
+from . import gettext
 
 
 def parse_rst(text):
@@ -88,6 +89,19 @@ def describe_input(module_name, keys):
     # anchor names cannot contain underscores. sphinx will replace them
     # automatically, but lets explicitly replace them here
     anchor_name = '-'.join(keys).replace('_', '-')
+
+    additional_attributes = []
+    # Only top-level model inputs can be designated as these special inputs
+    if len(keys) == 1:
+        model_spec = importlib.import_module(module_name).MODEL_SPEC
+        if _input.id == model_spec.default_projection_id:
+            additional_attributes.append(f"**{gettext('default projection input')}**")
+        if _input.id == model_spec.default_pixelsize_id:
+            additional_attributes.append(f"**{gettext('default pixel size input')}**")
+        if additional_attributes:
+            rst = '\n\n'.join(_input.describe_rst(additional_attributes=additional_attributes))
+            return f'.. _{anchor_name}:\n\n{rst}'
+
     rst = '\n\n'.join(_input.describe_rst())
     return f'.. _{anchor_name}:\n\n{rst}'
 

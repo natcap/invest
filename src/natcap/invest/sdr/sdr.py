@@ -15,6 +15,7 @@ import pygeoprocessing
 import pygeoprocessing.routing
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 from shapely.errors import GEOSException
 
 from natcap.invest import gettext
@@ -31,8 +32,7 @@ LOGGER = logging.getLogger(__name__)
 _model_description = gettext(
     """
     The InVEST Sediment Delivery Ratio (SDR) model quantifies and maps overland 
-    sediment generation and delivery to the stream. It works at the spatial 
-    resolution of the input digital elevation model (DEM). For each pixel, the 
+    sediment generation and delivery to the stream. For each pixel, the 
     model computes the amount of annual soil loss from that pixel, then 
     computes the sediment delivery ratio (SDR), which is the proportion of 
     soil loss actually reaching the stream. Sediment retention services are 
@@ -46,7 +46,9 @@ MODEL_SPEC = spec.ModelSpec(
     reporter="natcap.invest.sdr.reporter",
     about=_model_description,
     validate_spatial_overlap=True,
-    different_projections_ok=False,
+    different_projections_ok=True,
+    default_pixelsize_id="dem_path",
+    default_projection_id="dem_path",
     aliases=(),
     module_name=__name__,
     input_field_order=[
@@ -55,14 +57,15 @@ MODEL_SPEC = spec.ModelSpec(
         ["lulc_path", "biophysical_table_path"],
         ["watersheds_path", "drainage_path"],
         ["flow_dir_algorithm", "threshold_flow_accumulation", "k_param",
-         "sdr_max", "ic_0_param", "l_max"]
+         "sdr_max", "ic_0_param", "l_max"],
+        ["target_projection_id", "target_pixelsize_id"]
     ],
     aoi_input_id="watersheds_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.PROJECTED_DEM,
+        spec.DEM,
         spec.SingleBandRasterInput(
             id="erosivity_path",
             name=gettext("erosivity"),
@@ -73,7 +76,6 @@ MODEL_SPEC = spec.ModelSpec(
             keywords=[keywords.RAINFALL_EROSIVITY],
             data_type=float,
             units=u.megajoule * u.millimeter / (u.hectare * u.hour * u.year),
-            projected=True
         ),
         spec.SingleBandRasterInput(
             id="erodibility_path",
@@ -85,12 +87,9 @@ MODEL_SPEC = spec.ModelSpec(
             keywords=[keywords.SOIL_EROSION, keywords.SOIL_ERODIBILITY],
             data_type=float,
             units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter),
-            projected=True
         ),
-        spec.LULC.model_copy(update=dict(
-            projected=True
-        )),
-        spec.PROJECTED_WATERSHED_VECTOR.model_copy(update=dict(
+        spec.LULC,
+        spec.WATERSHED_VECTOR.model_copy(update=dict(
             about=gettext(
                 "Map of the boundaries of the watershed(s) over which to aggregate"
                 " results. Each watershed should contribute to a point of interest where"
@@ -165,7 +164,26 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none,
             projected=None
         ),
-        spec.FLOW_DIR_ALGORITHM
+        spec.FLOW_DIR_ALGORITHM,
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            about=spec.TARGET_PROJECTION.about + gettext(
+                " If your DEM is already projected (with linear units of "
+                "meters), we recommend using it as the target projection "
+                "source to avoid warping the DEM further. However, if the "
+                "DEM does not meet this model's projection requirements, "
+                "choose a different target projection source."),
+            projection_units=u.meter
+        )),
+        spec.TARGET_PIXELSIZE.model_copy(update=dict(
+            about=spec.TARGET_PIXELSIZE.about + gettext(
+                "The pixel will be a square with a side length equal to the "
+                "smaller of this raster's pixel width and height. This raster "
+                "will also be used to set the alignment during resampling. We "
+                "recommend using the DEM as the target pixel size source to "
+                "avoid warping this raster, which may cause unexpected "
+                "results."
+            )
+        ))
     ],
     outputs=[
         spec.SingleBandRasterOutput(
@@ -451,6 +469,17 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.none
         ),
+        spec.VectorOutput(
+            id="reprojected_watersheds",
+            path="intermediate_outputs/reprojected_watersheds.gpkg",
+            about=gettext(
+                "Reprojected copy of the input watersheds vector if the input"
+                " watersheds vector is in a different projection than the"
+                " target projection."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
         spec.SingleBandRasterOutput(
             id="aligned_dem",
             path="intermediate_outputs/aligned_dem.tif",
@@ -466,7 +495,8 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/aligned_drainage.tif",
             about=gettext(
                 "Copy of the input drainage map, clipped to the extent of the"
-                " other raster inputs and aligned to the DEM."
+                " other raster inputs and aligned to the target pixel size"
+                " source."
             ),
             created_if="drainage_path",
             data_type=int,
@@ -476,8 +506,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="aligned_erodibility",
             path="intermediate_outputs/aligned_erodibility.tif",
             about=gettext(
-                "Copy of the input erodibility map, clipped to the extent of the"
-                " other raster inputs and aligned to the DEM."
+                "Copy of the input erodibility map, clipped to the extent of"
+                " the other raster inputs and aligned to the target pixel size"
+                " source."
             ),
             data_type=float,
             units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter)
@@ -487,7 +518,8 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/aligned_erosivity.tif",
             about=gettext(
                 "Copy of the input erosivity map, clipped to the extent of the"
-                " other raster inputs and aligned to the DEM."
+                " other raster inputs and aligned to the target pixel size"
+                " source."
             ),
             data_type=float,
             units=u.megajoule * u.millimeter / (u.hectare * u.hour * u.year)
@@ -496,8 +528,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="aligned_lulc",
             path="intermediate_outputs/aligned_lulc.tif",
             about=gettext(
-                "Copy of the input Land Use Land Cover map, clipped to the extent"
-                " of the other raster inputs and aligned to the DEM."
+                "Copy of the input Land Use Land Cover map, clipped to the"
+                " extent of the other raster inputs and aligned to the target"
+                " pixel size source."
             ),
             data_type=int,
             units=u.none
@@ -506,11 +539,11 @@ MODEL_SPEC = spec.ModelSpec(
             id="mask",
             path="intermediate_outputs/mask.tif",
             about=gettext(
-                "A raster aligned to the DEM and clipped to the extent of the"
-                " other raster inputs. Pixel values indicate where a nodata value"
-                " exists in the stack of aligned rasters (pixel value of 0), or"
-                " if all values in the stack of rasters at this pixel location"
-                " are valid."
+                "A raster aligned to the target pixel size source and clipped"
+                " to the extent of the other raster inputs. Pixel values"
+                " indicate where a nodata value exists in the stack of aligned"
+                " rasters (pixel value of 0), or if all values in the stack of"
+                " rasters at this pixel location are valid."
             ),
             data_type=int,
             units=u.none
@@ -611,6 +644,12 @@ def execute(args):
         args['l_max'] (number): the maximum allowed value of the slope length
             parameter (L) in the LS factor. If the calculated value of L
             exceeds 'l_max' it will be clamped to this value.
+        args['target_projection_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            projection.
+        args['target_pixelsize_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            pixel size.
         args['n_workers'] (int): if present, indicates how many worker
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
@@ -621,6 +660,9 @@ def execute(args):
 
     """
     args, f_reg, task_graph = MODEL_SPEC.setup(args)
+    args = MODEL_SPEC.preprocess_spatial_reference_args(args)
+    target_projection_path = args[args['target_projection_id']]
+    target_pixelsize_path = args[args['target_pixelsize_id']]
 
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
@@ -644,9 +686,35 @@ def execute(args):
         masked_list.append(f_reg['masked_drainage'])
         interpolation_list.append('near')
 
-    dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
-    min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
+    target_projection_wkt = utils.get_raster_or_vector_projection(
+        target_projection_path)
+    target_pixelsize_info = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_projection_wkt)
+    min_pixel_size = numpy.min(numpy.abs(target_pixelsize_info))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
+
+    watersheds_projection_wkt = utils.get_raster_or_vector_projection(
+        args['watersheds_path'])
+    watersheds_sr = osr.SpatialReference()
+    watersheds_sr.ImportFromWkt(watersheds_projection_wkt)
+
+    target_sr = osr.SpatialReference()
+    target_sr.ImportFromWkt(target_projection_wkt)
+
+    if not watersheds_sr.IsSame(target_sr):
+        reproject_watersheds = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(
+                args['watersheds_path'], target_projection_wkt,
+                f_reg['reprojected_watersheds']),
+            kwargs={'driver_name': 'GPKG'},
+            target_path_list=[f_reg['reprojected_watersheds']],
+            task_name='reproject watersheds')
+        watersheds_path = f_reg['reprojected_watersheds']
+        align_dependent_tasks = [reproject_watersheds]
+    else:
+        watersheds_path = args['watersheds_path']
+        align_dependent_tasks = []
 
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
@@ -654,14 +722,15 @@ def execute(args):
             base_list, aligned_list, interpolation_list,
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_projection_wkt': dem_raster_info['projection_wkt'],
-            'base_vector_path_list': (args['watersheds_path'],),
-            'raster_align_index': 0,
+            'target_projection_wkt': target_projection_wkt,
+            'base_vector_path_list': (watersheds_path,),
+            'raster_align_index': base_list.index(target_pixelsize_path),
             'vector_mask_options': {
-                'mask_vector_path': args['watersheds_path'],
+                'mask_vector_path': watersheds_path,
             },
         },
         target_path_list=aligned_list,
+        dependent_task_list=align_dependent_tasks,
         task_name='align input rasters')
 
     mutual_mask_task = task_graph.add_task(
@@ -998,7 +1067,7 @@ def execute(args):
     _ = task_graph.add_task(
         func=_generate_report,
         args=(
-            args['watersheds_path'], f_reg['usle'],
+            watersheds_path, f_reg['usle'],
             f_reg['sed_export'], f_reg['sed_deposition'],
             f_reg['avoided_export'], f_reg['avoided_erosion'],
             f_reg['watershed_results_sdr']),
