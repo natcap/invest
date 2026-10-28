@@ -694,7 +694,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, title_list=None,
             f'length of title_list does not equal length of tif_list \n'
             f'title_list: {title_list} \n'
             f'tif_list: {tif_list}')
-    resample_alg = resample_alg = RESAMPLE_ALGS[datatype]
+    resample_alg = RESAMPLE_ALGS[datatype]
     arr, resampled = _read_masked_array(tif_list[0], resample_alg, target_px_width)
     ndarray = numpy.empty((n_plots, *arr.shape))
     ndarray[0] = arr
