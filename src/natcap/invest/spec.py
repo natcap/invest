@@ -23,8 +23,11 @@ import pandas
 import pint
 import pygeoprocessing
 from pygeoprocessing.utils import GDALUseExceptions
-from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_serializer, field_validator, model_serializer, model_validator
+from pydantic import AfterValidator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import field_serializer, field_validator
+from pydantic import model_serializer, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
@@ -319,6 +322,25 @@ def set_metadata_field_descriptions(field_specs, resource):
             # fields that are in the spec but missing
             # from model results because they are conditional.
             LOGGER.debug(error)
+
+
+class InputGroup(BaseModel):
+    """Represent a group of input fields for display in the workbench."""
+
+    label: str = ''
+    """Optional label that will be displayed in the workbench above
+       this group of inputs."""
+
+    input_ids: list[str]
+    """List of model input ids that belong to this group. Each string must
+       match the id of an Input in the model."""
+
+    @model_serializer()
+    def serialize(self):
+        return {
+            'group_label': self.label,
+            'input_ids': self.input_ids
+        }
 
 
 class ImmutableBaseModel(BaseModel):
@@ -931,15 +953,20 @@ class SingleBandRasterInput(SpatialFileInput):
             if projection_warning:
                 return projection_warning
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
+
+        Args:
+            additional_attributes (list[str]): optional list of additional
+                (RST-formatted) ModelSpec attributes to include in the
+                parenthetical in the RST line (e.g.,
+                ['**default projection input**']).
 
         Returns:
             list of strings, where each string is a line of RST-formatted text.
         """
         name = self.name or self.id
         type_string = format_type_string(self)
-
         in_parentheses = [type_string]
 
         if self.units:
@@ -948,6 +975,16 @@ class SingleBandRasterInput(SpatialFileInput):
                 # pybabel can't find the message if it's in the f-string
                 translated_units = gettext("units")
                 in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        if self.projected:
+            if self.projection_units:
+                in_parentheses.append(
+                    f'{gettext("projected")} [{gettext("projection units")}: **{format_unit(self.projection_units)}**]')
+            else:
+                in_parentheses.append(gettext("projected"))
+
+        if additional_attributes:
+            in_parentheses += additional_attributes
 
         required_string = self.format_required_string()
         in_parentheses.append(f'*{required_string}*')
@@ -1106,8 +1143,14 @@ class VectorInput(SpatialFileInput):
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
+
+        Args:
+            additional_attributes (list[str]): optional list of additional
+                (RST-formatted) ModelSpec attributes to include in the
+                parenthetical in the RST line (e.g.,
+                ['**default projection input**']).
 
         Returns:
             list of strings, where each string is a line of RST-formatted text.
@@ -1116,7 +1159,20 @@ class VectorInput(SpatialFileInput):
         type_string = format_type_string(self)
         required_string = self.format_required_string()
         geom_string = self.format_geometry_types_rst()
-        rst_line = f'**{name}** ({type_string}, {geom_string}, *{required_string}*)'
+        in_parentheses = [type_string, geom_string]
+
+        if self.projected:
+            if self.projection_units:
+                in_parentheses.append(
+                    f'{gettext("projected")} [{gettext("projection units")}: **{self.projection_units}**]')
+            else:
+                in_parentheses.append(f'{gettext("projected")}')
+
+        if additional_attributes:
+            in_parentheses += additional_attributes
+
+        in_parentheses.append(f'*{required_string}*')
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
 
         # Nested args may not have an about section
         if self.about:
@@ -2499,18 +2555,26 @@ class ModelSpec(ImmutableBaseModel):
     Example: ``"https://github.com/natcap/invest-demo-plugin/blob/main/README.md"``
     """
 
-    input_field_order: list[list[str]]
-    """A list that specifies the order and grouping of model inputs.
-    Inputs will be displayed in the input form from top to bottom in the order
-    listed here. Sub-lists represent groups of inputs that will be visually
-    separated by a horizontal line. This improves UX by breaking up long lists
-    and visually grouping related inputs. If you do not wish to use groups,
-    all inputs may go in the same sub-list. It is a convention to begin with a
-    group of ``workspace_dir`` and ``results_suffix``. Each item in the
-    sub-lists must match the key of an ``Input`` in ``inputs``. The key of each
+    input_field_order: list[InputGroup | list[str]]
+    """A list that specifies the order and grouping of model inputs that will be
+    displayed in the workbench input form. This list may contain lists and/or
+    spec.InputGroups. Each sub-list or InputGroup represents a group of inputs
+    that will be visually separated by a horizontal line. This improves UX by
+    breaking up long lists and visually grouping related inputs. You can give a
+    group a label, which will be displayed in the workbench, by using an
+    InputGroup and setting the ``label`` property. Note that groups and their
+    labels only affect workbench rendering and have no effect on the python side.
+
+    The InputGroup was added to allow labeling groups. Using plain lists is
+    still supported for backwards compatibility. If you do not wish to use
+    groups, all inputs may go in the same sub-list.
+
+    It is a convention to begin with a group of ``workspace_dir`` and
+    ``results_suffix``. Each item in each sub-list or InputGroup.input_ids
+    list must match the key of an ``Input`` in ``inputs``. The key of each
     ``Input`` must be included exactly once, unless it is hidden.
 
-    Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
+    Example: ``[['workspace_dir', 'results_suffix'], InputGroup(label='Group A', input_ids=['bar', baz'])``
     """
 
     aoi_input_id: str = ''
@@ -2567,6 +2631,16 @@ class ModelSpec(ImmutableBaseModel):
     about: str = ''
     """A brief description of the model."""
 
+    @field_validator('input_field_order', mode='after')
+    @classmethod
+    def standardize_input_groups(
+            cls, input_field_order: list[InputGroup | list[str]]
+    ) -> list[InputGroup]:
+        """Convert any lists in the input_field_order to InputGroups."""
+        return [
+            InputGroup(label='', input_ids=group) if isinstance(
+                group, list) else group for group in input_field_order]
+
     @field_validator('reporter', mode='after')
     @classmethod
     def check_reporter(cls, value: str) -> str:
@@ -2587,6 +2661,8 @@ class ModelSpec(ImmutableBaseModel):
         or are marked as hidden."""
         found_keys = set()
         for group in self.input_field_order:
+            if isinstance(group, InputGroup):
+                group = group.input_ids
             for key in group:
                 if key in found_keys:
                     raise ValueError(
@@ -2677,20 +2753,17 @@ class ModelSpec(ImmutableBaseModel):
         """Get an Output of this model by its key."""
         return {_output.id: _output for _output in self.outputs}[key]
 
-    def to_json(self):
-        """Serialize an MODEL_SPEC dict to a JSON string.
-
-        Args:
-            spec (dict): An invest model's MODEL_SPEC.
+    @model_serializer()
+    def serialize(self):
+        """Serialize a MODEL_SPEC to a JSON-compatible dict.
 
         Raises:
             TypeError if any object type within the spec is not handled by
             json.dumps or by the fallback serializer.
 
         Returns:
-            JSON String
+            dict
         """
-
         def fallback_serializer(obj):
             """Serialize objects that are otherwise not JSON serializeable."""
             if isinstance(obj, pint.Unit):
@@ -2719,7 +2792,27 @@ class ModelSpec(ImmutableBaseModel):
         spec_dict.pop('inputs')
         spec_dict['args'] = {_input.id: _input for _input in self.inputs}
         spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
-        return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
+
+        # dump to json so that we can apply the fallback serializer,
+        # then convert back to a dictionary.
+        return json.loads(json.dumps(
+            spec_dict, default=fallback_serializer, ensure_ascii=False))
+
+    def to_json(self):
+        """Serialize a MODEL_SPEC to a JSON string.
+
+        Raises:
+            TypeError if any object type within the spec is not handled by
+            json.dumps or by the fallback serializer.
+
+        Returns:
+            str
+        """
+        warnings.warn(
+            ("to_json method of spec.ModelSpec is deprecated and will be "
+             "removed in a future version. Use model_dump_json instead."),
+            DeprecationWarning)
+        return self.model_dump_json()
 
     def preprocess_inputs(self, input_values):
         """Preprocess a dictionary of input values.
@@ -2755,14 +2848,23 @@ class ModelSpec(ImmutableBaseModel):
         """
         args_copy = args.copy()
         if not args.get('target_projection_id'):
-            args_copy['target_projection_id'] = self.get_default_projection_input().id
+            default_projection_input = self.get_default_projection_input()
+            if default_projection_input:
+                args_copy['target_projection_id'] = default_projection_input.id
 
         if not args.get('target_pixelsize_id'):
             default_pixelsize_input = self.get_default_pixelsize_input()
-            # NOTE: UMH does not have a default_pixelsize_id, it sets default
-            # dynamically in the dropdown function.
             if default_pixelsize_input:
                 args_copy['target_pixelsize_id'] = default_pixelsize_input.id
+            # NOTE: UMH does not have a default_pixelsize_id, it sets default
+            # dynamically in the dropdown function.
+            elif 'target_pixelsize_id' in args:
+                pixelsize_spec = self.get_input('target_pixelsize_id')
+                options = pixelsize_spec.dropdown_function(
+                    args_copy, self)
+                if options:
+                    args_copy['target_pixelsize_id'] = options[0].key
+
         return args_copy
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):

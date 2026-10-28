@@ -436,7 +436,7 @@ def main(user_args=None):
                 importlib.import_module(name=target_model))
             model_spec = model_module.MODEL_SPEC
 
-            message = model_spec.to_json()
+            message = model_spec.model_dump_json()
             sys.stdout.write(message)
             parser.exit(0)
 
