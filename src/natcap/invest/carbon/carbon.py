@@ -13,6 +13,7 @@ from natcap.invest import utils
 from natcap.invest import spec
 from natcap.invest.unit_registry import u
 from natcap.invest import gettext
+from natcap.invest import keywords
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " alternate scenario. All values in this raster must have corresponding"
                 " entries in the Carbon Pools table."
             ),
+            keywords=[keywords.LULC],
             data_type=int,
             units=None,
             projected=True,
@@ -80,6 +82,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " entries in the Carbon Pools table. This raster must align with the"
                 " Baseline LULC raster. Required if Calculate Sequestration is selected."
             ),
+            keywords=[keywords.LULC],
             required="calc_sequestration",
             allowed="calc_sequestration",
             data_type=int,
@@ -93,26 +96,31 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "A table that maps each LULC code to carbon pool data for that LULC type."
             ),
+            keywords=[keywords.CARBON],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(
                     id="c_above",
                     about=gettext("Carbon density of aboveground biomass."),
+                    keywords=[keywords.ABOVEGROUND_BIOMASS_CARBON],
                     units=u.metric_ton / u.hectare
                 ),
                 spec.NumberInput(
                     id="c_below",
                     about=gettext("Carbon density of belowground biomass."),
+                    keywords=[keywords.BELOWGROUND_BIOMASS_CARBON],
                     units=u.metric_ton / u.hectare
                 ),
                 spec.NumberInput(
                     id="c_soil",
                     about=gettext("Carbon density of soil."),
+                    keywords=[keywords.SOIL_ORGANIC_CARBON],
                     units=u.metric_ton / u.hectare
                 ),
                 spec.NumberInput(
                     id="c_dead",
                     about=gettext("Carbon density of dead matter."),
+                    keywords=[keywords.DEAD_BIOMASS_CARBON],
                     units=u.metric_ton / u.hectare
                 )
             ],

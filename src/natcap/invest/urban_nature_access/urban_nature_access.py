@@ -15,6 +15,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -87,6 +88,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " required to be uniquely identified. All outputs will be produced at the"
                 " resolution of this raster."
             ),
+            keywords=[keywords.LULC],
             data_type=int,
             units=None,
             projected=True,
@@ -110,6 +112,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " lowest (0% nature), while 1 indicates that of this LULC type is"
                         " the highest (100% nature)"
                     ),
+                    keywords=[keywords.NATURE_PROPORTION],
                     units=None
                 ),
                 spec.NumberInput(
@@ -121,6 +124,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " and defined in meters. Required when running the model with"
                         " search radii defined per urban nature class."
                     ),
+                    keywords=[keywords.TRAVEL_DISTANCE],
                     required='search_radius_mode == "radius per urban nature class"',
                     units=u.meter,
                     expression="value >= 0"
@@ -133,6 +137,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="population_raster_path",
             name=gettext("population raster"),
             about=gettext("A raster representing the number of inhabitants per pixel."),
+            keywords=[keywords.POPULATION_SIZE],
             data_type=float,
             units=u.count,
             projected=True,
@@ -147,6 +152,8 @@ MODEL_SPEC = spec.ModelSpec(
                 " geometries may cause unexpected results and for this reason should not"
                 " overlap."
             ),
+            keywords=[keywords.ADMINISTRATIVE_DIVISIONS,
+                      keywords.VULNERABLE_POPULATIONS],
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
                 spec.RatioInput(
@@ -272,6 +279,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "The name of the population group. Names must match the names"
                         " defined in the administrative boundaries vector."
                     ),
+                    keywords=[keywords.VULNERABLE_POPULATIONS],
                     required=False,
                     regexp=None
                 ),
@@ -281,6 +289,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "The search radius in meters to use for this population group. "
                         " Values must be >= 0."
                     ),
+                    keywords=[keywords.TRAVEL_DISTANCE],
                     units=u.meter,
                     expression="value >= 0"
                 )

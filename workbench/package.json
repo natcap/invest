@@ -21,7 +21,8 @@
     "build-renderer": "vite --config vite.config.mjs build",
     "build": "yarn build-renderer && yarn build-main && yarn build:preload && yarn build-license",
     "token": "cd .. && make jprint-DATA_BASE_URL > workbench/resources/storage_token.txt",
-    "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
+    "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js",
+    "i18n-extract": "i18next-cli --config i18next-main.config.mjs extract && i18next-cli --config i18next-renderer.config.mjs extract"
   },
   "jest": {
     "reporters": [
@@ -46,7 +47,12 @@
     "testEnvironment": "jsdom",
     "clearMocks": true,
     "restoreMocks": true,
-    "resetModules": true
+    "resetModules": true,
+    "preset": "ts-jest",
+    "transform": {
+      "^.+\\.(ts|tsx)?$": "ts-jest",
+      "^.+\\.(js|jsx)$": "babel-jest"
+    }
   },
   "keywords": [],
   "author": "Natural Capital Alliance",
@@ -55,7 +61,7 @@
     "@babel/runtime": "^7.13.10",
     "electron-context-menu": "^4.1.1",
     "electron-dl": "^4.0.0",
-    "electron-log": "^5.4.3",
+    "electron-log": "<=5.4.3",
     "electron-store": "^11.0.2",
     "i18next": "^22.4.9",
     "localforage": "^1.9.0",
@@ -63,7 +69,7 @@
     "nodejs-file-downloader": "^4.13.0",
     "prop-types": "^15.7.2",
     "react-i18next": "^12.1.4",
-    "toml": "^3.0.0",
+    "toml": "^4.2.0",
     "upath": "^2.0.1",
     "yauzl": "^3.2.1"
   },
@@ -78,13 +84,16 @@
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.4.3",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^4.0.0",
     "ajv": "^8.12.0",
     "babel-eslint": "^10.1.0",
     "bootstrap": "^5.0.0",
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
-    "electron": "^43.3.0",
+    "electron": "^43.7.0",
     "electron-builder": "^26.15.3",
     "electron-devtools-installer": "^4.0.0",
     "eslint": "^8.57.0",
@@ -97,8 +106,8 @@
     "eslint-plugin-react-hooks": "^4.2.0",
     "fs-extra": "^9.1.0",
     "glob": "^13.0.6",
+    "i18next-cli": "^1.74.1",
     "i18next-conv": "^15.1.1",
-    "i18next-parser": "^9.4.0",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "puppeteer-core": "^24.38.0",
@@ -107,7 +116,9 @@
     "react-dom": "^19.0.0",
     "react-icons": "^4.9.0",
     "rimraf": "^6.1.2",
-    "vite": "^6.4.3",
+    "ts-jest": "^29.4.13",
+    "typescript": "<7.0.0",
+    "vite": "^6.4.4",
     "yazl": "^3.3.1"
   }
 }

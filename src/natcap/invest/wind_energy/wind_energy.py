@@ -19,6 +19,7 @@ from scipy import integrate
 from rtree import index
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -137,6 +138,7 @@ MODEL_SPEC = spec.ModelSpec(
          "grid_points_path", "avg_grid_distance", "price_table",
          "wind_schedule", "wind_price", "rate_change"]
     ],
+    aoi_input_id="aoi_vector_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
@@ -145,6 +147,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="wind_data_path",
             name=gettext("wind data points"),
             about=gettext("Table of Weibull parameters for each wind data point."),
+            keywords=[keywords.WIND_TURBINE, keywords.WEIBULL_PARAMETERS],
             columns=[
                 spec.NumberInput(
                     id="long",
@@ -192,6 +195,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="bathymetry_path",
             name=gettext("bathymetry"),
             about=gettext("Map of ocean depth. Values should be negative."),
+            keywords=[keywords.BATHYMETRY],
             data_type=float,
             units=u.meter,
             projected=None
@@ -202,6 +206,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "Map of the coastlines of landmasses in the area of interest."
             ),
+            keywords=[keywords.LANDMASS],
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[],
             projected=None
@@ -322,6 +327,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="turbine_parameters_path",
             name=gettext("turbine parameters"),
             about=gettext("A table of parameters specific to the type of turbine."),
+            keywords=[keywords.WIND_TURBINE, keywords.WIND_SPEED],
             orientation="row",
             columns=[
                 spec.NumberInput(
@@ -430,6 +436,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " Required if Run Valuation is selected and Average Shore-to-Grid"
                 " Distance is not provided."
             ),
+            keywords=[keywords.ENERGY_GRID_CONNECTION_POINTS],
             required="valuation_container and not avg_grid_distance",
             allowed="valuation_container",
             columns=[
@@ -489,6 +496,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " Wind Energy Parameters table. Required if Run Valuation and Use Price"
                 " Table are selected."
             ),
+            keywords=[keywords.WIND_ENERGY_PRODUCTION, keywords.ELECTRICITY_COST],
             required="valuation_container and price_table",
             allowed="price_table",
             columns=[

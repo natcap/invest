@@ -9,6 +9,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -168,6 +169,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["demand_table_path", "valuation_table_path"],
         ["target_projection_id", "target_pixelsize_id"]
     ],
+    aoi_input_id="watersheds_path",
     default_projection_id="lulc_path",
     default_pixelsize_id="lulc_path",
     validate_spatial_overlap=True,
@@ -178,19 +180,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.SingleBandRasterInput(
-            id="lulc_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of land use/land cover codes. Each land use/land cover"
-                " type must be assigned a unique integer code. All values in"
-                " this raster must have corresponding entries in the"
-                " Biophysical Table. This input defines the default target"
-                " projection and alignment for all other spatial data."
-            ),
-            data_type=int,
-            units=None
-        ),
+        spec.LULC,
         spec.SingleBandRasterInput(
             id="depth_to_root_rest_layer_path",
             name=gettext("root restricting layer depth"),
@@ -199,6 +189,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " root penetration is strongly inhibited because of physical or"
                 " chemical characteristics."
             ),
+            keywords=[keywords.SOIL_ROOTING_DEPTH],
             data_type=float,
             units=u.millimeter,
         ),
@@ -206,6 +197,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="precipitation_path",
             name=gettext("precipitation"),
             about=gettext("Map of average annual precipitation."),
+            keywords=[keywords.PRECIPITATION_RATE],
             data_type=float,
             units=u.millimeter / u.year,
         ),
@@ -217,6 +209,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " that can be stored in the soil profile that is available to"
                 " plants."
             ),
+            keywords=[keywords.PAWC],
             data_type=float,
             units=None,
         ),
@@ -224,6 +217,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="eto_path",
             name=gettext("reference evapotranspiration"),
             about=gettext("Map of reference evapotranspiration values."),
+            keywords=[keywords.REFERENCE_EVAPOTRANSPIRATION],
             data_type=float,
             units=u.millimeter
         ),
@@ -235,6 +229,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " to a point of interest where hydropower production will be"
                 " analyzed."
             ),
+            keywords=[keywords.WATERSHED_BOUNDARIES],
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
                 spec.IntegerInput(
@@ -250,6 +245,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of subwatershed boundaries within each watershed in the"
                 " Watersheds map."
             ),
+            keywords=[keywords.WATERSHED_BOUNDARIES],
             required=False,
             geometry_types={"MULTIPOLYGON", "POLYGON"},
             fields=[
@@ -286,11 +282,13 @@ MODEL_SPEC = spec.ModelSpec(
                         "Maximum root depth for plants in this LULC class. Only"
                         " used for classes with a 'lulc_veg' value of 1."
                     ),
+                    keywords=[keywords.SOIL_ROOTING_DEPTH],
                     units=u.millimeter
                 ),
                 spec.NumberInput(
                     id="kc",
                     about=gettext("Crop coefficient for this LULC class."),
+                    keywords=[keywords.CROP_COEFFICIENT],
                     units=u.none
                 )
             ],
@@ -317,15 +315,13 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="valuation_table_path",
             columns=[
-                spec.IntegerInput(
-                    id="lucode",
-                    about=gettext("LULC code corresponding to the LULC raster")
-                ),
+                spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(
                     id="demand",
                     about=gettext(
                         "Average consumptive water use in this LULC class."
                     ),
+                    keywords=[keywords.WATER_BUDGET],
                     units=u.meter ** 3 / u.year / u.pixel
                 )
             ],
@@ -338,6 +334,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "A table mapping each watershed to the associated valuation"
                 " parameters for its hydropower station."
             ),
+            keywords=[keywords.HYDROELECTRIC_ENERGY],
             required=False,
             columns=[
                 spec.IntegerInput(
@@ -760,7 +757,7 @@ def execute(args):
     target_projection_wkt = utils.get_raster_or_vector_projection(
         target_projection_path)
     # Reproject watersheds_path even if it has the `target_projection_id` to
-    # create a copy so we don't modify the original when doing zonal stats 
+    # create a copy so we don't modify the original when doing zonal stats
     reproject_watersheds_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['watersheds_path'], target_projection_wkt,

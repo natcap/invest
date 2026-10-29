@@ -63,15 +63,46 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+General
+=======
+* Added support for labeled input groups. ``spec.InputGroup`` was added to
+  represent a group of input fields that may have a label.
+  ``spec.ModelSpec.input_field_order`` can now contain ``spec.InputGroup``s
+  as well as lists. The ``spec.InputGroup.label`` will be displayed on that
+  section of the model input form in the workbench.
+  (`#1602 <https://github.com/natcap/invest/issues/1602>`_)
+* The ``to_json`` method of ``spec.ModelSpec`` has been deprecated.
+  Serialization should now be done using the pydantic ``model_dump_json``
+  method.
+* No longer testing and building with Python 3.10, which reached EOL.
+  (`#2782 <https://github.com/natcap/invest/issues/2782>`_)
+
+Workbench
+=========
+* The InVEST workbench is now built for both Intel and Apple Silicon
+  architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+
 
 General
 =======
 * Some models now allow users to select which raster or vector
   input defines the output pixel size and projection.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
+* Additional data attributes (projection requirements and whether an input
+  has the default target projection or pixel size) will now automatically
+  be added to spatial inputs listed in the Data Needs sections of the User's
+  Guide. (`#2749 <https://github.com/natcap/invest/issues/2749>`_)
+
+
+Workbench
+=========
+* Some models now offer the option to search the Natural Capital Alliance Data
+  Hub for datasets you can use in InVEST without having to download them first.
+  (`#2702 <https://github.com/natcap/invest/issues/2702>`_)
+  (`#2703 <https://github.com/natcap/invest/issues/2703>`_)
 
 Annual Water Yield
 ==================
@@ -79,6 +110,42 @@ Annual Water Yield
   pixel size, respectively, for the model outputs. If not specified, the
   model will use the projection and pixel size of the LULC raster.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
+
+DelineateIt
+===========
+* A user may now select which model input defines the target projection
+  for the model outputs. If not specified, the model will use the
+  projection of the DEM raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+
+NDR
+===
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the DEM raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+* The DEM and Nutrient Runoff Proxy are resampled using the bilinear method,
+  instead of nearest neighbor.
+* Fixed a bug where non-meter projection units were incorrectly permitted.
+  The new Target Projection input now addresses this, requiring units in
+  meters. (`#2783 <https://github.com/natcap/invest/issues/2783>`_)
+
+SDR
+===
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the DEM raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+* Fixed a bug where non-meter projection units were incorrectly permitted.
+  The new Target Projection input now addresses this, requiring units in
+  meters. (`#2783 <https://github.com/natcap/invest/issues/2783>`_)
+
+Urban Flood Risk
+================
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the LULC raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
 
 Urban Mental Health
 ===================

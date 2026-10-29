@@ -103,6 +103,7 @@ import taskgraph
 from osgeo import gdal
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
@@ -147,6 +148,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SUFFIX,
         spec.N_WORKERS,
         spec.CSVInput(
+            # TODO: this input should not query the DataHub
             id="landcover_snapshot_csv",
             name=gettext("landcover snapshots table"),
             about=gettext("A table mapping snapshot years to corresponding LULC maps."),
@@ -165,6 +167,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " raster must have corresponding entries in the Biophysical Table"
                         " and Landcover Transitions Table."
                     ),
+                    keywords=[keywords.LULC],
                     data_type=int,
                     units=None,
                     projected=None
@@ -188,14 +191,11 @@ MODEL_SPEC = spec.ModelSpec(
             id="biophysical_table_path",
             name=gettext("biophysical table"),
             about=gettext("Table of biophysical properties for each LULC class."),
+            keywords=[
+                keywords.CARBON,
+                keywords.CARBON_SEQUESTRATION],
             columns=[
-                spec.IntegerInput(
-                    id="lucode",
-                    about=gettext(
-                        "The LULC code that represents this LULC class in the LULC"
-                        " snapshot rasters."
-                    )
-                ),
+                spec.LULC_TABLE_COLUMN,
                 spec.StringInput(
                     id="lulc-class",
                     about=gettext(
@@ -318,6 +318,7 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="lucode"
         ),
         spec.CSVInput(
+            # TODO: do not query DataHub? This table is initialized by the CBC preprocessor
             id="landcover_transitions_table",
             name=gettext("landcover transitions table"),
             about=gettext(

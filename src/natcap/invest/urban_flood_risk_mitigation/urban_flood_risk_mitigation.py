@@ -11,7 +11,9 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
+from natcap.invest import utils
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
 
@@ -23,19 +25,26 @@ MODEL_SPEC = spec.ModelSpec(
     userguide="urban_flood_mitigation.html",
     validate_spatial_overlap=True,
     different_projections_ok=True,
+    default_pixelsize_id="lulc_path",
+    default_projection_id="lulc_path",
     aliases=("ufrm",),
     module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["aoi_watersheds_path", "rainfall_depth"],
         ["lulc_path", "curve_number_table_path", "soils_hydrological_group_raster_path"],
-        ["built_infrastructure_vector_path", "infrastructure_damage_loss_table_path"]
+        ["built_infrastructure_vector_path", "infrastructure_damage_loss_table_path"],
+        ["target_projection_id", "target_pixelsize_id"]
     ],
+    aoi_input_id="aoi_watersheds_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.AOI.model_copy(update=dict(id="aoi_watersheds_path")),
+        spec.AOI.model_copy(update=dict(
+            id="aoi_watersheds_path",
+            keywords=[keywords.WATERSHED_BOUNDARIES],
+        )),
         spec.NumberInput(
             id="rainfall_depth",
             name=gettext("rainfall depth"),
@@ -43,20 +52,9 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter,
             expression="value > 0"
         ),
-        spec.SingleBandRasterInput(
-            id="lulc_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of LULC. All values in this raster must have corresponding entries"
-                " in the Biophysical Table."
-            ),
-            data_type=int,
-            units=None,
-            projected=True
-        ),
+        spec.LULC,
         spec.SOIL_GROUP.model_copy(update=dict(
             id="soils_hydrological_group_raster_path",
-            projected=True
         )),
         spec.CSVInput(
             id="curve_number_table_path",
@@ -66,14 +64,9 @@ MODEL_SPEC = spec.ModelSpec(
                 " LULC raster must have corresponding entries in this table for each soil"
                 " group."
             ),
+            keywords=[keywords.RUNOFF_CURVE_NUMBER, keywords.HYDROLOGIC_SOIL_GROUPS],
             columns=[
-                spec.IntegerInput(
-                    id="lucode",
-                    about=gettext(
-                        "LULC codes from the LULC raster. Each code must be a unique"
-                        " integer."
-                    )
-                ),
+                spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(
                     id="cn_a",
                     about=gettext(
@@ -121,6 +114,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="built_infrastructure_vector_path",
             name=gettext("built infrastructure"),
             about=gettext("Map of building footprints."),
+            keywords=[keywords.BUILDINGS],
             required=False,
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
@@ -143,6 +137,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " entries in this table. Required if the Built Infrastructure vector is"
                 " provided."
             ),
+            keywords=[keywords.BUILDINGS, keywords.FLOOD_DAMAGE_VALUE],
             required="built_infrastructure_vector_path",
             columns=[
                 spec.IntegerInput(id="type", about=gettext("Building type code.")),
@@ -153,6 +148,12 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ],
             index_col="type"
+        ),
+        spec.TARGET_PROJECTION,
+        spec.TARGET_PIXELSIZE.model_copy(update=dict(
+            about=spec.TARGET_PIXELSIZE.about + gettext(
+                " This raster will also be used to set the alignment during "
+                "resampling."))
         )
     ],
     outputs=[
@@ -301,6 +302,12 @@ def execute(args):
             of built infrastructure type from the 'Type' field in
             ``args['built_infrastructure_vector_path']`` and potential damage
             loss (in currency/m^2).
+        args['target_projection_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SEPC.inputs`` that defines the target
+            projection.
+        args['target_pixelsize_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SEPC.inputs`` that defines the target
+            pixel size.
         args['n_workers'] (int): (optional) if present, indicates how many
             worker processes should be used in parallel processing. -1
             indicates single process mode, 0 is single process but
@@ -311,13 +318,21 @@ def execute(args):
 
     """
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
+    args = MODEL_SPEC.preprocess_spatial_reference_args(args)
+    target_projection_path = args[args['target_projection_id']]
+    target_pixelsize_path = args[args['target_pixelsize_id']]
 
-    # Align LULC with soils
-    lulc_raster_info = pygeoprocessing.get_raster_info(
-        args['lulc_path'])
-    target_pixel_size = lulc_raster_info['pixel_size']
+    # Align rasters with the target projection and pixel size
+    # (alignment based on target pixelsize raster)
+    target_sr_wkt = utils.get_raster_or_vector_projection(
+        target_projection_path)
+    target_pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_sr_wkt)
     pixel_area = abs(target_pixel_size[0] * target_pixel_size[1])
-    target_sr_wkt = lulc_raster_info['projection_wkt']
+
+    align_raster_list = [args['lulc_path'],
+                         args['soils_hydrological_group_raster_path']]
+    raster_align_index = align_raster_list.index(target_pixelsize_path)
 
     soil_raster_info = pygeoprocessing.get_raster_info(
         args['soils_hydrological_group_raster_path'])
@@ -325,15 +340,15 @@ def execute(args):
     align_raster_stack_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
-            [args['lulc_path'], args['soils_hydrological_group_raster_path']],
+            align_raster_list,
             [file_registry['aligned_lulc'],
-            file_registry['aligned_soils_hydrological_group']],
+             file_registry['aligned_soils_hydrological_group']],
             ['mode', 'mode'],
             target_pixel_size, 'intersection'),
         kwargs={
             'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': [args['aoi_watersheds_path']],
-            'raster_align_index': 0},
+            'raster_align_index': raster_align_index},
         target_path_list=[file_registry['aligned_lulc'], file_registry['aligned_soils_hydrological_group']],
         task_name='align raster stack')
 
@@ -355,6 +370,7 @@ def execute(args):
     lucode_to_cn_table = scipy.sparse.csr_matrix((data, (row_ind, col_ind)))
 
     cn_nodata = -1
+    lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_path'])
     lucode_nodata = lulc_raster_info['nodata'][0]
     soil_type_nodata = soil_raster_info['nodata'][0]
 
@@ -841,7 +857,7 @@ def _s_max_op(cn_array, cn_nodata, result_nodata):
     result[valid_mask] = 25400 / cn_array[valid_mask] - 254
     # Curve Number of 0 means infitite retention so set s_max to a value
     # higher than any possible storm depth. Largest storm depth is recorded
-    # at 6,433mm. 
+    # at 6,433mm.
     result[zero_mask] = 100000
     return result
 

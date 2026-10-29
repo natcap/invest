@@ -23,11 +23,15 @@ import pandas
 import pint
 import pygeoprocessing
 from pygeoprocessing.utils import GDALUseExceptions
-from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_validator, model_serializer, model_validator
+from pydantic import AfterValidator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import field_serializer, field_validator
+from pydantic import model_serializer, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
+from natcap.invest import keywords
 from natcap.invest import utils
 from . import gettext
 from .unit_registry import u
@@ -320,6 +324,25 @@ def set_metadata_field_descriptions(field_specs, resource):
             LOGGER.debug(error)
 
 
+class InputGroup(BaseModel):
+    """Represent a group of input fields for display in the workbench."""
+
+    label: str = ''
+    """Optional label that will be displayed in the workbench above
+       this group of inputs."""
+
+    input_ids: list[str]
+    """List of model input ids that belong to this group. Each string must
+       match the id of an Input in the model."""
+
+    @model_serializer()
+    def serialize(self):
+        return {
+            'group_label': self.label,
+            'input_ids': self.input_ids
+        }
+
+
 class ImmutableBaseModel(BaseModel):
     """BaseModel with frozen attributes."""
 
@@ -405,6 +428,13 @@ class Input(IOModel):
     Bad examples: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
     """
 
+    keywords: typing.Union[list[natcap.invest.keywords.Keyword], None] = None
+    """A list of keywords from a controlled vocabulary.
+
+    Keywords can be used to identify possible data sources that satisfy input
+    requirements.
+    """
+
     required: typing.Union[bool, str] = True
     """Whether the input is required to be provided. Defaults to True. Set to
     False if the input is always optional. If the input is conditionally
@@ -487,6 +517,48 @@ class Input(IOModel):
             rst_line += f': {sanitized_about_string}'
 
         return [rst_line]
+
+    def get_child_inputs(self):
+        """Get list of child Inputs."""
+        if hasattr(self, 'fields'):
+            return self.fields
+        if hasattr(self, 'columns'):
+            # columns can be None for irregular CSV like in HRA
+            if self.columns:
+                return self.columns
+        if hasattr(self, 'contents'):
+            return self.contents
+        return []
+
+    @field_serializer('keywords')
+    def serialize_keywords(self, _):
+        return(self.get_keywords())
+
+    def get_keywords(self, include_children=True, include_aliases=True):
+        """Get a list of unique keyword strings for this input and children.
+
+        Args:
+            include_children (bool): include the keywords of nested Input specs.
+            include_aliases (bool): extend the list of keyword strings with the
+                list of the keyword's aliases
+
+        Returns:
+            list of strings
+
+        """
+        keywords = []
+        if self.keywords:
+            for keyword in self.keywords:
+                keywords.append(keyword.value)
+                if include_aliases:
+                    keywords.extend(keyword.aliases)
+        if include_children:
+            for child in self.get_child_inputs():
+                if child.keywords:
+                    keywords += child.get_keywords(
+                        include_children=include_children,
+                        include_aliases=include_aliases)
+        return list(set(keywords))
 
     def validate(self, value):
         """Validate this input's value in isolation."""
@@ -881,15 +953,20 @@ class SingleBandRasterInput(SpatialFileInput):
             if projection_warning:
                 return projection_warning
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
+
+        Args:
+            additional_attributes (list[str]): optional list of additional
+                (RST-formatted) ModelSpec attributes to include in the
+                parenthetical in the RST line (e.g.,
+                ['**default projection input**']).
 
         Returns:
             list of strings, where each string is a line of RST-formatted text.
         """
         name = self.name or self.id
         type_string = format_type_string(self)
-
         in_parentheses = [type_string]
 
         if self.units:
@@ -898,6 +975,16 @@ class SingleBandRasterInput(SpatialFileInput):
                 # pybabel can't find the message if it's in the f-string
                 translated_units = gettext("units")
                 in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        if self.projected:
+            if self.projection_units:
+                in_parentheses.append(
+                    f'{gettext("projected")} [{gettext("projection units")}: **{format_unit(self.projection_units)}**]')
+            else:
+                in_parentheses.append(gettext("projected"))
+
+        if additional_attributes:
+            in_parentheses += additional_attributes
 
         required_string = self.format_required_string()
         in_parentheses.append(f'*{required_string}*')
@@ -1056,8 +1143,14 @@ class VectorInput(SpatialFileInput):
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
-    def describe_rst(self):
+    def describe_rst(self, additional_attributes=None):
         """Generate RST documentation for this input.
+
+        Args:
+            additional_attributes (list[str]): optional list of additional
+                (RST-formatted) ModelSpec attributes to include in the
+                parenthetical in the RST line (e.g.,
+                ['**default projection input**']).
 
         Returns:
             list of strings, where each string is a line of RST-formatted text.
@@ -1066,7 +1159,20 @@ class VectorInput(SpatialFileInput):
         type_string = format_type_string(self)
         required_string = self.format_required_string()
         geom_string = self.format_geometry_types_rst()
-        rst_line = f'**{name}** ({type_string}, {geom_string}, *{required_string}*)'
+        in_parentheses = [type_string, geom_string]
+
+        if self.projected:
+            if self.projection_units:
+                in_parentheses.append(
+                    f'{gettext("projected")} [{gettext("projection units")}: **{self.projection_units}**]')
+            else:
+                in_parentheses.append(f'{gettext("projected")}')
+
+        if additional_attributes:
+            in_parentheses += additional_attributes
+
+        in_parentheses.append(f'*{required_string}*')
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
 
         # Nested args may not have an about section
         if self.about:
@@ -1103,7 +1209,7 @@ class RasterOrVectorInput(SpatialFileInput):
     geometry_types: set
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[list[Input]]
+    fields: list[Input] | None = None
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -2449,18 +2555,34 @@ class ModelSpec(ImmutableBaseModel):
     Example: ``"https://github.com/natcap/invest-demo-plugin/blob/main/README.md"``
     """
 
-    input_field_order: list[list[str]]
-    """A list that specifies the order and grouping of model inputs.
-    Inputs will be displayed in the input form from top to bottom in the order
-    listed here. Sub-lists represent groups of inputs that will be visually
-    separated by a horizontal line. This improves UX by breaking up long lists
-    and visually grouping related inputs. If you do not wish to use groups,
-    all inputs may go in the same sub-list. It is a convention to begin with a
-    group of ``workspace_dir`` and ``results_suffix``. Each item in the
-    sub-lists must match the key of an ``Input`` in ``inputs``. The key of each
+    input_field_order: list[InputGroup | list[str]]
+    """A list that specifies the order and grouping of model inputs that will be
+    displayed in the workbench input form. This list may contain lists and/or
+    spec.InputGroups. Each sub-list or InputGroup represents a group of inputs
+    that will be visually separated by a horizontal line. This improves UX by
+    breaking up long lists and visually grouping related inputs. You can give a
+    group a label, which will be displayed in the workbench, by using an
+    InputGroup and setting the ``label`` property. Note that groups and their
+    labels only affect workbench rendering and have no effect on the python side.
+
+    The InputGroup was added to allow labeling groups. Using plain lists is
+    still supported for backwards compatibility. If you do not wish to use
+    groups, all inputs may go in the same sub-list.
+
+    It is a convention to begin with a group of ``workspace_dir`` and
+    ``results_suffix``. Each item in each sub-list or InputGroup.input_ids
+    list must match the key of an ``Input`` in ``inputs``. The key of each
     ``Input`` must be included exactly once, unless it is hidden.
 
-    Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
+    Example: ``[['workspace_dir', 'results_suffix'], InputGroup(label='Group A', input_ids=['bar', baz'])``
+    """
+
+    aoi_input_id: str = ''
+    """The ``id`` of the model input that functions as the Area of Interest
+    (AOI). While some models explicitly call this input "Area of Interest",
+    others do not. (For example, the "Watersheds" vector functions as the AOI
+    in some hydrological models.) If an ``aoi_input_id`` is specified, it must
+    refer to a ``VectorInput``.
     """
 
     default_projection_id: str = ''
@@ -2509,6 +2631,16 @@ class ModelSpec(ImmutableBaseModel):
     about: str = ''
     """A brief description of the model."""
 
+    @field_validator('input_field_order', mode='after')
+    @classmethod
+    def standardize_input_groups(
+            cls, input_field_order: list[InputGroup | list[str]]
+    ) -> list[InputGroup]:
+        """Convert any lists in the input_field_order to InputGroups."""
+        return [
+            InputGroup(label='', input_ids=group) if isinstance(
+                group, list) else group for group in input_field_order]
+
     @field_validator('reporter', mode='after')
     @classmethod
     def check_reporter(cls, value: str) -> str:
@@ -2529,6 +2661,8 @@ class ModelSpec(ImmutableBaseModel):
         or are marked as hidden."""
         found_keys = set()
         for group in self.input_field_order:
+            if isinstance(group, InputGroup):
+                group = group.input_ids
             for key in group:
                 if key in found_keys:
                     raise ValueError(
@@ -2543,6 +2677,19 @@ class ModelSpec(ImmutableBaseModel):
         if found_keys != set([s.id for s in self.inputs]):
             raise ValueError(
                 f'Mismatch between keys in inputs and input_field_order')
+        return self
+
+    @model_validator(mode='after')
+    def check_aoi_input_id(self):
+        """Make sure ``aoi_input_id`` refers to a valid vector input."""
+        if self.aoi_input_id:
+            try:
+                aoi_input = self.get_input(self.aoi_input_id)
+            except KeyError:
+                raise ValueError('Invalid aoi_input_id. No input with id '
+                                 f'{self.aoi_input_id}.')
+            if not isinstance(aoi_input, VectorInput):
+                raise ValueError('aoi_input_id must refer to a VectorInput.')
         return self
 
     @model_validator(mode='after')
@@ -2606,20 +2753,17 @@ class ModelSpec(ImmutableBaseModel):
         """Get an Output of this model by its key."""
         return {_output.id: _output for _output in self.outputs}[key]
 
-    def to_json(self):
-        """Serialize an MODEL_SPEC dict to a JSON string.
-
-        Args:
-            spec (dict): An invest model's MODEL_SPEC.
+    @model_serializer()
+    def serialize(self):
+        """Serialize a MODEL_SPEC to a JSON-compatible dict.
 
         Raises:
             TypeError if any object type within the spec is not handled by
             json.dumps or by the fallback serializer.
 
         Returns:
-            JSON String
+            dict
         """
-
         def fallback_serializer(obj):
             """Serialize objects that are otherwise not JSON serializeable."""
             if isinstance(obj, pint.Unit):
@@ -2648,7 +2792,27 @@ class ModelSpec(ImmutableBaseModel):
         spec_dict.pop('inputs')
         spec_dict['args'] = {_input.id: _input for _input in self.inputs}
         spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
-        return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
+
+        # dump to json so that we can apply the fallback serializer,
+        # then convert back to a dictionary.
+        return json.loads(json.dumps(
+            spec_dict, default=fallback_serializer, ensure_ascii=False))
+
+    def to_json(self):
+        """Serialize a MODEL_SPEC to a JSON string.
+
+        Raises:
+            TypeError if any object type within the spec is not handled by
+            json.dumps or by the fallback serializer.
+
+        Returns:
+            str
+        """
+        warnings.warn(
+            ("to_json method of spec.ModelSpec is deprecated and will be "
+             "removed in a future version. Use model_dump_json instead."),
+            DeprecationWarning)
+        return self.model_dump_json()
 
     def preprocess_inputs(self, input_values):
         """Preprocess a dictionary of input values.
@@ -2684,14 +2848,23 @@ class ModelSpec(ImmutableBaseModel):
         """
         args_copy = args.copy()
         if not args.get('target_projection_id'):
-            args_copy['target_projection_id'] = self.get_default_projection_input().id
+            default_projection_input = self.get_default_projection_input()
+            if default_projection_input:
+                args_copy['target_projection_id'] = default_projection_input.id
 
         if not args.get('target_pixelsize_id'):
             default_pixelsize_input = self.get_default_pixelsize_input()
-            # NOTE: UMH does not have a default_pixelsize_id, it sets default
-            # dynamically in the dropdown function.
             if default_pixelsize_input:
                 args_copy['target_pixelsize_id'] = default_pixelsize_input.id
+            # NOTE: UMH does not have a default_pixelsize_id, it sets default
+            # dynamically in the dropdown function.
+            elif 'target_pixelsize_id' in args:
+                pixelsize_spec = self.get_input('target_pixelsize_id')
+                options = pixelsize_spec.dropdown_function(
+                    args_copy, self)
+                if options:
+                    args_copy['target_pixelsize_id'] = options[0].key
+
         return args_copy
 
     def generate_metadata_for_outputs(self, file_registry, args_dict):
@@ -2945,6 +3118,7 @@ DEM = SingleBandRasterInput(
     id="dem_path",
     name=gettext("digital elevation model"),
     about=gettext("Map of elevation above sea level."),
+    keywords=[keywords.DEM],
     data_type=float,
     units=u.meter
 )
@@ -2966,6 +3140,7 @@ SOIL_GROUP = SingleBandRasterInput(
         "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4,"
         " corresponding to soil hydrologic groups A, B, C, or D, respectively."
     ),
+    keywords=[keywords.HYDROLOGIC_SOIL_GROUPS],
     data_type=int,
     units=None
 )
@@ -2974,7 +3149,8 @@ LULC_TABLE_COLUMN = IntegerInput(
     about=gettext(
         "LULC codes from the LULC raster. Each code must be a unique"
         " integer."
-    )
+    ),
+    keywords=[keywords.LULC]
 )
 AOI = VectorInput(
     id="aoi_path",
@@ -2986,13 +3162,15 @@ AOI = VectorInput(
     fields=[]
 )
 LULC = SingleBandRasterInput(
-    id="lulc_bas_path",
-    name=gettext("baseline LULC"),
+    id="lulc_path",
+    name=gettext("land use/land cover"),
     about=gettext(
-        "A map of LULC for the baseline scenario, which must occur prior to the"
-        " alternate scenario. All values in this raster must have corresponding"
-        " entries in the Carbon Pools table."
+        "Map of land use/land cover codes. Each land use/land cover"
+        " type must be assigned a unique integer code. All values in"
+        " this raster must have corresponding entries in the"
+        " Biophysical Table."
     ),
+    keywords=[keywords.LULC],
     data_type=int,
     units=None
 )
@@ -3005,6 +3183,19 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
         Option(key="MFD", description="Multiple flow direction")
     ]
 )
+WATERSHED_VECTOR = VectorInput(
+    id="watersheds_path",
+    name=gettext("Watersheds"),
+    about=gettext(
+        "Map of the boundaries of the watershed(s) over which to aggregate"
+        " results."
+    ),
+    keywords=[keywords.WATERSHED_BOUNDARIES],
+    geometry_types={"POLYGON", "MULTIPOLYGON"},
+    fields=[]
+)
+PROJECTED_WATERSHED_VECTOR = WATERSHED_VECTOR.model_copy(
+    update=dict(projected=True))
 TARGET_PROJECTION = OptionSpatialInput(
     id="target_projection_id",
     name=gettext("target projection"),

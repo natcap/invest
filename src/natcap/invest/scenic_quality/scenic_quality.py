@@ -15,6 +15,7 @@ from osgeo import gdal
 from osgeo import osr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -43,6 +44,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["do_valuation", "valuation_function", "a_coef", "b_coef",
          "max_valuation_radius"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
@@ -55,6 +57,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of locations of objects that negatively affect scenic quality. This"
                 " must have the same projection as the DEM."
             ),
+            keywords=[keywords.VIEWSHED_OBSTRUCTION],
             geometry_types={"POINT"},
             fields=[
                 spec.NumberInput(
@@ -88,6 +91,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "Viewpoint height, the elevation above the ground of each"
                         " feature. If this field is not provided, defaults to 0."
                     ),
+                    keywords=[keywords.HEIGHT],
                     required=False,
                     units=u.meter
                 )

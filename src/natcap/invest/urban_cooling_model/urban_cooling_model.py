@@ -16,6 +16,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -55,26 +56,20 @@ MODEL_SPEC = spec.ModelSpec(
         ["do_productivity_valuation", "avg_rel_humidity"],
         ["cc_weight_shade", "cc_weight_albedo", "cc_weight_eti"]
     ],
+    aoi_input_id="aoi_vector_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.SingleBandRasterInput(
-            id="lulc_raster_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of LULC for the area of interest. All values in this raster must"
-                " have corresponding entries in the Biophysical Table."
-            ),
-            data_type=int,
-            units=u.none,
+        spec.LULC.model_copy(update=dict(
+            id='lulc_raster_path',
             projected=True,
-            projection_units=u.meter
-        ),
+            projection_units=u.meter)),
         spec.SingleBandRasterInput(
             id="ref_eto_raster_path",
             name=gettext("reference evapotranspiration"),
             about=gettext("Map of reference evapotranspiration values."),
+            keywords=[keywords.REFERENCE_EVAPOTRANSPIRATION],
             data_type=float,
             units=u.millimeter
         ),
@@ -92,6 +87,7 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberInput(
                     id="kc",
                     about=gettext("Crop coefficient for this LULC class."),
+                    keywords=[keywords.CROP_COEFFICIENT],
                     units=u.none
                 ),
                 spec.BooleanInput(
@@ -109,6 +105,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " tree canopy at least 2 meters high. Required if the 'factors'"
                         " option is selected for the Cooling Capacity Calculation Method."
                     ),
+                    keywords=[keywords.SHADE_FRACTION],
                     required="cc_method == 'factors'",
                 ),
                 spec.RatioInput(
@@ -118,16 +115,18 @@ MODEL_SPEC = spec.ModelSpec(
                         " this LULC class. Required if the 'factors' option is selected"
                         " for the Cooling Capacity Calculation Method."
                     ),
+                    keywords=[keywords.ALBEDO],
                     required="cc_method == 'factors'",
                 ),
                 spec.RatioInput(
                     id="building_intensity",
                     about=(
-                        "The ratio of building floor area to footprint area, with all"
+                        "The ratio of building floor area to land area, with all"
                         " values in this column normalized between 0 and 1. Required if"
                         " the 'intensity' option is selected for the Cooling Capacity"
                         " Calculation Method."
                     ),
+                    keywords=[keywords.FLOOR_AREA_RATIO],
                     required="cc_method == 'intensity'",
                 )
             ],
@@ -202,6 +201,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "A map of built infrastructure footprints. Required if Run Energy Savings"
                 " Valuation is selected."
             ),
+            keywords=[keywords.BUILDINGS],
             required="do_energy_valuation",
             allowed="do_energy_valuation",
             geometry_types={"POLYGON", "MULTIPOLYGON"},
@@ -237,6 +237,7 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext(
                         "Energy consumption by footprint area for this building type."
                     ),
+                    keywords=[keywords.BUILDING_COOLING_ENERGY],
                     units=u.kilowatt_hour / u.degree_Celsius / u.meter**2
                 ),
                 spec.NumberInput(
@@ -246,6 +247,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " is provided, the energy savings outputs will be in the this"
                         " currency unit rather than kWh."
                     ),
+                    keywords=[keywords.ELECTRICITY_COST],
                     required=False,
                     units=u.currency / u.kilowatt_hour
                 )

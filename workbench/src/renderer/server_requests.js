@@ -328,3 +328,29 @@ export async function setGeoMetaMakerProfile(payload) {
       .catch((error) => logger.error(error.stack))
   );
 }
+
+/**
+ * Get the bounding box of a vector.
+ *
+ * @param {object} payload {
+ *   vector_path: string
+ * }
+  * @returns {Promise} resolves object {
+  *   vector_bbox: number[]
+  * }
+*/
+export async function getVectorBoundingBox(payload) {
+  const port = await getCorePort();
+  return (
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/get_vector_bounding_box`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .then(({ vector_bbox }) => {
+        return { vector_bbox };
+      })
+      .catch((error) => logger.error(error.stack))
+  );
+}

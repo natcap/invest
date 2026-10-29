@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -7,7 +8,7 @@ from unittest.mock import Mock, patch
 import geometamaker
 import numpy
 import pygeoprocessing
-from natcap.invest import spec, models
+from natcap.invest import spec, models, keywords
 from natcap.invest.unit_registry import u
 from osgeo import gdal
 from osgeo import osr
@@ -241,12 +242,15 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             id="bar",
             data_type=float,
             units=u.millimeter/u.year,
+            projected=True,
+            projection_units=u.meter,
             about="Description",
             name="Bar"
         )
         out = raster_spec.describe_rst()
         expected_rst = ([
-            '**Bar** (`raster <input_types.html#raster>`__, units: **mm/year**, *required*): Description'
+            '**Bar** (`raster <input_types.html#raster>`__, '
+            'units: **mm/year**, projected [projection units: **m**], *required*): Description'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
@@ -278,12 +282,13 @@ class TestDescribeArgFromSpec(unittest.TestCase):
                 )
             ],
             geometry_types={"POLYGON", "MULTIPOLYGON"},
+            projected=True,
             about="Description",
             name="Bar"
         )
         out = vector_spec.describe_rst()
         expected_rst = ([
-            '**Bar** (`vector <input_types.html#vector>`__, polygon/multipolygon, *required*): Description',
+            '**Bar** (`vector <input_types.html#vector>`__, polygon/multipolygon, projected, *required*): Description',
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
@@ -359,7 +364,7 @@ class TestMetadataFromSpec(unittest.TestCase):
     def test_write_metadata_for_outputs(self):
         """Test writing metadata for an invest output workspace."""
         from .utils import SAMPLE_MODEL_SPEC
-        
+
         # Generate an output workspace with real files, without
         # running an invest model.
         args_dict = {'workspace_dir': self.workspace_dir}
@@ -614,6 +619,61 @@ class InputTests(unittest.TestCase):
         self.assertEqual(option_string_input.preprocess(''), None)
         self.assertEqual(option_string_input.preprocess(None), None)
 
+    def test_get_keywords_csv_input(self):
+        """Test that CSVInput.get_keywords returns correct keywords."""
+        csv_input = spec.CSVInput(
+            id="foo",
+            about="Description.",
+            keywords=[keywords.LULC],
+            name="foo",
+            columns=[
+                spec.LULC_TABLE_COLUMN,
+                spec.NumberInput(
+                    id='carbon', units=None, keywords=[keywords.CARBON]),
+            ]
+        )
+        self.assertCountEqual(
+            csv_input.get_keywords(),
+            [keywords.LULC.value, keywords.CARBON.value] + keywords.LULC.aliases)
+        self.assertCountEqual(
+            csv_input.get_keywords(include_children=False),
+            [keywords.LULC.value] + keywords.LULC.aliases)
+        self.assertCountEqual(
+            csv_input.get_keywords(include_aliases=False),
+            [keywords.LULC.value, keywords.CARBON.value])
+
+    def test_get_keywords_irregular_csv_input(self):
+        """Test that CSVInput.get_keywords works when columns=None."""
+        csv_input = spec.CSVInput(
+            id="foo",
+            about="Description.",
+            name="foo",
+            columns=None
+        )
+        expected_keywords = []
+        self.assertEqual(csv_input.get_keywords(), expected_keywords)
+
+    def test_get_keywords_vector_input(self):
+        """Test that VectorInput.get_keywords returns correct keywords."""
+        vector_input = spec.VectorInput(
+            id="foo",
+            about="Description.",
+            keywords=[keywords.LULC],
+            name="foo",
+            geometry_types={"POLYGON"},
+            fields=[
+                spec.LULC_TABLE_COLUMN,
+                spec.NumberInput(
+                    id='carbon', units=None, keywords=[keywords.CARBON]),
+            ]
+        )
+        self.assertCountEqual(
+            vector_input.get_keywords(),
+            [keywords.LULC.value, keywords.CARBON.value] + keywords.LULC.aliases)
+        self.assertCountEqual(
+            vector_input.get_keywords(include_children=False),
+            [keywords.LULC.value] + keywords.LULC.aliases)
+
     def test_immutable_input(self):
         """Test that Input instances are immutable."""
         with self.assertRaises(ValidationError):
@@ -648,3 +708,88 @@ class ModelSpecTests(unittest.TestCase):
         from natcap.invest.carbon import MODEL_SPEC
         with self.assertRaises(ValidationError):
             MODEL_SPEC.model_id = 'foo'
+
+    def test_json_serialization(self):
+        """Test serizalizing the ModelSpec."""
+        test_spec = spec.ModelSpec(
+            model_id="foo",
+            model_title="Foo",
+            userguide="",
+            reporter="",
+            about="",
+            validate_spatial_overlap=True,
+            different_projections_ok=False,
+            aliases=(),
+            module_name=__name__,
+            input_field_order=[
+                ["workspace_dir"],
+                spec.InputGroup(label="Group A", input_ids=["baz"])
+            ],
+            inputs=[
+                spec.WORKSPACE,
+                spec.NumberInput(id="baz", data_type=int, units=None)
+            ],
+            outputs=[
+                spec.SingleBandRasterOutput(
+                    id="c_storage_bas",
+                    path="c_storage_bas.tif",
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                )
+            ]
+        )
+        self.assertEqual(
+            json.loads(test_spec.model_dump_json()),
+            {
+                'model_id': 'foo',
+                'model_title': 'Foo',
+                'userguide': '',
+                'aliases': 'set()',
+                'reporter': '',
+                'about': '',
+                'input_field_order': [
+                    {'group_label': '', 'input_ids': ['workspace_dir']},
+                    {'group_label': 'Group A', 'input_ids': ['baz']}
+                ],
+                'aoi_input_id': '',
+                'default_projection_id': '',
+                'default_pixelsize_id': '',
+                'different_projections_ok': False,
+                'validate_spatial_overlap': True,
+                'args': {
+                    'workspace_dir': {
+                        'about': spec.WORKSPACE.about,
+                        'required': True,
+                        'allowed': True,
+                        'hidden': False,
+                        'id': 'workspace_dir',
+                        'name': 'workspace directory',
+                        'type': 'workspace',
+                        'keywords': [],
+                    },
+                    'baz': {
+                        'id': 'baz',
+                        'about': None,
+                        'name': None,
+                        'required': True,
+                        'allowed': True,
+                        'hidden': False,
+                        'units': None,
+                        'expression': None,
+                        'type': 'number',
+                        'keywords': [],
+                    }
+                },
+                'outputs': {
+                    'c_storage_bas': {
+                        'id': 'c_storage_bas',
+                        'about': None,
+                        'created_if': True,
+                        'path': 'c_storage_bas.tif',
+                        'data_type': 'number',
+                        'units': 't/ha'
+                    }
+                },
+                'module_name': __name__
+            }
+        )

@@ -8,6 +8,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
@@ -38,22 +39,13 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.SingleBandRasterInput(
-            id="lulc_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of land use/land cover codes. Each land use/land cover type must be"
-                " assigned a unique integer code."
-            ),
-            data_type=int,
-            units=None,
-            projected=True
-        ),
+        spec.LULC.model_copy(update=dict(projected=True)),
         spec.SOIL_GROUP,
         spec.SingleBandRasterInput(
             id="precipitation_path",
             name=gettext("precipitation"),
             about=gettext("Map of average annual precipitation."),
+            keywords=[keywords.PRECIPITATION_RATE],
             data_type=float,
             units=u.millimeter / u.year,
             projected=None
@@ -67,6 +59,8 @@ MODEL_SPEC = spec.ModelSpec(
                 " column (PE_[X]) for any soil group, you must provide it for all four"
                 " soil groups."
             ),
+            keywords=[keywords.RUNOFF_COEFFICIENT, keywords.PERCOLATION,
+                      keywords.EVENT_MEAN_CONCENTRATION],
             columns=[
                 spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(
@@ -166,6 +160,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="road_centerlines_path",
             name=gettext("Road centerlines"),
             about=gettext("Map of road centerlines"),
+            keywords=[keywords.ROADS],
             required="adjust_retention_ratios",
             allowed="adjust_retention_ratios",
             geometry_types={"LINESTRING", "MULTILINESTRING"},

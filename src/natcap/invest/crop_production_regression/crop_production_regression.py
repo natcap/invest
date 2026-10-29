@@ -9,6 +9,7 @@ from osgeo import gdal
 from osgeo import osr
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import utils
 from natcap.invest import validation
@@ -111,18 +112,11 @@ CROP_TO_PATH_TABLES = CropToPathTables(
     regression_yield='regression_yield_csv_table',
 )
 
-LULC_RASTER_INPUT = spec.SingleBandRasterInput(
+LULC_RASTER_INPUT = spec.LULC.model_copy(update=dict(
     id="landcover_raster_path",
-    name=gettext("land use/land cover"),
-    about=gettext(
-        "Map of land use/land cover codes. Each land use/land cover type must"
-        " be assigned a unique integer code."
-    ),
-    data_type=int,
-    units=None,
     projected=True,
-    projection_units=u.meter
-)
+    projection_units=u.meter))
+
 
 class CropNameColumnInput(spec.OptionStringInput):
     """Represents the 'crop_name' column in the crop nutrient table."""
@@ -162,8 +156,9 @@ MODEL_SPEC = spec.ModelSpec(
                 "A table that maps each LULC code from the LULC map to one of the 10"
                 " canonical crop names representing the crop grown in that LULC class."
             ),
+            keywords=[keywords.CROP_TYPE],
             columns=[
-                spec.IntegerInput(id="lucode", about=None),
+                spec.LULC_TABLE_COLUMN,
                 spec.OptionStringInput(
                     id="crop_name",
                     about=None,
@@ -176,6 +171,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="fertilization_rate_table_path",
             name=gettext("fertilization rate table"),
             about=gettext("A table that maps crops to fertilizer application rates."),
+            keywords=[keywords.CROP_TYPE, keywords.FERTILIZERS],
             columns=[
                 spec.OptionStringInput(
                     id="crop_name",
@@ -215,6 +211,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " You do not need to create this table; it is provided for you"
                 " in the sample data."
             ),
+            keywords=[keywords.CROP_TYPE, keywords.CROP_CLIMATE_SUITABILITY],
             columns=[
                 CropNameColumnInput(
                     id="crop_name",
@@ -242,6 +239,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " You do not need to create this table; it is provided for you"
                 " in the sample data."
             ),
+            keywords=[keywords.CROP_TYPE, keywords.CROP_PLANT_YIELDS],
             columns=[
                 CropNameColumnInput(
                     id="crop_name",
@@ -269,6 +267,8 @@ MODEL_SPEC = spec.ModelSpec(
                 " You do not need to create this table; it is provided for you"
                 " in the sample data."
             ),
+            keywords=[keywords.CROP_TYPE, keywords.CROP_PLANT_YIELDS,
+                      keywords.CROP_CLIMATE_SUITABILITY],
             columns=[
                 CropNameColumnInput(
                     id="crop_name",
@@ -306,6 +306,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " You do not need to create this table; it is provided for you"
                 " in the sample data."
             ),
+            keywords=[keywords.CROP_TYPE, keywords.NUTRIENTS],
             columns=[
                 CropNameColumnInput(
                     id="crop_name",

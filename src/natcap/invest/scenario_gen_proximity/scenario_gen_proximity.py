@@ -16,6 +16,7 @@ import scipy
 from osgeo import gdal
 
 from natcap.invest import gettext
+from natcap.invest import keywords
 from natcap.invest import spec
 from natcap.invest import validation
 from natcap.invest.unit_registry import u
@@ -42,6 +43,7 @@ MODEL_SPEC = spec.ModelSpec(
         ["convert_farthest_from_edge", "convert_nearest_to_edge",
          "n_fragmentation_steps"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
@@ -50,6 +52,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="base_lulc_path",
             name=gettext("base LULC map"),
             about=gettext("Base map from which to generate scenarios."),
+            keywords=[keywords.LULC],
             data_type=int,
             units=None,
             projected=True
