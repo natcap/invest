@@ -1150,7 +1150,7 @@ describe('Effects of async validation & bounding box calculation on search modal
   });
 
   let user = null;
-  const inputFieldOrder = [['aoi', 'dem']];
+  const inputFieldOrder = [{ group_label: '', input_ids: ['aoi', 'dem'] }];
   const spec = {
     aoiInputId: 'aoi',
     args: {
