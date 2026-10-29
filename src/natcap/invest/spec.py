@@ -2356,7 +2356,7 @@ class ModelSpec(ImmutableBaseModel):
     list must match the key of an ``Input`` in ``inputs``. The key of each
     ``Input`` must be included exactly once, unless it is hidden.
 
-    Example: ``[['workspace_dir', 'results_suffix'], InputGroup(label='Group A', input_ids=['bar', baz'])``
+    Example: ``[['workspace_dir', 'results_suffix'], InputGroup(group_label='Group A', input_ids=['bar', baz'])``
     """
 
     inputs: list[Input]
@@ -2399,7 +2399,7 @@ class ModelSpec(ImmutableBaseModel):
     ) -> list[InputGroup]:
         """Convert any lists in the input_field_order to InputGroups."""
         return [
-            InputGroup(label='', input_ids=group) if isinstance(
+            InputGroup(group_label='', input_ids=group) if isinstance(
                 group, list) else group for group in input_field_order]
 
     @field_validator('reporter', mode='after')
