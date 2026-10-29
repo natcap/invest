@@ -1,6 +1,5 @@
 import collections
 import contextlib
-import copy
 import importlib
 import json
 import logging
@@ -26,7 +25,7 @@ from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
-from pydantic import field_serializer, field_validator
+from pydantic import field_validator
 from pydantic import model_serializer, model_validator
 import taskgraph
 
@@ -232,9 +231,9 @@ class InputSubGroup(BaseModel):
     NumberInput or StringInput types.
     """
 
-    subgroup_label: str = ''
-    """Optional label that will be displayed in the workbench above
-       this subgroup of inputs."""
+    subgroup_label: str
+    """Label that will be displayed in the workbench above this subgroup
+       of inputs."""
 
     input_ids: list[str]
     """List of model input ids that belong to this group. Each string must
