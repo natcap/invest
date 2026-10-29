@@ -69,6 +69,7 @@ button {
 .info-button.tight {
   border: 0;
   &:hover, &:focus {
+    color: var(--lagunita-light);
     background: none;
   }
   &:focus, &:focus-visible, &:active {
