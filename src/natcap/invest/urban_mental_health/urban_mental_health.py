@@ -273,8 +273,6 @@ MODEL_SPEC = spec.ModelSpec(
             allowed="model_option=='lulc' or lulc_base"
         ),
         spec.TARGET_PROJECTION.model_copy(update=dict(
-            about=spec.TARGET_PROJECTION.about + gettext(
-                "The default selection is the AOI vector."),
             projection_units=u.meter
         )),
         spec.TARGET_PIXELSIZE.model_copy(update=dict(

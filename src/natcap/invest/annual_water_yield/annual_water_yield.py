@@ -700,7 +700,7 @@ def execute(args):
             'fraction', 'cost', 'height', 'kw_price'
 
         args['target_projection_id'] (string): (optional) if a non-empty
-            string, ``id`` of a spatial input listed in ``MODEL_SEPC.inputs``
+            string, ``id`` of a spatial input listed in ``MODEL_SPEC.inputs``
             that defines the target projection. If this spatial input is
             a raster, rather than a vector, it will also represent the
             target alignment for other spatial inputs (otherwise,
