@@ -2399,7 +2399,7 @@ class ModelSpec(ImmutableBaseModel):
     ) -> list[InputGroup]:
         """Convert any lists in the input_field_order to InputGroups."""
         return [
-            InputGroup(label='', input_ids=group) if isinstance(
+            InputGroup(group_label='', input_ids=group) if isinstance(
                 group, list) else group for group in input_field_order]
 
     @field_validator('reporter', mode='after')
