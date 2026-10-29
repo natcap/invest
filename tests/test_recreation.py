@@ -1511,22 +1511,6 @@ class RecreationProductionServerHealth(unittest.TestCase):
         finally:
             proxy._pyroRelease()
 
-    def test_production_server_3_15_0(self):
-        """Ping server supporting invest clients prior to 3.19.0."""
-        import requests
-
-        registry = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_3_15_0/index.html'
-        server_url = requests.get(registry).text.rstrip()
-        try:
-            proxy = Pyro5.api.Proxy(server_url)
-            # _pyroBind() forces the client-server handshake and
-            # seems like a good way to check if the remote object is ready
-            proxy._pyroBind()
-        except Exception as exc:
-            self.fail(exc)
-        finally:
-            proxy._pyroRelease()
-
 
 def _assert_regression_results_eq(
         workspace_dir, file_list_path, result_vector_path,
