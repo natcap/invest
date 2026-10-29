@@ -44,6 +44,8 @@ MODEL_SPEC = spec.ModelSpec(
     about=model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
+    default_projection_id="lulc_raster_path",
+    default_pixelsize_id="lulc_raster_path",
     aliases=set("ucm",),
     module_name=__name__,
     input_field_order=[
@@ -54,7 +56,8 @@ MODEL_SPEC = spec.ModelSpec(
          "green_area_cooling_distance", "cc_method"],
         ["do_energy_valuation", "building_vector_path", "energy_consumption_table_path"],
         ["do_productivity_valuation", "avg_rel_humidity"],
-        ["cc_weight_shade", "cc_weight_albedo", "cc_weight_eti"]
+        ["cc_weight_shade", "cc_weight_albedo", "cc_weight_eti"],
+        ['target_projection_id', 'target_pixelsize_id']
     ],
     aoi_input_id="aoi_vector_path",
     inputs=[
@@ -62,9 +65,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SUFFIX,
         spec.N_WORKERS,
         spec.LULC.model_copy(update=dict(
-            id='lulc_raster_path',
-            projected=True,
-            projection_units=u.meter)),
+            id='lulc_raster_path')),
         spec.SingleBandRasterInput(
             id="ref_eto_raster_path",
             name=gettext("reference evapotranspiration"),
@@ -297,7 +298,15 @@ MODEL_SPEC = spec.ModelSpec(
                 " capacity index. If not provided, defaults to 0.2."
             ),
             required=False,
-        )
+        ),
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            projection_units=u.meter)),
+        spec.TARGET_PIXELSIZE.model_copy(update=dict(
+            about=spec.TARGET_PIXELSIZE.about + gettext(
+                "The pixel will be a square with a side length equal to the "
+                "smaller of this raster's pixel width and height. This raster "
+                "will also be used to set the alignment during resampling.")
+            ))
     ],
     outputs=[
         spec.SingleBandRasterOutput(
@@ -434,7 +443,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/reprojected_aoi.shp",
             about=gettext(
                 "The Area of Interest vector reprojected to the spatial reference"
-                " of the LULC."
+                " of the target projection source."
             ),
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[]
@@ -444,7 +453,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/reprojected_buildings.shp",
             about=gettext(
                 "The buildings vector reprojected to the spatial reference of the"
-                " LULC."
+                " target projection source."
             ),
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[]
@@ -619,6 +628,18 @@ def execute(args):
         args['cc_weight_eti'] (str/float): floating point number
             representing the relative weight to apply to ETI when
             calculating the cooling index. Default: 0.2
+        args['target_projection_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            projection.
+        args['target_pixelsize_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            pixel size. The pixel will be a square with a side length equal to
+            the smaller of this raster's pixel width and height. This raster
+            will also be used to set the alignment during resampling.
+        args['n_workers'] (int): if present, indicates how many worker
+            processes should be used in parallel processing. -1 indicates
+            single process mode, 0 is single process but non-blocking mode,
+            and >= 1 is number of processes.
 
 
     Returns:
@@ -627,6 +648,9 @@ def execute(args):
     """
     LOGGER.info('Starting Urban Cooling Model')
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
+    args = MODEL_SPEC.preprocess_spatial_reference_args(args)
+    target_projection_path = args[args['target_projection_id']]
+    target_pixelsize_path = args[args['target_pixelsize_id']]
 
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
@@ -655,26 +679,27 @@ def execute(args):
     cc_weight_albedo = cc_weight_albedo_raw / cc_weight_sum
     cc_weight_eti = cc_weight_eti_raw / cc_weight_sum
 
-    # align all the input rasters.
-    lulc_raster_info = pygeoprocessing.get_raster_info(
-        args['lulc_raster_path'])
     # ensure raster has square pixels by picking the smallest dimension
-    cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
+    target_projection_wkt = utils.get_raster_or_vector_projection(
+        target_projection_path)
+    cell_size = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_projection_wkt)
+    cell_size = numpy.min(numpy.abs(cell_size))
 
-    # Reproject and align inputs to the intersection of the AOI, ET0 and LULC,
-    # with target raster sizes matching those of the LULC.
+    # Reproject and align inputs to the intersection of the AOI, ET0 and LULC
     aligned_raster_path_list = [file_registry['lulc'], file_registry['ref_eto']]
+    align_inputs_list = [args['lulc_raster_path'], args['ref_eto_raster_path']]
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=([args['lulc_raster_path'], args['ref_eto_raster_path']],
+        args=(align_inputs_list,
               aligned_raster_path_list,
               ['mode', 'cubicspline'],
               (cell_size, -cell_size),
               'intersection'),
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
-            'raster_align_index': 0,
-            'target_projection_wkt': lulc_raster_info['projection_wkt']},
+            'raster_align_index': align_inputs_list.index(target_pixelsize_path),
+            'target_projection_wkt': target_projection_wkt},
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
 
@@ -849,7 +874,7 @@ def execute(args):
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
-            args['aoi_vector_path'], lulc_raster_info['projection_wkt'],
+            args['aoi_vector_path'], target_projection_wkt,
             file_registry['reprojected_aoi']),
         kwargs={'driver_name': 'ESRI Shapefile'},
         target_path_list=[file_registry['reprojected_aoi']],
@@ -943,7 +968,7 @@ def execute(args):
             func=pygeoprocessing.reproject_vector,
             args=(
                 args['building_vector_path'],
-                lulc_raster_info['projection_wkt'],
+                target_projection_wkt,
                 file_registry['reprojected_buildings']),
             kwargs={'driver_name': 'ESRI Shapefile'},
             target_path_list=[file_registry['reprojected_buildings']],
