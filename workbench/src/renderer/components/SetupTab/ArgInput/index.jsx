@@ -463,7 +463,6 @@ function AboutModal(props) {
           <span>{`${i18n.t('Type:')} ${userFriendlyArgType}`}</span>
           <span>{optional && <em>{i18n.t('optional')}</em>}</span>
           <br />
-          {/* display units at the end of the arg name, if applicable */}
           {
             (arg.units && arg.units !== 'unitless') ?
             <span>{`${i18n.t('Units:')} ${arg.units}`}</span> :
