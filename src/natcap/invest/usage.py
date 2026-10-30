@@ -120,7 +120,8 @@ def _calculate_args_bounding_box(args, model_spec):
 
 
 def _log_model(
-        pyname, model_args, invest_interface, model_type, plugin_source):
+        pyname, model_args, invest_interface, model_type, plugin_source,
+        workbench_language):
     """Log information about a model run to a remote server.
 
     Args:
@@ -132,6 +133,8 @@ def _log_model(
         plugin_source (string): For plugins, a string identifying the source of
             the plugin (e.g. 'git+https://github.com/foo/bar' or 'local'). For
             core models, this is None.
+        workbench_language (string): the two-letter locale code corresponding
+            to the language setting in the Workbench (e.g., 'en', 'es', 'zh').
 
     Returns:
         None
@@ -154,7 +157,8 @@ def _log_model(
             'bounding_box_intersection': str(bounding_box_intersection),
             'bounding_box_union': str(bounding_box_union),
             'type': model_type,
-            'source': plugin_source
+            'source': plugin_source,
+            'workbench_language': workbench_language
         })
     except Exception as exception:
         # An exception was thrown, we don't care.
