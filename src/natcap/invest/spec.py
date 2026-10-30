@@ -1,6 +1,5 @@
 import collections
 import contextlib
-import copy
 import importlib
 import json
 import logging
@@ -26,7 +25,7 @@ from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
-from pydantic import field_serializer, field_validator
+from pydantic import field_validator
 from pydantic import model_serializer, model_validator
 import taskgraph
 
@@ -221,23 +220,40 @@ def set_metadata_field_descriptions(field_specs, resource):
             LOGGER.debug(error)
 
 
-class InputGroup(BaseModel):
-    """Represent a group of input fields for display in the workbench."""
+class InputSubGroup(BaseModel):
+    """Represent a sub-group of input fields to display in the workbench.
 
-    label: str = ''
-    """Optional label that will be displayed in the workbench above
-       this group of inputs."""
+    The inputs in this sub-group will be displayed with condensed vertical
+    spacing. This is useful for models that have a lot of closely-related
+    inputs that otherwise might take up too much space in the form.
+
+    Because of the condensed layout, inputs in a sub-group are limited to
+    NumberInput or StringInput types.
+    """
+
+    subgroup_label: str
+    """Label that will be displayed in the workbench above this subgroup
+       of inputs."""
 
     input_ids: list[str]
     """List of model input ids that belong to this group. Each string must
        match the id of an Input in the model."""
 
-    @model_serializer()
-    def serialize(self):
-        return {
-            'group_label': self.label,
-            'input_ids': self.input_ids
-        }
+
+class InputGroup(BaseModel):
+    """Represent a group of input fields for display in the workbench.
+
+    The inputs in this group will be visually grouped together and separated
+    from other groups.
+    """
+
+    group_label: str = ''
+    """Optional label that will be displayed in the workbench above
+       this group of inputs."""
+
+    input_ids: list[str | InputSubGroup]
+    """List of model input ids or InputSubGroups that belong to this group.
+       Each string must match the id of an Input in the model."""
 
 
 class ImmutableBaseModel(BaseModel):
@@ -2340,7 +2356,7 @@ class ModelSpec(ImmutableBaseModel):
     list must match the key of an ``Input`` in ``inputs``. The key of each
     ``Input`` must be included exactly once, unless it is hidden.
 
-    Example: ``[['workspace_dir', 'results_suffix'], InputGroup(label='Group A', input_ids=['bar', baz'])``
+    Example: ``[['workspace_dir', 'results_suffix'], InputGroup(group_label='Group A', input_ids=['bar', baz'])``
     """
 
     inputs: list[Input]
@@ -2383,7 +2399,7 @@ class ModelSpec(ImmutableBaseModel):
     ) -> list[InputGroup]:
         """Convert any lists in the input_field_order to InputGroups."""
         return [
-            InputGroup(label='', input_ids=group) if isinstance(
+            InputGroup(group_label='', input_ids=group) if isinstance(
                 group, list) else group for group in input_field_order]
 
     @field_validator('reporter', mode='after')
@@ -2408,11 +2424,24 @@ class ModelSpec(ImmutableBaseModel):
         for group in self.input_field_order:
             if isinstance(group, InputGroup):
                 group = group.input_ids
-            for key in group:
-                if key in found_keys:
-                    raise ValueError(
-                        f'Key {key} appears more than once in input_field_order')
-                found_keys.add(key)
+            for item in group:
+                if isinstance(item, InputSubGroup):
+                    for key in item.input_ids:
+                        if key in found_keys:
+                            raise ValueError(
+                                f'Key {key} appears more than once in input_field_order')
+                        found_keys.add(key)
+                        _input = self.get_input(key)
+                        if not (isinstance(_input, NumberInput) or
+                                isinstance(_input, StringInput)):
+                            raise ValueError(
+                                f'Input {key} is in an InputSubGroup but is '
+                                'not a NumberInput or StringInput.')
+                else:
+                    if item in found_keys:
+                        raise ValueError(
+                            f'Key {item} appears more than once in input_field_order')
+                    found_keys.add(item)
         for _input in self.inputs:
             if _input.hidden is True:
                 if _input.id in found_keys:

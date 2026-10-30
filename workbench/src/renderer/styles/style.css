@@ -52,7 +52,7 @@ button {
    components, but since there's currently only one button style in need of
    customization (the "info" color became too light in Bootstrap 5), a more
    complex approach doesn't seem worthwhile. */
-.btn-outline-info {
+.info-button {
   color: var(--lagunita-light);
   border-color: var(--lagunita-light);
   &:hover, &:focus {
@@ -63,6 +63,25 @@ button {
   &:focus, &:focus-visible {
     box-shadow: 0 0 0 .25rem var(--lagunita-light-opacity-50);
   }
+  margin-right: 0.5rem;
+}
+
+.info-button.tight {
+  border: 0;
+  &:hover, &:focus {
+    color: var(--lagunita-light);
+    background: none;
+  }
+  &:focus, &:focus-visible, &:active {
+    box-shadow: none !important;
+    background-color: inherit !important;
+  }
+}
+
+.info-icon-outline {
+  color: var(--lagunita-light);
+  background: none;
+  border-color: var(--lagunita-light);
 }
 
 /* Bootstrap form control style overrides. */
@@ -403,7 +422,7 @@ exceed 100% of window.*/
   background-color: transparent;
 }
 
-.card-header {
+.recent-job-card .card-header {
   --card-header-title-font-size: 1.25rem;
   --card-header-title-line-height: 1.2;
   --card-header-button-height: 2.625rem;
@@ -629,17 +648,28 @@ exceed 100% of window.*/
   &:has(.arg-group-fieldset:first-of-type > legend) {
     padding-top: 1rem;
   }
-
-  &:has(.arg-group-fieldset > legend) {
-    .arg-group {
-      padding-left: 1.5rem;
-    }
-  }
 }
 
 /* InVEST Argument Forms */
 .args-form.dragging {
   opacity: 0.2;
+}
+
+.args-form .accordion {
+  --bs-accordion-border-width: 0;
+  --bs-accordion-bg: none;
+}
+
+.args-form .accordion-header {
+  border-bottom: 0;
+}
+
+.args-form .accordion-button {
+  box-shadow: none;
+  --bs-accordion-active-bg: none;
+  --bs-accordion-btn-padding-x: 0;
+  --bs-accordion-btn-padding-y: 0;
+  color: black;
 }
 
 .arg-group-fieldset {
@@ -655,8 +685,56 @@ exceed 100% of window.*/
     width: auto;
     padding: 0 0.5rem 0 0;
     margin: 0;
-    font-size: 1.125rem;
     font-weight: 600;
+    font-size: 1.2rem;
+  }
+}
+
+.arg-group-fieldset:has(.accordion-button.collapsed) {
+  margin-bottom: 1.5rem;
+}
+
+.sub-group-accordion {
+  background-color: inherit;
+  & > legend {
+    float: none;
+    width: auto;
+    padding: 0 0.5rem 0 0;
+    margin: 0;
+    font-size: inherit;
+    font-weight: 600;
+  }
+  & button {
+    font-weight: 600;
+  }
+  & :after {
+    margin-left: 0.5rem;
+  }
+}
+
+.sub-group-accordion .card-header {
+  font-weight: 600;
+}
+
+.sub-group-accordion .accordion-collapse {
+  background-color: var(--bs-card-cap-bg);
+}
+
+.sub-group-accordion .accordion-header:not(.disabled) {
+  & > ::after {
+    display: none;
+  }
+  & > button {
+    cursor: default;
+  }
+}
+
+.sub-group-accordion .accordion-header.disabled {
+  & > ::after {
+    color: #a5a5a5;
+  }
+  & > button {
+    color: #a5a5a5;
   }
 }
 
@@ -666,6 +744,11 @@ exceed 100% of window.*/
   gap: 16px;
   margin: 0;
   padding: 1.5rem 0;
+}
+
+.sub-group {
+  gap: 0;
+  margin: 16px;
 }
 
 .arg-hide {
@@ -685,6 +768,14 @@ exceed 100% of window.*/
   font-weight: 600;
 }
 
+.argname.tight-spacing {
+  padding-left: 0;
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
+  border: 1px solid gray;
+}
+
 .args-form {
   .form-control,
   .form-select {
@@ -700,12 +791,46 @@ exceed 100% of window.*/
 .args-form .form-label {
   padding-top: 0;
   padding-bottom: 0;
+  margin-left: 16px;
+}
+
+.args-form .form-label.tight-spacing {
+  margin-top: 4px;
+  margin-bottom: 4px;
+  margin-left: 0;
+  display: flex;
+  align-items: center;
 }
 
 .args-form .form-control[type=text] {
   /*always hold space for a validation mark so the rightmost
   text is never hidden by the mark when it appears.*/
   padding-right: var(--form-field-padding-right);
+}
+
+.args-form .form-control.tight-spacing {
+  border-radius: 0 !important;
+  margin-left: -1px;
+}
+
+/*
+For sub-groups where adjacent inputs share a 1px border,
+the invalid red outline should be in front.
+On focus, the wider red (invalid) / green (valid) highlighted border
+should be in front of any other border.
+*/
+.args-form .form-control.is-invalid {
+  z-index: 2;
+
+  &:focus {
+    z-index: 3;
+  }
+}
+
+.args-form .form-control.is-valid {
+  &:focus {
+    z-index: 3;
+  }
 }
 
 input.input-dragging {
@@ -731,11 +856,20 @@ input[type=text]::placeholder {
   padding-left: calc(3.5rem + 2px);
 }
 
+.invalid-feedback.tight-spacing {
+  padding-left: 0.5rem;
+}
+
 .args-form svg {
   font-size: 1.5rem;
 }
 
-.args-form .input-group {
+.form-container {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  margin-top: -1px;
+  position: relative;
   .form-select,
   .form-select.is-valid,
   .form-select.is-invalid {

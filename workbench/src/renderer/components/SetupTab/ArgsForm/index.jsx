@@ -1,6 +1,9 @@
+import classNames from 'classnames';
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Accordion from 'react-bootstrap/Accordion'
+import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 
 import ArgInput from '../ArgInput';
@@ -137,28 +140,86 @@ class ArgsForm extends React.Component {
       // object with an input_ids attribute.
       const inputIDs = Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
       const groupItems = [];
-      inputIDs.forEach((argkey) => {
-        groupItems.push(
-          <ArgInput
-            argkey={argkey}
-            argSpec={argsSpec[argkey]}
-            userguide={userguide}
-            isCoreModel={isCoreModel}
-            dropdownOptions={argsDropdownOptions[argkey]}
-            enabled={argsEnabled[argkey]}
-            updateArgValues={this.props.updateArgValues}
-            handleFocus={this.handleFocus}
-            inputDropHandler={this.inputDropHandler}
-            isValid={argsValidation[argkey].valid}
-            key={argkey}
-            selectFile={this.selectFile}
-            touched={argsValues[argkey].touched}
-            validationMessage={argsValidation[argkey].validationMessage}
-            value={argsValues[argkey].value}
-            scrollEventCount={scrollEventCount}
-          />
-        );
+      inputIDs.forEach((groupItem) => {
+        let subGroupItems;
+        if (typeof groupItem === 'string') {
+          const argkey = groupItem;
+          groupItems.push(
+            <ArgInput
+              argkey={argkey}
+              argSpec={argsSpec[argkey]}
+              userguide={userguide}
+              isCoreModel={isCoreModel}
+              dropdownOptions={argsDropdownOptions[argkey]}
+              enabled={argsEnabled[argkey] ?? true}
+              updateArgValues={this.props.updateArgValues}
+              handleFocus={this.handleFocus}
+              inputDropHandler={this.inputDropHandler}
+              isValid={(argsValidation[argkey] ?? {}).valid}
+              key={argkey}
+              selectFile={this.selectFile}
+              touched={argsValues[argkey].touched}
+              validationMessage={(argsValidation[argkey] ?? {}).validationMessage}
+              value={argsValues[argkey].value}
+              scrollEventCount={scrollEventCount}
+              tightSpacing={false}
+            />
+          );
+        } else {  // is an object representing a sub-group
+          subGroupItems = [];
+          let anyEnabled = false;
+          groupItem.input_ids.forEach((argkey) => {
+            subGroupItems.push(
+              <ArgInput
+                argkey={argkey}
+                argSpec={argsSpec[argkey]}
+                userguide={userguide}
+                isCoreModel={isCoreModel}
+                dropdownOptions={argsDropdownOptions[argkey]}
+                enabled={argsEnabled[argkey] ?? true}
+                updateArgValues={this.props.updateArgValues}
+                handleFocus={this.handleFocus}
+                inputDropHandler={this.inputDropHandler}
+                isValid={(argsValidation[argkey] ?? {}).valid}
+                key={argkey}
+                selectFile={this.selectFile}
+                touched={argsValues[argkey].touched}
+                validationMessage={(argsValidation[argkey] ?? {}).validationMessage}
+                value={argsValues[argkey].value}
+                scrollEventCount={scrollEventCount}
+                tightSpacing={true}
+              />
+            );
+            if (argsEnabled[argkey] ?? true) {
+              anyEnabled = true;
+            }
+          });
+          // Sub-groups that have all their inputs disabled will be rendered
+          // as a collapsed accordion section. If any input is enabled, render
+          // the section expanded and don't allow it to be collapsed.
+          groupItems.push(
+            <Accordion activeKey={anyEnabled ? k : undefined} key={groupItem.subgroup_label}>
+            <Accordion.Item as={Card} className="sub-group-accordion"
+                eventKey={k} key={k}
+                >
+              {groupItem.subgroup_label &&
+                <Accordion.Header as={Card.Header} className={classNames({'disabled': !anyEnabled})}>
+                  {groupItem.subgroup_label}
+                </Accordion.Header>
+              }
+              <Accordion.Collapse eventKey={k}>
+                <Form.Group className='sub-group'>
+                  {subGroupItems}
+                </Form.Group>
+              </Accordion.Collapse>
+            </Accordion.Item>
+            </Accordion>
+          );
+        }
       });
+      // CSS styling separates each group of input fields with a dotted line
+      // and label if applicable. Omits the dotted line above the first group
+      // if it has no label.
       formItems.push(
         <fieldset className="arg-group-fieldset" key={k}>
           {inputGroup.group_label &&
@@ -168,7 +229,6 @@ class ArgsForm extends React.Component {
             {groupItems}
           </Form.Group>
         </fieldset>
-
       );
       k += 1;
     });

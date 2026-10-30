@@ -580,10 +580,13 @@ class ModelSpecTests(unittest.TestCase):
             module_name=__name__,
             input_field_order=[
                 ["workspace_dir"],
-                spec.InputGroup(label="Group A", input_ids=["baz"])
+                spec.InputGroup(group_label="Group A", input_ids=[
+                    "bar", spec.InputSubGroup(
+                        subgroup_label="Subgroup B", input_ids=["baz"])])
             ],
             inputs=[
                 spec.WORKSPACE,
+                spec.NumberInput(id="bar", data_type=int, units=None),
                 spec.NumberInput(id="baz", data_type=int, units=None)
             ],
             outputs=[
@@ -595,6 +598,7 @@ class ModelSpecTests(unittest.TestCase):
                 )
             ]
         )
+
         self.assertEqual(
             json.loads(test_spec.model_dump_json()),
             {
@@ -606,7 +610,16 @@ class ModelSpecTests(unittest.TestCase):
                 'about': '',
                 'input_field_order': [
                     {'group_label': '', 'input_ids': ['workspace_dir']},
-                    {'group_label': 'Group A', 'input_ids': ['baz']}
+                    {
+                        'group_label': 'Group A',
+                        'input_ids': [
+                            'bar',
+                            {
+                                'subgroup_label': 'Subgroup B',
+                                'input_ids': ['baz']
+                            }
+                        ]
+                    }
                 ],
                 'different_projections_ok': False,
                 'validate_spatial_overlap': True,
@@ -619,6 +632,17 @@ class ModelSpecTests(unittest.TestCase):
                         'id': 'workspace_dir',
                         'name': 'workspace directory',
                         'type': 'workspace'
+                    },
+                    'bar': {
+                        'id': 'bar',
+                        'about': None,
+                        'name': None,
+                        'required': True,
+                        'allowed': True,
+                        'hidden': False,
+                        'units': None,
+                        'expression': None,
+                        'type': 'number'
                     },
                     'baz': {
                         'id': 'baz',
