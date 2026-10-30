@@ -276,15 +276,14 @@ MODEL_SPEC = spec.ModelSpec(
             projection_units=u.meter
         )),
         spec.TARGET_PIXELSIZE.model_copy(update=dict(
-            about=gettext(
-                "Input with target pixel size to which all other spatial "
-                "inputs will be resampled. Units match those of the selected "
-                "Target Projection. If the selected model option is 'LULC', "
+            about=spec.TARGET_PIXELSIZE.about + gettext(
+                "If the selected model option is 'LULC', "
                 "then this will default to the baseline LULC raster pixel "
                 "size. Otherwise, this will default to the baseline NDVI "
                 "raster pixel size. If the selected input has a non-square "
-                "pixel size, this will be converted to sqaure during model"
-                "execution."),
+                "pixel size, this will be converted to square during model"
+                "execution. This input will also set the output pixel "
+                "alignment."),
             dropdown_function=_get_pixelsize_umh
         )),
         ],
