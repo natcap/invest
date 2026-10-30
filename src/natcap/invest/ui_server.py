@@ -275,7 +275,8 @@ def log_model_start():
         model_args=json.loads(payload['model_args']),
         invest_interface=payload['invest_interface'],
         model_type=payload['model_type'],  # 'core' or 'plugin'
-        plugin_source=payload.get('plugin_source', None))  # source only used for plugins
+        plugin_source=payload.get('plugin_source', None),  # source only used for plugins
+        workbench_language=payload['workbench_language'])
     return 'OK'
 
 

@@ -17,6 +17,7 @@ export default function investUsageLogger() {
       model_id: modelID,
       model_args: JSON.stringify(args),
       invest_interface: `Workbench ${WORKBENCH_VERSION}`,
+      workbench_language: settingsStore.get('language'),
     };
 
     const plugins = settingsStore.get('plugins');
