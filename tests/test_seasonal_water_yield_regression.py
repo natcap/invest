@@ -586,6 +586,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         band.WriteArray(lulc_array)
         geotransform = [1180000, 1, 0, 690000, 0, -1]
         new_raster.SetGeoTransform(geotransform)
+        # need to set projection in order for lulc to be correctly reprojected
+        # during align_and_resize (since base_projection_wkt unspecified)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        new_raster.SetProjection(srs.ExportToWkt())
         band = None
         new_raster = None
         driver = None
@@ -652,6 +657,9 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         band.WriteArray(lulc_array)
         geotransform = [1180000, 1, 0, 690000, 0, -1]
         new_raster.SetGeoTransform(geotransform)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        new_raster.SetProjection(srs.ExportToWkt())
         band = None
         new_raster = None
         driver = None
@@ -690,8 +698,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             numpy.testing.assert_allclose(expected_val, actual_result_df[col_name],
                                           rtol=1e-5)
 
-    def test_base_regression_nodata_inf(self):
-        """SWY base regression test on sample data with really small nodata.
+    def test_base_regression_nodata_inf_and_non_default_proj_pixelsize(self):
+        """SWY base regr test with tiny nodata and diff proj/pixelsize targets.
 
         Executes SWY in default mode and checks that the output files are
         generated and that the aggregate shapefile fields are the same as the
@@ -714,8 +722,13 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             lulc_array.shape[1], 1, gdal.GDT_Byte)
         band = new_raster.GetRasterBand(1)
         band.WriteArray(lulc_array)
-        geotransform = [1180000, 1, 0, 690000, 0, -1]
+        geotransform = [-2544590.35, 1, 0, -1474018.72, 0, -1]
         new_raster.SetGeoTransform(geotransform)
+        # need to set projection in order for lulc to be correctly reprojected
+        # during align_and_resize (since base_projection_wkt unspecified)
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(5070)
+        new_raster.SetProjection(target_srs.ExportToWkt())
         band = None
         new_raster = None
         driver = None
@@ -756,13 +769,23 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
 
-        seasonal_water_yield.execute(args)
+        args['target_projection_id'] = 'lulc_raster_path'
+        args['target_pixelsize_id'] = 'lulc_raster_path'
+
+        file_registry = seasonal_water_yield.execute(args)
+
+        # assert output projection and pixel size are same as targets
+        actual_srs = osr.SpatialReference()
+        output_info = pygeoprocessing.get_raster_info(file_registry['b'])
+        actual_srs.ImportFromWkt(output_info['projection_wkt'])
+        self.assertTrue(target_srs.IsSame(actual_srs))
+        self.assertEqual(output_info['pixel_size'], (1, -1))
 
         # generate aggregated results csv table for assertion
         agg_results_csv_path = os.path.join(
             args['workspace_dir'], 'agg_results_base.csv')
         with open(agg_results_csv_path, 'w') as open_table:
-            open_table.write('0,1.0,50.076062\n')
+            open_table.write('0,1.0,101.964\n')
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
@@ -1498,7 +1521,12 @@ class SWYValidationTests(unittest.TestCase):
             'precip_raster_table',
             'threshold_flow_accumulation',
             'user_defined_local_recharge',
-            'flow_dir_algorithm'
+            'flow_dir_algorithm',
+            'target_projection_id',
+            'target_pixelsize_id'
+            # last 2 are technically optional but still included in this list
+            # as they will error when default projection and pixel size
+            # source input (default is dem) not provided
         ]
 
     def tearDown(self):
