@@ -111,6 +111,12 @@ Annual Water Yield
   model will use the projection and pixel size of the LULC raster.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
 
+Coastal Vulnerability
+=====================
+* A user may now select which model input defines the target projection for
+  the model outputs. If not specified, the model will use the projection of
+  the AOI vector. (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+
 DelineateIt
 ===========
 * A user may now select which model input defines the target projection
