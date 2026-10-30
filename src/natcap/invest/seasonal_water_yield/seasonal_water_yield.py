@@ -808,6 +808,7 @@ def execute(args):
 
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
+    interpolate_list = ["near", "bilinear"]
     output_align_list = [
         file_registry['lulc_aligned'], file_registry['dem_aligned']]
     if not args['user_defined_local_recharge']:
@@ -835,6 +836,10 @@ def execute(args):
         input_align_list = (
             precip_path_list + [args['soil_group_path']] + et0_path_list +
             input_align_list)
+        interpolate_list = (
+            ['bilinear'] * len(precip_path_list) +
+            ['near'] + ['bilinear'] * len(et0_path_list) +
+            interpolate_list)
         output_align_list = (
             [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE] +
             [file_registry['soil_group_aligned']] +
@@ -843,11 +848,12 @@ def execute(args):
 
     if args['user_defined_local_recharge']:
         input_align_list.append(args['l_path'])
+        interpolate_list.append('bilinear')
         output_align_list.append(file_registry['l'])
     elif args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
+        interpolate_list.append('near')
         output_align_list.append(file_registry['cz_aligned'])
-    interpolate_list = ['near'] * len(input_align_list)
     align_index = input_align_list.index(target_pixelsize_path)
 
     align_task = task_graph.add_task(
