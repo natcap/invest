@@ -64,7 +64,7 @@
     "nodejs-file-downloader": "^4.13.0",
     "prop-types": "^15.7.2",
     "react-i18next": "^12.1.4",
-    "toml": "^4.2.0",
+    "toml": "^5.0.1",
     "upath": "^2.0.1",
     "yauzl": "^3.2.1"
   },
@@ -85,7 +85,7 @@
     "bootstrap": "^5.0.0",
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
-    "electron": "^43.3.0",
+    "electron": "^43.8.1",
     "electron-builder": "^26.15.3",
     "electron-devtools-installer": "^4.0.0",
     "eslint": "^8.57.0",
@@ -108,7 +108,7 @@
     "react-dom": "^19.0.0",
     "react-icons": "^4.9.0",
     "rimraf": "^6.1.2",
-    "vite": "^6.4.3",
+    "vite": "^6.4.4",
     "yazl": "^3.3.1"
   }
 }

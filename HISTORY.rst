@@ -77,6 +77,24 @@ General
 * The ``to_json`` method of ``spec.ModelSpec`` has been deprecated.
   Serialization should now be done using the pydantic ``model_dump_json``
   method.
+* When plotting rasters in reports, avoid building unnecessary overviews
+  by determining the target plot width and building a single overview for
+  that width. (`#2576 <https://github.com/natcap/invest/issues/2576>`_)
+* No longer testing and building with Python 3.10, which reached EOL.
+  (`#2782 <https://github.com/natcap/invest/issues/2782>`_)
+
+Workbench
+=========
+* The InVEST workbench is now built for both Intel and Apple Silicon
+  architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+
+Visitation: Recreation and Tourism
+==================================
+* This model will no longer be functional in InVEST versions prior to 3.19.0.
+  The server infrastructure supporting those earlier versions will go offline.
+  Visitation results produced by the server supporting versions 3.15.0 - 3.18.0
+  are identical to results produced by version 3.19.0 and beyond.
+  We recommend updating to the latest version of InVEST.
 
 
 3.20.2 (2026-09-02)
