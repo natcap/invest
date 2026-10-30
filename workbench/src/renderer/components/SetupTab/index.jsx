@@ -106,6 +106,7 @@ class SetupTab extends React.Component {
     this.state = {
       argsValues: null,
       argsValidation: null,
+      argsValidationComplete: false,
       argsValid: false,
       argsEnabled: null,
       argsDropdownOptions: null,
@@ -489,106 +490,156 @@ class SetupTab extends React.Component {
     this.validationTimer = setTimeout(this.investValidate, 200);
   }
 
+  currentValidationRequest = null;
+
   /** Validate an arguments dictionary using the InVEST model's validate function.
    *
-   * @returns {undefined}
+   * @returns {void}
    */
-  async investValidate() {
-    
-    const { argsSpec, modelID } = this.props;
-    const { argsValues, argsValidation, argsValid, argsEnabled } = this.state;
-    const keyset = new Set(Object.keys(argsSpec));
+  investValidate() {
+    if (this.props.aoiInputId) {
+      // If aoiInputId is defined, we need finer control over validation state
+      // to allow the search modal to determine when searching is allowed.
+      // Setting AOI input's validation status to `undefined` signals it's not
+      // definitively valid but avoids premature or inaccurate error feedback.
+      this.setState({
+        argsValidationComplete: false,
+        argsValidation: {
+          ...this.state.argsValidation,
+          [this.props.aoiInputId]: {
+            ...this.state.argsValidation[this.props.aoiInputId],
+            valid: undefined,
+          },
+        }
+      });
+    }
+    const { modelID } = this.props;
+    const { argsValues } = this.state;
     const payload = {
       model_id: modelID,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
-    const results = await fetchValidation(payload);
+    const validationRequest = fetchValidation(payload);
+    this.currentValidationRequest = validationRequest;
+    validationRequest.then(results => this.updateValidationState(results, validationRequest));
+  }
 
-    // Invalidate a target spatial dropdown when its selected input is disabled
-    const validateSpatialDropdownSelections = () => {
-      let invalidSelection = false;
+  /**
+   * If the provided validation request is the currentValidationRequest,
+   * update state and reset currentValidationRequest.
+   * Otherwise, do nothing.
+   *
+   * @param {array[array[array[string]], string]} results
+   * @param {Promise} validationRequest
+   */
+  updateValidationState(results, validationRequest) {
+    // If validation requires a network call (i.e., if an arg value is a
+    // remote URL), we don't know how long it will take to receive a response,
+    // and if a new validation request comes in while awaiting that response,
+    // the second request could resolve before the first one. To avoid
+    // unnecessary state updates in such cases, we update state only when we
+    // receive a response to the current (i.e., most recent) request.
+    // If we later receive responses to earlier requests, we ignore them.
+    if (validationRequest === this.currentValidationRequest) {
+      this.currentValidationRequest = null;
 
-      Object.keys(argsSpec).forEach((argkey) => {
-        const isTargetSpatialDropdown = [
-          'target_pixelsize_id',
-          'target_projection_id',
-        ].includes(argsSpec[argkey]?.id);
+      const { argsSpec } = this.props;
+      const { argsValues, argsValidation, argsValid, argsEnabled } = this.state;
+      const keyset = new Set(Object.keys(argsSpec));
 
-        if (!isTargetSpatialDropdown) {
-          return;
+      // Invalidate a target spatial dropdown when its selected input is disabled
+      const validateSpatialDropdownSelections = () => {
+        let invalidSelection = false;
+
+        Object.keys(argsSpec).forEach((argkey) => {
+          const isTargetSpatialDropdown = [
+            'target_pixelsize_id',
+            'target_projection_id',
+          ].includes(argsSpec[argkey]?.id);
+
+          if (!isTargetSpatialDropdown) {
+            return;
+          }
+
+          const selectedInputKey = argsValues[argkey]?.value;
+          const selectedInputIsDisabled = (
+            selectedInputKey &&
+            argsEnabled[selectedInputKey] === false
+          );
+
+          if (selectedInputIsDisabled) {
+            argsValidation[argkey].valid = false;
+            argsValidation[argkey].validationMessage =
+              'The selected input is disabled. Select a new input.';
+            invalidSelection = true;
+          }
+        });
+
+        return invalidSelection;
+      };
+      // A) At least one arg was invalid:
+      if (results.length) {
+        results.forEach((result) => {
+          // Each result is an array of two elements
+          const argkeys = result[0]; // array of arg keys
+          const message = result[1]; // string that describes those args
+          argkeys.forEach((key) => {
+            argsValidation[key].validationMessage = message;
+            argsValidation[key].valid = false;
+            keyset.delete(key);
+          });
+        });
+        // validated all, so ones left in keyset are either valid
+        // or their "required" condition was unmet and so they were
+        // not validated and will appear disabled in the UI. Disabled
+        // inputs will not display a validation state, so it's okay
+        // to simply set all these as valid here.
+        keyset.forEach((k) => {
+          argsValidation[k].valid = true;
+          argsValidation[k].validationMessage = '';
+        });
+        validateSpatialDropdownSelections();
+        if (this._isMounted) {
+          this.setState({
+            argsValidationComplete: true,
+            argsValidation: argsValidation,
+            argsValid: false,
+          });
         }
 
-        const selectedInputKey = argsValues[argkey]?.value;
-        const selectedInputIsDisabled = (
-          selectedInputKey &&
-          argsEnabled[selectedInputKey] === false
-        );
+      // B) All args were validated and none were invalid:
+      } else {
+        keyset.forEach((k) => {
+          argsValidation[k].valid = true;
+          argsValidation[k].validationMessage = '';
+        });
+        const invalidSpatialDropdown = validateSpatialDropdownSelections();
+        // The model is valid only if no target dropdown points to
+        // an input that is currently disabled
+        const newArgsValid = !invalidSpatialDropdown;
+        const searchEnabled = this.props.aoiInputId;
 
-        if (selectedInputIsDisabled) {
-          argsValidation[argkey].valid = false;
-          argsValidation[argkey].validationMessage =
-            'The selected input is disabled. Select a new input.';
-          invalidSelection = true;
+        // It's possible all args were already valid, in which case
+        // no validation state has changed and this setState call can
+        // be avoided entirely.
+        // Update state in the following cases:
+        // 1. Not all args were valid, and now they are.
+        // 2. An invalid spatial dropdown was found.
+        // 3. Data Hub search is enabled.
+        if (
+          (
+            argsValid !== newArgsValid
+            || invalidSpatialDropdown
+            || searchEnabled
+          )
+          && this._isMounted
+        ) {
+          this.setState({
+            argsValidationComplete: true,
+            argsValidation: argsValidation,
+            argsValid: newArgsValid,
+          });
         }
-      });
-
-      return invalidSelection;
-    };
-
-    // A) At least one arg was invalid:
-    if (results.length) {
-      results.forEach((result) => {
-        // Each result is an array of two elements
-        const argkeys = result[0]; // array of arg keys
-        const message = result[1]; // string that describes those args
-        argkeys.forEach((key) => {
-          argsValidation[key].validationMessage = message;
-          argsValidation[key].valid = false;
-          keyset.delete(key);
-        });
-      });
-      // validated all, so ones left in keyset are either valid
-      // or their "required" condition was unmet and so they were
-      // not validated and will appear disabled in the UI. Disabled
-      // inputs will not display a validation state, so it's okay
-      // to simply set all these as valid here.
-      keyset.forEach((k) => {
-        argsValidation[k].valid = true;
-        argsValidation[k].validationMessage = '';
-      });
-      validateSpatialDropdownSelections();
-      if (this._isMounted) {
-        this.setState({
-          argsValidation: argsValidation,
-          argsValid: false,
-        });
-      }
-
-    // B) All args were validated and none were invalid:
-    } else {
-      keyset.forEach((k) => {
-        argsValidation[k].valid = true;
-        argsValidation[k].validationMessage = '';
-      });
-      const invalidSpatialDropdown = validateSpatialDropdownSelections();
-      // The model is valid only if no target dropdown points to
-      // an input that is currently disabled
-      const newArgsValid = !invalidSpatialDropdown;
-
-      // It's possible all args were already valid, in which case
-      // no validation state has changed and this setState call can
-      // be avoided entirely.
-      if (argsValid !== newArgsValid && this._isMounted) {
-        this.setState({
-          argsValidation: argsValidation,
-          argsValid: newArgsValid,
-        });
-      } else if (invalidSpatialDropdown && this._isMounted) {
-        // The overall validity may already be false, but the dropdown's
-        // validation message still needs to be committed
-        this.setState({
-          argsValidation,
-        });
       }
     }
   }
@@ -598,6 +649,7 @@ class SetupTab extends React.Component {
       argsValues,
       argsValid,
       argsValidation,
+      argsValidationComplete,
       argsEnabled,
       argsDropdownOptions,
       saveAlerts,
@@ -664,6 +716,7 @@ class SetupTab extends React.Component {
               argsSpec={argsSpec}
               argsValues={argsValues}
               argsValidation={argsValidation}
+              argsValidationComplete={argsValidationComplete}
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={inputFieldOrder}

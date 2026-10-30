@@ -34,6 +34,7 @@ class ArgsForm extends React.Component {
       focusOnAoiRequested: false,
       readyToFocusOnAoi: false,
       searchExtent: [],
+      searchExtentUpdateComplete: false,
       searchCollections: {
         [DataHubSearchSiblingType.LULC]: [],
         [DataHubSearchSiblingType.BIOPHYSICAL_TABLE]: [],
@@ -127,25 +128,89 @@ class ArgsForm extends React.Component {
     }
   }
 
-  cachedAoiPath = '';
+  /* Some local state to support handling of calls to updateSearchExtent. */
+  currentBoundingBox = [];
+  pendingAoiPath = '';
+  currentBboxRequest = null;
+
+  /**
+   * @function updateSearchExtentState
+   * If the provided bbox request is the currentBboxRequest,
+   * OR if the bbox is empty,
+   * update search extent-related state and reset currentBboxRequest.
+   * Otherwise, do nothing.
+   *
+   * @param {array[number]} bbox
+   * @param {Promise | null} bboxRequest, defaults to null
+   *
+   * @returns {void}
+   */
+  updateSearchExtentState = (bbox, bboxRequest = null) => {
+    if (bboxRequest === this.currentBboxRequest || !bbox.length) {
+      this.currentBboxRequest = null;
+      this.currentBoundingBox = bbox;
+      this.setState({
+        searchExtent: this.currentBoundingBox,
+        searchExtentUpdateComplete: true,
+      });
+    }
+  };
+
+  /**
+   * @function updateSearchExtent
+   * Handle request to update the extent parameter in a Data Hub search query.
+   * Depending on context, either set extent to [] and update state,
+   * fetch the current AOI's bounding box and update state, or do nothing.
+   *
+   * @returns {void}
+   */
   updateSearchExtent = () => {
-    const { aoiInputId, argsValidation, argsValues } = this.props;
+    const { aoiInputId, argsValidation, argsValidationComplete, argsValues } = this.props;
     const aoiIsValid = argsValidation[aoiInputId]?.valid || false;
     const aoiPath = argsValues[aoiInputId]?.value || '';
-    // Fetch AOI bounding box if we don't already have it
-    // (i.e., if aoiPath has changed since the last bounding box calculation).
-    if (aoiIsValid && aoiPath !== this.cachedAoiPath) {
-      // Clear extent to avoid displaying previous values while awaiting update.
-      this.setState({searchExtent: []});
-      getVectorBoundingBox(
+
+    // Whenever AOI validation status is updated, updateSearchExtent is called
+    // from each search modal. Since each search-enabled input has its own
+    // search modal, this means there are multiple near-simultaneous calls.
+    // These initial checks avoid processing those duplicate calls
+    // and also skip calls that come in while validation is in progress
+    // (since any bbox updates now will be outdated once validation updates).
+
+    // If awaiting validation
+    // OR if awaiting a bounding box calculation for this aoiPath
+    // OR if AOI is invalid and bounding box is already [],
+    // do nothing.
+    if (
+      !argsValidationComplete
+      || aoiPath === this.pendingAoiPath
+      || (!aoiIsValid && !this.currentBoundingBox.length)
+    ) {
+      return;
+    }
+
+    // Signal that an update is in progress.
+    this.setState({
+      searchExtentUpdateComplete: false,
+    });
+
+    if (!aoiIsValid && this.currentBoundingBox.length) {
+      this.updateSearchExtentState([]);
+    } else if (aoiPath !== this.pendingAoiPath) {
+      this.pendingAoiPath = aoiPath;
+      const bboxRequest = getVectorBoundingBox(
         { vector_path: aoiPath }
-      ).then(({ vector_bbox }) => {
-        this.setState({
-          ...this.state,
-          searchExtent: vector_bbox
-        });
-        this.cachedAoiPath = aoiPath;
+      );
+      this.currentBboxRequest = bboxRequest;
+      bboxRequest.then(({ vector_bbox }) => {
+        this.updateSearchExtentState(vector_bbox, bboxRequest);
+        this.pendingAoiPath = '';
       });
+      // Note: state is updated only when handling the response to the latest
+      // call to getVectorBoundingBox. Other (outdated) responses are ignored.
+      // It could be useful to cache outdated responses in case they're needed
+      // later. But since that adds significant complexity and could have
+      // unwanted side effects, we decided it's not worth implementing
+      // until/unless there's an obvious need.
     }
   };
 
@@ -190,7 +255,7 @@ class ArgsForm extends React.Component {
   };
 
   getSiblingType = (argkey) => {
-    // These hard-coded values support AWY, NDR, and SDR.
+    // These hard-coded values support AWY, NDR, SDR, and UFRM.
     // @TODO: add support for all search-enabled models (via model spec, probably).
     if (argkey === 'lulc_path') {
       return DataHubSearchSiblingType.LULC;
@@ -227,6 +292,7 @@ class ArgsForm extends React.Component {
       argsSpec,
       argsValues,
       argsValidation,
+      argsValidationComplete,
       argsEnabled,
       argsDropdownOptions,
       userguide,
@@ -265,8 +331,10 @@ class ArgsForm extends React.Component {
             value={argsValues[argkey].value}
             scrollEventCount={scrollEventCount}
             aoiInputName={argsSpec[aoiInputId]?.name || ''}
+            argsValidationComplete={argsValidationComplete}
             aoiIsValid={argsValidation[aoiInputId]?.valid || false}
             searchExtent={this.state.searchExtent}
+            searchExtentUpdateComplete={this.state.searchExtentUpdateComplete}
             updateSearchExtent={this.updateSearchExtent}
             searchCollections={siblingCollections}
             clearSearchCollections={this.clearSearchCollections}
