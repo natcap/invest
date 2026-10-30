@@ -50,6 +50,8 @@ MODEL_SPEC = spec.ModelSpec(
     about=_model_description,
     validate_spatial_overlap=True,
     different_projections_ok=True,
+    default_projection_id="dem_raster_path",
+    default_pixelsize_id="dem_raster_path",
     aliases=("swy",),
     module_name=__name__,
     input_field_order=[
@@ -61,7 +63,8 @@ MODEL_SPEC = spec.ModelSpec(
          "precip_raster_table", "soil_group_path"],
         ["monthly_alpha", "alpha_m", "monthly_alpha_path"],
         ["user_defined_climate_zones", "rain_events_table_path",
-         "climate_zone_table_path", "climate_zone_raster_path"]
+         "climate_zone_table_path", "climate_zone_raster_path"],
+        ["target_projection_id", "target_pixelsize_id"]
     ],
     aoi_input_id="aoi_path",
     inputs=[
@@ -129,16 +132,13 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.DEM.model_copy(update=dict(id="dem_raster_path")),
         spec.LULC.model_copy(update=dict(
-            id="lulc_raster_path",
-            projected=True)),
+            id="lulc_raster_path")),
         spec.SOIL_GROUP.model_copy(update=dict(
-            projected=True,
             required="not user_defined_local_recharge",
             allowed="not user_defined_local_recharge"
         )),
         spec.AOI.model_copy(update=dict(
             id="aoi_path",
-            projected=True
         )),
         spec.CSVInput(
             id="biophysical_table_path",
@@ -254,8 +254,7 @@ MODEL_SPEC = spec.ModelSpec(
             required="user_defined_local_recharge",
             allowed="user_defined_local_recharge",
             data_type=float,
-            units=u.millimeter,
-            projected=True
+            units=u.millimeter
         ),
         spec.BooleanInput(
             id="user_defined_climate_zones",
@@ -308,8 +307,7 @@ MODEL_SPEC = spec.ModelSpec(
             required="user_defined_climate_zones",
             allowed="user_defined_climate_zones",
             data_type=int,
-            units=None,
-            projected=True
+            units=None
         ),
         spec.BooleanInput(
             id="monthly_alpha",
@@ -344,7 +342,23 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col="month"
         ),
-        spec.FLOW_DIR_ALGORITHM
+        spec.FLOW_DIR_ALGORITHM,
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            about=spec.TARGET_PROJECTION.about + gettext(
+                " If your DEM is already projected (with linear units of "
+                "meters), we recommend using it as the target projection "
+                "source to avoid warping the DEM further. However, if the "
+                "DEM does not meet this model's projection requirements, "
+                "choose a different target projection source."),
+            projection_units=u.meter
+        )),
+        spec.TARGET_PIXELSIZE.model_copy(update=dict(
+            about=spec.TARGET_PIXELSIZE.about + gettext(
+                "This raster will also be used to set the alignment during "
+                "resampling. We recommend using the DEM as the target pixel "
+                "size source to avoid warping this raster, which may cause "
+                "unexpected results.")
+        ))
     ],
     outputs=[
         spec.SingleBandRasterOutput(
@@ -381,11 +395,11 @@ MODEL_SPEC = spec.ModelSpec(
             path="L.tif",
             about=gettext(
                 "Map of local recharge. If a user-defined local recharge input"
-                " is provided, this is a copy of that layer, aligned and clipped"
-                " to match the other spatial inputs. Otherwise, this is the"
-                " local recharge as calculated by the model. Local recharge can"
-                " be negative if a pixel does not receive enough of its own water"
-                " to satisfy its vegetation requirements."
+                " is provided, this is a copy of that layer, aligned, clipped"
+                " and reprojected to match the other spatial inputs. Otherwise,"
+                " this is the local recharge as calculated by the model. Local"
+                " recharge can be negative if a pixel does not receive enough"
+                " of its own water to satisfy its vegetation requirements."
             ),
             data_type=float,
             units=u.millimeter / u.year
@@ -571,8 +585,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="lulc_aligned",
             path="intermediate_outputs/lulc_aligned.tif",
             about=gettext(
-                "Copy of LULC input, aligned and clipped to match the other"
-                " spatial inputs"
+                "Copy of LULC input, aligned, clipped, and reprojected to"
+                " match the other spatial inputs"
             ),
             data_type=int,
             units=u.none
@@ -581,8 +595,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="dem_aligned",
             path="intermediate_outputs/dem_aligned.tif",
             about=gettext(
-                "Copy of DEM input, aligned and clipped to match the other"
-                " spatial inputs"
+                "Copy of DEM input, aligned, clipped, and reprojected to match"
+                " the other spatial inputs"
             ),
             data_type=float,
             units=u.meter
@@ -598,8 +612,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="soil_group_aligned",
             path="intermediate_outputs/soil_group_aligned.tif",
             about=gettext(
-                "Copy of soil groups input, aligned and clipped to match the"
-                " other spatial inputs"
+                "Copy of soil groups input, aligned, clipped, and reprojected"
+                " to match the other spatial inputs"
             ),
             data_type=int,
             units=u.none,
@@ -612,8 +626,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="prcp_a[MONTH]",
             path="intermediate_outputs/prcp_a[MONTH].tif",
             about=gettext(
-                "Monthly precipitation rasters, aligned and clipped to match the"
-                " other spatial inputs"
+                "Monthly precipitation rasters, aligned, clipped, and"
+                " reprojected to match the other spatial inputs"
             ),
             data_type=float,
             units=u.millimeter / u.year,
@@ -631,8 +645,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="et0_a[MONTH]",
             path="intermediate_outputs/et0_a[MONTH].tif",
             about=gettext(
-                "Monthly ET0 rasters, aligned and clipped to match the other"
-                " spatial inputs"
+                "Monthly ET0 rasters, aligned, clipped, and reprojected to"
+                " match the other spatial inputs"
             ),
             data_type=float,
             units=u.millimeter / u.month,
@@ -650,8 +664,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="cz_aligned",
             path="intermediate_outputs/cz_aligned.tif",
             about=gettext(
-                "Copy of user-defined climate zones raster, aligned and clipped"
-                " to match the other spatial inputs"
+                "Copy of user-defined climate zones raster, aligned,"
+                " clipped, and reprojected to match the other spatial inputs"
             ),
             created_if="user_defined_climate_zones",
             data_type=int,
@@ -729,6 +743,12 @@ def execute(args):
         args['monthly_alpha'] (boolean): if True, use the alpha
         args['monthly_alpha_path'] (string): required if args['monthly_alpha']
             is True. A CSV file.
+        args['target_projection_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            projection.
+        args['target_pixelsize_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            pixel size.
         args['n_workers'] (int): (optional) indicates the number of processes
             to devote to potential parallel task execution. A value < 0 will
             use a single process, 0 will be non-blocking scheduling but
@@ -739,6 +759,9 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
+    args = MODEL_SPEC.preprocess_spatial_reference_args(args)
+    target_projection_path = args[args['target_projection_id']]
+    target_pixelsize_path = args[args['target_pixelsize_id']]
 
     LOGGER.info('prepare and test inputs for common errors')
 
@@ -767,8 +790,10 @@ def execute(args):
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
     threshold_flow_accumulation = args['threshold_flow_accumulation']
-    pixel_size = pygeoprocessing.get_raster_info(
-        args['dem_raster_path'])['pixel_size']
+    target_projection_wkt = utils.get_raster_or_vector_projection(
+        target_projection_path)
+    pixel_size = utils.get_raster_pixel_size_in_target_proj_units(
+        target_pixelsize_path, target_projection_wkt)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
     LOGGER.debug(f"aoi_path: {args['aoi_path']}")
@@ -783,6 +808,7 @@ def execute(args):
 
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
+    interpolate_list = ["near", "bilinear"]
     output_align_list = [
         file_registry['lulc_aligned'], file_registry['dem_aligned']]
     if not args['user_defined_local_recharge']:
@@ -810,20 +836,25 @@ def execute(args):
         input_align_list = (
             precip_path_list + [args['soil_group_path']] + et0_path_list +
             input_align_list)
+        interpolate_list = (
+            ['bilinear'] * len(precip_path_list) +
+            ['near'] + ['bilinear'] * len(et0_path_list) +
+            interpolate_list)
         output_align_list = (
             [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE] +
             [file_registry['soil_group_aligned']] +
             [file_registry['et0_a[MONTH]', month] for month in MONTH_RANGE] +
             output_align_list)
 
-    align_index = len(input_align_list) - 1  # this aligns with the DEM
     if args['user_defined_local_recharge']:
         input_align_list.append(args['l_path'])
+        interpolate_list.append('bilinear')
         output_align_list.append(file_registry['l'])
     elif args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
+        interpolate_list.append('near')
         output_align_list.append(file_registry['cz_aligned'])
-    interpolate_list = ['near'] * len(input_align_list)
+    align_index = input_align_list.index(target_pixelsize_path)
 
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
@@ -832,7 +863,8 @@ def execute(args):
             pixel_size, 'intersection'),
         kwargs={
             'base_vector_path_list': (args['aoi_path'],),
-            'raster_align_index': align_index},
+            'raster_align_index': align_index,
+            'target_projection_wkt': target_projection_wkt},
         target_path_list=output_align_list,
         task_name='align rasters')
 
