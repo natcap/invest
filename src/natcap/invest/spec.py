@@ -204,8 +204,9 @@ def _get_projection_inputs_options(args, model_spec):
                 display_name = inp.name
             if args.get(inp.id):
                 try:
+                    gdal_path = utils._GDALPath.from_uri(args[inp.id]).to_normalized_path()
                     srs = osr.SpatialReference()
-                    srs.ImportFromWkt(utils.get_raster_or_vector_projection(args[inp.id]))
+                    srs.ImportFromWkt(utils.get_raster_or_vector_projection(gdal_path))
                 except (RuntimeError, ValueError):  # raised if invalid filepath
                     srs = None
                 if srs:
@@ -243,8 +244,9 @@ def _get_pixel_size_options(args, model_spec, default_id=None):
     projection_units = None
     if projection_input_id and args.get(projection_input_id):
         try:
+            gdal_path = utils._GDALPath.from_uri(args[projection_input_id]).to_normalized_path()
             current_projection_wkt = utils.get_raster_or_vector_projection(
-                args[projection_input_id])
+                gdal_path)
             srs = osr.SpatialReference()
             srs.ImportFromWkt(current_projection_wkt)
 
@@ -273,8 +275,9 @@ def _get_pixel_size_options(args, model_spec, default_id=None):
         if current_projection_wkt and args.get(inp.id):
             # convert pixel size to be in same units as selected target projection
             try:
+                gdal_path = utils._GDALPath.from_uri(args[inp.id]).to_normalized_path()
                 pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
-                    args[inp.id], current_projection_wkt)
+                    gdal_path, current_projection_wkt)
                 formatted_pixelsize = f" ({pixelsize[0]:.{3}g}, "\
                     f"{abs(pixelsize[1]):.{3}g} {projection_units})"
             except (RuntimeError, ValueError):  # raised if current_projection_wkt is unprojected
