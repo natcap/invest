@@ -44,6 +44,17 @@ To install a particular version of invest, override these variables by adding
 
 
 ### Routine Maintenance
+If possible, avoid doing maintenance if there are active invest jobs
+running on the server. I usually tail the logfile to check:
+```
+sudo tail -f /mnt/recreation/server/pyro.log
+```
+It will look like this if there are no active connections:
+```
+[2026-11-02 16:45:47.070,Pyro5.threadpoolserver,DEBUG] disconnected ('47.38.117.44', 62903)
+[2026-11-02 16:45:47.071,Pyro5.threadpoolserver,DEBUG] worker counts: 0 busy, 8 idle
+```
+Otherwise it will have some active progress logging related to a model run.
 
 #### Restart the invest server process
 Sometimes the process may hang our crash, usually due to unexpected usage patterns.  
