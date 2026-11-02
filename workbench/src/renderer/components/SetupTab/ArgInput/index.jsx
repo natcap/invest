@@ -47,7 +47,10 @@ function FormLabel(props) {
   } = props;
 
   const userFriendlyArgType = parseArgType(argtype);
-  const optional = typeof required === 'boolean' && !required;
+  // Target projection and pixel size _are_ optional, but we don't want to display that in the
+  // Workbench because the dropdown will always be populated and it is confusing to users (#2744).
+  const isTargetSpatialDropdown = ['target_projection_id', 'target_pixelsize_id'].includes(argkey);
+  const optional = typeof required === 'boolean' && !required && !isTargetSpatialDropdown;
   const includeComma = userFriendlyArgType && optional;
 
   return (
