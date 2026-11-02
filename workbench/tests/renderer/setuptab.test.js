@@ -490,12 +490,14 @@ describe('UI spec functionality', () => {
       arg1: true, arg2: true, arg3: true, arg4: true, arg5: true, arg6: true
     });
 
-    // intentionally leaving out arg6, it should not be in the setup form
+    // intentionally leaving out arg6, it should not be in the setup form.
+    // test both the new input group object format and the old list format.
+    // previous invest server versions will return a plain list of input ids.
     const inputFieldOrder = [
       { group_label: '', input_ids: ['arg4'] },
       { group_label: '', input_ids: ['arg3', 'arg2'] },
       { group_label: 'Group A', input_ids: ['arg1'] },
-      { group_label: '', input_ids: ['arg5'] }
+      ['arg5']
     ];
 
     const { findByTestId, queryByText } = renderSetupFromSpec(spec, inputFieldOrder);
