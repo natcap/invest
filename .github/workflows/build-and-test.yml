@@ -19,6 +19,9 @@ concurrency:
 env:
   # build: dependency of make install
   # setuptools_scm: needed for versioning to work
+  # libgdal-core==3.10.3 and libcurl==8.18.0 form a temporary solution to
+  # vsicurl deadlock on Windows (https://github.com/natcap/invest/issues/2724).
+  # libgdal-core and libcurl can be unpinned when a bugfix is released in GDAL.
   CONDA_DEFAULT_DEPENDENCIES: python-build setuptools_scm gdal==3.10.3 libgdal-core==3.10.3 libcurl==8.18.0
   LATEST_SUPPORTED_PYTHON_VERSION: "3.14"
   GDAL_VERSION_FOR_WHEEL_BUILD: "3.10.*"
