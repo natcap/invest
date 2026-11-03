@@ -169,9 +169,10 @@ class ArgsForm extends React.Component {
     const aoiIsValid = argsValidation[aoiInputId]?.valid || false;
     const aoiPath = argsValues[aoiInputId]?.value || '';
 
-    // Whenever AOI validation status is updated, updateSearchExtent is called
-    // from each search modal. Since each search-enabled input has its own
-    // search modal, this means there are multiple near-simultaneous calls.
+    // updateSearchExtent is called whenever a search modal is opened.
+    // Since each search-enabled input has its own search modal,
+    // there is a potential for duplicate calls (i.e., if a call takes
+    // some time to return and a second modal is opened in the meantime).
     // These initial checks avoid processing those duplicate calls
     // and also skip calls that come in while validation is in progress
     // (since any bbox updates now will be outdated once validation updates).
