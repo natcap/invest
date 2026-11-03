@@ -26,12 +26,13 @@ The playbook will,
 * Mount a bucket with necessary recreation model data using `gcsfuse`
 * Stop and start the invest server python process
 
+### Running the playbook
 Run the playbook from a control node, a system where `ansible` is installed.
 Windows control nodes should use a WSL environment.  
 Specify a VM user that has ssh access from the control node to the VM.
 After it connects, the playbook will switch to the "rec" user.
 ```
-ansible-playbook -u dfisher5 -i inventory.ini playbook.yml
+ansible-playbook -u <username> -i inventory.ini playbook.yml
 ```
 
 By default, the playbook clones the latest `main` from the `natcap` fork of invest.
@@ -41,9 +42,32 @@ To install a particular version of invest, override these variables by adding
 `--extra-vars "invest_version=3.20.2"`  
 `--extra-vars "invest_version=task/2774-recserver-ansible invest_fork=davemfish"`
 
-If all you want to do is restart the invest server process, it won't hurt to run
-the whole playbook, but you may also use this tag to run only the "stop" and "start"
-tasks:
+
+### Routine Maintenance
+If possible, avoid doing maintenance if there are active invest jobs
+running on the server. I usually tail the logfile to check:
 ```
-ansible-playbook -u dfisher5 -i inventory.ini playbook.yml --tags restart-process
+sudo tail -f /mnt/recreation/server/pyro.log
+```
+It will look like this if there are no active connections:
+```
+[2026-11-02 16:45:47.070,Pyro5.threadpoolserver,DEBUG] disconnected ('47.38.117.44', 62903)
+[2026-11-02 16:45:47.071,Pyro5.threadpoolserver,DEBUG] worker counts: 0 busy, 8 idle
+```
+Otherwise it will have some active progress logging related to a model run.
+
+#### Restart the invest server process
+Sometimes the process may hang our crash, usually due to unexpected usage patterns.  
+To restart the process, it won't hurt to run the whole playbook,
+but you may also use this tag to run only the "stop" and "start" tasks:
+```
+ansible-playbook -u <username> -i inventory.ini playbook.yml --tags restart-process
+```
+
+#### Update the VM system packages and reboot
+
+Do `apt update` and `apt-upgrade`, and then reboot if it is required.  
+For example, if there are debian kernel patches to apply.
+```
+ansible-playbook -u <username> -i inventory.ini playbook.yml --tags update-reboot
 ```
