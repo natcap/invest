@@ -303,7 +303,7 @@ MODEL_SPEC = spec.ModelSpec(
             projection_units=u.meter)),
         spec.TARGET_PIXELSIZE.model_copy(update=dict(
             about=spec.TARGET_PIXELSIZE.about + gettext(
-                "The pixel will be a square with a side length equal to the "
+                " The pixel will be a square with a side length equal to the "
                 "smaller of this raster's pixel width and height. This raster "
                 "will also be used to set the alignment during resampling.")
             ))

@@ -340,6 +340,8 @@ class UCMTests(unittest.TestCase):
         from natcap.invest import urban_cooling_model
         from natcap.invest import validation_messages
         args = self.generate_base_args()
+        del args['cc_weight_shade']
+        del args['cc_weight_albedo']
 
         del args['t_ref']
         warnings = urban_cooling_model.validate(args)

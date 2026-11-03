@@ -354,7 +354,7 @@ MODEL_SPEC = spec.ModelSpec(
         )),
         spec.TARGET_PIXELSIZE.model_copy(update=dict(
             about=spec.TARGET_PIXELSIZE.about + gettext(
-                "This raster will also be used to set the alignment during "
+                " This raster will also be used to set the alignment during "
                 "resampling. We recommend using the DEM as the target pixel "
                 "size source to avoid warping this raster, which may cause "
                 "unexpected results.")
