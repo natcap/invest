@@ -497,8 +497,9 @@ class SetupTab extends React.Component {
    * @returns {void}
    */
   investValidate() {
-    if (this.props.aoiInputId) {
-      // If aoiInputId is defined, we need finer control over validation state
+    const searchEnabled = this.props.aoiInputId || false;
+    if (searchEnabled) {
+      // If search is enabled, we need finer control over validation state
       // to allow the search modal to determine when searching is allowed.
       // Setting AOI input's validation status to `undefined` signals it's not
       // definitively valid but avoids premature or inaccurate error feedback.
@@ -617,15 +618,13 @@ class SetupTab extends React.Component {
         // The model is valid only if no target dropdown points to
         // an input that is currently disabled
         const newArgsValid = !invalidSpatialDropdown;
-        const searchEnabled = this.props.aoiInputId;
+        const searchEnabled = this.props.aoiInputId || false;
 
-        // It's possible all args were already valid, in which case
-        // no validation state has changed and this setState call can
-        // be avoided entirely.
         // Update state in the following cases:
         // 1. Not all args were valid, and now they are.
         // 2. An invalid spatial dropdown was found.
         // 3. Data Hub search is enabled.
+        // Otherwise, there is no need to update the validation state.
         if (
           (
             argsValid !== newArgsValid
