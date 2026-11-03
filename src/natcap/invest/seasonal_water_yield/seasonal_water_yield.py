@@ -850,7 +850,7 @@ def execute(args):
         input_align_list.append(args['l_path'])
         interpolate_list.append('bilinear')
         output_align_list.append(file_registry['l'])
-    elif args['user_defined_climate_zones']:
+    if args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
         interpolate_list.append('near')
         output_align_list.append(file_registry['cz_aligned'])

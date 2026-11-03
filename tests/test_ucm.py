@@ -270,6 +270,7 @@ class UCMTests(unittest.TestCase):
         expected_srs.ImportFromWkt(expected_wkt)
         expected_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
             args[args['target_pixelsize_id']], expected_wkt)
+        expected_pixelsize = numpy.min(numpy.abs(expected_pixelsize))
 
         file_registry = natcap.invest.urban_cooling_model.execute(args)
 
@@ -278,7 +279,12 @@ class UCMTests(unittest.TestCase):
             utils.get_raster_or_vector_projection(file_registry['t_air']))
         self.assertTrue(expected_srs.IsSame(actual_srs))
         self.assertEqual(expected_pixelsize, pygeoprocessing.get_raster_info(
-            file_registry['t_air'])['pixel_size'])
+            file_registry['t_air'])['pixel_size'][0])
+
+        building_srs = osr.SpatialReference()
+        building_srs.ImportFromWkt(
+            utils.get_raster_or_vector_projection(file_registry['reprojected_buildings']))
+        self.assertTrue(expected_srs.IsSame(building_srs))
 
     def test_bad_building_type(self):
         """UCM: error on bad building type."""
