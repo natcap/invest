@@ -95,10 +95,10 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
   const searchAllowed: boolean = aoiIsValid || query.datatype === 'csv';
 
   useEffect(() => {
-    if (query.datatype === 'raster' && argsValidationComplete) {
+    if (show && query.datatype === 'raster' && argsValidationComplete) {
       updateSearchExtent();
     }
-  }, [argsValidationComplete]);
+  }, [show, argsValidationComplete]);
 
   useEffect(() => {
     setStep(getLoadingOrIntroStep());
