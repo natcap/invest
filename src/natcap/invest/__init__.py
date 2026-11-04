@@ -26,6 +26,9 @@ except importlib.metadata.PackageNotFoundError:
 # systems when running in a pyinstaller frozen environment
 # https://github.com/natcap/invest/issues/2200
 os.environ['SSL_CERT_FILE'] = certifi.where()
+print('=========== CERT FILE ==============')
+print(os.environ['SSL_CERT_FILE'])
+print('====================================')
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(
