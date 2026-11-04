@@ -202,11 +202,9 @@ class ArgsForm extends React.Component {
             <Accordion.Item as={Card} className="sub-group-accordion"
                 eventKey={k} key={k}
                 >
-              {groupItem.subgroup_label &&
-                <Accordion.Header as={Card.Header} className={classNames({'disabled': !anyEnabled})}>
-                  {groupItem.subgroup_label}
-                </Accordion.Header>
-              }
+              <Accordion.Header as={Card.Header} className={classNames({'disabled': !anyEnabled})}>
+                {groupItem.subgroup_label}
+              </Accordion.Header>
               <Accordion.Collapse eventKey={k}>
                 <Form.Group className='sub-group'>
                   {subGroupItems}
