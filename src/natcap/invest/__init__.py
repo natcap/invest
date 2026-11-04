@@ -26,6 +26,9 @@ except importlib.metadata.PackageNotFoundError:
 # systems when running in a pyinstaller frozen environment
 # https://github.com/natcap/invest/issues/2200
 os.environ['SSL_CERT_FILE'] = certifi.where()
+if getattr(sys, '_MEIPASS', False):
+    os.environ['SSL_CERT_FILE'] = os.path.join(
+        sys._MEIPASS, '_internal', 'certifi', 'cacert.pem')
 print('=========== CERT FILE ==============')
 print(os.environ['SSL_CERT_FILE'])
 print('====================================')
