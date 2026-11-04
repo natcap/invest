@@ -121,6 +121,28 @@ async function cloneAndCheckoutPlugin(
   );
 }
 
+async function removePlugin(key) {
+  logger.info('removing plugin', key);
+  try {
+    // Shut down the plugin server process
+    const pluginPID = settingsStore.get(`plugins.${key}.pid`);
+    await shutdownPythonProcess(pluginPID);
+    // Delete the plugin's conda env
+    const env = settingsStore.get(`plugins.${key}.env`);
+    const micromamba = settingsStore.get('micromamba');
+    await spawnWithLogging(
+      micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]
+    );
+    // Delete the plugin's data from storage
+    settingsStore.delete(`plugins.${key}`);
+    logger.info('successfully removed plugin');
+  } catch (error) {
+    logger.info('Error removing plugin:');
+    logger.info(error);
+    throw error;
+  }
+}
+
 /**
  * Install a plugin and its dependencies into a new micromamba environment.
  * @param  {string} micromamba      path to the micromamba executable
@@ -170,50 +192,6 @@ async function installPlugin(
     ]
   );
   logger.info('installed plugin into its env');
-}
-
-/**
- * Get plugin metadata from the installed Python package,
- * and store that metadata in the Workbench's settingsStore.
- * @param  {string} micromamba      path to the micromamba executable
- * @param  {string} pluginEnvPrefix location of the plugin's micromamba env
- * @param  {string} packageName     the plugin's python package name
- * @param  {string} installString   pip install argument for the plugin
- */
-function storePluginMetadataSync(
-  micromamba, pluginEnvPrefix, packageName, installString
-) {
-  const modelID = execSync(
-    `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-    `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
-  ).toString().trim();
-  const modelTitle = execSync(
-    `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-    `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
-  ).toString().trim();
-  const version = execSync(
-    `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-    `python -c "from importlib.metadata import version; ` +
-    `print(version('${packageName}'))"`
-  ).toString().trim();
-
-  // Write plugin metadata to the workbench's config.json
-  logger.info('writing plugin info to settings store');
-  // Uniquely identify plugin by its ID and version
-  // Replace dots with underscores in the version, because dots are a
-  // special character in keys for electron-store's set and get methods
-  const pluginID = `${modelID}@${version}`;
-  settingsStore.set(
-    `plugins.${pluginID.replaceAll('.', '_')}`,
-    {
-      modelID: modelID,
-      modelTitle: modelTitle,
-      type: 'plugin',
-      source: installString,
-      env: pluginEnvPrefix,
-      version: version,
-    }
-  );
 }
 
 export function setupAddPlugin(i18n) {
@@ -287,15 +265,58 @@ export function setupAddPlugin(i18n) {
         // know the model_id until after creating the environment to be able to
         // import metadata from the MODEL_SPEC. And mamba does not support
         // renaming or moving environments after they're created.
-        const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${Date.now()}`);
+        const timestamp = Date.now()
+        const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${timestamp}`);
         try {
           await installPlugin(
             micromamba, pluginEnvPrefix, condaDeps, installString, i18n, event
           );
           event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
-          storePluginMetadataSync(
-            micromamba, pluginEnvPrefix, packageName, installString
+
+          const modelID = execSync(
+            `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
+            `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
+          ).toString().trim();
+          const modelTitle = execSync(
+            `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
+            `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
+          ).toString().trim();
+          const version = execSync(
+            `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
+            `python -c "from importlib.metadata import version; ` +
+            `print(version('${packageName}'))"`
+          ).toString().trim();
+
+          console.log(modelTitle);
+          console.log(version);
+
+          // Make sure we don't have two plugins with the same title and version
+          // because they'd be indistinguishable in the workbench model list
+          Object.entries(settingsStore.get('plugins')).forEach(([key, val]) => {
+            console.log(key);
+            console.log(val);
+            if (val.modelTitle === modelTitle && val.version === version) {
+              logger.warn(
+                `A plugin is already installed with this title and version.
+                 It will be removed.`);
+              removePlugin(key);
+            }
+          })
+
+          // Write plugin metadata to the workbench's config.json
+          logger.info('writing plugin info to settings store');
+          settingsStore.set(
+            `plugins.${timestamp}`,
+            {
+              modelID: modelID,
+              modelTitle: modelTitle,
+              type: 'plugin',
+              source: installString,
+              env: pluginEnvPrefix,
+              version: version,
+            }
           );
+
           logger.info('successfully added plugin');
         } catch (error) {
           logger.info('Cleaning up failed installation environment.');
@@ -315,27 +336,7 @@ export function setupAddPlugin(i18n) {
 export function setupRemovePlugin() {
   ipcMain.handle(
     ipcMainChannels.REMOVE_PLUGIN,
-    async (e, pluginID) => {
-      logger.info('removing plugin', pluginID);
-      try {
-        // Shut down the plugin server process
-        const pluginPID = settingsStore.get(`plugins.${pluginID}.pid`);
-        await shutdownPythonProcess(pluginPID);
-        // Delete the plugin's conda env
-        const env = settingsStore.get(`plugins.${pluginID}.env`);
-        const micromamba = settingsStore.get('micromamba');
-        await spawnWithLogging(
-          micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]
-        );
-        // Delete the plugin's data from storage
-        settingsStore.delete(`plugins.${pluginID}`);
-        logger.info('successfully removed plugin');
-      } catch (error) {
-        logger.info('Error removing plugin:');
-        logger.info(error);
-        throw error;
-      }
-    }
+    async (e, key) => removePlugin(key)
   );
 }
 

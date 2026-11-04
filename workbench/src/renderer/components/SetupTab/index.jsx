@@ -48,7 +48,8 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
   const argsDropdownOptions = {};
-
+  console.log(argsSpec);
+  console.log(inputFieldOrder);
   inputFieldOrder.map(
     (inputGroup) =>
       // support both new and old input group formats because the plugin
@@ -57,6 +58,7 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
       // object with an input_ids attribute.
       Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
   ).flat().forEach((argkey) => {
+    console.log(argkey);
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.
