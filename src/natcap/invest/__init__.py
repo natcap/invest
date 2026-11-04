@@ -6,6 +6,7 @@ import sys
 from gettext import translation
 
 import babel
+import certifi
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
@@ -23,6 +24,7 @@ except importlib.metadata.PackageNotFoundError:
 # Needed to reliably open datasets over HTTPS across different
 # systems when running in a pyinstaller frozen environment
 # https://github.com/natcap/invest/issues/2200
+os.environ['SSL_CERT_FILE'] = certifi.where()
 # certifi.where() sometimes returns the wrong location when
 # running the frozen environment.
 # https://github.com/natcap/invest/issues/2816
@@ -32,8 +34,6 @@ if getattr(sys, '_MEIPASS', False):
         if 'cacert.pem' in files:
             print(root)
     print('========================================')
-    os.environ['SSL_CERT_FILE'] = os.path.join(
-        sys._MEIPASS, 'certifi', 'cacert.pem')
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(

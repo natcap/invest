@@ -28,7 +28,7 @@ flask_cors
 requests
 geometamaker>=0.3.1
 pydantic
-certifi
+certifi  # pip-only
 docutils
 altair>=6.0.0
 fiona
