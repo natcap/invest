@@ -26,7 +26,12 @@ except importlib.metadata.PackageNotFoundError:
 # certifi.where() sometimes returns the wrong location when
 # running the frozen environment.
 # https://github.com/natcap/invest/issues/2816
+print('========= looking for cert file ============')
 if getattr(sys, '_MEIPASS', False):
+    for root, dirs, files in os.walk(sys._MEIPASS):
+        if 'cacert.pem' in files:
+            print(root)
+    print('========================================')
     os.environ['SSL_CERT_FILE'] = os.path.join(
         sys._MEIPASS, 'certifi', 'cacert.pem')
 
