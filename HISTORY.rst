@@ -153,8 +153,10 @@ Seasonal Water Yield
   model will use the projection and pixel size of the DEM raster.
   (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
 * Fixed a bug where non-meter projection units were incorrectly permitted,
-  and inputs were not reprojected. Raster inputs are now reprojected to the
+  and inputs were not reprojected. Raster inputs are now reprojected to
   match the Target Projection source, which must be projected in meters.
+  Continuous rasters are now reprojected using bilinear resampling, instead
+  of nearest neighbor resampling.
   (`#2795 <https://github.com/natcap/invest/issues/2795>`_)
 
 Urban Cooling
