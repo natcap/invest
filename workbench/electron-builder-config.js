@@ -8,6 +8,7 @@ const EXT = OS === 'win32' ? 'exe' : 'dmg';
 const investVersion = execFileSync(
   '../dist/invest/invest', ['--version']
 ).toString().split('\n')[0].trim();
+console.log('Building with invest version: ', investVersion);
 
 // the appID may not display anywhere, but seems to control if the
 // install overwrites pre-existing or creates a new install directory.
