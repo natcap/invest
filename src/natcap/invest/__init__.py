@@ -24,16 +24,11 @@ except importlib.metadata.PackageNotFoundError:
 # Needed to reliably open datasets over HTTPS across different
 # systems when running in a pyinstaller frozen environment
 # https://github.com/natcap/invest/issues/2200
-os.environ['SSL_CERT_FILE'] = certifi.where()
 # certifi.where() sometimes returns the wrong location when
-# running the frozen environment.
+# it was installed from conda and then frozen by pyinstaller,
+# which is why we now pip install certifi.
 # https://github.com/natcap/invest/issues/2816
-print('========= looking for cert file ============')
-if getattr(sys, '_MEIPASS', False):
-    for root, dirs, files in os.walk(sys._MEIPASS):
-        if 'cacert.pem' in files:
-            print(root)
-    print('========================================')
+os.environ['SSL_CERT_FILE'] = certifi.where()
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(
