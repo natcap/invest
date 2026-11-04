@@ -87,6 +87,10 @@ Workbench
 =========
 * The InVEST workbench is now built for both Intel and Apple Silicon
   architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+* The InVEST Plugin Registry is now integrated into the Workbench Plugin
+  Manager modal. Users can browse and install plugins listed on the Plugin
+  Registry directly from the Workbench.
+  (`#2736 <https://github.com/natcap/invest/issues/2736>`_)
 
 Visitation: Recreation and Tourism
 ==================================
