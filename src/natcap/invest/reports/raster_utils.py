@@ -253,7 +253,6 @@ def _read_masked_array(filepath, resample_method, target_width):
         resampled = True
         level = raster_width // target_width
         raster = gdal.OpenEx(filepath)
-        band = raster.GetRasterBand(1)
 
         def overviews_progress(*args, **kwargs):
             pct_complete, name, other = args
@@ -273,17 +272,21 @@ def _read_masked_array(filepath, resample_method, target_width):
             overviewlist=[level],
             callback=overviews_progress,
             options={'LOCATION': "EXTERNAL"})
-        # Find the overview with width closest to,
-        # but not smaller than, target_width
-        # Overviews are ordered from largest array size to smallest
-        ovr_idx = 0
-        for i in range(band.GetOverviewCount()):
-            ovr_idx = i
-            if band.GetOverview(i).XSize < target_width * 2:
-                break
-
-        raster = gdal.OpenEx(filepath)
         band = raster.GetRasterBand(1)
+        ovr_idx = 0
+        ovr_count = band.GetOverviewCount()
+        # The overview order is unpredictable in cases where overviews
+        # might already exist for a dataset. So find the one we just
+        # created, which is the largest one less than 2 * target_width
+        if ovr_count > 1:
+            elegible_overviews = []
+            for i in range(ovr_count):
+                x_size = band.GetOverview(i).XSize
+                if x_size < target_width * 2:
+                    elegible_overviews.append((i, x_size))
+            elegible_overviews.sort(key=lambda x: x[1])
+            ovr_idx = elegible_overviews.pop()[0]
+
         array = band.GetOverview(ovr_idx).ReadAsArray()
         raster = band = None
     else:
@@ -853,12 +856,13 @@ def plot_categorical_raster_with_table(raster_path_list: list[str]):
         small_plots = True
     fig, axs, subplot_width = _figure_subplots(
         xy_ratio, n_plots=n_plots, small_plots=small_plots)
+    target_px_width = int(subplot_width * MPL_SAVE_FIG_KWARGS['dpi'])
     imshow_kwargs = {}
     imshow_kwargs['interpolation'] = 'none'
 
     for ax, raster_path in zip(axs, raster_path_list):
         arr, resampled = _read_masked_array(
-            raster_path, resample_alg, subplot_width)
+            raster_path, resample_alg, target_px_width)
         ax.set_title(**_get_title_kwargs(
             os.path.basename(raster_path), resampled, 100))
 
