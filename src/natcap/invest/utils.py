@@ -317,6 +317,7 @@ def read_csv_to_dataframe(path, **kwargs):
                 'sep': None,
                 'engine': 'python',
                 'encoding': 'utf-8-sig',
+                'on_bad_lines': lambda line: line,  # ignore trailing delimiters
                 **kwargs
             })
     except UnicodeDecodeError:

@@ -18,6 +18,7 @@ import warnings
 import numpy
 import numpy.testing
 import pygeoprocessing
+import pytest
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -306,6 +307,10 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
+    # don't fail on this pandas ParserWarning about extra fields
+    # because we test that pandas will truncate lines with extra fields
+    # and the line is not actually skipped, as the msg indicates.
+    @pytest.mark.filterwarnings("default::pandas.errors.ParserWarning")
     def test_read_csv_to_dataframe(self):
         """utils: read csv with no row or column specs provided"""
         from natcap.invest import utils
