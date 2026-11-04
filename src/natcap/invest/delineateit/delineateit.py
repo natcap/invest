@@ -34,14 +34,18 @@ MODEL_SPEC = spec.ModelSpec(
     module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
-        ["dem_path", "detect_pour_points", "outlet_vector_path", "skip_invalid_geometry"],
+        ["aoi_path", "dem_path", "detect_pour_points", "outlet_vector_path",
+         "skip_invalid_geometry"],
         ["snap_points", "flow_threshold", "snap_distance"],
         ["target_projection_id"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
+        spec.AOI.model_copy(update=dict(
+            required=False)),
         spec.DEM,
         spec.BooleanInput(
             id="detect_pour_points",
@@ -127,7 +131,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="reprojected_dem",
             path="reprojected_dem.tif",
             about=gettext(
-                "DEM reprojected and resampled to match Target Projection."),
+                "DEM reprojected and resampled to match Target Projection and "
+                "clipped to AOI vector if provided."),
             data_type=float,
             units=u.meter
         ),
@@ -226,6 +231,8 @@ def execute(args):
             (required)
         args['results_suffix'] (string):  This text will be appended to the end
             of output files to help separate multiple runs. (optional)
+        args['aoi_path'] (string): path to a vector that indicates the area
+            over which the model should be run.
         args['dem_path'] (string):  A GDAL-supported raster file with an
             elevation for each cell. Make sure the DEM is corrected by filling
             in sinks, and if necessary burning hydrographic features into the
@@ -272,16 +279,21 @@ def execute(args):
             target_projection_path)
         target_pixelsize_value = utils.get_raster_pixel_size_in_target_proj_units(
             args['dem_path'], target_projection_wkt)
-        dem_reproject_task = graph.add_task(
+        mask_options = None
+        if args.get('aoi_path'):
+            mask_options = {'mask_vector_path': args['aoi_path']}
+        reproject_and_clip_dem_task = graph.add_task(
             pygeoprocessing.warp_raster,
             args=(args['dem_path'],
                   target_pixelsize_value,
                   file_registry['reprojected_dem'],
                   'cubic'),
-            kwargs={'target_projection_wkt': target_projection_wkt},
+            kwargs={'target_projection_wkt': target_projection_wkt,
+                    'mask_options': mask_options},
             target_path_list=[file_registry['reprojected_dem']],
             task_name='reproject_dem')
-        fill_pits_dependent_task_list.append(dem_reproject_task)
+
+        fill_pits_dependent_task_list.append(reproject_and_clip_dem_task)
         dem_path = file_registry['reprojected_dem']
     else:
         dem_path = args['dem_path']
