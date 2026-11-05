@@ -123,6 +123,8 @@ DelineateIt
   for the model outputs. If not specified, the model will use the
   projection of the DEM raster.
   (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+* DelineateIt now has an optional AOI input that can be used to clip the
+  DEM. (`#2760 <https://github.com/natcap/invest/issues/2760>`_)
 
 NDR
 ===
