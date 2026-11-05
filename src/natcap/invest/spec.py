@@ -532,7 +532,7 @@ class Input(IOModel):
 
     @field_serializer('keywords')
     def serialize_keywords(self, _):
-        return(self.get_keywords())
+        return self.get_keywords()
 
     def get_keywords(self, include_children=True, include_aliases=True):
         """Get a list of unique keyword strings for this input and children.
@@ -1321,6 +1321,21 @@ class CSVInput(FileInput):
     def model_post_init(self, context):
         if self.columns:
             self._columns_dict = {col.id: col for col in self.columns}
+
+    def _get_index_and_other_keywords(self):
+        index_keywords = set()
+        if self.index_col is not None:
+            index_col_spec = self.get_column(self.index_col)
+            index_keywords.update(
+                index_col_spec.get_keywords(include_children=False))
+        all_keywords = set(self.get_keywords())
+        other_keywords = all_keywords - index_keywords
+        return {'index_keywords': list(index_keywords),
+                'other_keywords': list(other_keywords)}
+
+    @field_serializer('keywords')
+    def serialize_keywords(self, _):
+        self._get_structured_keywords()
 
     @property
     def display_name(self):
