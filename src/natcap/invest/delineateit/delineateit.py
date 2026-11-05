@@ -128,11 +128,11 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="reprojected_dem",
-            path="reprojected_dem.tif",
+            id="warped_dem",
+            path="warped_dem.tif",
             about=gettext(
-                "DEM reprojected and resampled to match Target Projection and "
-                "clipped to AOI vector if provided."),
+                "DEM reprojected and resampled to match Target Projection "
+                "and/or clipped to AOI vector if provided."),
             data_type=float,
             units=u.meter
         ),
@@ -273,30 +273,45 @@ def execute(args):
     args = MODEL_SPEC.preprocess_spatial_reference_args(args)
     target_projection_path = args[args['target_projection_id']]
 
-    fill_pits_dependent_task_list = []
-    if args['target_projection_id'] != 'dem_path':
-        target_projection_wkt = utils.get_raster_or_vector_projection(
+    target_projection_wkt = utils.get_raster_or_vector_projection(
             target_projection_path)
-        target_pixelsize_value = utils.get_raster_pixel_size_in_target_proj_units(
-            args['dem_path'], target_projection_wkt)
-        mask_options = None
+    target_srs = osr.SpatialReference()
+    target_srs.ImportFromWkt(target_projection_wkt)
+    dem_srs = osr.SpatialReference()
+    dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
+    dem_srs.ImportFromWkt(dem_info['projection_wkt'])
+    fill_pits_dependent_task_list = []
+    dem_path = args['dem_path']
+
+    if not target_srs.IsSame(dem_srs) or args.get('aoi_path'):
+        dem_path = file_registry['warped_dem']
         if args.get('aoi_path'):
             mask_options = {'mask_vector_path': args['aoi_path']}
-        reproject_and_clip_dem_task = graph.add_task(
+            aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
+            aoi_bbox = pygeoprocessing.transform_bounding_box(
+                aoi_info['bounding_box'], aoi_info['projection_wkt'],
+                dem_info['projection_wkt'])
+        else:
+            mask_options = None
+            aoi_bbox = None
+
+        if not target_srs.IsSame(dem_srs):
+            target_pixelsize_value = utils.get_raster_pixel_size_in_target_proj_units(
+                args['dem_path'], target_projection_wkt)
+        else:
+            target_pixelsize_value = dem_info['pixel_size']
+        warp_dem_task = graph.add_task(
             pygeoprocessing.warp_raster,
             args=(args['dem_path'],
                   target_pixelsize_value,
-                  file_registry['reprojected_dem'],
-                  'cubic'),
+                  file_registry['warped_dem'],
+                  'cubic',
+                  aoi_bbox),
             kwargs={'target_projection_wkt': target_projection_wkt,
                     'mask_options': mask_options},
-            target_path_list=[file_registry['reprojected_dem']],
+            target_path_list=[file_registry['warped_dem']],
             task_name='reproject_dem')
-
-        fill_pits_dependent_task_list.append(reproject_and_clip_dem_task)
-        dem_path = file_registry['reprojected_dem']
-    else:
-        dem_path = args['dem_path']
+        fill_pits_dependent_task_list.append(warp_dem_task)
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,
