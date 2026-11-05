@@ -47,7 +47,10 @@ function FormLabel(props) {
   } = props;
 
   const userFriendlyArgType = parseArgType(argtype);
-  const optional = typeof required === 'boolean' && !required;
+  // Target projection and pixel size _are_ optional, but we don't want to display that in the
+  // Workbench because the dropdown will always be populated and it is confusing to users (#2744).
+  const isTargetSpatialDropdown = ['target_projection_id', 'target_pixelsize_id'].includes(argkey);
+  const optional = typeof required === 'boolean' && !required && !isTargetSpatialDropdown;
   const includeComma = userFriendlyArgType && optional;
 
   return (
@@ -160,7 +163,8 @@ export default function ArgInput({
   touched = false, isValid = undefined, validationMessage = '',
   updateArgValues, handleFocus, selectFile, enabled,
   dropdownOptions = undefined, inputDropHandler, scrollEventCount = 0,
-  aoiInputName, aoiIsValid, searchExtent, updateSearchExtent,
+  aoiInputName, argsValidationComplete, aoiIsValid,
+  searchExtent, searchExtentUpdateComplete, updateSearchExtent,
   searchCollections, clearSearchCollections, searchSiblingType, selectSearchResult,
   requestFocusOnAoiInput, setReadyToFocusOnAoi, resetAoiFocusState, autoFocus,
 }) {
@@ -251,7 +255,6 @@ export default function ArgInput({
   const openSearch = () => {
     setShowSearchModal(true);
     setReadyToFocusOnAoi(false);
-    updateSearchExtent();
   };
 
   const handleFocusOnSearchBtn = () => {
@@ -274,11 +277,17 @@ export default function ArgInput({
     selectSearchResult(argkey, url, collections, searchSiblingType);
   };
 
+  const enableSearch = (
+    aoiInputName
+    && aoiInputName !== argSpec.name
+    && enabled
+    && ['csv', 'raster'].includes(argSpec.type)
+    && argSpec.keywords
+    && argSpec.keywords.length > 0
+  );
+
   let searchButton = <React.Fragment />;
-  // @TODO: refine this condition if needed (e.g., should any input w/o keywords be skipped?)
-  if (isCoreModel && aoiInputName && aoiInputName !== argSpec.name
-      && ['csv', 'raster'].includes(argSpec.type)
-  ) {
+  if (enableSearch) {
     searchButton = (
       <>
         <Button
@@ -296,8 +305,11 @@ export default function ArgInput({
           closeModal={() => setShowSearchModal(false)}
           query={searchQuery}
           aoiInputName={aoiInputName}
+          argsValidationComplete={argsValidationComplete}
           aoiIsValid={aoiIsValid}
           requestFocusOnAoiInput={requestFocusOnAoiInput}
+          updateSearchExtent={updateSearchExtent}
+          searchExtentUpdateComplete={searchExtentUpdateComplete}
           selectSearchResult={(url, collections) => onSelectSearchResult(argkey, url, collections)}
         />
       </>

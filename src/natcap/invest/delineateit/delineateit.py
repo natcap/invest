@@ -34,14 +34,18 @@ MODEL_SPEC = spec.ModelSpec(
     module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
-        ["dem_path", "detect_pour_points", "outlet_vector_path", "skip_invalid_geometry"],
+        ["aoi_path", "dem_path", "detect_pour_points", "outlet_vector_path",
+         "skip_invalid_geometry"],
         ["snap_points", "flow_threshold", "snap_distance"],
         ["target_projection_id"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
+        spec.AOI.model_copy(update=dict(
+            required=False)),
         spec.DEM,
         spec.BooleanInput(
             id="detect_pour_points",
@@ -124,10 +128,11 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="reprojected_dem",
-            path="reprojected_dem.tif",
+            id="warped_dem",
+            path="warped_dem.tif",
             about=gettext(
-                "DEM reprojected and resampled to match Target Projection."),
+                "DEM reprojected and resampled to match Target Projection "
+                "and/or clipped to AOI vector if provided."),
             data_type=float,
             units=u.meter
         ),
@@ -226,6 +231,8 @@ def execute(args):
             (required)
         args['results_suffix'] (string):  This text will be appended to the end
             of output files to help separate multiple runs. (optional)
+        args['aoi_path'] (string): path to a vector that indicates the area
+            over which the model should be run.
         args['dem_path'] (string):  A GDAL-supported raster file with an
             elevation for each cell. Make sure the DEM is corrected by filling
             in sinks, and if necessary burning hydrographic features into the
@@ -266,25 +273,38 @@ def execute(args):
     args = MODEL_SPEC.preprocess_spatial_reference_args(args)
     target_projection_path = args[args['target_projection_id']]
 
-    fill_pits_dependent_task_list = []
-    if args['target_projection_id'] != 'dem_path':
-        target_projection_wkt = utils.get_raster_or_vector_projection(
+    target_projection_wkt = utils.get_raster_or_vector_projection(
             target_projection_path)
-        target_pixelsize_value = utils.get_raster_pixel_size_in_target_proj_units(
-            args['dem_path'], target_projection_wkt)
-        dem_reproject_task = graph.add_task(
-            pygeoprocessing.warp_raster,
-            args=(args['dem_path'],
+    target_srs = osr.SpatialReference()
+    target_srs.ImportFromWkt(target_projection_wkt)
+    dem_srs = osr.SpatialReference()
+    dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
+    dem_srs.ImportFromWkt(dem_info['projection_wkt'])
+    fill_pits_dependent_task_list = []
+    dem_path = args['dem_path']
+    aoi_path = args.get('aoi_path')
+    if not target_srs.IsSame(dem_srs) or aoi_path:
+        target_pixelsize_value = (
+            dem_info['pixel_size'] if target_srs.IsSame(dem_srs) else
+            utils.get_raster_pixel_size_in_target_proj_units(
+                args['dem_path'], target_projection_wkt))
+        mask_options = {'mask_vector_path': aoi_path} if aoi_path else None
+        base_vector_path_list = [aoi_path] if aoi_path else None
+        warp_dem_task = graph.add_task(
+            pygeoprocessing.align_and_resize_raster_stack,
+            args=([args['dem_path']],
+                  [file_registry['warped_dem']],
+                  ['cubic'],
                   target_pixelsize_value,
-                  file_registry['reprojected_dem'],
-                  'cubic'),
-            kwargs={'target_projection_wkt': target_projection_wkt},
-            target_path_list=[file_registry['reprojected_dem']],
+                  'intersection',
+                  base_vector_path_list),
+            kwargs={
+                'target_projection_wkt': target_projection_wkt,
+                'mask_options': mask_options},
+            target_path_list=[file_registry['warped_dem']],
             task_name='reproject_dem')
-        fill_pits_dependent_task_list.append(dem_reproject_task)
-        dem_path = file_registry['reprojected_dem']
-    else:
-        dem_path = args['dem_path']
+        dem_path = file_registry['warped_dem']
+        fill_pits_dependent_task_list.append(warp_dem_task)
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,

@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 4202b5914fa8b5215c814ce13d87b1f7c64a6309
+GIT_SAMPLE_DATA_REPO_REV    := 55955267f76b9cb651ff208b239e8873afde6bae
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 44a4fdcc550c094050c9d4247d5f8f1ca1c2488e
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 8a54f562ae4c3ce4b154320818d7e5707cedda3d
+GIT_UG_REPO_REV             := 199f8b63fd7afcb24a5a86de55597bd9f8392b21
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)

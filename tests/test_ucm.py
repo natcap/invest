@@ -11,6 +11,7 @@ import pygeoprocessing
 from shapely import Polygon
 
 from .utils import assert_complete_execute
+from natcap.invest import utils
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
@@ -78,15 +79,12 @@ class UCMTests(unittest.TestCase):
         """Clean up remaining files."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_ucm_regression_factors(self):
-        """UCM: regression: CC Factors."""
-        import natcap.invest.urban_cooling_model
-        args = {
+    def generate_base_args(self):
+        """Generate args list consistent across regression tests."""
+        return {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
             'results_suffix': 'test_suffix',
             't_ref': 35.0,
-            't_obs_raster_path': os.path.join(
-                REGRESSION_DATA, "Tair_Sept.tif"),
             'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, "LULC_SFBA.tif"),
             'ref_eto_raster_path': os.path.join(
@@ -113,6 +111,11 @@ class UCMTests(unittest.TestCase):
             'n_workers': -1,
         }
 
+    def test_ucm_regression_factors(self):
+        """UCM: regression: CC Factors."""
+        import natcap.invest.urban_cooling_model
+
+        args = self.generate_base_args()
         execute_kwargs = {
             'generate_report': bool(
                 natcap.invest.urban_cooling_model.MODEL_SPEC.reporter),
@@ -221,37 +224,11 @@ class UCMTests(unittest.TestCase):
     def test_ucm_regression_intensity(self):
         """UCM: regression: CC Building Intensity."""
         import natcap.invest.urban_cooling_model
-        args = {
-            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
-            'results_suffix': 'test_suffix',
-            't_ref': 35.0,
-            't_obs_raster_path': os.path.join(
-                REGRESSION_DATA, "Tair_Sept.tif"),
-            'lulc_raster_path': os.path.join(
-                REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(
-                REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA,
-                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(
-                REGRESSION_DATA, "biophysical_table_ucm.csv"),
-            'green_area_cooling_distance': 1000.0,
-            'uhi_max': 3,
-            'cc_method': 'intensity',  # main difference in the reg. tests
-            'do_energy_valuation': True,
-            'do_productivity_valuation': True,
-            't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(
-                REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(
-                REGRESSION_DATA, "Energy.csv"),
-            'avg_rel_humidity': '30.0',
-            'cc_weight_shade': '0.6',
-            'cc_weight_albedo': '0.2',
-            'cc_weight_eti': '0.2',
-            'n_workers': -1,
-        }
+        args = self.generate_base_args()
+        args['cc_method'] = 'intensity'
+        args['cc_weight_shade'] = '0.6'
+        args['cc_weight_albedo'] = '0.2'
+        args['cc_weight_eti'] = '0.2'
 
         natcap.invest.urban_cooling_model.execute(args)
         results_vector = gdal.OpenEx(os.path.join(
@@ -280,40 +257,39 @@ class UCMTests(unittest.TestCase):
             results_layer = None
             results_vector = None
 
+    def test_ucm_regression_different_target_proj_pixelsize(self):
+        """UCM: test non-default target projection and pixelsize."""
+        import natcap.invest.urban_cooling_model
+        args = self.generate_base_args()
+        # LULC (the default) has EPSG 5070 and 30 m pixels, but AOI has EPSG 3310
+        args['target_projection_id'] = 'aoi_vector_path'
+        args['target_pixelsize_id'] = 'ref_eto_raster_path'
+
+        expected_wkt = utils.get_raster_or_vector_projection(args[args['target_projection_id']])
+        expected_srs = osr.SpatialReference()
+        expected_srs.ImportFromWkt(expected_wkt)
+        expected_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
+            args[args['target_pixelsize_id']], expected_wkt)
+        expected_pixelsize = numpy.min(numpy.abs(expected_pixelsize))
+
+        file_registry = natcap.invest.urban_cooling_model.execute(args)
+
+        actual_srs = osr.SpatialReference()
+        actual_srs.ImportFromWkt(
+            utils.get_raster_or_vector_projection(file_registry['t_air']))
+        self.assertTrue(expected_srs.IsSame(actual_srs))
+        self.assertEqual(expected_pixelsize, pygeoprocessing.get_raster_info(
+            file_registry['t_air'])['pixel_size'][0])
+
+        building_srs = osr.SpatialReference()
+        building_srs.ImportFromWkt(
+            utils.get_raster_or_vector_projection(file_registry['reprojected_buildings']))
+        self.assertTrue(expected_srs.IsSame(building_srs))
+
     def test_bad_building_type(self):
         """UCM: error on bad building type."""
         import natcap.invest.urban_cooling_model
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'results_suffix': 'test_suffix',
-            't_ref': 35.0,
-            't_obs_raster_path': os.path.join(
-                REGRESSION_DATA, "Tair_Sept.tif"),
-            'lulc_raster_path': os.path.join(
-                REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(
-                REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA,
-                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(
-                REGRESSION_DATA, "biophysical_table_ucm.csv"),
-            'green_area_cooling_distance': 1000.0,
-            'uhi_max': 3,
-            'cc_method': 'factors',
-            'do_energy_valuation': True,
-            'do_productivity_valuation': True,
-            't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(
-                REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(
-                REGRESSION_DATA, "Energy.csv"),
-            'avg_rel_humidity': '30.0',
-            'cc_weight_shade': '0.6',
-            'cc_weight_albedo': '0.2',
-            'cc_weight_eti': '0.2',
-            'n_workers': -1,
-            }
+        args = self.generate_base_args()
 
         bad_building_vector_path = os.path.join(
             self.workspace_dir, 'bad_building_vector.gpkg')
@@ -341,37 +317,7 @@ class UCMTests(unittest.TestCase):
         import natcap.invest.urban_cooling_model
         import pandas
 
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'results_suffix': 'test_suffix',
-            't_ref': 35.0,
-            't_obs_raster_path': os.path.join(
-                REGRESSION_DATA, "Tair_Sept.tif"),
-            'lulc_raster_path': os.path.join(
-                REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(
-                REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA,
-                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(
-                REGRESSION_DATA, "biophysical_table_ucm.csv"),
-            'green_area_cooling_distance': 1000.0,
-            'uhi_max': 3,
-            'cc_method': 'factors',
-            'do_energy_valuation': True,
-            'do_productivity_valuation': True,
-            't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(
-                REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(
-                REGRESSION_DATA, "Energy.csv"),
-            'avg_rel_humidity': '30.0',
-            'cc_weight_shade': '0.6',
-            'cc_weight_albedo': '0.2',
-            'cc_weight_eti': '0.2',
-            'n_workers': -1,
-            }
+        args = self.generate_base_args()
 
         # remove a row from the biophysical table so that lulc value is missing
         bad_biophysical_path = os.path.join(
@@ -393,33 +339,9 @@ class UCMTests(unittest.TestCase):
         """UCM: test validation of bad arguments."""
         from natcap.invest import urban_cooling_model
         from natcap.invest import validation_messages
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'results_suffix': 'test_suffix',
-            't_ref': 35.0,
-            'lulc_raster_path': os.path.join(
-                REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(
-                REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA,
-                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(
-                REGRESSION_DATA, "biophysical_table_ucm.csv"),
-            'green_area_cooling_distance': 1000.0,
-            'uhi_max': 3,
-            'cc_method': 'factors',
-            'do_energy_valuation': True,
-            'do_productivity_valuation': True,
-            't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(
-                REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(
-                REGRESSION_DATA, "Energy.csv"),
-            'avg_rel_humidity': '30.0',
-            # Explicitly leaving CC weight parameters out.
-            'n_workers': -1,
-            }
+        args = self.generate_base_args()
+        del args['cc_weight_shade']
+        del args['cc_weight_albedo']
 
         del args['t_ref']
         warnings = urban_cooling_model.validate(args)
@@ -472,36 +394,12 @@ class UCMTests(unittest.TestCase):
     def test_do_energy_valuation_option(self):
         """UCM: test separate valuation options."""
         import natcap.invest.urban_cooling_model
-        args = {
-            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
-            'results_suffix': '',
-            't_ref': 35.0,
-            't_obs_raster_path': os.path.join(
-                REGRESSION_DATA, "Tair_Sept.tif"),
-            'lulc_raster_path': os.path.join(
-                REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(
-                REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA,
-                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(
-                REGRESSION_DATA, "biophysical_table_ucm.csv"),
-            'green_area_cooling_distance': 1000.0,
-            'uhi_max': 3,
-            'cc_method': 'regression',
-            'do_energy_valuation': True,
-            'do_productivity_valuation': False,
-            't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(
-                REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(
-                REGRESSION_DATA, "Energy.csv"),
-            'cc_weight_shade': '0.6',
-            'cc_weight_albedo': '0.2',
-            'cc_weight_eti': '0.2',
-            'n_workers': -1,
-        }
+        args = self.generate_base_args()
+        args['results_suffix'] = ''
+        args['cc_method'] = 'regression'
+        args['do_productivity_valuation'] = False
+        del args['avg_rel_humidity']
+
         natcap.invest.urban_cooling_model.execute(args)
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
 
@@ -537,37 +435,11 @@ class UCMTests(unittest.TestCase):
     def test_do_productivity_valuation_option(self):
         """UCM: test separate valuation options."""
         import natcap.invest.urban_cooling_model
-        args = {
-            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
-            'results_suffix': '',
-            't_ref': 35.0,
-            't_obs_raster_path': os.path.join(
-                REGRESSION_DATA, "Tair_Sept.tif"),
-            'lulc_raster_path': os.path.join(
-                REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(
-                REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA,
-                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(
-                REGRESSION_DATA, "biophysical_table_ucm.csv"),
-            'green_area_cooling_distance': 1000.0,
-            'uhi_max': 3,
-            'cc_method': 'regression',
-            'do_energy_valuation': False,
-            'do_productivity_valuation': True,
-            't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(
-                REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(
-                REGRESSION_DATA, "Energy.csv"),
-            'avg_rel_humidity': '30.0',
-            'cc_weight_shade': '0.6',
-            'cc_weight_albedo': '0.2',
-            'cc_weight_eti': '0.2',
-            'n_workers': -1,
-        }
+
+        args = self.generate_base_args()
+        args['results_suffix'] = ''
+        args['cc_method'] = 'regression'
+        args['do_energy_valuation'] = False
         natcap.invest.urban_cooling_model.execute(args)
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
 
@@ -604,31 +476,27 @@ class UCMTests(unittest.TestCase):
         synthetic data"""
         from natcap.invest import urban_cooling_model
 
-        args = {}
-        args['workspace_dir'] = self.workspace_dir
-        args['results_suffix'] = "_01"
-        args['t_ref'] = 23.5
-        args['lulc_raster_path'] = os.path.join(self.workspace_dir,
-                                                "lulc.tif")
-        args['ref_eto_raster_path'] = os.path.join(self.workspace_dir,
-                                                   "evapotranspiration.tif")
-        args['aoi_vector_path'] = os.path.join(self.workspace_dir, "aoi.shp")
-        args['biophysical_table_path'] = os.path.join(self.workspace_dir,
-                                                      "biophysical_table.csv")
-        args['green_area_cooling_distance'] = 90
-        args['t_air_average_radius'] = 300
-        args['uhi_max'] = 2.05
-        args['do_energy_valuation'] = False
-        args['do_productivity_valuation'] = False
-        args['avg_rel_humidity'] = ''
-        args['building_vector_path'] = os.path.join(self.workspace_dir,
-                                                    "buildings.shp")
-        args['energy_consumption_table_path'] = os.path.join(self.workspace_dir,
-                                                             "ucm_energy.csv")
-        args['cc_method'] = "factors"
-        args['cc_weight_shade'] = ''  # 0.6
-        args['cc_weight_albedo'] = ''  # 0.2
-        args['cc_weight_eti'] = ''  # 0.2
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'results_suffix': '_01',
+            't_ref': 23.5,
+            'lulc_raster_path': os.path.join(self.workspace_dir, "lulc.tif"),
+            'ref_eto_raster_path': os.path.join(self.workspace_dir, "evapotranspiration.tif"),
+            'aoi_vector_path': os.path.join(self.workspace_dir, "aoi.shp"),
+            'biophysical_table_path': os.path.join(self.workspace_dir, "biophysical_table.csv"),
+            'green_area_cooling_distance': 90,
+            't_air_average_radius': 300,
+            'uhi_max': 2.05,
+            'do_energy_valuation': False,
+            'do_productivity_valuation': False,
+            'avg_rel_humidity': '',
+            'building_vector_path': os.path.join(self.workspace_dir, "buildings.shp"),
+            'energy_consumption_table_path': os.path.join(self.workspace_dir, "ucm_energy.csv"),
+            'cc_method': "factors",
+            'cc_weight_shade': '',  # 0.6
+            'cc_weight_albedo': '',  # 0.2
+            'cc_weight_eti': ''  # 0.2
+        }
 
         def _make_input_data(args):
             """ Create aoi shapefile, biophysical table csv, lulc tif,

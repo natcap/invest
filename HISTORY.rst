@@ -111,12 +111,20 @@ Annual Water Yield
   model will use the projection and pixel size of the LULC raster.
   (`#2267 <https://github.com/natcap/invest/issues/2267>`_)
 
+Coastal Vulnerability
+=====================
+* A user may now select which model input defines the target projection for
+  the model outputs. If not specified, the model will use the projection of
+  the AOI vector. (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+
 DelineateIt
 ===========
 * A user may now select which model input defines the target projection
   for the model outputs. If not specified, the model will use the
   projection of the DEM raster.
   (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+* DelineateIt now has an optional AOI input that can be used to clip the
+  DEM. (`#2760 <https://github.com/natcap/invest/issues/2760>`_)
 
 NDR
 ===
@@ -139,6 +147,26 @@ SDR
 * Fixed a bug where non-meter projection units were incorrectly permitted.
   The new Target Projection input now addresses this, requiring units in
   meters. (`#2783 <https://github.com/natcap/invest/issues/2783>`_)
+
+Seasonal Water Yield
+====================
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the DEM raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
+* Fixed a bug where non-meter projection units were incorrectly permitted,
+  and inputs were not reprojected. Raster inputs are now reprojected to
+  match the Target Projection source, which must be projected in meters.
+  Continuous rasters are now reprojected using bilinear resampling, instead
+  of nearest neighbor resampling.
+  (`#2795 <https://github.com/natcap/invest/issues/2795>`_)
+
+Urban Cooling
+=============
+* A user may now select which model inputs define the target projection and
+  pixel size, respectively, for the model outputs. If not specified, the
+  model will use the projection and pixel size of the LULC raster.
+  (`#2757 <https://github.com/natcap/invest/issues/2757>`_)
 
 Urban Flood Risk
 ================
