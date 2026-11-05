@@ -163,7 +163,8 @@ export default function ArgInput({
   touched = false, isValid = undefined, validationMessage = '',
   updateArgValues, handleFocus, selectFile, enabled,
   dropdownOptions = undefined, inputDropHandler, scrollEventCount = 0,
-  aoiInputName, aoiIsValid, searchExtent, updateSearchExtent,
+  aoiInputName, argsValidationComplete, aoiIsValid,
+  searchExtent, searchExtentUpdateComplete, updateSearchExtent,
   searchCollections, clearSearchCollections, searchSiblingType, selectSearchResult,
   requestFocusOnAoiInput, setReadyToFocusOnAoi, resetAoiFocusState, autoFocus,
 }) {
@@ -254,7 +255,6 @@ export default function ArgInput({
   const openSearch = () => {
     setShowSearchModal(true);
     setReadyToFocusOnAoi(false);
-    updateSearchExtent();
   };
 
   const handleFocusOnSearchBtn = () => {
@@ -277,11 +277,17 @@ export default function ArgInput({
     selectSearchResult(argkey, url, collections, searchSiblingType);
   };
 
+  const enableSearch = (
+    aoiInputName
+    && aoiInputName !== argSpec.name
+    && enabled
+    && ['csv', 'raster'].includes(argSpec.type)
+    && argSpec.keywords
+    && argSpec.keywords.length > 0
+  );
+
   let searchButton = <React.Fragment />;
-  // @TODO: refine this condition if needed (e.g., should any input w/o keywords be skipped?)
-  if (isCoreModel && aoiInputName && aoiInputName !== argSpec.name
-      && ['csv', 'raster'].includes(argSpec.type)
-  ) {
+  if (enableSearch) {
     searchButton = (
       <>
         <Button
@@ -299,8 +305,11 @@ export default function ArgInput({
           closeModal={() => setShowSearchModal(false)}
           query={searchQuery}
           aoiInputName={aoiInputName}
+          argsValidationComplete={argsValidationComplete}
           aoiIsValid={aoiIsValid}
           requestFocusOnAoiInput={requestFocusOnAoiInput}
+          updateSearchExtent={updateSearchExtent}
+          searchExtentUpdateComplete={searchExtentUpdateComplete}
           selectSearchResult={(url, collections) => onSelectSearchResult(argkey, url, collections)}
         />
       </>

@@ -32,7 +32,7 @@ MODEL_SPEC = spec.ModelSpec(
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["aoi_watersheds_path", "rainfall_depth"],
-        ["lulc_path", "curve_number_table_path", "soils_hydrological_group_raster_path"],
+        ["lulc_path", "biophysical_table_path", "soils_hydrological_group_raster_path"],
         ["built_infrastructure_vector_path", "infrastructure_damage_loss_table_path"],
         ["target_projection_id", "target_pixelsize_id"]
     ],
@@ -57,7 +57,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="soils_hydrological_group_raster_path",
         )),
         spec.CSVInput(
-            id="curve_number_table_path",
+            id="biophysical_table_path",
             name=gettext("biophysical table"),
             about=gettext(
                 "Table of curve number data for each LULC class. All LULC codes in the"
@@ -290,7 +290,7 @@ def execute(args):
         args['soils_hydrological_group_raster_path'] (string): Raster with
             values equal to 1, 2, 3, 4, corresponding to soil hydrologic group
             A, B, C, or D, respectively (used to derive the CN number).
-        args['curve_number_table_path'] (string): path to a CSV table that
+        args['biophysical_table_path'] (string): path to a CSV table that
             contains at least the headers 'lucode', 'CN_A', 'CN_B', 'CN_C',
             'CN_D'.
         args['built_infrastructure_vector_path'] (string): (optional) path to
@@ -354,8 +354,8 @@ def execute(args):
 
     # Load CN table
     cn_df = MODEL_SPEC.get_input(
-        'curve_number_table_path').get_validated_dataframe(
-        args['curve_number_table_path'])
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
