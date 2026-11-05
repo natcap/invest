@@ -748,39 +748,47 @@ class DelineateItTests(unittest.TestCase):
                 (raster_path, 1))
             self.assertEqual(pour_points, expected_pour_points)
 
-    def test_outlet_vector_is_target_projection(self):
-        """DelineateIt: test reprojection if outlet vector is target projection."""
+    def test_reproject_to_nondefault_target_and_clip_to_aoi(self):
+        """DelineateIt: test reproject to non-default target and clip to AOI"""
         from natcap.invest.delineateit import delineateit
 
-        dem_matrix = numpy.ones((10, 10), dtype=numpy.float32)
-        dem_matrix[0, 0] = 7
-        dem_raster_path = os.path.join(self.workspace_dir, 'dem.tif')
-        dem_srs = osr.SpatialReference()
-        dem_srs.ImportFromEPSG(4326)
-        dem_wkt = dem_srs.ExportToWkt()
-        pygeoprocessing.numpy_array_to_raster(
-            dem_matrix, 0, (0.0001, -0.0001), (-127.488, -0.001), dem_wkt,
-            dem_raster_path)
-
-        outlet_vector_path = os.path.join(self.workspace_dir,
-                                          'outlet_vector_path.gpkg')
-        vector_geom = [Polygon([(0, -200), (200, -200), (200, 0),
-                                (0, 0), (0, -200)])]
-        vector_srs = osr.SpatialReference()
-        vector_srs.ImportFromEPSG(26910)
-        vector_wkt = vector_srs.ExportToWkt()
-        pygeoprocessing.shapely_geometry_to_vector(
-            vector_geom, outlet_vector_path, vector_wkt, 'GPKG',
-            ogr_geom_type=ogr.wkbPolygon)
-
-        args = {'dem_path': dem_raster_path,
-                'outlet_vector_path': outlet_vector_path,
+        args = {'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+                'outlet_vector_path': os.path.join(self.workspace_dir, 'outlet.gpkg'),
+                'aoi_path': os.path.join(self.workspace_dir, 'aoi.gpkg'),
                 'workspace_dir': self.workspace_dir,
                 'snap_points': True,
                 'snap_distance': '20',
                 'flow_threshold': '500',
-                'results_suffix': 'w'}
+                'results_suffix': 'w',
+                'target_projection_id': 'aoi_path'}
 
+        center_x, center_y = 550000, 4180000
+        aoi_srs = osr.SpatialReference()
+        aoi_srs.ImportFromEPSG(4326)
+        circle_utm = Point(-122.4322, 37.766).buffer(.0005)
+        pygeoprocessing.shapely_geometry_to_vector(
+            [circle_utm], args['aoi_path'], aoi_srs.ExportToWkt(),
+            'GPKG', ogr_geom_type=ogr.wkbPolygon)
+
+        outlet_srs = osr.SpatialReference()
+        outlet_srs.ImportFromEPSG(5070)
+        pygeoprocessing.shapely_geometry_to_vector(
+            [Point(-2276760, 1955282)], args['outlet_vector_path'],
+            outlet_srs.ExportToWkt(), 'GPKG', ogr_geom_type=ogr.wkbPoint)
+
+        raster_array = numpy.ones((10, 10), dtype=numpy.float32)
+        dem_srs = osr.SpatialReference()
+        dem_srs.ImportFromEPSG(26910)
+        pygeoprocessing.numpy_array_to_raster(
+            base_array=raster_array,
+            target_nodata=-1,
+            pixel_size=(20, -20),
+            origin=(center_x-100, center_y+100),
+            projection_wkt=dem_srs.ExportToWkt(),
+            target_path=args['dem_path'],
+        )
+
+        # assert error if target projection not in linear
         error_list = delineateit.validate(args)
         self.assertEqual('Dataset must be projected in linear units.',
                          error_list[0][1])
@@ -788,6 +796,13 @@ class DelineateItTests(unittest.TestCase):
         args['target_projection_id'] = 'outlet_vector_path'
         file_registry = delineateit.execute(args)
 
-        flow_dir_path = file_registry['flow_direction']
-        flow_dir_info = pygeoprocessing.get_raster_info(flow_dir_path)
-        self.assertEqual(flow_dir_info['projection_wkt'], vector_wkt)
+        # assert that outputs were clipped to AOI
+        output_path = file_registry['flow_direction']
+        actual_flow_dir = pygeoprocessing.raster_to_numpy_array(output_path)
+        self.assertEqual(actual_flow_dir.shape, (6, 5))  # vs. input DEM was 10x10
+
+        # assert correct output projection
+        flow_dir_info = pygeoprocessing.get_raster_info(output_path)
+        output_srs = osr.SpatialReference()
+        output_srs.ImportFromWkt(flow_dir_info['projection_wkt'])
+        self.assertTrue(output_srs.IsSame(outlet_srs))
