@@ -87,6 +87,9 @@ Workbench
 =========
 * The InVEST workbench is now built for both Intel and Apple Silicon
   architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+* The Workbench language is now included in the usage stats that are logged
+  when a model run begins.
+  (`#2803 <https://github.com/natcap/invest/issues/2803>`_)
 
 Visitation: Recreation and Tourism
 ==================================
