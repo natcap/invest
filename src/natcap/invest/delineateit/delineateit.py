@@ -282,35 +282,28 @@ def execute(args):
     dem_srs.ImportFromWkt(dem_info['projection_wkt'])
     fill_pits_dependent_task_list = []
     dem_path = args['dem_path']
-
-    if not target_srs.IsSame(dem_srs) or args.get('aoi_path'):
-        dem_path = file_registry['warped_dem']
-        if args.get('aoi_path'):
-            mask_options = {'mask_vector_path': args['aoi_path']}
-            aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
-            aoi_bbox = pygeoprocessing.transform_bounding_box(
-                aoi_info['bounding_box'], aoi_info['projection_wkt'],
-                dem_info['projection_wkt'])
-        else:
-            mask_options = None
-            aoi_bbox = None
-
-        if not target_srs.IsSame(dem_srs):
-            target_pixelsize_value = utils.get_raster_pixel_size_in_target_proj_units(
-                args['dem_path'], target_projection_wkt)
-        else:
-            target_pixelsize_value = dem_info['pixel_size']
+    aoi_path = args.get('aoi_path')
+    if not target_srs.IsSame(dem_srs) or aoi_path:
+        target_pixelsize_value = (
+            dem_info['pixel_size'] if target_srs.IsSame(dem_srs) else
+            utils.get_raster_pixel_size_in_target_proj_units(
+                args['dem_path'], target_projection_wkt))
+        mask_options = {'mask_vector_path': aoi_path} if aoi_path else None
+        base_vector_path_list = [aoi_path] if aoi_path else None
         warp_dem_task = graph.add_task(
-            pygeoprocessing.warp_raster,
-            args=(args['dem_path'],
+            pygeoprocessing.align_and_resize_raster_stack,
+            args=([args['dem_path']],
+                  [file_registry['warped_dem']],
+                  ['cubic'],
                   target_pixelsize_value,
-                  file_registry['warped_dem'],
-                  'cubic',
-                  aoi_bbox),
-            kwargs={'target_projection_wkt': target_projection_wkt,
-                    'mask_options': mask_options},
+                  'intersection',
+                  base_vector_path_list),
+            kwargs={
+                'target_projection_wkt': target_projection_wkt,
+                'mask_options': mask_options},
             target_path_list=[file_registry['warped_dem']],
             task_name='reproject_dem')
+        dem_path = file_registry['warped_dem']
         fill_pits_dependent_task_list.append(warp_dem_task)
 
     fill_pits_task = graph.add_task(

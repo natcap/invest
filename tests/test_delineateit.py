@@ -799,7 +799,7 @@ class DelineateItTests(unittest.TestCase):
         # assert that outputs were clipped to AOI
         output_path = file_registry['flow_direction']
         actual_flow_dir = pygeoprocessing.raster_to_numpy_array(output_path)
-        self.assertEqual(actual_flow_dir.shape, (6, 5))  # vs. input DEM was 10x10
+        self.assertEqual(actual_flow_dir.shape, (7, 6))  # vs. input DEM was 10x10
 
         # assert correct output projection
         flow_dir_info = pygeoprocessing.get_raster_info(output_path)
