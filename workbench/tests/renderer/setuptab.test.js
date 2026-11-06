@@ -598,7 +598,7 @@ describe('Misc form validation stuff', () => {
 
     // Feedback on each input should only include the bounding box
     // of that single input.
-    const vectorGroup = vectorInput.closest('.input-group');
+    const vectorGroup = vectorInput.closest('[data-testid="group-vector"]');
     await waitFor(() => {
       expect(within(vectorGroup).getByText(vectorMessage))
         .toBeInTheDocument();
@@ -606,7 +606,7 @@ describe('Misc form validation stuff', () => {
         .toBeNull();
     });
 
-    const rasterGroup = rasterInput.closest('.input-group');
+    const rasterGroup = rasterInput.closest('[data-testid="group-raster"]');
     await waitFor(() => {
       expect(within(rasterGroup).getByText(rasterMessage))
         .toBeInTheDocument();
@@ -655,7 +655,7 @@ describe('Misc form validation stuff', () => {
     await waitFor(() => {
       expect(input1).toHaveClass('is-invalid');
     });
-    const input1Group = input1.closest('.input-group');
+    const input1Group = input1.closest('[data-testid="group-arg1"]');
     await waitFor(() => {
       expect(within(input1Group).queryByText(RegExp(VALIDATION_MESSAGE)))
         .toBeInTheDocument();
@@ -1053,3 +1053,76 @@ describe('loadParametersFromFile', () => {
     });
   });
 });
+
+describe('Input groups and sub-groups', () => {
+  beforeEach(() => {
+    fetchValidation.mockResolvedValue([]);
+  });
+
+  test('Render a sub-group with all inputs disabled', async () => {
+    const spec = {
+      pyname: 'natcap.invest.dummy',
+      args: {
+        arg1: {
+          name: 'Afoo',
+          type: 'integer',
+        },
+        arg2: {
+          name: 'Bfoo',
+          type: 'integer',
+        },
+      },
+    };
+    const inputFieldOrder = [{
+      group_label: '', input_ids: [
+        { subgroup_label: 'sub group', input_ids: Object.keys(spec.args) }
+      ]
+    }];
+    fetchArgsEnabled.mockResolvedValue({ arg1: false, arg2: false });
+
+    const { findByLabelText, findByRole } = renderSetupFromSpec(spec, inputFieldOrder);
+    const accordionTrigger = await findByRole('button', { name: /sub group/i });
+    await waitFor(() => {
+      expect(accordionTrigger).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    await userEvent.click(accordionTrigger);
+    await waitFor(() => {
+      expect(accordionTrigger).toHaveAttribute('aria-expanded', 'true');
+    });
+  });
+
+  test('Render a sub-group with inputs enabled', async () => {
+    const spec = {
+      pyname: 'natcap.invest.dummy',
+      args: {
+        arg1: {
+          name: 'Afoo',
+          type: 'integer',
+        },
+        arg2: {
+          name: 'Bfoo',
+          type: 'integer',
+        },
+      },
+    };
+    const inputFieldOrder = [{
+      group_label: '', input_ids: [
+        { subgroup_label: 'sub group', input_ids: Object.keys(spec.args) }
+      ]
+    }];
+    fetchArgsEnabled.mockResolvedValue({ arg1: false, arg2: true });
+
+    const { findByLabelText, findByRole } = renderSetupFromSpec(spec, inputFieldOrder);
+    const accordionTrigger = await findByRole('button', { name: /sub group/i });
+    await waitFor(() => {
+      expect(accordionTrigger).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    // Clicking the accordion should have no effect (always expanded)
+    await userEvent.click(accordionTrigger);
+    await waitFor(() => {
+      expect(accordionTrigger).toHaveAttribute('aria-expanded', 'true');
+    });
+  });
+})
