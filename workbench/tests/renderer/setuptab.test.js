@@ -1169,7 +1169,7 @@ describe('Effects of async validation & bounding box calculation on search modal
         required: true,
         about: 'Map of elevation above sea level.',
         // At least one keyword is required in order to enable search.
-        keywords: ['DIGITAL ELEVATION/TERRAIN MODEL (DEM)']
+        keywords: [{value: 'DIGITAL ELEVATION/TERRAIN MODEL (DEM)', aliases: ['DEM']}],
       },
     },
     input_field_order: inputFieldOrder,
