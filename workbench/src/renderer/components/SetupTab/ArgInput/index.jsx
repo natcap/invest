@@ -174,6 +174,46 @@ export default function ArgInput({
 
   const inputId = `${argkey}-${uniqueId}`;
 
+  // @TODO: ¿move search-related stuff to a separate module?
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [tags, setTags] = useState([]);
+  const [indexTags, setIndexTags] = useState([]);
+
+  useEffect(() => {
+    const tags = [];
+    if (argSpec.keywords) {
+      argSpec.keywords.forEach((kw) => {
+        tags.push(kw.value, ...kw.aliases);
+      });
+    }
+    const indexTags = [];
+    let children = [];
+    if (argSpec.fields) {
+      children = argSpec.fields;
+    }
+    if (argSpec.columns) {
+      children = argSpec.columns;
+    }
+    if (argSpec.contents) {
+      children = argSpec.contents;
+    }
+    const indexCol = argSpec.index_col;
+    children.forEach((child) => {
+      const childTags = [];
+      child.keywords.forEach((kw) => {
+        childTags.push(kw.value, ...kw.aliases);
+      });
+      if (indexCol && child.id === indexCol) {
+        indexTags.push(...childTags);
+      } else {
+        tags.push(...childTags);
+      }
+    });
+    setTags(tags);
+    setIndexTags(indexTags);
+    // TODO: remove duplicate tags
+  }, []);
+
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
   // scrollEventCount changes on drop events and on use of the browse button.
@@ -243,10 +283,9 @@ export default function ArgInput({
     );
   }
 
-  // @TODO: ¿move search-related stuff to a separate module?
-  const [showSearchModal, setShowSearchModal] = useState(false);
   const searchQuery = {
-    tags: argSpec.keywords || [],
+    tags: tags || [],
+    indexTags: indexTags,
     datatype: argSpec.type,
     extent: argSpec.type === 'raster' ? searchExtent : [],
     collections: searchCollections,
@@ -282,8 +321,8 @@ export default function ArgInput({
     && aoiInputName !== argSpec.name
     && enabled
     && ['csv', 'raster'].includes(argSpec.type)
-    && argSpec.keywords
-    && argSpec.keywords.length > 0
+    && tags
+    && tags.length > 0
   );
 
   let searchButton = <React.Fragment />;

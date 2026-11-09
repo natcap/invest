@@ -648,17 +648,6 @@ class InputTests(unittest.TestCase):
         self.assertCountEqual(
             csv_input.get_keywords(include_aliases=False),
             [keywords.LULC.value, keywords.NDVI.value, keywords.CARBON.value])
-        
-        index_keywords = [keywords.LULC.value] + keywords.LULC.aliases
-        other_keywords = [keywords.NDVI.value] + keywords.NDVI.aliases + [keywords.CARBON.value]
-        expected_keywords = {
-            'index_keywords': index_keywords,
-            'other_keywords': other_keywords
-        }
-        actual_keywords = csv_input._get_index_and_other_keywords()
-        for key in ['index_keywords', 'other_keywords']:
-            self.assertCountEqual(
-                actual_keywords[key], expected_keywords[key])
 
     def test_get_keywords_irregular_csv_input(self):
         """Test that CSVInput.get_keywords works when columns=None."""
@@ -670,10 +659,6 @@ class InputTests(unittest.TestCase):
         )
         expected_keywords = []
         self.assertEqual(csv_input.get_keywords(), expected_keywords)
-        self.assertEqual(
-            csv_input._get_index_and_other_keywords(),
-            {'index_keywords': expected_keywords,
-             'other_keywords': expected_keywords})
 
     def test_get_keywords_vector_input(self):
         """Test that VectorInput.get_keywords returns correct keywords."""
@@ -745,20 +730,11 @@ class ModelSpecTests(unittest.TestCase):
             module_name=__name__,
             input_field_order=[
                 ["workspace_dir"],
-                spec.InputGroup(label="Group A", input_ids=["baz", "table"])
+                spec.InputGroup(label="Group A", input_ids=["baz"])
             ],
             inputs=[
                 spec.WORKSPACE,
                 spec.NumberInput(id="baz", data_type=int, units=None),
-                spec.CSVInput(
-                    id="table",
-                    columns=[
-                        spec.IntegerInput(
-                            id="lucode", keywords=[keywords.LULC]),
-                        spec.NumberInput(
-                            id="ndvi", keywords=[keywords.NDVI], units=None)
-                    ],
-                    index_col="lucode")
             ],
             outputs=[
                 spec.SingleBandRasterOutput(
@@ -781,7 +757,7 @@ class ModelSpecTests(unittest.TestCase):
                 'about': '',
                 'input_field_order': [
                     {'group_label': '', 'input_ids': ['workspace_dir']},
-                    {'group_label': 'Group A', 'input_ids': ['baz', 'table']}
+                    {'group_label': 'Group A', 'input_ids': ['baz']}
                 ],
                 'aoi_input_id': '',
                 'default_projection_id': '',
@@ -797,7 +773,7 @@ class ModelSpecTests(unittest.TestCase):
                         'id': 'workspace_dir',
                         'name': 'workspace directory',
                         'type': 'workspace',
-                        'keywords': [],
+                        'keywords': None
                     },
                     'baz': {
                         'id': 'baz',
@@ -809,22 +785,7 @@ class ModelSpecTests(unittest.TestCase):
                         'units': None,
                         'expression': None,
                         'type': 'number',
-                        'keywords': [],
-                    },
-                    'table': {
-                        'id': 'table',
-                        'about': None,
-                        'name': None,
-                        'required': True,
-                        'allowed': True,
-                        'hidden': False,
-                        'units': None,
-                        'expression': None,
-                        'type': 'csv',
-                        'keywords': {
-                            'index_keywords': [keywords.LULC.value] + keywords.LULC.aliases,
-                            'other_keywords': [keywords.NDVI.value] + keywords.NDVI.aliases
-                        },
+                        'keywords': None
                     }
                 },
                 'outputs': {
