@@ -87,6 +87,19 @@ Workbench
 =========
 * The InVEST workbench is now built for both Intel and Apple Silicon
   architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+* Updates to the Plugin Manager modal
+    * The InVEST Plugin Registry is now integrated into the Workbench Plugin
+      Manager modal. Users can browse and install plugins listed on the Plugin
+      Registry directly from the Workbench.
+      (`#2736 <https://github.com/natcap/invest/issues/2736>`_)
+    * The modal can no longer be closed while a plugin is actively being
+      installed or uninstalled. This helps to ensure that the (un)installation
+      status, as well as any errors encountered during the process, are obvious
+      to the user. (`#2105 <https://github.com/natcap/invest/issues/2105>`_)
+    * To address some confusion about what to do after a plugin has successfully
+      installed, after installation completes, a message now displays that tells
+      the user to close the modal and open the plugin from the list of models.
+      (`#2643 <https://github.com/natcap/invest/issues/2643>`_)
 
 Visitation: Recreation and Tourism
 ==================================
