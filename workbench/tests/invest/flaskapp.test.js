@@ -255,27 +255,27 @@ describe('Test building model UIs and forum links', () => {
       .toBeInTheDocument();
   });
 
-  // test.each(modelIDs)('test each forum link: %s', async (modelID) => {
-  //   const argsSpec = await serverRequests.getSpec(modelID);
-  //   const { findByRole } = render(
-  //     <ResourcesLinks
-  //       modelID={modelID}
-  //       isCoreModel={true}
-  //       docs={argsSpec.userguide}
-  //     />
-  //   );
-  //   const link = await findByRole('link', { name: /frequently asked questions/i });
-  //   const address = link.getAttribute('href');
-  //   // If a model has no tag, the link defaults to the forum homepage,
-  //   // This will pass the urlStatus check, but we want to know if that happened,
-  //   // so check url text first,
-  //   expect(address).toContain('/tag/');
-  //   const options = {
-  //     method: 'HEAD',
-  //     host: url.parse(address).host,
-  //     path: url.parse(address).pathname,
-  //   };
-  //   const status = await getUrlStatus(options);
-  //   expect(status).toBeStatus200(address);
-  // });
+  test.each(modelIDs)('test each forum link: %s', async (modelID) => {
+    const argsSpec = await serverRequests.getSpec(modelID);
+    const { findByRole } = render(
+      <ResourcesLinks
+        modelID={modelID}
+        isCoreModel={true}
+        docs={argsSpec.userguide}
+      />
+    );
+    const link = await findByRole('link', { name: /frequently asked questions/i });
+    const address = link.getAttribute('href');
+    // If a model has no tag, the link defaults to the forum homepage,
+    // This will pass the urlStatus check, but we want to know if that happened,
+    // so check url text first,
+    expect(address).toContain('/tag/');
+    const options = {
+      method: 'HEAD',
+      host: url.parse(address).host,
+      path: url.parse(address).pathname,
+    };
+    const status = await getUrlStatus(options);
+    expect(status).toBeStatus200(address);
+  });
 });
