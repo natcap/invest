@@ -180,17 +180,16 @@ export default function ArgInput({
   const [indexTags, setIndexTags] = useState([]);
 
   // Organize the input's keywords to prepare for a DataHub query.
-  // All keywords go into the tags array, except when an input has an
-  // index_col attribute. Keywords on the column referenced by index_col
+  // Keywords on the column referenced by index_col
   // are kept separate to support more complex boolean queries.
   useEffect(() => {
-    const tags = [];
-    const indexTags = [];
+    const keywords = [];
+    const indexKeywords = [];
     const indexCol = argSpec.index_col;
 
     if (argSpec.keywords) {
       argSpec.keywords.forEach((kw) => {
-        tags.push(kw.value, ...kw.aliases);
+        keywords.push(kw.value, ...kw.aliases);
       });
     }
 
@@ -217,9 +216,8 @@ export default function ArgInput({
       }
     });
 
-    setTags(tags);
-    setIndexTags(indexTags);
-    // TODO: remove duplicate tags
+    setTags(keywords);
+    setIndexTags(indexKeywords);
   }, []);
 
   // Occasionaly we want to force a scroll to the end of input fields
