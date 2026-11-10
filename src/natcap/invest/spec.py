@@ -2778,7 +2778,6 @@ class ModelSpec(ImmutableBaseModel):
             elif obj is float:
                 return 'number'
             elif isinstance(obj, BaseModel):
-                # import pdb; pdb.set_trace()
                 as_dict = obj.model_dump()
                 # type is a ClassVar, so it won't be included in the default dump
                 if hasattr(obj, 'type'):

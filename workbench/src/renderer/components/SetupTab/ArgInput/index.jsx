@@ -179,36 +179,44 @@ export default function ArgInput({
   const [tags, setTags] = useState([]);
   const [indexTags, setIndexTags] = useState([]);
 
+  // Organize the input's keywords to prepare for a DataHub query.
+  // All keywords go into the tags array, except when an input has an
+  // index_col attribute. Keywords on the column referenced by index_col
+  // are kept separate to support more complex boolean queries.
   useEffect(() => {
     const tags = [];
+    const indexTags = [];
+    const indexCol = argSpec.index_col;
+
     if (argSpec.keywords) {
       argSpec.keywords.forEach((kw) => {
         tags.push(kw.value, ...kw.aliases);
       });
     }
-    const indexTags = [];
+
     let children = [];
     if (argSpec.fields) {
       children = argSpec.fields;
-    }
-    if (argSpec.columns) {
+    } else if (argSpec.columns) {
       children = argSpec.columns;
-    }
-    if (argSpec.contents) {
+    } else if (argSpec.contents) {
       children = argSpec.contents;
     }
-    const indexCol = argSpec.index_col;
+
     children.forEach((child) => {
       const childTags = [];
-      child.keywords.forEach((kw) => {
-        childTags.push(kw.value, ...kw.aliases);
-      });
+      if (child.keywords) {
+        child.keywords.forEach((kw) => {
+          childTags.push(kw.value, ...kw.aliases);
+        });
+      }
       if (indexCol && child.id === indexCol) {
         indexTags.push(...childTags);
       } else {
         tags.push(...childTags);
       }
     });
+
     setTags(tags);
     setIndexTags(indexTags);
     // TODO: remove duplicate tags
