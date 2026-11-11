@@ -1252,25 +1252,11 @@ def reclassify_lulc_raster(lulc, mean_ndvi_by_lulc_csv, target_path):
                        "can cause problems if the extent of the buffered AOI "
                        "exceeds that of the LULC raster.")
 
-    try:
-        utils.reclassify_raster(
-            (lulc, 1), mean_ndvi_by_lulc_dict, target_path, target_datatype,
-            target_nodata, error_details={'raster_name': lulc,
-                                          'column_name': 'lucode',
-                                          'table_name': 'LULC attribute'})
-    except ValueError as e:
-        if any(f"table are: [{val}]" in str(e) for val in ['0', '0.', '0.0']):
-            raise ValueError(
-                f"Error reclassifying LULC raster {lulc} to NDVI values: {e} "
-                "This error may be caused by the input LULC raster not "
-                "having a set NoData value, which can cause problems if the "
-                "extent of the buffered AOI exceeds that of the LULC raster. "
-                "To fix this, you can increase the coverage of your LULC "
-                "raster (preferred) or you can set a NoData value for your "
-                "LULC raster. This error can also simply be caused by missing "
-                "LULC classes in the attibute table.")
-        else:
-            raise e
+    utils.reclassify_raster(
+        (lulc, 1), mean_ndvi_by_lulc_dict, target_path, target_datatype,
+        target_nodata, error_details={'raster_name': lulc,
+                                      'column_name': 'lucode',
+                                      'table_name': 'LULC attribute'})
 
     return None
 

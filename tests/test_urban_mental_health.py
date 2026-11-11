@@ -1059,29 +1059,3 @@ class UMHTests(unittest.TestCase):
 
         # spot check
         self.assertAlmostEqual(actual_masked_lulc[0, 0], .1)
-
-    def test_error_if_lulc_raster_too_small_and_no_nodata_value_set(self):
-        """Test custom error msg if LULC has no NoData and is too small."""
-        # TODO: I think this was only a problem because of a bug in pgp that
-        # padded rasters with 0s instead of nodata during align_and_resize.
-
-        from natcap.invest.urban_mental_health import urban_mental_health
-
-        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
-
-        # create NDVI base with no nodata value set
-        lulc_base_array = numpy.ones((3, 3))
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(26910)
-        pygeoprocessing.numpy_array_to_raster(
-            lulc_base_array.astype(numpy.float64), target_nodata=None,
-            pixel_size=(100, -100), origin=(ORIGIN_X, ORIGIN_Y),
-            projection_wkt=srs.ExportToWkt(),
-            target_path=args['lulc_base'])
-
-        with self.assertRaises(ValueError) as context:
-            urban_mental_health.execute(args)
-        self.assertTrue(
-            "having a set NoData value, which can cause problems if the " in
-            str(context.exception))
