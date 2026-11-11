@@ -1072,7 +1072,7 @@ def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc,
     ndvi_nodata = ndvi_info["nodata"][0]
 
     if ndvi_nodata is None:
-        ndvi_nodata = pygeoprocessing.choose_nodata(ndvi_dtype)
+        ndvi_nodata = pygeoprocessing.choose_nodata(ndvi_info['numpy_type'])
         LOGGER.info("Since no NoData value was set for the input NDVI "
                     f"raster, {ndvi_nodata} was chosen.")
 
