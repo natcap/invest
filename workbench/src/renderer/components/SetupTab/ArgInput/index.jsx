@@ -178,6 +178,7 @@ export default function ArgInput({
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [tags, setTags] = useState([]);
   const [indexTags, setIndexTags] = useState([]);
+  const [enableSearch, setEnableSearch] = useState(false);
 
   // Organize the input's keywords to prepare for a DataHub query.
   // Keywords on the column referenced by index_col
@@ -210,15 +211,26 @@ export default function ArgInput({
         });
       }
       if (indexCol && child.id === indexCol) {
-        indexTags.push(...childTags);
+        indexKeywords.push(...childTags);
       } else {
-        tags.push(...childTags);
+        keywords.push(...childTags);
       }
     });
 
     setTags(keywords);
     setIndexTags(indexKeywords);
   }, []);
+
+  useEffect(() => {
+    setEnableSearch((
+      aoiInputName
+      && aoiInputName !== argSpec.name
+      && enabled
+      && ['csv', 'raster'].includes(argSpec.type)
+      && tags
+      && tags.length > 0
+    ));
+  }, [enabled, tags]);
 
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
@@ -321,15 +333,6 @@ export default function ArgInput({
   const onSelectSearchResult = (argkey, url, collections) => {
     selectSearchResult(argkey, url, collections, searchSiblingType);
   };
-
-  const enableSearch = (
-    aoiInputName
-    && aoiInputName !== argSpec.name
-    && enabled
-    && ['csv', 'raster'].includes(argSpec.type)
-    && tags
-    && tags.length > 0
-  );
 
   let searchButton = <React.Fragment />;
   if (enableSearch) {

@@ -24,15 +24,27 @@ const MODULE = 'carbon';
 
 const VALIDATION_MESSAGE = 'invalid because';
 const BASE_MODEL_SPEC = {
+  model_id: 'foo',
+  model_title: 'Foo',
+  userguide: '',
+  aliases: 'set()',
+  module_name: '',
+  reporter: '',
+  about: '',
+  default_projection_id: '',
+  default_pixelsize_id: '',
+  validate_spatial_overlap: true,
+  different_projections_ok: true,
   args: {
     arg: {
       name: 'foo',
       type: undefined, // varies by test
       required: undefined,
       about: 'this is about foo',
-    },
+      keywords: [{ value: 'DEM', aliases: [] }],
+    }
   },
-  input_field_order: [['arg']],
+  input_field_order: [['arg', 'aoi']],
 };
 
 /**
@@ -50,7 +62,7 @@ function baseArgsSpec(type) {
   }
   return spec;
 }
-const BASE_ARGS_ENABLED = {}
+const BASE_ARGS_ENABLED = {};
 Object.keys(BASE_MODEL_SPEC.args).forEach((arg) => {
   BASE_ARGS_ENABLED[arg] = true;
 });
@@ -76,7 +88,7 @@ function renderSetupFromSpec(baseSpec, inputFieldOrder, initValues = undefined, 
       modelID={spec.model_id}
       argsSpec={spec.args}
       inputFieldOrder={inputFieldOrder}
-      aoiInputId={spec.aoiInputId || ''}
+      aoiInputId={spec.aoi_input_id || ''}
       defaultProjectionId={spec.default_projection_id || ''}
       defaultPixelsizeId={spec.default_pixelsize_id || ''}
       argsInitValues={initValues}
@@ -96,9 +108,7 @@ function renderSetupFromSpec(baseSpec, inputFieldOrder, initValues = undefined, 
 
 describe('Arguments form input types', () => {
   beforeEach(() => {
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(BASE_MODEL_SPEC.args), VALIDATION_MESSAGE]]
-    );
+    fetchValidation.mockResolvedValue([[[], '']]); // everything is valid
     fetchArgsEnabled.mockResolvedValue(BASE_ARGS_ENABLED);
   });
 
@@ -181,6 +191,33 @@ describe('Arguments form input types', () => {
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveDisplayValue('Select an option...');
     expect(input).toHaveValue('placeholderOpt');
+  });
+
+  test.each([
+    ['csv'],
+    ['vector'],
+    ['raster'],
+  ])('Conditionally render a search button for %s input', async (type) => {
+    const spec = baseArgsSpec(type);
+    // Search is only enabled when there is also an AOI
+    spec.args.aoi = {
+      name: 'bar',
+      type: 'vector',
+      required: undefined,
+      about: 'this is about bar',
+    };
+    spec.aoi_input_id = 'aoi';
+    const inputFieldOrder = [['aoi', 'arg']];
+    const { findByRole, queryByRole } = renderSetupFromSpec(spec, inputFieldOrder);
+
+    // Search is not enabled for vectors yet
+    if (type !== 'vector') {
+      expect(await findByRole('button', { name: /search for/ }))
+        .toBeInTheDocument();
+    } else {
+      expect(await queryByRole('button', { name: /search for/ }))
+        .toBeNull();
+    }
   });
 
   test('initial arg values can contain extra args', async () => {
@@ -1152,7 +1189,7 @@ describe('Effects of async validation & bounding box calculation on search modal
   let user = null;
   const inputFieldOrder = [{ group_label: '', input_ids: ['aoi', 'dem'] }];
   const spec = {
-    aoiInputId: 'aoi',
+    aoi_input_id: 'aoi',
     args: {
       aoi: {
         name: 'Area of Interest',
