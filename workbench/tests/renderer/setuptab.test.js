@@ -24,17 +24,6 @@ const MODULE = 'carbon';
 
 const VALIDATION_MESSAGE = 'invalid because';
 const BASE_MODEL_SPEC = {
-  model_id: 'foo',
-  model_title: 'Foo',
-  userguide: '',
-  aliases: 'set()',
-  module_name: '',
-  reporter: '',
-  about: '',
-  default_projection_id: '',
-  default_pixelsize_id: '',
-  validate_spatial_overlap: true,
-  different_projections_ok: true,
   args: {
     arg: {
       name: 'foo',
@@ -44,7 +33,6 @@ const BASE_MODEL_SPEC = {
       keywords: [{ value: 'DEM', aliases: [] }],
     }
   },
-  input_field_order: [['arg', 'aoi']],
 };
 
 /**
