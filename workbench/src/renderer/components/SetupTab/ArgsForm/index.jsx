@@ -128,6 +128,13 @@ class ArgsForm extends React.Component {
     }
   }
 
+  aoiIsValidForSearch() {
+    const { aoiInputId, argsValidation, argsValues } = this.props;
+    // AOI may be optional to the model, in which case an empty value is valid.
+    // For search, AOI must be both non-empty and valid.
+    return (argsValues[aoiInputId]?.value && argsValidation[aoiInputId]?.valid) ? true : false;
+  }
+
   /* Some local state to support handling of calls to updateSearchExtent. */
   currentBoundingBox = [];
   pendingAoiPath = '';
@@ -165,8 +172,8 @@ class ArgsForm extends React.Component {
    * @returns {void}
    */
   updateSearchExtent = () => {
-    const { aoiInputId, argsValidation, argsValidationComplete, argsValues } = this.props;
-    const aoiIsValid = argsValidation[aoiInputId]?.valid || false;
+    const { aoiInputId, argsValidationComplete, argsValues } = this.props;
+    const aoiIsValid = this.aoiIsValidForSearch();
     const aoiPath = argsValues[aoiInputId]?.value || '';
 
     // updateSearchExtent is called whenever a search modal is opened.
@@ -301,6 +308,7 @@ class ArgsForm extends React.Component {
       scrollEventCount,
       aoiInputId,
     } = this.props;
+    const aoiIsValid = this.aoiIsValidForSearch();
     const formItems = [];
     let k = 0;
     argsOrder.forEach((inputGroup) => {
@@ -333,7 +341,7 @@ class ArgsForm extends React.Component {
             scrollEventCount={scrollEventCount}
             aoiInputName={argsSpec[aoiInputId]?.name || ''}
             argsValidationComplete={argsValidationComplete}
-            aoiIsValid={argsValidation[aoiInputId]?.valid || false}
+            aoiIsValid={aoiIsValid}
             searchExtent={this.state.searchExtent}
             searchExtentUpdateComplete={this.state.searchExtentUpdateComplete}
             updateSearchExtent={this.updateSearchExtent}
