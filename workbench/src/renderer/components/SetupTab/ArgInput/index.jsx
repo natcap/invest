@@ -176,14 +176,15 @@ export default function ArgInput({
 
   // @TODO: ¿move search-related stuff to a separate module?
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [tags, setTags] = useState([]);
-  const [indexTags, setIndexTags] = useState([]);
-  const [enableSearch, setEnableSearch] = useState(false);
 
-  // Organize the input's keywords to prepare for a DataHub query.
-  // Keywords on the column referenced by index_col
-  // are kept separate to support more complex boolean queries.
-  useEffect(() => {
+  /**
+   * Organize the input's keywords to prepare for a DataHub query.
+   * Keywords on the column referenced by index_col
+   * are kept separate to support more complex boolean queries.
+   *
+   * @returns {Array} - two items, each an array of strings
+   */
+  function collectKeywords() {
     const keywords = [];
     const indexKeywords = [];
     const indexCol = argSpec.index_col;
@@ -216,21 +217,18 @@ export default function ArgInput({
         keywords.push(...childTags);
       }
     });
+    return [keywords, indexKeywords];
+  }
 
-    setTags(keywords);
-    setIndexTags(indexKeywords);
-  }, []);
-
-  useEffect(() => {
-    setEnableSearch((
-      aoiInputName
-      && aoiInputName !== argSpec.name
-      && enabled
-      && ['csv', 'raster'].includes(argSpec.type)
-      && tags
-      && tags.length > 0
-    ));
-  }, [enabled, tags]);
+  const [tags, indexTags] = collectKeywords();
+  const enableSearch = (
+    aoiInputName
+    && aoiInputName !== argSpec.name
+    && enabled
+    && ['csv', 'raster'].includes(argSpec.type)
+    && tags
+    && tags.length > 0
+  );
 
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
