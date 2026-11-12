@@ -222,7 +222,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
           step !== searchStep.LOADING && searchAllowed &&
           <>
             <DataHubSearchParams
-              tags={query.tags}
+              tags={query.tags.concat(query.indexTags)}
               datatype={query.datatype}
               extent={query.extent}
               collections={query.collections}
