@@ -1,6 +1,6 @@
 export interface DataHubSearchQuery {
   tags: string[],
-  index_tags: string[],
+  indexTags: string[],
   datatype: string,
   extent: number[], // [xmin, ymin, xmax, ymax]
   collections: string[],
