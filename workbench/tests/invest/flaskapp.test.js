@@ -230,7 +230,7 @@ describe('Test building model UIs and forum links', () => {
     'wind_energy',
   ];
 
-  test.each(modelIDs)('test building each model setup tab', async (modelID) => {
+  test.each(modelIDs)('test building model setup tab: %s', async (modelID) => {
     const argsSpec = await serverRequests.getSpec(modelID);
     const { findByRole } = render(
       <SetupTab
@@ -255,7 +255,7 @@ describe('Test building model UIs and forum links', () => {
       .toBeInTheDocument();
   });
 
-  test.each(modelIDs)('test each forum link', async (modelID) => {
+  test.each(modelIDs)('test each forum link: %s', async (modelID) => {
     const argsSpec = await serverRequests.getSpec(modelID);
     const { findByRole } = render(
       <ResourcesLinks

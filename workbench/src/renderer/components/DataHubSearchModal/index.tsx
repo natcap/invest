@@ -122,7 +122,6 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
   const search = async () => {
     setStep(searchStep.SEARCHING);
     setSearchError(false);
-
     const params = new DHALSearchParams(query);
     const requestUrl = `${DHAL_BASE_URL}?${params}`;
 
@@ -223,7 +222,7 @@ export default function DataHubSearchModal(props: DataHubSearchModalProps) {
           step !== searchStep.LOADING && searchAllowed &&
           <>
             <DataHubSearchParams
-              tags={query.tags}
+              tags={query.tags.concat(query.indexTags)}
               datatype={query.datatype}
               extent={query.extent}
               collections={query.collections}

@@ -47,7 +47,8 @@
         "no-underscore-dangle": ["off", ],
         "react/destructuring-assignment": ["warn", "always"],
         "react/jsx-fragments": ["off", "syntax"],
-        "react/jsx-filename-extension": ["warn", { "extensions": [".js", ".jsx"] }]
+        "react/jsx-filename-extension": ["warn", { "extensions": [".js", ".jsx"] }],
+        "react/prop-types": "off"
     },
     "globals": {
         "_": "writeable"

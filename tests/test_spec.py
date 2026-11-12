@@ -623,24 +623,31 @@ class InputTests(unittest.TestCase):
         """Test that CSVInput.get_keywords returns correct keywords."""
         csv_input = spec.CSVInput(
             id="foo",
-            about="Description.",
+            about="Description",
             keywords=[keywords.LULC],
             name="foo",
             columns=[
-                spec.LULC_TABLE_COLUMN,
+                spec.IntegerInput(
+                    id="lucode",
+                    keywords=[keywords.LULC]
+                ),
                 spec.NumberInput(
                     id='carbon', units=None, keywords=[keywords.CARBON]),
-            ]
+                spec.NumberInput(
+                    id='ndvi', units=None, keywords=[keywords.NDVI]),
+            ],
+            index_col='lucode'
         )
         self.assertCountEqual(
             csv_input.get_keywords(),
-            [keywords.LULC.value, keywords.CARBON.value] + keywords.LULC.aliases)
+            [keywords.LULC.value, keywords.NDVI.value, keywords.CARBON.value]
+            + keywords.LULC.aliases + keywords.NDVI.aliases + keywords.CARBON.aliases)
         self.assertCountEqual(
             csv_input.get_keywords(include_children=False),
             [keywords.LULC.value] + keywords.LULC.aliases)
         self.assertCountEqual(
             csv_input.get_keywords(include_aliases=False),
-            [keywords.LULC.value, keywords.CARBON.value])
+            [keywords.LULC.value, keywords.NDVI.value, keywords.CARBON.value])
 
     def test_get_keywords_irregular_csv_input(self):
         """Test that CSVInput.get_keywords works when columns=None."""
@@ -727,7 +734,7 @@ class ModelSpecTests(unittest.TestCase):
             ],
             inputs=[
                 spec.WORKSPACE,
-                spec.NumberInput(id="baz", data_type=int, units=None)
+                spec.NumberInput(id="baz", data_type=int, units=None),
             ],
             outputs=[
                 spec.SingleBandRasterOutput(
@@ -738,6 +745,7 @@ class ModelSpecTests(unittest.TestCase):
                 )
             ]
         )
+
         self.assertEqual(
             json.loads(test_spec.model_dump_json()),
             {
@@ -765,7 +773,7 @@ class ModelSpecTests(unittest.TestCase):
                         'id': 'workspace_dir',
                         'name': 'workspace directory',
                         'type': 'workspace',
-                        'keywords': [],
+                        'keywords': None
                     },
                     'baz': {
                         'id': 'baz',
@@ -777,7 +785,7 @@ class ModelSpecTests(unittest.TestCase):
                         'units': None,
                         'expression': None,
                         'type': 'number',
-                        'keywords': [],
+                        'keywords': None
                     }
                 },
                 'outputs': {

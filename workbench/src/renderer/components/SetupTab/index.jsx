@@ -144,7 +144,6 @@ class SetupTab extends React.Component {
     */
     this._isMounted = true;
     const { argsInitValues, argsSpec, inputFieldOrder, defaultProjectionId, defaultPixelsizeId } = this.props;
-
     const {
       argsValues,
       argsDropdownOptions,
