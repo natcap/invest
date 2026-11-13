@@ -684,13 +684,21 @@ def execute(args):
     years = set(snapshots.keys()).union({baseline_lulc_year})
     transition_years = years - {baseline_lulc_year}
 
+    snapshot_years = []
+    snapshot_paths = []
+    for year, path in sorted(snapshots.items()):
+        snapshot_years.append(year)
+        snapshot_paths.append(path)
+
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=([path for (year, path) in sorted(snapshots.items())],
-              [file_registry['aligned-lulc-[YEAR]', year] for year in years],
-              ['near']*len(years),
+        args=(snapshot_paths,
+              [file_registry['aligned-lulc-[YEAR]', year] for year in snapshot_years],
+              ['near']*len(snapshot_years),
               target_pixel_size, 'intersection'),
-        target_path_list=[file_registry['aligned-lulc-[YEAR]', year] for year in years],
+        target_path_list=[
+            file_registry['aligned-lulc-[YEAR]', year]
+            for year in snapshot_years],
         task_name='Align input landcover rasters.')
 
     (disturbance_matrices, accumulation_matrices) = _read_transition_matrix(
