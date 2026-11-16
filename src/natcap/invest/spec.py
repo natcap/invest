@@ -26,6 +26,7 @@ from pygeoprocessing.utils import GDALUseExceptions
 from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from pydantic import SerializeAsAny
 from pydantic import field_serializer, field_validator
 from pydantic import model_serializer, model_validator
 import taskgraph
@@ -431,7 +432,7 @@ class Input(IOModel):
     Bad examples: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
     """
 
-    keywords: typing.Union[list[natcap.invest.keywords.Keyword], None] = None
+    keywords: typing.Union[list[SerializeAsAny[natcap.invest.keywords.Keyword]], None] = None
     """A list of keywords from a controlled vocabulary.
 
     Keywords can be used to identify possible data sources that satisfy input
@@ -532,10 +533,6 @@ class Input(IOModel):
         if hasattr(self, 'contents'):
             return self.contents
         return []
-
-    @field_serializer('keywords')
-    def serialize_keywords(self, _):
-        return(self.get_keywords())
 
     def get_keywords(self, include_children=True, include_aliases=True):
         """Get a list of unique keyword strings for this input and children.
@@ -714,7 +711,6 @@ class FileInput(Input):
         shutil.copyfile(source_path, target_filepath)
         datastack.args[self.id] = target_filepath
         datastack.files_found[source_path] = target_filepath
-
 
 
 class SpatialFileInput(FileInput):
@@ -2599,7 +2595,6 @@ class ModelSpec(ImmutableBaseModel):
     should be resampled by default. A user can select a different input to
     represent the target pixel size, but this input will be selected by
     default. The value must match the id of another model input."""
-
 
     inputs: list[Input]
     """A list of the data inputs, or parameters, to the model."""

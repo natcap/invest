@@ -110,10 +110,11 @@ CONTOUR_MAPS = GCMDKeyword(
     uuid='120f9132-a756-4f6f-a74c-78e94dfcd2a1',
     full_path='EARTH SCIENCE > LAND SURFACE > TOPOGRAPHY > TERRAIN ELEVATION > CONTOUR MAPS')
 
-CONTINENTAL_MARGINS = GCMDKeyword(
-    value='CONTINENTAL MARGINS',
-    uuid='a91a00f7-05ed-4633-9fac-1772a48b6342',
-    full_path='EARTH SCIENCE > OCEANS > BATHYMETRY/SEAFLOOR TOPOGRAPHY > CONTINENTAL MARGINS')
+CONTINENTAL_SHELF = InvestKeyword(
+    value='CONTINENTAL SHELF',
+    definition=(
+        'The shallow, submerged portion of a continent between the coastline'
+        ' and the continental slope.'))
 
 CROP_CLIMATE_SUITABILITY = InvestKeyword(
     value='CROP CLIMATE SUITABILITY',

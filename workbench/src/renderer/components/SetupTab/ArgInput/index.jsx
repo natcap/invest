@@ -243,10 +243,55 @@ export default function ArgInput({
     );
   }
 
+  /**
+   * Organize the input's keywords to prepare for a DataHub query.
+   * Keywords on the column referenced by index_col
+   * are kept separate to support more complex boolean queries.
+   *
+   * @returns {Array} - two items, each an array of strings
+   */
+  function collectKeywords() {
+    const keywords = [];
+    const indexKeywords = [];
+    const indexCol = argSpec.index_col;
+
+    if (argSpec.keywords) {
+      argSpec.keywords.forEach((kw) => {
+        keywords.push(kw.value, ...kw.aliases);
+      });
+    }
+
+    let children = [];
+    if (argSpec.fields) {
+      children = argSpec.fields;
+    } else if (argSpec.columns) {
+      children = argSpec.columns;
+    } else if (argSpec.contents) {
+      children = argSpec.contents;
+    }
+
+    children.forEach((child) => {
+      const childTags = [];
+      if (child.keywords) {
+        child.keywords.forEach((kw) => {
+          childTags.push(kw.value, ...kw.aliases);
+        });
+      }
+      if (indexCol && child.id === indexCol) {
+        indexKeywords.push(...childTags);
+      } else {
+        keywords.push(...childTags);
+      }
+    });
+    return [keywords, indexKeywords];
+  }
+
   // @TODO: ¿move search-related stuff to a separate module?
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [tags, indexTags] = collectKeywords();
   const searchQuery = {
-    tags: argSpec.keywords || [],
+    tags: tags || [],
+    indexTags: indexTags,
     datatype: argSpec.type,
     extent: argSpec.type === 'raster' ? searchExtent : [],
     collections: searchCollections,
@@ -282,8 +327,8 @@ export default function ArgInput({
     && aoiInputName !== argSpec.name
     && enabled
     && ['csv', 'raster'].includes(argSpec.type)
-    && argSpec.keywords
-    && argSpec.keywords.length > 0
+    && tags
+    && tags.length > 0
   );
 
   let searchButton = <React.Fragment />;
