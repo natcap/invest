@@ -837,8 +837,9 @@ def execute(args):
             precip_path_list + [args['soil_group_path']] + et0_path_list +
             input_align_list)
         interpolate_list = (
-            ['bilinear'] * len(precip_path_list) +
-            ['near'] + ['bilinear'] * len(et0_path_list) +
+            ['near'] * len(precip_path_list) +
+            ['near'] +
+            ['near'] * len(et0_path_list) +
             interpolate_list)
         output_align_list = (
             [file_registry['prcp_a[MONTH]', month] for month in MONTH_RANGE] +
