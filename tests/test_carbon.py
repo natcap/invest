@@ -371,6 +371,8 @@ class CarbonValidationTests(unittest.TestCase):
             'workspace_dir',
             'lulc_bas_path',
             'carbon_pools_path',
+            'target_projection_id',
+            'target_pixelsize_id'
         ]
 
     def tearDown(self):

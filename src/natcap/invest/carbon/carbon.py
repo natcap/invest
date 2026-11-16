@@ -5,6 +5,7 @@ import logging
 import os
 
 from osgeo import gdal
+from osgeo import osr
 import numpy
 import pygeoprocessing
 
@@ -35,20 +36,30 @@ MODEL_SPEC = spec.ModelSpec(
     reporter="natcap.invest.carbon.reporter",
     about=_model_description,
     validate_spatial_overlap=True,
-    different_projections_ok=False,
+    different_projections_ok=True,
+    default_projection_id="lulc_bas_path",
+    default_pixelsize_id="lulc_bas_path",
     aliases=(),
     module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
-        ["lulc_bas_path", "carbon_pools_path"],
+        ["aoi_path", "lulc_bas_path", "carbon_pools_path"],
         ["calc_sequestration", "lulc_alt_path"],
         ["do_valuation", "lulc_bas_year", "lulc_alt_year", "price_per_metric_ton_of_c",
-         "discount_rate", "rate_change"]
+         "discount_rate", "rate_change"],
+        ["target_projection_id", "target_pixelsize_id"]
     ],
+    aoi_input_id="aoi_path",
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
+        spec.AOI.model_copy(update=dict(
+            about=gettext(
+                "If included, the raster input(s) will be clipped to the AOI at the"
+                " beginning of the model run."
+            ),
+            required=False)),
         spec.SingleBandRasterInput(
             id="lulc_bas_path",
             name=gettext("baseline LULC"),
@@ -60,8 +71,6 @@ MODEL_SPEC = spec.ModelSpec(
             keywords=[keywords.LULC],
             data_type=int,
             units=None,
-            projected=True,
-            projection_units=u.meter
         ),
         spec.BooleanInput(
             id="calc_sequestration",
@@ -87,8 +96,6 @@ MODEL_SPEC = spec.ModelSpec(
             allowed="calc_sequestration",
             data_type=int,
             units=None,
-            projected=True,
-            projection_units=u.meter
         ),
         spec.CSVInput(
             id="carbon_pools_path",
@@ -195,7 +202,11 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="do_valuation",
             allowed="do_valuation",
-        )
+        ),
+        spec.TARGET_PROJECTION.model_copy(update=dict(
+            projection_units=u.meter
+        )),
+        spec.TARGET_PIXELSIZE
     ],
     outputs=[
         spec.SingleBandRasterOutput(
@@ -273,6 +284,38 @@ MODEL_SPEC = spec.ModelSpec(
                 ),
             ],
             index_col="raster_label"
+        ),
+        spec.VectorOutput(
+            id="reprojected_aoi",
+            path="intermediate_outputs/reprojected_aoi.gpkg",
+            about=gettext(
+                "Reprojected copy of the AOI vector. Created if the input AOI vector"
+                " is in a different projection than the Target Projection."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_lulc_bas",
+            path="intermediate_outputs/aligned_lulc_bas.tif",
+            about=gettext(
+                "A map of LULC for the baseline scenario, clipped to the extent of"
+                " the other raster inputs and aligned to the target pixel size"
+                " source."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_lulc_alt",
+            path="intermediate_outputs/aligned_lulc_alt.tif",
+            about=gettext(
+                "A map of LULC for the alternate scenario, clipped to the extent of"
+                " the other raster inputs and aligned to the target pixel size"
+                " source."
+            ),
+            data_type=int,
+            units=None
         ),
         spec.SingleBandRasterOutput(
             id="c_above_bas",
@@ -375,6 +418,8 @@ def execute(args):
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files during calculation.
         args['results_suffix'] (string): appended to any output file name.
+        args['aoi_path'] (string): path to a vector that indicates the area
+            over which the model should run.
         args['lulc_bas_path'] (string): a path to a raster representing the
             baseline carbon stocks.
         args['calc_sequestration'] (bool): if true, sequestration should
@@ -404,6 +449,12 @@ def execute(args):
         args['rate_change'] (float): Annual rate of change in price of carbon
             as a percentage.  Used if `args['do_valuation']` is  present and
             True.
+        args['target_projection_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            projection.
+        args['target_pixelsize_id'] (string): (optional) ``id`` of a spatial
+            input listed in ``MODEL_SPEC.inputs`` that defines the target
+            pixel size.
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -412,6 +463,9 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     args, file_registry, graph = MODEL_SPEC.setup(args)
+    args = MODEL_SPEC.preprocess_spatial_reference_args(args)
+    target_projection_path = args[args['target_projection_id']]
+    target_pixelsize_path = args[args['target_pixelsize_id']]
 
     if (args['do_valuation'] and
             args['lulc_bas_year'] >= args['lulc_alt_year']):
@@ -422,29 +476,65 @@ def execute(args):
             "Ensure that the Baseline LULC Year is earlier than the Alternate LULC Year."
         )
 
-    cell_size_set = set()
-    raster_size_set = set()
-    valid_lulc_keys = []
     valid_scenarios = []
+    lulc_raster_path_list = []
+    aligned_lulc_raster_path_list = []
 
     for scenario_type in ['bas', 'alt']:
-        lulc_key = "lulc_%s_path" % (scenario_type)
+        lulc_key = f"lulc_{scenario_type}_path"
         if args[lulc_key]:
+            lulc_raster_path_list.append(args[lulc_key])
+            aligned_lulc_raster_path_list.append(
+                    file_registry[f'aligned_lulc_{scenario_type}'])
+
             raster_info = pygeoprocessing.get_raster_info(args[lulc_key])
-            cell_size_set.add(raster_info['pixel_size'])
-            raster_size_set.add(raster_info['raster_size'])
-            valid_lulc_keys.append(lulc_key)
             valid_scenarios.append(scenario_type)
-    if len(cell_size_set) > 1:
-        raise ValueError(
-            "the pixel sizes of %s are not equivalent. Here are the "
-            "different sets that were found in processing: %s" % (
-                valid_lulc_keys, cell_size_set))
-    if len(raster_size_set) > 1:
-        raise ValueError(
-            "the raster dimensions of %s are not equivalent. Here are the "
-            "different sizes that were found in processing: %s" % (
-                valid_lulc_keys, raster_size_set))
+
+    target_projection_wkt = utils.get_raster_or_vector_projection(
+            target_projection_path)
+    target_pixelsize = utils.get_raster_pixel_size_in_target_proj_units(
+            target_pixelsize_path, target_projection_wkt)
+
+    align_dependent_tasks = []
+    aoi_path = args.get('aoi_path')
+    if aoi_path:
+        aoi_projection_wkt = utils.get_raster_or_vector_projection(
+            args['aoi_path'])
+        aoi_sr = osr.SpatialReference()
+        aoi_sr.ImportFromWkt(aoi_projection_wkt)
+
+        target_sr = osr.SpatialReference()
+        target_sr.ImportFromWkt(target_projection_wkt)
+
+        if not aoi_sr.IsSame(target_sr):
+            reproject_aoi = graph.add_task(
+                func=pygeoprocessing.reproject_vector,
+                args=(
+                    args['aoi_path'], target_projection_wkt,
+                    file_registry['reprojected_aoi']),
+                kwargs={'driver_name': 'GPKG'},
+                target_path_list=[file_registry['reprojected_aoi']],
+                task_name='reproject aoi')
+            aoi_path = file_registry['reprojected_aoi']
+            align_dependent_tasks = [reproject_aoi]
+
+    mask_options = {'mask_vector_path': aoi_path} if aoi_path else None
+    base_vector_path_list = [aoi_path] if aoi_path else None
+
+    align_task = graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        kwargs={
+            'base_raster_path_list': lulc_raster_path_list,
+            'target_raster_path_list': aligned_lulc_raster_path_list,
+            'resample_method_list': ['near']*len(lulc_raster_path_list),
+            'target_pixel_size': target_pixelsize,
+            'bounding_box_mode': 'intersection',
+            'base_vector_path_list': base_vector_path_list,
+            'target_projection_wkt': target_projection_wkt,
+            'mask_options': mask_options},
+        target_path_list=aligned_lulc_raster_path_list,
+        dependent_task_list=align_dependent_tasks,
+        task_name='align_and_resize_task')
 
     # calculate total carbon storage
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
@@ -459,16 +549,17 @@ def execute(args):
         for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
             carbon_pool_by_type = carbon_pool_df[pool_type].to_dict()
 
-            lulc_key = f'lulc_{scenario_type}_path'
+            lulc_key = f'aligned_lulc_{scenario_type}'
             storage_key = f'{pool_type}_{scenario_type}'
             LOGGER.info(
                 f"Mapping carbon from '{lulc_key}' to '{storage_key}' scenario.")
 
             carbon_map_task = graph.add_task(
                 _generate_carbon_map,
-                args=(args[lulc_key], carbon_pool_by_type,
+                args=(file_registry[lulc_key], carbon_pool_by_type,
                       file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
+                dependent_task_list=[align_task],
                 task_name=f'carbon_map_{storage_key}')
             storage_path_list.append(file_registry[storage_key])
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
