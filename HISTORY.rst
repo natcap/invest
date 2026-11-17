@@ -89,6 +89,11 @@ General
 * No longer testing and building with Python 3.10, which reached EOL.
   (`#2782 <https://github.com/natcap/invest/issues/2782>`_)
 
+Workbench
+=========
+* The InVEST workbench is now built for both Intel and Apple Silicon
+  architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+
 Coastal Blue Carbon
 ===================
 * Fixed a flaky issue where snapshot lulc rasters would sometimes be treated
@@ -96,10 +101,11 @@ Coastal Blue Carbon
   results. This issue only affected analyses with 2 or more snapshot rasters.
   (`#2841 <https://github.com/natcap/invest/issues/2841>`_)
 
-Workbench
-=========
-* The InVEST workbench is now built for both Intel and Apple Silicon
-  architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+Coastal Vulnerability
+=====================
+* Fixed a bug where an error occurred while generating the report if the
+  optional population raster input was not used.
+  (`#2755 <https://github.com/natcap/invest/issues/2755>`_)
 
 Visitation: Recreation and Tourism
 ==================================
