@@ -66,6 +66,12 @@
 Unreleased Changes
 ------------------
 
+Highlights
+==========
+* The InVEST Plugin Registry is now integrated into the Workbench Plugin
+  Manager modal. Users can browse and install plugins listed on the Plugin
+  Registry directly from the Workbench.
+
 General
 =======
 * Added support for labeled input groups. ``spec.InputGroup`` was added to
