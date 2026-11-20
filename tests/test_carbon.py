@@ -7,23 +7,28 @@ import os
 
 from bs4 import BeautifulSoup
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 import numpy
 import numpy.testing
 import pygeoprocessing
+from shapely.geometry import box
 
 from .utils import assert_complete_execute
 
 gdal.UseExceptions()
 
-
-def make_simple_raster(base_raster_path, fill_val, nodata_val):
+def make_simple_raster(base_raster_path, fill_val, nodata_val,
+                       epsg=26910, origin=(461261, 4923265)):
     """Create a 10x10 int32 raster on designated path with fill value.
 
     Args:
         base_raster_path (str): the raster path for making the new raster.
         fill_val (int): the value used for filling the raster.
         nodata_val (int or None): for defining a band's nodata value.
+        epsg (int or None): EPSG code for setting SRS. Default: 26910,
+            UTM Zone 10N.
+        origin (tuple): (x, y) coordinates to use as origin when creating raster.
 
     Returns:
         None.
@@ -31,10 +36,8 @@ def make_simple_raster(base_raster_path, fill_val, nodata_val):
     """
 
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(26910)  # UTM Zone 10N
+    srs.ImportFromEPSG(epsg)
     projection_wkt = srs.ExportToWkt()
-    # origin hand-picked for this epsg:
-    origin = (461261, 4923265)
 
     n = 10
     array = numpy.empty((n, n), dtype=numpy.int32)
@@ -236,6 +239,97 @@ class CarbonTests(unittest.TestCase):
         # Alternate: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_alt.tif'), -3422.079)
+
+    def test_carbon_aoi(self):
+        """Carbon: regression testing with AOI."""
+        from natcap.invest import carbon
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': True,
+            'price_per_metric_ton_of_c': 43.0,
+            'rate_change': 2.8,
+            'lulc_bas_year': 2016,
+            'lulc_alt_year': 2030,
+            'discount_rate': -7.1,
+            'n_workers': -1,
+        }
+
+        lulc_names = ['lulc_bas_path', 'lulc_alt_path']
+        for fill_val, lulc_name in enumerate(lulc_names, 1):
+            args[lulc_name] = os.path.join(args['workspace_dir'],
+                                           lulc_name + '.tif')
+            make_simple_raster(args[lulc_name], fill_val, -1)
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        make_pools_csv(args['carbon_pools_path'])
+
+        # Make a simple AOI vector that covers half of the simple raster
+        args['aoi_path'] = os.path.join(args['workspace_dir'], 'aoi.shp')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+        origin = (461261, 4923265)
+
+        pos_x = origin[0]
+        pos_y = origin[1]
+        aoi_bbox = [pos_x, pos_y - 10, pos_x + 5, pos_y]
+
+        geometry = [box(*aoi_bbox)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometry, args['aoi_path'], projection_wkt, 'ESRI Shapefile',
+            ogr_geom_type=ogr.wkbPolygon)
+
+        file_registry = carbon.execute(args)
+
+        # Confirm output raster bounding box restricted to overlap with AOI
+        npv_raster_info = pygeoprocessing.get_raster_info(file_registry['npv_alt'])
+        self.assertEqual(npv_raster_info['bounding_box'], aoi_bbox)
+
+        # Ensure NPV calculations are correct.
+        # Valuation constant based on provided args is 59.00136.
+        # Alternate: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
+        assert_raster_equal_value(file_registry['npv_alt'], -3422.079)
+
+    def test_output_projection_if_different_target_projection(self):
+        """Carbon: test outputs have target projection if non-default target."""
+        from natcap.invest import carbon
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': True,
+            'price_per_metric_ton_of_c': 43.0,
+            'rate_change': 2.8,
+            'lulc_bas_year': 2016,
+            'lulc_alt_year': 2030,
+            'discount_rate': -7.1,
+            'n_workers': -1,
+            'target_projection_id': 'lulc_alt_path',
+            'target_pixelsize_id': 'lulc_alt_path'
+        }
+
+        args['lulc_bas_path'] = os.path.join(args['workspace_dir'],
+                                             'lulc_bas_path.tif')
+        make_simple_raster(args['lulc_bas_path'], 1, -1)
+
+        args['lulc_alt_path'] = os.path.join(args['workspace_dir'],
+                                             'lulc_alt_path.tif')
+        make_simple_raster(args['lulc_alt_path'], 2, -1,
+                           epsg=5070, origin=(-2151456.7667290024, 2699104.05026251))
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        make_pools_csv(args['carbon_pools_path'])
+
+        file_registry = carbon.execute(args)
+
+        expected_srs = osr.SpatialReference()
+        expected_srs.ImportFromEPSG(5070)
+
+        actual_srs = osr.SpatialReference()
+        output_info = pygeoprocessing.get_raster_info(file_registry['npv_alt'])
+        actual_srs.ImportFromWkt(output_info['projection_wkt'])
+        self.assertTrue(expected_srs.IsSame(actual_srs))
+        self.assertEqual(output_info['pixel_size'], (1, -1))
 
     def test_carbon_missing_landcover_values(self):
         """Carbon: testing expected exception on missing LULC codes."""
