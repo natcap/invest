@@ -299,9 +299,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="aligned_lulc_bas",
             path="intermediate_outputs/aligned_lulc_bas.tif",
             about=gettext(
-                "A map of LULC for the baseline scenario, clipped to the extent of"
-                " the other raster inputs and aligned to the target pixel size"
-                " source."
+                "Copy of the baseline LULC input, aligned, clipped, and reprojected"
+                " to match the other spatial inputs. If no other spatial inputs are"
+                " included, this will be a copy of the input baseline LULC."
             ),
             data_type=int,
             units=None
@@ -310,9 +310,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="aligned_lulc_alt",
             path="intermediate_outputs/aligned_lulc_alt.tif",
             about=gettext(
-                "A map of LULC for the alternate scenario, clipped to the extent of"
-                " the other raster inputs and aligned to the target pixel size"
-                " source."
+                "Copy of the alternate LULC input, aligned, clipped, and reprojected"
+                " to match the other spatial inputs."
             ),
             data_type=int,
             units=None
