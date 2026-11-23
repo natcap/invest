@@ -1,15 +1,15 @@
 {
-  "File": "Archivo",
-  "Edit": "Edición",
-  "Speech": "Dicción",
-  "View": "Vista",
-  "Window": "Ventana",
-  "About": "Acerca de",
-  "About InVEST": "Acerca de InVEST",
-  "Report a problem": "Informe de un problema",
-  "Creating plugin environment...": "",
-  "Installing plugin into environment...": "",
-  "Creating base environment...": "",
-  "Downloading plugin source code...": "",
-  "Importing plugin...": ""
+    "File": "Archivo",
+    "Edit": "Edición",
+    "Speech": "Dicción",
+    "View": "Vista",
+    "Window": "Ventana",
+    "About": "Acerca de",
+    "About InVEST": "Acerca de InVEST",
+    "Report a problem": "Informe de un problema",
+    "Creating plugin environment...": "Creando el entorno del complemento...",
+    "Installing plugin into environment...": "Instalando el complemento en el entorno...",
+    "Creating base environment...": "Creando el entorno base...",
+    "Downloading plugin source code...": "Descargando el código fuente del complemento...",
+    "Importing plugin...": "Importando el complemento..."
 }
