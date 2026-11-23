@@ -78,7 +78,27 @@
             owner: rec
             group: staff
 
+    - name: Update, upgrade, and restart VM
+      tags: update-reboot
+      become: true
+      block:
+        - name: Update and upgrade apt packages
+          ansible.builtin.apt:
+            upgrade: yes
+            update_cache: yes
+
+        - name: Check for reboot
+          ansible.builtin.stat:
+            path: /var/run/reboot-required
+          register: reboot_required
+
+        - name: Reboot VM
+          ansible.builtin.reboot:
+            reboot_timeout: 600
+          when: reboot_required.stat.exists
+
     - name: Setup and run the invest python process
+      tags: update-reboot
       become: true
       become_user: rec
       block:

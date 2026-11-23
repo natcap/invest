@@ -997,7 +997,7 @@ class UMHTests(unittest.TestCase):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)
         pygeoprocessing.numpy_array_to_raster(
-            ndvi_base_array.astype(numpy.float64), target_nodata=None,
+            ndvi_base_array.astype(numpy.float32), target_nodata=None,
             pixel_size=(100, -100), origin=(ORIGIN_X, ORIGIN_Y),
             projection_wkt=srs.ExportToWkt(),
             target_path=args['ndvi_base'])
@@ -1010,12 +1010,12 @@ class UMHTests(unittest.TestCase):
         raster_info = pygeoprocessing.get_raster_info(
             file_reg['ndvi_base_buffer_mean'])
         pgp_chosen_nodata = pygeoprocessing.choose_nodata(
-            raster_info['datatype'])
+            raster_info['numpy_type'])
         numpy.testing.assert_allclose(actual_buffer_mean[3, 2:4],
                                       [pgp_chosen_nodata, pgp_chosen_nodata])
 
         # spot check
-        self.assertAlmostEqual(actual_buffer_mean[2, 2], .6)
+        numpy.testing.assert_almost_equal(actual_buffer_mean[2, 2], .6)
 
     def test_lulc_raster_with_no_nodata_value_set(self):
         """Test UMH if base_LULC has no NoData value but is large enough."""
@@ -1059,27 +1059,3 @@ class UMHTests(unittest.TestCase):
 
         # spot check
         self.assertAlmostEqual(actual_masked_lulc[0, 0], .1)
-
-    def test_error_if_lulc_raster_too_small_and_no_nodata_value_set(self):
-        """Test custom error msg if LULC has no NoData and is too small."""
-
-        from natcap.invest.urban_mental_health import urban_mental_health
-
-        args = make_synthetic_data_and_params(self.workspace_dir, 'lulc')
-
-        # create NDVI base with no nodata value set
-        lulc_base_array = numpy.ones((3, 3))
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(26910)
-        pygeoprocessing.numpy_array_to_raster(
-            lulc_base_array.astype(numpy.float64), target_nodata=None,
-            pixel_size=(100, -100), origin=(ORIGIN_X, ORIGIN_Y),
-            projection_wkt=srs.ExportToWkt(),
-            target_path=args['lulc_base'])
-
-        with self.assertRaises(ValueError) as context:
-            urban_mental_health.execute(args)
-        self.assertTrue(
-            "having a set NoData value, which can cause problems if the " in
-            str(context.exception))

@@ -62,7 +62,7 @@ math or your code.
 .. note::
 
     If you have created a plugin and want to share it with others, consider submitting
-    it for inclusion in the `InVEST Community Plugin Registry <https://natcap.github.io/invest-plugin-registry/>`_.
+    it for inclusion in the `InVEST Plugin Registry <https://natcap.github.io/invest-plugin-registry/>`_.
 
     The goal of the Plugin Registry is to make it easy for members of the InVEST
     community to both share the plugins they have created and discover plugins created
