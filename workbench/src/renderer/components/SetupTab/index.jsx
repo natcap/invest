@@ -29,6 +29,27 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 const { logger } = window.Workbench;
 
+function getArgKeysFromInputFieldOrder(inputFieldOrder) {
+  return inputFieldOrder.map(
+    (inputGroup) => {
+      // support both new and old input group formats because the plugin
+      // environment could have an older version of invest installed.
+      // the old format is an array of input ids. the new format is an
+      // object with an input_ids attribute.
+      if (Array.isArray(inputGroup)) {
+        return inputGroup
+      } else {
+        return inputGroup.input_ids.map((item) => {
+          if (typeof item === 'string') {
+            return [item]
+          } else {
+            return item.input_ids
+          }
+        }).flat()
+      }
+  }).flat();
+}
+
 /** Initialize values of InVEST args based on the model's UI Spec.
  *
  * Values initialize with either a complete args dict, or with empty/default values.
@@ -51,14 +72,8 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict, defaultProject
   const argsValues = {};
   const argsDropdownOptions = {};
 
-  inputFieldOrder.map(
-    (inputGroup) =>
-      // support both new and old input group formats because the plugin
-      // environment could have an older version of invest installed.
-      // the old format is an array of input ids. the new format is an
-      // object with an input_ids attribute.
-      Array.isArray(inputGroup) ? inputGroup : inputGroup.input_ids
-  ).flat().forEach((argkey) => {
+  const argKeys = getArgKeysFromInputFieldOrder(inputFieldOrder);
+  argKeys.forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.
@@ -108,7 +123,7 @@ class SetupTab extends React.Component {
       argsValidation: null,
       argsValidationComplete: false,
       argsValid: false,
-      argsEnabled: null,
+      argsEnabled: {},
       argsDropdownOptions: null,
       saveAlerts: {},
       scrollEventCount: 0,
@@ -149,27 +164,8 @@ class SetupTab extends React.Component {
       argsDropdownOptions,
     } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {}, defaultProjectionId, defaultPixelsizeId)
 
-    // map each arg to an empty object, to fill in later
-    // here we use the argsSpec because it includes all args, even ones like
-    // n_workers, which do get validated.
-    const argsValidation = Object.keys(argsSpec).reduce((acc, argkey) => {
-      acc[argkey] = {};
-      return acc;
-    }, {});
-    // here we only use the keys in inputFieldOrder because args that
-    // aren't displayed in the form don't need an enabled/disabled state.
-    // all args default to being enabled
-    const argsEnabled = inputFieldOrder.map(
-      (inputGroup) => inputGroup.input_ids
-    ).flat().reduce((acc, argkey) => {
-      acc[argkey] = true;
-      return acc;
-    }, {});
-
     this.setState({
       argsValues: argsValues,
-      argsValidation: argsValidation,
-      argsEnabled: argsEnabled,
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
@@ -577,6 +573,7 @@ class SetupTab extends React.Component {
 
         return invalidSelection;
       };
+
       // A) At least one arg was invalid:
       if (results.length) {
         results.forEach((result) => {

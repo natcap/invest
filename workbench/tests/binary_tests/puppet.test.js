@@ -345,7 +345,7 @@ test.skip('Install and run a plugin', async () => {
 
   const dropdownButton = await page.waitForSelector('aria/[name="menu"][role="button"]');
   await dropdownButton.click();
-  const pluginsModalButton = await page.waitForSelector('aria/[name="Manage Plugins"][role="button"]');
+  const pluginsModalButton = await page.waitForSelector('aria/[name="Plugin Manager"][role="button"]');
   await pluginsModalButton.click();
   console.log('opened plugin modal');
   const urlInputField = await page.waitForSelector('aria/[name="Git URL"][role="textbox"]');

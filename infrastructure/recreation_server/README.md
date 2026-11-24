@@ -1,0 +1,73 @@
+## Recreation model server infrastructure
+
+### Creating a new VM
+* Create a Debian VM and attach an additional non-boot disk of 200GB.
+* Assign the disk path to the `storage_disk` variable in playbook.yml
+  * From the VM, find the disk by its name and then format the disk:
+  ```
+  ls -l /dev/disk/by-id/google-*
+  ```
+* Make sure the VM has a static external IP and add it to the list of hosts
+  in `inventory.ini`
+
+### Setup the VM using the ansible playbook
+Use `playbook.yml` to setup the VM to run an InVEST Recreation Model server process
+on the hosts defined in `inventory.ini`.
+
+The playbook is only designed for a single host because it attaches
+a persistent disk to the host. To setup multiple hosts we would need to
+update how we manage the non-boot disks.  
+
+The playbook will,
+* Setup a "staff" group and a "rec" user account
+* Install system dependencies
+* Format and mount a persistent disk to serve as a workspace
+* Clone invest, setup a Python environment with `natcap.invest`
+* Mount a bucket with necessary recreation model data using `gcsfuse`
+* Stop and start the invest server python process
+
+### Running the playbook
+Run the playbook from a control node, a system where `ansible` is installed.
+Windows control nodes should use a WSL environment.  
+Specify a VM user that has ssh access from the control node to the VM.
+After it connects, the playbook will switch to the "rec" user.
+```
+ansible-playbook -u <username> -i inventory.ini playbook.yml
+```
+
+By default, the playbook clones the latest `main` from the `natcap` fork of invest.
+To install a particular version of invest, override these variables by adding
+`--extra-vars` to the previous command:
+
+`--extra-vars "invest_version=3.20.2"`  
+`--extra-vars "invest_version=task/2774-recserver-ansible invest_fork=davemfish"`
+
+
+### Routine Maintenance
+If possible, avoid doing maintenance if there are active invest jobs
+running on the server. I usually tail the logfile to check:
+```
+sudo tail -f /mnt/recreation/server/pyro.log
+```
+It will look like this if there are no active connections:
+```
+[2026-11-02 16:45:47.070,Pyro5.threadpoolserver,DEBUG] disconnected ('47.38.117.44', 62903)
+[2026-11-02 16:45:47.071,Pyro5.threadpoolserver,DEBUG] worker counts: 0 busy, 8 idle
+```
+Otherwise it will have some active progress logging related to a model run.
+
+#### Restart the invest server process
+Sometimes the process may hang our crash, usually due to unexpected usage patterns.  
+To restart the process, it won't hurt to run the whole playbook,
+but you may also use this tag to run only the "stop" and "start" tasks:
+```
+ansible-playbook -u <username> -i inventory.ini playbook.yml --tags restart-process
+```
+
+#### Update the VM system packages and reboot
+
+Do `apt update` and `apt-upgrade`, and then reboot if it is required.  
+For example, if there are debian kernel patches to apply.
+```
+ansible-playbook -u <username> -i inventory.ini playbook.yml --tags update-reboot
+```
