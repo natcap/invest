@@ -63,20 +63,39 @@
 
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.21.0 (2026-11-18)
+-------------------
+
+Highlights
+==========
+* The InVEST Plugin Registry is now integrated into the Workbench Plugin
+  Manager modal. Users can browse and install plugins listed on the Plugin
+  Registry directly from the Workbench.
 
 General
 =======
 * Added support for labeled input groups. ``spec.InputGroup`` was added to
   represent a group of input fields that may have a label.
   ``spec.ModelSpec.input_field_order`` can now contain ``spec.InputGroup``s
-  as well as lists. The ``spec.InputGroup.label`` will be displayed on that
+  as well as lists. The ``spec.InputGroup.group_label`` will be displayed on that
   section of the model input form in the workbench.
   (`#1602 <https://github.com/natcap/invest/issues/1602>`_)
+* Added support for collapsible sub-groups of inputs. ``spec.InputSubGroup``
+  was introduced to represent a closely-related group of inputs that are
+  displayed together with tighter vertical spacing. If all inputs in a sub-
+  group are disabled, the sub-group renders as a collapsible section.
+  (`#1601 <https://github.com/natcap/invest/issues/1601>`_),
+  (`#2726 <https://github.com/natcap/invest/issues/2726>`_)
 * The ``to_json`` method of ``spec.ModelSpec`` has been deprecated.
   Serialization should now be done using the pydantic ``model_dump_json``
   method.
+* When plotting rasters in reports, avoid building unnecessary overviews
+  by determining the target plot width and building a single overview for
+  that width. (`#2576 <https://github.com/natcap/invest/issues/2576>`_)
 * No longer testing and building with Python 3.10, which reached EOL.
   (`#2782 <https://github.com/natcap/invest/issues/2782>`_)
 
@@ -84,6 +103,40 @@ Workbench
 =========
 * The InVEST workbench is now built for both Intel and Apple Silicon
   architectures. (`#1586 <https://github.com/natcap/invest/issues/1586>`_)
+* Updates to the Plugin Manager modal
+    * The InVEST Plugin Registry is now integrated into the Workbench Plugin
+      Manager modal. Users can browse and install plugins listed on the Plugin
+      Registry directly from the Workbench.
+      (`#2736 <https://github.com/natcap/invest/issues/2736>`_)
+    * The modal can no longer be closed while a plugin is actively being
+      installed or uninstalled. This helps to ensure that the (un)installation
+      status, as well as any errors encountered during the process, are obvious
+      to the user. (`#2105 <https://github.com/natcap/invest/issues/2105>`_)
+    * To address some confusion about what to do after a plugin has successfully
+      installed, after installation completes, a message now displays that tells
+      the user to close the modal and open the plugin from the list of models.
+      (`#2643 <https://github.com/natcap/invest/issues/2643>`_)
+
+Coastal Blue Carbon
+===================
+* Fixed a flaky issue where snapshot lulc rasters would sometimes be treated
+  as though they represented a different snapshot year leading to unexpected
+  results. This issue only affected analyses with 2 or more snapshot rasters.
+  (`#2841 <https://github.com/natcap/invest/issues/2841>`_)
+
+Coastal Vulnerability
+=====================
+* Fixed a bug where an error occurred while generating the report if the
+  optional population raster input was not used.
+  (`#2755 <https://github.com/natcap/invest/issues/2755>`_)
+
+Visitation: Recreation and Tourism
+==================================
+* This model will no longer be functional in InVEST versions prior to 3.19.0.
+  The server infrastructure supporting those earlier versions will go offline.
+  Visitation results produced by the server supporting versions 3.15.0 - 3.18.0
+  are identical to results produced by version 3.19.0 and beyond.
+  We recommend updating to the latest version of InVEST.
 
 
 General

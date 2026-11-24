@@ -1,3 +1,4 @@
+import classNames from 'classnames';
 import React, { useEffect, useId, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -6,9 +7,10 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
-import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
-import { MdFolderOpen, MdInfo, MdOpenInNew, MdSearch } from 'react-icons/md';
+import {
+  MdFolderOpen, MdInfo, MdInfoOutline, MdOpenInNew, MdSearch
+} from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import i18n from '../../../i18n/i18n';
@@ -41,9 +43,9 @@ function filterSpatialOverlapFeedback(message, filepath) {
   return `${newPrefix}\n${bboxFormatted}`;
 }
 
-function FormLabel(props) {
+function InputLabel(props) {
   const {
-    inputId, argkey, argname, argtype, required, units,
+    inputId, argkey, argname, argtype, required, units, tightSpacing
   } = props;
 
   const userFriendlyArgType = parseArgType(argtype);
@@ -53,26 +55,34 @@ function FormLabel(props) {
   const optional = typeof required === 'boolean' && !required && !isTargetSpatialDropdown;
   const includeComma = userFriendlyArgType && optional;
 
-  return (
-    <Form.Label column sm="3" htmlFor={inputId}>
-      <span className="argname">{argname} </span>
-      {
-       (userFriendlyArgType || optional) &&
-        <span>
-          (
-            {userFriendlyArgType}
-            {includeComma && ', '}
-            {optional && <em>{i18n.t('optional')}</em>}
-          )
-        </span>
-      }
-      {/* display units at the end of the arg name, if applicable */}
-      { (units && units !== 'unitless') ? <span> ({units})</span> : <React.Fragment /> }
-    </Form.Label>
-  );
+  if (tightSpacing) {
+    return (
+      <Form.Label className='tight-spacing' htmlFor={inputId}>
+        {argname}
+      </Form.Label>
+    );
+  } else {
+    return (
+      <Form.Label column sm="3" htmlFor={inputId}>
+        <span className="argname">{argname} </span>
+        {
+         (userFriendlyArgType || optional) &&
+          <span>
+            (
+              {userFriendlyArgType}
+              {includeComma && ', '}
+              {optional && <em>{i18n.t('optional')}</em>}
+            )
+          </span>
+        }
+        {/* display units at the end of the arg name, if applicable */}
+        { (units && units !== 'unitless') ? <span> ({units})</span> : <React.Fragment /> }
+      </Form.Label>
+    );
+  }
 }
 
-FormLabel.propTypes = {
+InputLabel.propTypes = {
   argkey: PropTypes.string.isRequired,
   argname: PropTypes.string.isRequired,
   argtype: PropTypes.string.isRequired,
@@ -80,14 +90,16 @@ FormLabel.propTypes = {
     [PropTypes.string, PropTypes.bool]
   ),
   units: PropTypes.string,
+  tightSpacing: PropTypes.bool,
 };
 
-function Feedback({argkey, message = ''}) {
+function Feedback({argkey, message = '', tightSpacing = false}) {
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
     <Form.Control.Feedback
-      className="d-block"
+      className={classNames(
+        'd-block', 'col-1', {'tight-spacing': tightSpacing})}
       type="invalid"
       id={`${argkey}-feedback`}
     >
@@ -98,6 +110,7 @@ function Feedback({argkey, message = ''}) {
 Feedback.propTypes = {
   argkey: PropTypes.string.isRequired,
   message: PropTypes.string,
+  tightSpacing: PropTypes.boolean,
 };
 
 /**
@@ -167,6 +180,7 @@ export default function ArgInput({
   searchExtent, searchExtentUpdateComplete, updateSearchExtent,
   searchCollections, clearSearchCollections, searchSiblingType, selectSearchResult,
   requestFocusOnAoiInput, setReadyToFocusOnAoi, resetAoiFocusState, autoFocus,
+  tightSpacing = false,
 }) {
   const uniqueId = useId();
   const inputRef = useRef();
@@ -201,8 +215,6 @@ export default function ArgInput({
     );
   }
 
-  const className = enabled ? null : 'arg-disable';
-
   let feedback = <React.Fragment />;
   if (validationMessage && touched && argSpec.type !== 'boolean') {
     feedback = (
@@ -210,6 +222,7 @@ export default function ArgInput({
         argkey={argkey}
         argtype={argSpec.type}
         message={validationMessage}
+        tightSpacing={tightSpacing}
       />
     );
   }
@@ -428,6 +441,7 @@ export default function ArgInput({
           onDragEnter={dragEnterHandler}
           onDragLeave={dragLeavingHandler}
           aria-describedby={`${argkey}-feedback`}
+          className={classNames({"tight-spacing": tightSpacing})}
         />
         {fileSelector}
         {searchButton}
@@ -435,35 +449,61 @@ export default function ArgInput({
     );
   }
 
+  const aboutModal = (
+    <AboutModal
+      arg={argSpec}
+      userguide={userguide}
+      isCoreModel={isCoreModel}
+      argkey={argkey}
+      tightSpacing={tightSpacing}
+    />);
+
+  const inputLabel = (
+    <InputLabel
+      inputId={inputId}
+      argkey={argkey}
+      argname={argSpec.name}
+      argtype={argSpec.type}
+      required={argSpec.required}
+      units={argSpec.units} // undefined for all types except number
+      className="text-nowrap"
+      tightSpacing={tightSpacing}
+    />
+  );
+
+  let innerContent;
+  if (tightSpacing) {
+    innerContent = (
+      <div className="form-container">
+        <Col sm='4' className='argname tight-spacing'>
+          {aboutModal}
+          {inputLabel}
+        </Col>
+        <Col sm='3' className='d-flex'>{form}</Col>
+        <Col sm='4'>{feedback}</Col>
+      </div>
+    );
+  } else {
+    innerContent = (
+      <>
+        {inputLabel}
+        <Col>
+          <div className="form-container">
+            {aboutModal}
+            {form}
+          </div>
+          {feedback}
+        </Col>
+    </>);
+  }
   return (
     <Form.Group
       as={Row}
       key={argkey}
       data-testid={`group-${argkey}`}
-      className={className} // this grays out the label but doesn't actually disable the field
+      className={classNames({'arg-disable': !enabled})} // this grays out the label but doesn't actually disable the field
     >
-      <FormLabel
-        inputId={inputId}
-        argkey={argkey}
-        argname={argSpec.name}
-        argtype={argSpec.type}
-        required={argSpec.required}
-        units={argSpec.units} // undefined for all types except number
-      />
-      <Col>
-        <InputGroup>
-          <div className="d-flex flex-nowrap w-100">
-            <AboutModal
-              arg={argSpec}
-              userguide={userguide}
-              isCoreModel={isCoreModel}
-              argkey={argkey}
-            />
-            {form}
-          </div>
-          {feedback}
-        </InputGroup>
-      </Col>
+      {innerContent}
     </Form.Group>
   );
 }
@@ -514,8 +554,9 @@ function AboutModal(props) {
   const handleAboutClose = () => setAboutShow(false);
   const handleAboutOpen = () => setAboutShow(true);
 
-  const { userguide, arg, argkey, isCoreModel } = props;
+  const { userguide, arg, argkey, isCoreModel, tightSpacing } = props;
   const { t, i18n } = useTranslation();
+  const [isHovered, setIsHovered] = useState(false);
 
   // create link to users guide entry for this arg IFF this is a core model
   // anchor name is the arg name, with underscores replaced with hyphens
@@ -524,15 +565,25 @@ function AboutModal(props) {
     ? `${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${userguide}#${argkey.replace(/_/g, '-')}`
     : null
   );
+
+  const userFriendlyArgType = parseArgType(arg.type);
+  const optional = typeof required === 'boolean' && !required;
+  const includeComma = userFriendlyArgType && optional;
+
   return (
     <React.Fragment>
       <Button
         aria-label={`info about ${arg.name}`}
-        className="me-2"
+        className={classNames('info-button', {'tight': tightSpacing})}
         onClick={handleAboutOpen}
         variant="outline-info"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        <MdInfo />
+        { isHovered & tightSpacing ?
+          <MdInfoOutline className="info-icon-outline" /> :
+          <MdInfo />
+        }
       </Button>
       <Modal show={aboutShow} onHide={handleAboutClose}>
         <Modal.Header>
@@ -540,6 +591,15 @@ function AboutModal(props) {
         </Modal.Header>
         <Modal.Body>
           {arg.about}
+          <br />
+          <span>{`${i18n.t('Type:')} ${userFriendlyArgType}`}</span>
+          <span>{optional && <em>{i18n.t('optional')}</em>}</span>
+          <br />
+          {
+            (arg.units && arg.units !== 'unitless') ?
+            <span>{`${i18n.t('Units:')} ${arg.units}`}</span> :
+            <React.Fragment />
+          }
           <br />
           {
             isCoreModel

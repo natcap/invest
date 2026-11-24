@@ -163,11 +163,11 @@ class StormwaterTests(unittest.TestCase):
         pixel_size = (20, -20)
         pixel_area = abs(pixel_size[0] * pixel_size[1])
         # save each dataset to a file
-        for (array, path) in [
-                (lulc_array, lulc_path),
-                (soil_group_array, soil_group_path),
-                (precipitation_array, precipitation_path)]:
-            to_raster(array, path, pixel_size=pixel_size)
+        for (array, path, nodata) in [
+                (lulc_array, lulc_path, 255),
+                (soil_group_array, soil_group_path, 255),
+                (precipitation_array, precipitation_path, -1.0)]:
+            to_raster(array, path, pixel_size=pixel_size, nodata=nodata)
         biophysical_table.to_csv(biophysical_table_path)
 
         return [

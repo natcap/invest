@@ -735,8 +735,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # set precip nodata values to a large, negative 64bit value.
         nodata = numpy.finfo(numpy.float64).min
-        precip_csv_path = os.path.join(self.workspace_dir,
-                                    'precip_raster_table.csv')
+        precip_csv_path = os.path.join(
+            self.workspace_dir, 'precip_raster_table.csv')
         months_paths = []
         size = 100
         for month in range(1, 13):
@@ -785,7 +785,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         agg_results_csv_path = os.path.join(
             args['workspace_dir'], 'agg_results_base.csv')
         with open(agg_results_csv_path, 'w') as open_table:
-            open_table.write('0,1.0,101.964\n')
+            open_table.write('0,1.0,103.401\n')
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
