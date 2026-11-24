@@ -120,7 +120,7 @@ class SetupTab extends React.Component {
 
     this.state = {
       argsValues: null,
-      argsValidation: null,
+      argsValidation: {},
       argsValidationComplete: false,
       argsValid: false,
       argsEnabled: {},
@@ -581,8 +581,10 @@ class SetupTab extends React.Component {
           const argkeys = result[0]; // array of arg keys
           const message = result[1]; // string that describes those args
           argkeys.forEach((key) => {
-            argsValidation[key].validationMessage = message;
-            argsValidation[key].valid = false;
+            argsValidation[key] = {
+              validationMessage: message,
+              valid: false,
+            };
             keyset.delete(key);
           });
         });
@@ -592,8 +594,10 @@ class SetupTab extends React.Component {
         // inputs will not display a validation state, so it's okay
         // to simply set all these as valid here.
         keyset.forEach((k) => {
-          argsValidation[k].valid = true;
-          argsValidation[k].validationMessage = '';
+          argsValidation[k] = {
+            valid: true,
+            validationMessage: '',
+          };
         });
         validateSpatialDropdownSelections();
         if (this._isMounted) {
@@ -607,8 +611,10 @@ class SetupTab extends React.Component {
       // B) All args were validated and none were invalid:
       } else {
         keyset.forEach((k) => {
-          argsValidation[k].valid = true;
-          argsValidation[k].validationMessage = '';
+          argsValidation[k] = {
+            valid: true,
+            validationMessage: '',
+          };
         });
         const invalidSpatialDropdown = validateSpatialDropdownSelections();
         // The model is valid only if no target dropdown points to
